@@ -1,0 +1,2 @@
+CC = gcc
+PKG_CFLAGS = -O3

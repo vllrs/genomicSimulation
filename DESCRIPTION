@@ -1,0 +1,16 @@
+Package: genomicSimulation
+Version: 0.1-1
+Title: Simulate Breeding Schemes Across SNP Markers
+Authors@R: c(person("Kira", "Villiers", role = c("aut", "cre"), email="kirav@protonmail.com"))
+Description: Functions to simulate breeding programs on SNP markers, making simulated
+ phased genotypes, and functions to calculate or perform selection based on GEBVs from
+ provided effect values.
+License: GPL (>= 2)
+Encoding: UTF-8
+RoxygenNote: 7.1.1
+Suggests: 
+    knitr,
+    rmarkdown,
+	reshape2,
+	ggplot2
+VignetteBuilder: knitr
