@@ -14,7 +14,7 @@
 #' (eg. random crossing) will be applied to each group number in the vector.
 #' @param n.crosses The function will pick this many random pairs of parents
 #' to cross.
-#' @param offpsring The number of times to cross each randomly-chosen pair. 
+#' @param offspring The number of times to cross each randomly-chosen pair. 
 #' @param retain A boolean, repesenting whether to save the generated
 #' genotypes to memory or discard them. You may wish to discard them
 #' but save to file if you are generating too many crosses to save into
@@ -57,12 +57,12 @@
 #' @family crossing functions
 #' @useDynLib genomicSimulation cross_randomly
 #' @export
-cross.randomly <- function(group, n.crosses=5, offpsring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+cross.randomly <- function(group, n.crosses=5, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(cross_randomly, sim.data$p, length(group), group, n.crosses, give.names, name.prefix, 
-				offpsring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' Performs defined crosses as laid out in a file.
@@ -86,11 +86,11 @@ cross.randomly <- function(group, n.crosses=5, offpsring=1, retain=TRUE, give.na
 #' @family crossing functions
 #' @useDynLib genomicSimulation cross_combinations
 #' @export
-cross.combinations <- function(cross.file, offpsring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+cross.combinations <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(cross_combinations, sim.data$p, cross.file, give.names, name.prefix, offpsring, 
+	return(.Call(cross_combinations, sim.data$p, cross.file, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -117,11 +117,11 @@ cross.combinations <- function(cross.file, offpsring=1, retain=TRUE, give.names=
 #' @family crossing functions
 #' @useDynLib genomicSimulation dcross_combinations
 #' @export
-cross.dc.combinations <- function(cross.file, offpsring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+cross.dc.combinations <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(dcross_combinations, sim.data$p, cross.file, give.names, name.prefix, offpsring, 
+	return(.Call(dcross_combinations, sim.data$p, cross.file, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -143,12 +143,12 @@ cross.dc.combinations <- function(cross.file, offpsring=1, retain=TRUE, give.nam
 #' @family crossing functions
 #' @useDynLib genomicSimulation cross_unidirectional
 #' @export
-cross.all.pairs <- function(group, offpsring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(cross_unidirectional, sim.data$p, length(group), group, give.names, name.prefix,
-				 offpsring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
 # Performs random crosses between a high-scoring subset of the group of genotypes
@@ -205,11 +205,11 @@ cross.all.pairs <- function(group, offpsring=1, retain=TRUE, give.names=FALSE, n
 #' @family crossing functions
 #' @useDynLib genomicSimulation SXP_selfing
 #' @export
-self.n.times <- function(group, n, offpsring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+self.n.times <- function(group, n, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_selfing, sim.data$p, length(group), group, n, give.names, name.prefix, offpsring, 
+	return(.Call(SXP_selfing, sim.data$p, length(group), group, n, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }			
 			
@@ -234,11 +234,11 @@ self.n.times <- function(group, n, offpsring=1, retain=TRUE, give.names=FALSE, n
 #' @family crossing functions
 #' @useDynLib genomicSimulation SXP_doubled
 #' @export
-make.doubled.haploids <- function(group, offpsring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+make.doubled.haploids <- function(group, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_doubled, sim.data$p, length(group), group, give.names, name.prefix, offpsring, 
+	return(.Call(SXP_doubled, sim.data$p, length(group), group, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -259,12 +259,12 @@ make.doubled.haploids <- function(group, offpsring=1, retain=TRUE, give.names=FA
 #' @family crossing functions
 #' @useDynLib genomicSimulation SXP_one_cross
 #' @export
-cross <- function(parent1.index, parent2.index, offpsring=1, retain=TRUE, give.names=FALSE, 
+cross <- function(parent1.index, parent2.index, offspring=1, retain=TRUE, give.names=FALSE, 
 		name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_one_cross, sim.data$p, parent1.index, parent2.index, give.names, 
-				 name.prefix, offpsring, track.pedigree, give.ids, file.prefix, save.pedigree, 
+				 name.prefix, offspring, track.pedigree, give.ids, file.prefix, save.pedigree, 
 				 save.gebv, save.genotype, retain))
 }
 
