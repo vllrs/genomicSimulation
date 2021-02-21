@@ -26,50 +26,103 @@ library(genomicSimulation)
 ```
 
 # Introduction
-This package can simulate crossing and genomic selection. It was created with self-pollinated plant species in mind, and so has functions to simulate crossing and selfing steps as would be found in a plant breeding program on a set of SNP alleles. Meiosis simulating does not include mutation but does include simulating recombination/crossovers. The package's core is written in C, and this package is mostly just an R interface to the most important functions (most I/O is still via files not via R data structures).
+This package can be used to create 'digital twins' of breeding schemes. It offers scripting functions to simulate crossing and genomic selection on SNP markers. It was created with self-pollinated plant species in mind. 
 
-The package's functionality could be useful for comparing crossing plans, evaluating crossing methodologies or perhaps predicting the likely highest performing crosses. 
+The package itself is an interface to a set of C functions. Using C to perform the computation-intensive parts of simulation allows for quick runtimes - however, since this package is still mostly just a wrapper around those core C functions, it produces most of its output by writing to files rather than saving values to R.
+
 
 # Details and Methodology
-This package performs actions on data saved to a C struct called `SimData`. An external pointer to the struct is saved in a package-global R environment called `sim.data`.
 
-Each `SimData` is given a list of SNPs and a map for these in the genome on creation. These details cannot be changed after creation without clearing the `SimData` completely. 
+## Methodology: Calculating Genetic Estimated Breeding Values
+The simulation loads the effect file into a set of vectors, each vector containing the effect values for each SNP for a particular allele. When the simulation is then instructed to calculate GEBVs for a genotype, it creates a vector containing how many copies of a particular allele the genotype contains at each SNP, then multiplies this vector with the effect vector for that allele. It repeats this process for each allele it has an effect vector for, then adds up the results to produce one final value.
 
-## Details: SNPs 
-Each individual `SimData` struct tracks one set of SNPs. This set cannot be replaced or modified without clearing all data in the `SimData` at the current time. 
 
-The `SimData` object saves names of markers as-is, as long as the name is under 30 characters long. Behaviour is undefined if any marker name is longer than 30 characters.
-
-A linkage map should also be saved to the `SimData`. Once this is loaded, the `SimData`'s SNPs will be sorted in genome order
-
-If you want to calculate GEBVs or select by GEBVs, effect values (pre-calculated for a particular trait) for the alleles of each SNP should be loaded. Currently only one trait's effect values can be loaded at a time.
-
-## Details: Lines
-The genotypes of each line tracked by the `SimData` are saved in a matrix whose columns are the SNPs (sorted in genome order) that the `SimData` tracks (see previous section of this document). Each cell of the matrix contains the two alleles of the particular line at that particular SNP (eg . 'AA').
-
-Each line may or may not be allocated a name. If loading names from a file, behaviour is undefined if any marker name is longer than 30 characters. If creating names during crossing using the `give.names` setting, they are created by concatenating `name.prefix` and the line's ID. 
-
-If a line was loaded from a file or created during crossing with `give.ids` set to TRUE, it will have a unique ID. IDs are natural numbers, allocated sequentially starting with 1. A line's ID is unique for the lifetime of the SimData. IDs are used for tracking pedigree.
-
-The SimData allows for lines to be treated in groups/categories. Automatically the lines loaded from separate files are allocated to separate groups and each crossing function also places the lines it produces in a new group. Group numbers are also natural numbers starting at 1. Group numbers may not be allocated sequentially, though functions usually choose the lowest currently-unused valid group number when creating their new groups.
-
-## Methodology: Meiosis
+## Methodology: Simulating Meiosis
 To create a cross, the simulation generates gametes independently for the two parents. No distinction is made between male and female parent. 
 
 For each chromosome number, the number of crossovers to occur in the simulated meiosis are drawn from a Poisson distribution with parameter = [length of the chromosome in Morgans], where length of the chromosome is pre-calculated as the distance between the first and last SNP that the `SimData` knows are in that chromosome. The positions of those crossovers along the chromosome are then drawn from a uniform distribution, which is why the use of a linkage map (so that distances correspond to likelihood of crossover) is recommended over use of a physical map. Finally, a random logical value (0 or 1) is drawn to choose which of the parent's chromosomes to start with. 
 
-Note that this means that allele order in parents matters. Encoded data loaders like `load_transposed_encoded_genes_to_simdata` randomise the order of alleles when the line is heterozygous at a SNP on loading.
+Note that this means that allele order in parents matters. <!--Encoded data loaders like `load_transposed_encoded_genes_to_simdata` randomise the order of alleles when the line is heterozygous at a SNP on loading.-->
 
 The R package uses the R random generators, so will follow the R seed.
 
-## Understanding Output
-Most functions return a single number. 
+This procedure is displayed visually in the images below.
 
-If it is 0, it means the function succeeded but it is not a function that passes output into R. 
+![Random draws for each chromosome](meiosisdists.png)
 
-If it is a positive integer, it means the function created a new group of genotypes, and the positive integer is the group number of that group. The one exception is `split.group.into.individuals(group)`, which returns a vector of group numbers because it creates numerous groups.
+![Using those random values to generate a gamete](meiosis.png)
 
-`see.existing.groups()` also returns a vector of positive integers, but these are pre-existing groups and not created by the function.
+
+## Methodology: Counting Recombinations
+Extra functionality is available for estimating where crossovers occured in producing certain genotypes. This is offered by the `find.crossovers` and `find.plot.crossovers` functions. The difference between the two is that after crossovers points are found, as well as saving the results matrix to a file `find.plot.crossovers` produces an R plot, as shown below. It assumes the child is mostly homozygous.
+
+![An example plot produced by the crossover finder function with certainty=FALSE. The lines plotted were produced by crossing the two parents then selfing for 6 generations. This produces a large number of crossover events.](crossovers.png)
+
+To identify crossovers, the code starts at the beginning of each chromosome for the current child line, and reads through to find SNPs where the parents differ (and so therefore the provenance of the allele the child has there can be determined).
+
+The functions have two parameters that affect the way the crossover counting works: `window.size` and `certainty`.
+
+If the `certainty` setting is `True`, then SNPs where the provenance of an allele cannot be determined are marked with a 0, representing unknown parentage. If the `certainty` setting is `False`, when the provenance of an allele is unknown, the parentage at that SNP is set to the same parent as the most recent SNP with known parentage.
+
+The `window.size` parameter should be an odd positive integer. The window size is the number of SNPs that are observed at a time. Only if the alleles of the child at all SNPs in the window can come from one parent, and that same sequence cannot come from the other, is the parentage at that SNP considered known.
+
+
+
+# Speed
+On a consumer-model laptop running RStudio version 1.2.5019, the process of loading 50 founder lines and 5112 SNPs took on average 0.64 seconds.
+
+A call to `cross.randomly` to generate 100,000 ($10^5$) offspring from those founders took on average 2 seconds to run. Since all crossing functions use the same methodology, this time should be fairly representative of the speed of any crossing function. 
+
+Output (writing to files) adds significant delays. The same command, with save-as-you-go output of GEBVs and pedigrees requested, took approximately 20 seconds to run. With save-as-you-go output of GEBVs, pedigrees, and genotypes (the latter being a significantly larger file size), the function call took approximately 120 seconds. 
+
+Generating the $10^5$ offspring, then saving GEBVs, pedigrees, and genotypes to files via separate `save.` functions, took approximately 130 seconds to complete. This is a few seconds longer than the save-as-you-go call that did the same work, possibly because of the time spent moving from R-level execution to C-level and back again.
+
+The C-level functions make no attempt to parallelise execution.
+
+# Package-Specific Details
+## Understanding `sim.data`
+This package's set of working data is stored a C struct called `SimData`. An external pointer to the struct is saved in a package-global R variable called `sim.data$p`. `sim.data$p` is not visible during regular use. 
+
+To reset the simulation/clear it of all data, the function `clear.simdata()` is provided.
+
+### Markers
+Each `SimData` is given a list of SNPs and a map for positioning these in the genome on creation. These details cannot be changed after creation without clearing the `SimData`. The `SimData` object saves names of markers as-is, as long as the name is under 30 characters long. Behaviour is undefined if any marker name is longer than 30 characters.
+
+Becauses the `SimData` stores its SNPs in genome order, and so any outputs produced will have the SNP markers ordered according to the genetic map loaded at its creation. 
+
+### Effects
+The simulation cannot run without having a genetic map for the SNPs it tracks. However, it can run with no effect values loaded, so in cases where there is no need to be using GEBVs, there is no need to provide an effect file.
+
+Only one 'set' of effect values can be loaded at a time. That is, the simulation only has one way of calculating GEBVs at a time.
+
+### Genotypes
+Each genotype/line may or may not be allocated a name. If loading names from a file, behaviour is undefined if any line name is longer than 30 characters.
+
+## Understanding Groups
+The SimData allows for lines to be treated in groups/categories. Automatically, the lines loaded from separate files are allocated to separate groups. Each crossing function also places the lines it produces in a new group.
+
+A line can only belong to one group, so functions that overwrite allocations (eg `make.group`) effectively pull lines out of their old group and put them in a new one. There's therefore no chance of attempting to delete lines via `delete.group` that have already been deleted.
+
+Group numbers are natural numbers starting at 1. Group numbers are not guaranteed to be allocated sequentially, though functions usually choose the lowest currently-unused valid group number when creating their new groups.
+
+Each separate function call that adds new genotypes to the internal `SimData` allocates them to a new, separate group. 
+
+Every function except those that pull data into R (functions whose names begin with `see.`) return either one integer or a vector of integers. If the integer is 0, it means the function succeeded but it is not a function that acts on groups. Otherwise, the return value is the group number of the group(s) that were created.
+
+## Understanding Identifiers
+There are three categories of identifiers that may pop up during use of the simulation.
+
+1. Group numbers, which were discussed in the section above. They are non-negative integers that define a set of lines. Any number of lines can share a group number, and a line's group number may be changed over the course of the simulation.
+1. IDs. These are non-negative integers that are unique to a particular genotype for the lifetime of the `SimData`. IDs are used for tracking pedigree thanks to this uniqueness feature. However, genotypes are not guaranteed to have an ID: genotypes created during crossing with the setting `give.ids` set to FALSE will not be allocated IDs and will have 0 instead. 
+1. Indexes. These represent the position/column number in the internal matrix at which the genotype is stored. They are therefore unique to the genotype but not continuous over the lifetime of the `SimData`, because when genotypes/columns are deleted the column numbers of the matrix change. Because, unlike for IDs, every genotype is guaranteed to have an index, functions like `make.group` and `cross` that act on particular genotypes generally take indexes as inputs. Since indexes can change, however, it is important to not place a `delete.group` call between getting and using indexes.
+
+## Understanding Output Methods
+There are three sets of functions to get output from the simulation. 
+
+- The first involves calling a function to save data to a file (`save.` family functions). 
+- The second involves saving the data from a cross as you go (`save.` settings in crossing function settings). This is useful in conjunction with the setting `retain=FALSE` when generating more genotypes than will fit in memory, because in save-as-you-go mode the simulation saves the data to a file every 1000 lines (and if `retain=FALSE` it can then delete them and free up memory). However, this method is more limited than full `save.` functions in that it always uses the default printing format for that data type and only prints the genotypes being generated by that crossing call. 
+- The third (and most limited) is to use the `see.` family of functions to pull data into R. The family of `see.` functions will be expanded in future, but for now is fairly limited in scope.
+
 
 # Workflow
 The assumed workflow for this package involves the following steps:
@@ -82,14 +135,153 @@ The assumed workflow for this package involves the following steps:
 1. (Optional: Estimate the number of crossovers to reach these final genotypes. Suggested function: `plot.crossovers`)
  Load output files into R for further analysis.
 
-In-depth guides to these steps are shown in the next section.
+The example below shows a how a typical workflow would save group numbers and call crossing functions.
+```{R}
+# (Show the tiny example data set)
+read.csv("a-matrix.txt", sep='\t', header=T)
+read.csv("a-map.txt", sep='\t', header=T)
+read.csv("a-yield.txt", sep='\t')
+
+# load the small initial data set
+g0 <- load.data("a-matrix.txt", "a-map.txt", "a-yield.txt")
+
+# Do many random crosses from the data set. 
+f1 <- cross.randomly(g0, n.crosses=20, give.names=TRUE, name.prefix="F1.")
+
+# Let's see what crossovers we got. For this few markers we don't get much information.
+save.pedigrees("a.txt", f1, type="P")
+find.plot.crossovers("a.txt", "b.txt")
+
+# Make 40 random crosses from the 25% with the top GEBV
+f1.selected <- select.by.gebv(f1, percentage=25)
+
+# Delete groups we are not currently using, to free up some memory.
+delete.group(f1)
+
+f2 <- cross.randomly(f1.selected, n.crosses=5)
+delete.group(f1.selected)
+
+# Complete 4 rounds of selfing.
+f6 <- self.n.times(f2, 4, file.prefix="af6", save.genotype=TRUE)
+
+# (Show current state of groups)
+print(c(g0, f2, f6))
+see.existing.groups()
+
+# (Show these output files)
+read.csv("af6-genome", sep='\t')
+
+```
+
+## Simple Example Breeding Scheme
+![A demonstration of an implementation of a simplified breeding scheme. This process was run for two conditions, one with selection inside `get.top.by.phenotype` done across all individuals in the set, the other with selection done within each family of lines descended from one of the original 25 crosses.](example-scheme.png)
+
+![The script snippet above was run for 10 replications of each condition, and the mean GEBV and variance in GEBV at the end of each cycle was tracked. The thin lines show individual replications and the thick ones the mean for that condition at that cycle. ](example-scheme-fig.png)
+
+## Selection by Simulated Phenotype
+```{R}
+f <- cross.randomly(g0, n.crosses=5, offspring=3)
+
+f.info <- see.group.gebvs(f)
+
+# Create the masked values. In this case, a normally distributed term with sd corresponding
+# to environmental variance is added to each GEBV
+H2 <- 0.5  #estimate the heritability of the GEBV's trait at this step
+Vg <- var(f.info$GEBV)
+Ve <- Vg/H2 - Vg  # using the formula H2 = Vg/(Vg + Ve) to find the environmental variation
+f.info$Pheno <- f.info$GEBV + rnorm(length(f.info$GEBV), mean=0, sd = sqrt(Ve))
+  
+# Sort the list by phenotypes
+f.info <- f.info[order(f.info$Pheno, decreasing=TRUE),]
+# Send the top 10 phenotypes to a new group
+fselected <- make.group(f.info$i[1:10])
+
+# (delete the non-selected genotypes)
+delete.group(f)
+
+# Then generate further generations from the selected genotypes
+f2 <- cross.randomly(fselected, n.crosses=100)
+# ...
+delete.group(f2)
+```
 
 
-## Loading data
-### All at once
-If you are using the expected workflow of loading both original lines and a linkage map, and marker effect values for calculating GEBV for a particular trait, the function `group <- load.data(allele.file, map.file, effect.file = NULL)` will perform all setup for the three files provided. See the following sections for expected format of each file.
+# Indexes
+## Function Index
+Use the R documentation (eg. type `?load.data` in the RStudio console) to get descriptions of these functions.
 
-#### Lines
+Loading data:
+
+- `group <- load.data(allele.file, map.file, effect.file = NULL)`
+- `group <- load.more.genotypes(allele.file)`
+- `load.different.effects(effect.file)`
+
+Simulating crossing:
+
+- `group <- cross(parent1,parent2,[settings])`
+- `group <- cross.randomly(group,n.crosses,[settings])`
+- `group <- cross.combinations(cross.file,[settings])`
+- `group <- cross.dc.combinations(cross.file,[settings])`
+- `group <- cross.all.pairs(group,[settings])`
+- `group <- self.n.times(group,n,[settings])`
+- `group <- make.doubled.haploids(group,[settings])`
+
+Performing selection:
+
+- `selected.group <- select.by.gebv(from.group, low.score.best = FALSE, percentage OR number)`
+- For more customised selection, use the process
+  - `info <- see.group.gebvs(group)`
+  - `selected.info <- `[some R manipulation on `info` that performs the custom selection]
+  - `selected.group <- make.group(selected.info$I)`
+
+Modify groupings:
+
+- `delete.group(group)`
+- `group <- combine.groups(groups)`
+- `group <- make.group(indexes)`
+- `[vector of groups] <- break.group.into.individuals(group)`
+- `[vector of groups] <- break.group.into.families(group)`
+
+Save data (saves results to files):
+
+- `save.genome.model(filename)`
+- `save.genotypes(filename, group = NULL, type = "R")`
+- `save.allele.counts(filename, group = NULL, allele)`
+- `save.pedigrees(filename, group = NULL, type = "R")`
+- `save.GEBVs(filename, group = NULL)`
+
+View data (pulls data into R dataframes):
+
+- `[dataframe containing current existing groups and their sizes] <- see.existing.groups()`
+- `[vector containing the chosen data] <- see.group.data(group, data.type)`
+- `[index and GEBV for each group member] <- see.group.gebvs(group)`
+
+Identify recombination events:
+
+- `find.crossovers(parentage.file, out.file, window.size = 1, certainty = TRUE)`
+- `find.plot.crossovers(parentage.file, out.file, window.size = 1, certainty = TRUE)`
+
+Data Storage:
+
+- `clear.simdata()`
+
+## Crossing Function Settings
+All crossing functions take in a common set of settings. These are briefly described below.
+
+- `offspring` : A setting representing the number of times to do each cross.
+- `retain` : A boolean, repesenting whether to save the generated genotypes to memory or discard them. You may wish to discard them but save to file if you are generating too many crosses to save into memory.
+- `give.names` : A boolean representing whether or not to produce names for the new genotypes generated. The names produced would have format [name.prefix][id]
+- `name.prefix` : A string. If give.names is TRUE, the id is concatenated to this to produce the name of each new genotype.
+- `track.pedigree` :A boolean representing whether or not to save the ids of the parents of each new genotype to the new genotype's pedigree. If this is false, the new genotype's pedigree is unknown.
+- `give.ids` : A boolean representing whether or not to allocate each new genotype an id. If this is FALSE, the new genotype is 'invisible' to pedigree trackers and even if the pedigree of its offspring is supposedly tracked, the pedigree trackers will not be able to identify the progenitors of its offspring. Furthermore, if it is false and names are generated using give.names, all names generated in the same group will be the same. Probably you'd only have this FALSE if you were discarding the results or worried about id overflow.
+- `file.prefix` : A string representing the prefix of files produced if save.pedigree=TRUE, save.gebv=TRUE, or save.genotype=TRUE.
+- `save.pedigree` : A boolean. If TRUE, saves the pedigree in recursive format of each generated genotype to the text file with filename "[file.prefix]-pedigree".
+- `save.gebv` : A boolean. If TRUE, saves the GEBVs of each generated genotype to the tab-separated text file with filename "[file.prefix]-eff".
+- `save.genotype` : A boolean. If TRUE, saves the SNP/line matrix in regular format (generated genotypes as rows, SNPs as columns) to the tab-separated text file with filename "[file.prefix]-genome".
+
+
+## Input File Formats
+### Founder genotypes and SNPs
 The basic file format expected to the `allele.file` parameter of `load.data` is:
 ```
 name	G01	G02	G03	G04	G05	G06
@@ -101,22 +293,8 @@ where G01, G02, ..., are the parent lines and m1, m2 and m3 are the SNPs. Cells 
 
 To load more genotypes after original creation of the `SimData`, use the function `group <- load.more.genotypes(allele.file)`
 
-<!--
-- `int load_genes_to_simdata(SimData* d, char* filename)`, for loading a file that conversely has the lines as rows and SNP markers as columns
-- `int load_more_transposed_genes_to_simdata(SimData* d, char* filename)`, for loading a second file of lines. Only the alleles for the SNPs that the SimData already has will be loaded.
-- `int load_transposed_encoded_genes_to_simdata(SimData* d, char* filename)`, for loading a file where instead of printing both alleles, the line's genotype at each SNP is encoded as one character according to the standard IUPAC code shown below. Because the order of alleles matters in this package's simulation of meiosis, this is not an ideal format. The loader randomises the order of alleles where the line is heterozygous to attempt to manage this.
 
-```{r, echo=FALSE, warning=FALSE}
-knitr::kable(
-  as.matrix(t(data.frame(
-    Alleles=c("AA", "CC", "GG", "TT", "AG", "CT", "CG", "AT", "GT", "AC"),
-    Encoding=c("A", "C", "G", "T", "R", "Y", "S", "W", "K", "M")))), 
-  caption="IUPAC encodings of allele combinations:"
-)
-```
--->
-
-#### Linkage maps
+### Linkage maps
 
 The function's parameter `map.file` requires a file format like the following:
 ```
@@ -129,60 +307,39 @@ The first line's values are not checked. After that, it requires that all rows h
 
 This function loads only markers that already appear in the `SimData`'s SNP list, which is created from the SNPs in the genotype matrix file (`allele.file`). It will print out how many markers it successfully loaded.
 
-#### Marker effects
-Marker allele effects are the contribution an allele at a SNP has towards GEBV. They are optional, but when loading an `effect.file` its format should be:
+
+### Effect files
+Loading an effect file is optional for running the simulation. Its format should be:
 ```
-n
-m1 1 -0.8
-m2 1 -0.1
-m3 1 0.1
-m1 4 0.9
-m3 4 -0.1
-m2 4 -0.5
+m1 A -0.8
+m2 A -0.1
+m3 A 0.1
+m1 T 0.9
+m3 T -0.1
+m2 T -0.5
 ```
 
 The first column should be a SNP marker name, the second should be the allele this effect value corresponds to (as a single character), and then a decimal representing the effect value of that allele for that SNP.
 
+### Combination crossing functions
+Two crossing functions (`cross.combinations` and `cross.dc.combinations`) take instructions from files.
 
-The effect values are the effect of each individual allele on the GEBV. For example, for a SNP with effect value A=0.1 and T=-0.2, a genotype of "AA" returns a score of 0.2 and "AT" returns -0.1. 
-
-## Simulating crossing
-The package provides a number of crossing functions, described below. 
-
-- `group <- cross.randomly(group,[settings])` : : Take a group and make random crosses between its members. Selfing is not permitted. The number of crosses made is defined in the parameter `times`.
-- `group <- cross.combinations(cross.file,[settings])` : Take a file containing tab-separated pairs of line names and perform those crosses. An example file looks like:
+- `cross.combinations` : Take a file containing tab-separated pairs of line names and perform those crosses. An example file looks like:
 ```
 G01	G02
 G01	G03
 G05	G06
 G01	G04
 ```
-- `group <- cross.dc.combinations(cross.file,[settings])` : Supposes that only the names of the precursor lines are known but specific crosses between F1 individuals are wanted. Assumes that those F1 individuals have been produced with id allocation/pedigree tracking turned on. The function therefore reads in a tab-separated file that looks like the below to perform the cross between the offspring of G01 and G02, and the offspring of G03 and G05, and so forth.
+- `cross.dc.combinations` : Supposes that only the names of the precursor lines are known but specific crosses between F1 individuals are wanted. Assumes that those F1 individuals have been produced with id allocation/pedigree tracking turned on. The function therefore reads in a tab-separated file that looks like the below to perform the cross between the offspring of G01 and G02, and the offspring of G03 and G05, and so forth.
 ```
 G01	G02	G03	G05
 G01	G03	G05	G06
 G05	G06	G01	G04
 ```
-- `group <- cross.all.pairs(group,[settings])` : Cross every pair of lines in the `from_group`. 
-- `group <- cross.from.top.pc(group, threshold,[settings])` : Make random crosses between the subjects from `group` that are in the top `m`% by GEBV. 
-- `group <- self.n.times(group,n,[settings])` : Peform `n` steps of selfing on each member of the group. Only saves the end result of those steps. `times` is applied only once per call, not once per selfing step.
-- `group <- make.doubled.haploids(group,[settings])`
 
-All crossing functions take in a common set of settings. These are briefly described below.
-- `times` : A setting representing the number of times to do each cross.
-- `retain` : A boolean, repesenting whether to save the generated genotypes to memory or discard them. You may wish to discard them but save to file if you are generating too many crosses to save into memory.
-- `give.names` : A boolean representing whether or not to produce names for the new genotypes generated. The names produced would have format [name.prefix][id]
-- `name.prefix` : A string. If give.names is TRUE, the id is concatenated to this to produce the name of each new genotype.
-- `track.pedigree` :A boolean representing whether or not to save the ids of the parents of each new genotype to the new genotype's pedigree. If this is false, the new genotype's pedigree is unknown.
-- `give.ids` : A boolean representing whether or not to allocate each new genotype an id. If this is FALSE, the new genotype is 'invisible' to pedigree trackers and even if the pedigree of its offspring is supposedly tracked, the pedigree trackers will not be able to identify the progenitors of its offspring. Furthermore, if it is false and names are generated using give.names, all names generated in the same group will be the same. Probably you'd only have this FALSE if you were discarding the results or worried about id overflow.
-- `file.prefix` : A string representing the prefix of files produced if save.pedigree=TRUE, save.gebv=TRUE, or save.genotype=TRUE.
-- `save.pedigree` : A boolean. If TRUE, saves the pedigree in recursive format of each generated genotype to the text file with filename "[file.prefix]-pedigree".
-- `save.gebv` : A boolean. If TRUE, saves the GEBVs of each generated genotype to the tab-separated text file with filename "[file.prefix]-eff".
-- `save.genotype` : A boolean. If TRUE, saves the SNP/line matrix in regular format (generated genotypes as rows, SNPs as columns) to the tab-separated text file with filename "[file.prefix]-genome".
 
-When generating larger numbers of lines than will fit in memory, use the file-saving functions offered in these settings combined with `retain = FALSE`. This way, the package saves progressively/after every 1000 lines are generated, then overwrites that data, and so allow you to work around memory restrictions.
-
-## Output options
+## Output File Formats
 ### Saving genotypes
 Use the function `save.genotypes` or the `save.genotype = TRUE` setting of crossing functions to save the alleles of generated genotypes across the list of SNPs.
 
@@ -202,16 +359,15 @@ m2 AA     AA     AA
 m3 TT     TT     TT
 ```
 
-
 ### Saving pedigrees
 Pedigrees can be saved in one of two ways:
 
 - `save.pedigrees`, with `type = "P"`, which saves in the following format, even if grandparents are known:
 ```
-10	F2010=(F107)
-11	F2011=(F108,F109)
+F2010   F107   F107
+F2011   F108   F109
 ```
-The first cell is the ID number of the line, followed by the line name and then its parents in brackets. If only one parent is shown, then the line was produced by selfing or doubling haploids.
+This is a tab-separated text file. The first column is the child name, and the next two columns are the names of its immediate parents (or single parent duplicated if it was produced by selfing or doubling haploids). If names are not available, IDs are used instead.
 
 - `save.pedigrees`, with `type = "R"`, or crossing with setting `save.pedigree = TRUE`, which save in the following format:
 ```
@@ -239,21 +395,7 @@ m3	3	15.000000	0.100000	-0.100000
 ```
 This is a tab-separated text file. 
 
-## Other calculations
-Extra functionality is available for estimating where crossovers occured in producing certain genotypes. This is offered by the `find.crossovers` and `find.plot.crossovers` functions. The difference between the two is that after crossovers points are found, as well as saving the results matrix to a file `find.plot.crossovers` produces an R plot, as shown below. 
-
-![An example plot produced by the crossover finder function with certainty=FALSE. The lines plotted were produced by crossing the two parents then selfing for 6 generations. This produces a large number of crossover events.](crossovers.png)
-
-To identify crossovers, the code starts at the beginning of each chromosome for the current child line, and reads through to find SNPs where the parents differ/the provenance of the allele the child has there can be exactly determined. It reads through sequentially and in one direction only, to ensure the function runs fast.
-
-The functions have two parameters that affect the way the crossover counting works: `window.size` and `certainty`.
-
-The `certainty` setting determines whether unknowns are filled in or not with a guess based on the most recent parent. A visualisation of the effect of the `certainty` parameter is shown below.
-
-![Diagram to explain the `certainty` parameter](crossover-certainty.png)
-
-The `window.size` parameter should be an odd positive integer. The window size is the number of SNPs that are observed at a time. Only if the alleles of the child at all SNPs in the window can come from one parent, and that same sequence cannot come from the other, is the entry in the matrix at that SNP defined as the one parent.
-
+### Recombination counters
 The matrix saved to a file will have a format like the following:
 ```
 	m1	m2	m3
@@ -264,150 +406,23 @@ F10	0	1	0
 ```
 A 0 refers to an unknown parentage. Non-zero values are the ID of the parent from which the allele was inherited. 
 
-# Function Index
-Loading data:
 
-- `group <- load.data(allele.file, map.file, effect.file = NULL)`
-- `group <- load.more.genotypes(allele.file)`
-- `load.different.effects(effect.file)`
+## R Output Formats
 
-Simulating crossing:
+### `see.existing.groups`
+This function returns a dataframe with two columns:
 
-- `group <- cross.randomly(group,[settings])`
-- `group <- cross.combinations(cross.file,[settings])`
-- `group <- cross.dc.combinations(cross.file,[settings])`
-- `group <- cross.all.pairs(group,[settings])`
-- `group <- self.n.times(group,n,[settings])`
-- `group <- make.doubled.haploids(group,[settings])`
+- `Group`, containing the group numbers of all existing groups
+- `Group size`, containing the number of genotypes currently allocated to that group number.
 
-Performing selection:
+### `see.group.data`
+This function returns a vector containing the values of the chosen data type for each group member.
 
-- `selected.group <- select.by.gebv(from.group, low.score.best = FALSE, percentage OR number)`
-- For more customised selection, use the process
-  - `info <- evaluate.group(group)` to get group GEBVs
-  - `selected.info <- `[some R manipulation on `info` that performs the custom selection]
-  - `selected.group <- make.group(selected.info$I)`
+### `see.group.gebvs`
+This function returns a dataframe with two columns:
 
-Modify groupings:
-
-- `delete.group(group)`
-- `group <- combine.groups(groups)`
-- `group <- make.group(indexes)`
-- `[vector of groups] <- break.group.into.individuals(group)`
-
-Save data (saves results to files):
-
-- `save.genome.model(filename)`
-- `save.genotypes(filename, group = NULL, type = "R")`
-- `save.allele.counts(filename, group = NULL, allele)`
-- `save.pedigrees(filename, group = NULL, type = "R")`
-- `save.GEBVs(filename, group = NULL)`
-
-View data (pulls data into R dataframes):
-
-- `[vector of groups] <- see.existing.groups()`
-- `[vector containing the chosen data] <- see.group.data(group, data.type)`
-- `[index and GEBV for each group member] <- evaluate.group(group)`
-
-Identify recombination events:
-
-- `find.crossovers(parentage.file, out.file, window.size = 1, certainty = TRUE)`
-- `find.plot.crossovers(parentage.file, out.file, window.size = 1, certainty = TRUE)`
-
-Data Storage:
-
-- `sim.data$p` is an external pointer to the C struct where the data is stored.
-
-# Speed
-
-Code snippets were run and timed in RStudio version 1.2.5019, on the console, on a consumer-model laptop. 
-
-Loading 50 founder lines and 5112 SNPs (map, effect values, and alleles), took on average 0.64 seconds to execute.
-
-Without I/O (that is, no results were saved to files), it took on average 2 seconds for one crossing-simulation call to generate 100,000 (10e5) offspring. When saving GEBVs and pedigrees to files, the same call took approximately 20 seconds. When saving GEBVs, pedigrees, and alleles, the call took approximately 120 seconds. Generating the 10e5 genotypes, then saving GEBVs, pedigrees, and genotypes to files in separate calls, took slightly longer at approximately 130 seconds to complete. It will therefore be significantly faster to store genotypes in memory (where possible due to group/genotype sizes) until the data is needed for analysis.
-
-At this time, the simulation does not have parallel processing capabilities.
+- `i`, containing the indexes of the group members
+- `GEBV`, containing the GEBVs of the group member with that index
 
 
 
-# Examples
-
-## General workflow
-The example below shows a how a typical workflow would save group numbers and call crossing functions.
-```{R}
-# (Show the tiny example data set)
-read.csv("a-matrix.txt", sep='\t', header=T)
-read.csv("a-map.txt", sep='\t', header=T)
-read.csv("a-yield.txt", sep='\t')
-
-# load the small initial data set
-g0 <- load.data("a-matrix.txt", "a-map.txt", "a-yield.txt")
-
-# Do many random crosses from the data set. 
-f1 <- cross.randomly(g0, n.crosses=20, give.names=TRUE, name.prefix="F1.")
-
-# Let's see what crossovers we got. For this few markers we don't get much information.
-save.pedigrees("a.txt", f1, type="P")
-find.plot.crossovers("a.txt", "b.txt")
-
-# Make 40 random crosses from the 25% with the top yield
-f1.selected <- select.by.gebv(f1, percentage=25)
-f2 <- cross.randomly(f1.selected, n.crosses=40)
-
-# Delete groups we are not currently using, to free up some memory.
-delete.group(f1)
-
-# Complete 4 rounds of selfing.
-f6 <- self.n.times(f2, 4, file.prefix="af6", save.pedigree=TRUE, save.gebv=TRUE)
-
-# (Show current state of groups)
-print(c(g0, f1, f2, f6))
-see.existing.groups()
-
-# (Show these output files)
-read.csv("af6-pedigree", sep='\t')
-read.csv("af6-eff", sep='\t', header=F)
-
-```
-
-## Selection using GEBVs masked with environmental variance term
-```{R}
-f <- cross.randomly(g0, n.crosses=5, offspring=3)
-
-f.info <- see.group.gebvs(f) # this gives us the GEBVs of the group members
-
-# Create the masked values. In this case, a normally distributed term with sd corresponding
-# to environmental variance is added to each GEBV
-H2 <- 0.5  #estimate the heritability of the GEBV's trait at this step
-Vg <- var(f.info$GEBV)
-Ve <- Vg/H2 - Vg  # using the formula H2 = Vg/(Vg + Ve) to find the environmental variation
-f.info$Pheno <- f.info$GEBV + rnorm(length(f.info$GEBV), mean=0, sd = sqrt(Ve))
-  
-# Sort the list by phenotypes
-f.info <- f.info[order(f.info$Pheno, decreasing=TRUE),]
-# Send the top 10 phenotypes to a new group
-fselected <- make.group(f.info$i[1:10])
-
-# (optional: delete the non-selected genotypes)
-delete.group(f)
-
-# Then generate further generations from the selected genotypes
-f2 <- cross.randomly(fselected, n.crosses=100)
-```
-
-<!--# More detail:
-## Data Format
-The following relates to how the simulatin works by explaining some key elements in the underlying C simulation.
-
-The `SimData` struct tracks these items:
-
-- `markers`: The list of SNPs that the SimData tracks cannot be changed without clearing the contents of the
-- `map`: the positions of the SNPs in the genome.
-- `e`: effect values to be used to calculate GEBVs.
-- `m`: linked list of the genotypes currently in memory.
-- `group_list`: the group allocation of each genotype currently in memory
-
-See the following sections for explanation of the function of these items.
-
-## `m`
-The data about each line (name, alleles, id, and parentage) is saved in the linked list `m` of the SimData. Each entry in the linked list saves the genotypes, names, and ids of up to 1000 lines/individuals, and contains a pointer to the next entry. This should ensure that it takes longer for memory fragmentation to limit the number of lines that can be held in memory.-->
