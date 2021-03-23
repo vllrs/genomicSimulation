@@ -1,0 +1,6 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+vignettes/gSinstallguide.md
+vignettes/a.txt
+vignettes/af6-genome
+vignettes/b.txt

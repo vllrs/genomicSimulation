@@ -9,9 +9,9 @@ output:
       toc: true
       theme: simplex
 vignette: >
-  %\VignetteIndexEntry{gSvignette}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+  \VignetteIndexEntry{gSvignette}
+  \VignetteEngine{knitr::rmarkdown}
+  \VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
@@ -249,7 +249,7 @@ Save data (saves results to files):
 - `save.allele.counts(filename, group = NULL, allele)`
 - `save.pedigrees(filename, group = NULL, type = "R")`
 - `save.GEBVs(filename, group = NULL)`
-- `save.local.GEBVs(filename, block.file, group)` (functionality to save all genotypes at once is still to be added)
+- `save.local.GEBVs(filename, block.file, group = NULL)`
 
 View data (pulls data into R dataframes):
 
