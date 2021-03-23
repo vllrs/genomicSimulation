@@ -9,6 +9,7 @@ SEXP SXP_save_genotypes(SEXP exd, SEXP filename, SEXP group, SEXP type);
 SEXP SXP_save_counts(SEXP exd, SEXP filename, SEXP group, SEXP allele);
 SEXP SXP_save_pedigrees(SEXP exd, SEXP filename, SEXP group, SEXP type);
 SEXP SXP_save_GEBVs(SEXP exd, SEXP filename, SEXP group);
+SEXP SXP_save_partials(SEXP exd, SEXP filename, SEXP block_file, SEXP group);
 
 /* Savers */
 void save_simdata(FILE* f, SimData* m);
@@ -21,7 +22,8 @@ void save_transposed_group_alleles(FILE* f, SimData* d, int group_id);
 void save_group_one_step_pedigree(FILE* f, SimData* d, int group); 
 void save_one_step_pedigree(FILE* f, SimData* d); 
 void save_group_full_pedigree(FILE* f, SimData* d, int group);
-void save_full_pedigree(FILE* f, AlleleMatrix* m, AlleleMatrix* parents);
+void save_full_pedigree(FILE* f, SimData* d);
+void save_AM_pedigree(FILE* f, AlleleMatrix* m, SimData* parents);
 void save_parents_of(FILE* f, AlleleMatrix* m, unsigned int id);
 
 void save_group_fitness(FILE* f, SimData* d, int group);

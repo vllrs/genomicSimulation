@@ -249,6 +249,7 @@ Save data (saves results to files):
 - `save.allele.counts(filename, group = NULL, allele)`
 - `save.pedigrees(filename, group = NULL, type = "R")`
 - `save.GEBVs(filename, group = NULL)`
+- `save.local.GEBVs(filename, block.file, group)` (functionality to save all genotypes at once is still to be added)
 
 View data (pulls data into R dataframes):
 
@@ -384,6 +385,29 @@ Saving GEBVs, either via the `save.GEBVs` function or the `save.gebv = TRUE` set
 3	G03	1.600000
 ```
 This is a tab-separated text file. The first column is the ID, then the name of each line, then the GEBV of that line.
+
+### Saving block effect values/local GEBVs
+The effect values for each parental half of a genotype's alleles and summed up for markers in a particular block (defined in the `block.file` parameter) can be saved to a file via the `save.local.GEBVs` function.
+
+A block file with format the following format should be the second parameter:
+```
+Chrom	Pos	Name	Class	Markers
+1	2.3	b000000	b	m1;m2;m3;
+2 1.5 b000001 b m4;
+...
+```
+
+The chromosome number, position and class columns are ignored. Any number of markers can be semicolon-separated in the last column. 
+
+The output file has format:
+```
+    G1  G2  G3  G4 ...
+b000000_1   0.25    0.25    -0.45   -0.45 ...
+b000000_2   0.25    0.20    0.05    0.20 ...
+b000001_1 ...
+b000001_2 ...
+```
+This is a tab-separated text file.
 
 ### Save a summary of the `SimData`
 The function `save.genome.model` is available to print out the map and effect values that the current `SimData` is using. The format in which it prints them is:

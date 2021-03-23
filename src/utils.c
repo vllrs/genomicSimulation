@@ -129,7 +129,7 @@ void set_subject_ids(SimData* d, int from_index, int to_index) {
 	}
 }
 
-LineGroup get_new_group(SimData* d, const char* groupName) {
+/*LineGroup get_new_group(SimData* d, const char* groupName) {
 	LineGroup group;
 	group.gid = get_new_group_num(d);
 	if (groupName == NULL) {
@@ -140,7 +140,7 @@ LineGroup get_new_group(SimData* d, const char* groupName) {
 	}
 	
 	return group;
-}
+}*/
 
 
 /** Opens a table file and reads the number of columns and rows 

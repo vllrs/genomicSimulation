@@ -3,7 +3,7 @@
 #' \code{cross.randomly} returns the group number of the group
 #' that the new genotypes were loaded into. Selfing is not permitted.
 #'
-#' For random crossing, the offpsring parameter represents the number of 
+#' For random crossing, the offspring parameter represents the number of 
 #' random crosses to perform.
 #'
 #' Random crosses can only be performed within a group, not within the
@@ -70,7 +70,7 @@ cross.randomly <- function(group, n.crosses=5, offspring=1, retain=TRUE, give.na
 #' \code{cross.combinations} returns the group number of the group
 #' that the new genotypes were loaded into. 
 #'
-#' The offpsring parameter represents the number of times each cross in the file
+#' The offspring parameter represents the number of times each cross in the file
 #' is carried out.
 #'
 #' The function searches for the parents of each cross by name, so parents must
@@ -80,7 +80,7 @@ cross.randomly <- function(group, n.crosses=5, offspring=1, retain=TRUE, give.na
 #' to read and contain a tab-separated pair of names on each line. Each line
 #' represents a cross to make.
 #' @inheritParams cross.randomly
-#' @param offpsring The number of times each combination in the file is crossed.
+#' @param offspring The number of times each combination in the file is crossed.
 #' @return The group number of the new crosses produced
 #'
 #' @family crossing functions
@@ -111,7 +111,7 @@ cross.combinations <- function(cross.file, offspring=1, retain=TRUE, give.names=
 #' to read and contain a tab-separated quartet of names on each line. Each line
 #' represents a cross to make.
 #' @inheritParams cross.randomly
-#' @param offpsring The number of times each combination in the file is crossed.
+#' @param offspring The number of times each combination in the file is crossed.
 #' @return The group number of the new crosses produced
 #'
 #' @family crossing functions
@@ -136,7 +136,7 @@ cross.dc.combinations <- function(cross.file, offspring=1, retain=TRUE, give.nam
 #' this has no effect.
 #'
 #' @inheritParams cross.randomly
-#' @param offpsring The number of times each combination of group members is crossed.
+#' @param offspring The number of times each combination of group members is crossed.
 #' @return The group number of the new crosses produced, or 0 if they could not be
 #' produced due to an invalid parent group number being provided.
 #'
@@ -162,7 +162,7 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 # by GEBV and performs random crosses betwee them.
 #
 #
-# The offpsring parameter represents the number of random crosses performed.
+# The offspring parameter represents the number of random crosses performed.
 #
 # @param threshold The percent threshold with the highest GEBVs to subset and do 
 # random crosses of. Should not be the decimal version of a percentage: eg for top 5%, 
@@ -173,11 +173,11 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 # @family crossing functions
 # @useDynLib genomicSimulation cross_top
 # @export
-#cross.from.top.pc <- function(group, threshold, offpsring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+#cross.from.top.pc <- function(group, threshold, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 #		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 #		save.gebv=FALSE, save.genotype=FALSE) {
 #	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-#	return(.Call(cross_top, sim.data$p, group, threshold, give.names, name.prefix, offpsring, track.pedigree, 
+#	return(.Call(cross_top, sim.data$p, group, threshold, give.names, name.prefix, offspring, track.pedigree, 
 #				 give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 #}
 
@@ -190,13 +190,13 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 #' with itself), then another on the output of that setp, etc., for a total of 
 #' n steps of selfing. 
 #'
-#' The offpsring parameter represents the number of genotypes produced from each 
+#' The offspring parameter represents the number of genotypes produced from each 
 #' genotype in the original group. These genotypes from the same family are 
 #' independently descended from the original genotype.
 #'
 #' @param n An integer representing the number of steps of selfing to perform.
 #' @inheritParams cross.randomly
-#' @param offpsring This many offspring of each group member will be produced at the 
+#' @param offspring This many offspring of each group member will be produced at the 
 #' first selfing step. After that step, exactly one selfed offspring from each
 #' parent will be progressed, no matter this value.
 #' @return The group number of the new genotypes produced, or 0 if none could be
@@ -221,13 +221,13 @@ self.n.times <- function(group, n, offspring=1, retain=TRUE, give.names=FALSE, n
 #' The function generates a gamete from each genome in the original group. 
 #' Output genomes are therefore perfectly homozygous.
 #'
-#' The offpsring parameter represents the number of genotypes produced from each 
+#' The offspring parameter represents the number of genotypes produced from each 
 #' genotype in the original group. These genotypes from the same family are 
 #' independently produced from the original genotype (i.e. a different gamete
 #' to duplicate is generated for each of them)
 #'
 #' @inheritParams cross.randomly
-#' @param offpsring The number of doubled haploids to make from each group member.
+#' @param offspring The number of doubled haploids to make from each group member.
 #' @return The group number of the new genotypes produced, or 0 if none could be
 #' produced due to an invalid parent group number being provided.
 #'
@@ -249,11 +249,11 @@ make.doubled.haploids <- function(group, offspring=1, retain=TRUE, give.names=FA
 #' achieve similar functionality to \code{\link{cross.combinations}} without
 #' needing to save the combinations to be performed to a file.
 #'
-#' The offpsring parameter represents the number of offspring to make from
+#' The offspring parameter represents the number of offspring to make from
 #' this pair of parents.
 #' 
 #' @inheritParams cross.randomly
-#' @param offpsring The number of offspring to produce from this pair of parents
+#' @param offspring The number of offspring to produce from this pair of parents
 #' @return The group number of the group that the generated offspring were loaded into.
 #'
 #' @family crossing functions

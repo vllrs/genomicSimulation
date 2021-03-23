@@ -152,7 +152,6 @@ int load_transposed_genes_to_simdata(SimData* d, const char* filename, const cha
 	// now read the rest of the table.
 	char word2[30];
 	int badRows = 0;
-	current_am = d->m;
 	for (int j = 0; j < (t.num_rows - 1); ++j) {
 		R_CheckUserInterrupt();
 		// looping through rows in the table.
@@ -162,6 +161,7 @@ int load_transposed_genes_to_simdata(SimData* d, const char* filename, const cha
 		d->markers[j] = get_malloc(sizeof(char) * strlen(word) + 1);
 		strncpy(d->markers[j], word, strlen(word) + 1);
 		
+		current_am = d->m;
 		//d->m->alleles[j] = get_malloc(sizeof(char) * d->m[0].n_subjects * 2);
 		for (int i = 0, i_am = 0; i < (t.num_columns - 1); ++i, ++i_am) {
 			// looping through the remaining columns in this row.
@@ -260,7 +260,6 @@ int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename, c
 	GetRNGstate();
 	char c, decoded[2];
 	int r;
-	current_am = d->m;
 	for (int j = 0; j < (t.num_rows - 1); ++j) {
 		R_CheckUserInterrupt();
 		// looping through rows in the table.
@@ -270,6 +269,7 @@ int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename, c
 		d->markers[j] = get_malloc(sizeof(char) * strlen(word) + 1);
 		strncpy(d->markers[j], word, strlen(word) + 1);
 		
+		current_am = d->m;
 		//d->m->alleles[j] = get_malloc(sizeof(char) * d->m[0].n_subjects * 2);
 		for (int i = 0, i_am = 0; i < (t.num_columns - 1); ++i, ++i_am) {
 			// looping through the remaining columns in this row.

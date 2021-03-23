@@ -573,7 +573,7 @@ int cross_this_pair(SimData* d, int parent1_index, int parent2_index, GenOptions
 			
 			// save the subjects to files if appropriate
 			if (g.will_save_pedigree_to_file) {
-				save_full_pedigree( fp, crosses, d->m);
+				save_AM_pedigree( fp, crosses, d);
 			}
 			if (g.will_save_effects_to_file) {
 				eff = calculate_fitness_metric( crosses, &(d->e));
@@ -619,7 +619,7 @@ int cross_this_pair(SimData* d, int parent1_index, int parent2_index, GenOptions
 	
 	// save the subjects to files if appropriate
 	if (g.will_save_pedigree_to_file) {
-		save_full_pedigree( fp, crosses, d->m);
+		save_AM_pedigree( fp, crosses, d);
 		fclose(fp);
 	}
 	if (g.will_save_effects_to_file) {
@@ -739,7 +739,7 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, GenOptio
 				
 				// save the subjects to files if appropriate
 				if (g.will_save_pedigree_to_file) {
-					save_full_pedigree( fp, crosses, d->m);
+					save_AM_pedigree( fp, crosses, d);
 				}
 				if (g.will_save_effects_to_file) {
 					eff = calculate_fitness_metric( crosses, &(d->e));
@@ -792,7 +792,7 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, GenOptio
 	
 	// save the subjects to files if appropriate
 	if (g.will_save_pedigree_to_file) {
-		save_full_pedigree( fp, crosses, d->m);
+		save_AM_pedigree( fp, crosses, d);
 		fclose(fp);
 	}
 	if (g.will_save_effects_to_file) {
@@ -910,7 +910,7 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 					
 					// save the subjects to files if appropriate
 					if (g.will_save_pedigree_to_file) {
-						save_full_pedigree( fp, crosses, d->m);
+						save_AM_pedigree( fp, crosses, d);
 					}
 					if (g.will_save_effects_to_file) {
 						eff = calculate_fitness_metric( crosses, &(d->e));
@@ -960,7 +960,7 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 	
 	// save the subjects to files if appropriate
 	if (g.will_save_pedigree_to_file) {
-		save_full_pedigree( fp, crosses, d->m);
+		save_AM_pedigree( fp, crosses, d);
 		fclose(fp);
 	}
 	if (g.will_save_effects_to_file) {
@@ -1082,7 +1082,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 					
 					// save the subjects to files if appropriate
 					if (g.will_save_pedigree_to_file) {
-						save_full_pedigree( fp, outcome, d->m);
+						save_AM_pedigree( fp, outcome, d);
 					}
 					if (g.will_save_effects_to_file) {
 						eff = calculate_fitness_metric( outcome, &(d->e));
@@ -1133,7 +1133,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 					
 					// save the subjects to files if appropriate
 					if (g.will_save_pedigree_to_file) {
-						save_full_pedigree( fp, outcome, d->m);
+						save_AM_pedigree( fp, outcome, d);
 					}
 					if (g.will_save_effects_to_file) {
 						eff = calculate_fitness_metric( outcome, &(d->e));
@@ -1216,7 +1216,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	
 	// save the subjects to files if appropriate
 	if (g.will_save_pedigree_to_file) {
-		save_full_pedigree( fp, outcome, d->m);
+		save_AM_pedigree( fp, outcome, d);
 		fclose(fp);
 	}
 	if (g.will_save_effects_to_file) {
@@ -1321,7 +1321,7 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 				
 				// save the subjects to files if appropriate
 				if (g.will_save_pedigree_to_file) {
-					save_full_pedigree( fp, outcome, d->m);
+					save_AM_pedigree( fp, outcome, d);
 				}
 				if (g.will_save_effects_to_file) {
 					eff = calculate_fitness_metric( outcome, &(d->e));
@@ -1373,7 +1373,7 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 	
 	// save the subjects to files if appropriate
 	if (g.will_save_pedigree_to_file) {
-		save_full_pedigree( fp, outcome, d->m);
+		save_AM_pedigree( fp, outcome, d);
 		fclose(fp);
 	}
 	if (g.will_save_effects_to_file) {

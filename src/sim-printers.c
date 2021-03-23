@@ -87,7 +87,7 @@ SEXP SXP_save_pedigrees(SEXP exd, SEXP filename, SEXP group, SEXP type) {
 	const char t = CHAR(asChar(type))[0];	
 	if (t == 'R' || t == 'r') { // full/recursive
 		if (isNull(group)) {
-			save_full_pedigree(f, d->m, d->m);
+			save_full_pedigree(f, d);
 		} else if (asInteger(group) >= 0) {
 			save_group_full_pedigree(f, d, asInteger(group));
 		} else {
@@ -131,6 +131,21 @@ SEXP SXP_save_GEBVs(SEXP exd, SEXP filename, SEXP group) {
 	
 	fclose(f);
 	return ScalarInteger(0);
+}
+
+SEXP SXP_save_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP group) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
+	
+	if (isNull(group)) {
+		calculate_all_block_effects(d, CHAR(asChar(block_file)), CHAR(asChar(filename)));
+	} else if (asInteger(group) > 0) {
+		calculate_group_block_effects(d, CHAR(asChar(block_file)), CHAR(asChar(filename)), asInteger(group));
+	} else {
+		error("Supplied group number is invalid.\n");
+	}
+	
+	return ScalarInteger(0);	
 }
 
 /*--------------------------------Printing-----------------------------------*/
@@ -521,62 +536,42 @@ void save_group_full_pedigree(FILE* f, SimData* d, int group) {
 }
 
 /*Saves pedigree of all in m.*/
-void save_full_pedigree(FILE* f, AlleleMatrix* m, AlleleMatrix* parents) {
+void save_full_pedigree(FILE* f, SimData* d) {
 	const char newline[] = "\n";
-	const char tab[] = "\t";
 	
-	for (int i = 0; i < m->n_subjects; i++) {
+	AlleleMatrix* m = d->m;
+	
+	do {
+		for (int i = 0; i < m->n_subjects; ++i) {
+			/*Group member name*/
+			fprintf(f, "%d\t", m->ids[i]);
+			if (m->subject_names[i] != NULL) {
+				fwrite(m->subject_names[i], sizeof(char), strlen(m->subject_names[i]), f);
+			}
+			
+			save_parents_of(f, d->m, m->ids[i]);
+			fwrite(newline, sizeof(char), 1, f);
+		}
+	} while ((m = m->next) != NULL);
+	fflush(f);
+}
+
+void save_AM_pedigree(FILE* f, AlleleMatrix* m, SimData* parents) {
+	const char newline[] = "\n";
+	
+	for (int i = 0; i < m->n_subjects; ++i) {
 		/*Group member name*/
-		//fwrite(m->ids + i, sizeof(int), 1, f);
-		fprintf(f, "%d", m->ids[i]);
-		fwrite(tab, sizeof(char), 1, f);
+		fprintf(f, "%d\t", m->ids[i]);
 		if (m->subject_names[i] != NULL) {
 			fwrite(m->subject_names[i], sizeof(char), strlen(m->subject_names[i]), f);
 		}
 		
-		// save our parents
-		// open brackets
-		fwrite("=(", sizeof(char), 2, f);
-		char* name;
-		if (m->pedigrees[0][i] == m->pedigrees[1][i]) {
-			// Selfed parent
-			name = get_name_of_id( parents, m->pedigrees[0][i]);
-			if (name != NULL) {
-				fwrite(name, sizeof(char), strlen(name), f);
-			} else if (m->pedigrees[0][i] > 0) {
-				fprintf(f, "%d", m->pedigrees[0][i]);
-				//fwrite(m->pedigrees[0] + i, sizeof(int), 1, f);
-			}	
-			save_parents_of(f, parents, m->pedigrees[0][i]);
-		} else {
-			// Parent 1
-			name = get_name_of_id( parents, m->pedigrees[0][i]);
-			if (name != NULL) {
-				fwrite(name, sizeof(char), strlen(name), f);
-			} else if (m->pedigrees[0][i] > 0) {
-				fprintf(f, "%d", m->pedigrees[0][i]);
-				//fwrite(m->pedigrees[0] + i, sizeof(int), 1, f);
-			}
-			save_parents_of(f, parents, m->pedigrees[0][i]);
-			// separator
-			fwrite(",", sizeof(char), 1, f);
-			// Parent 2
-			name = get_name_of_id( parents, m->pedigrees[1][i]);
-			if (name != NULL) {
-				fwrite(name, sizeof(char), strlen(name), f);
-			} else if (m->pedigrees[1][i] > 0) {
-				fprintf(f, "%d", m->pedigrees[1][i]);
-				//fwrite(m->pedigrees[0] + i + 1, sizeof(int), 1, f);
-			}
-			save_parents_of(f, parents, m->pedigrees[1][i]);
-		}
-		// close brackets
-		fwrite(")", sizeof(char), 1, f);
-		
+		save_parents_of(f, parents->m, m->ids[i]);
 		fwrite(newline, sizeof(char), 1, f);
 	}
-	fflush(f);	
+	fflush(f);
 }
+
 
 /*Recursive, saves all parents and their parents.*/
 void save_parents_of(FILE* f, AlleleMatrix* m, unsigned int id) {

@@ -135,3 +135,36 @@ save.GEBVs <- function(filename, group=NULL) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_save_GEBVs, sim.data$p, filename, group))
 }
+
+#' Save the local GEBVs of each block in each selected line's haplotypes to a file. 
+#'
+#' \code{save.local.GEBVs} calculates GEBVs for each block of markers listed in 
+#' `block.file` for the maternal and paternal halves of its genotype. The results
+#' are saved to a file. The output file is formatted with the blocks as unlabelled columns
+#' and two rows for each genotype, named [line name]_1 and [line name]_2. The entries
+#' in this matrix are the calculated local GEBVs/block effects.
+#'
+#' Note that this function was written to run on an HPC cluster and so aims for speed rather
+#' than considering potential memory constraints. If the function crashes, it is likely
+#' that the system on which it is being run is not giving it enough memory to make a matrix
+#' of all lines and blocks. Try running the function on smaller groups of lines and concatenating
+#' the output files, or contact the package maintainer to ask them to have another look at
+#' this function and fix it up.
+#'
+#' @param filename A string containing a filename to which the output will
+#' be written
+#' @param block.file A string containing a filename from which the blocks should be read.
+#' It should have five columns and a header row. The third column (block name) and 
+#' fifth column (semicolon-separated marker names for the markers in the block) are 
+#' the only columns that will be used. Designed for the output of the function 
+#' `st.def.hblocks` from the package SelectionTools
+#' @param group Save only lines that belong to this group.
+#' @return 0 on success. On failure an error will be raised.
+#'
+#' @family saving functions
+#' @useDynLib genomicSimulation SXP_save_block_effects
+#' @export
+save.local.GEBVs <- function(filename, block.file, group=NULL) {
+	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+	return(.Call(SXP_save_block_effects, sim.data$p, filename, block.file, group))
+}
