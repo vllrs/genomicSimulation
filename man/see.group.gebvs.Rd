@@ -7,9 +7,7 @@
 see.group.gebvs(group)
 }
 \arguments{
-\item{group}{an integer: the group number of the group to return the GEBVs of.
-If a vector, the dataframe returned will have multiple columns, each of which is
-the GEBVs of a group in the vector.}
+\item{group}{an integer: the group number of the group to return the GEBVs of.}
 }
 \value{
 a dataframe whose columns are the GEBVs of the group members and 
@@ -45,6 +43,7 @@ Other saving functions:
 \code{\link{save.allele.counts}()},
 \code{\link{save.genome.model}()},
 \code{\link{save.genotypes}()},
+\code{\link{save.local.GEBVs}()},
 \code{\link{save.pedigrees}()},
 \code{\link{see.group.data}()}
 }

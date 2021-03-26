@@ -22,6 +22,7 @@ Other saving functions:
 \code{\link{save.GEBVs}()},
 \code{\link{save.allele.counts}()},
 \code{\link{save.genotypes}()},
+\code{\link{save.local.GEBVs}()},
 \code{\link{save.pedigrees}()},
 \code{\link{see.group.data}()},
 \code{\link{see.group.gebvs}()}

@@ -154,7 +154,6 @@ see.group.data <- function(group, data.type) {
 #' and split them into a new group using \code{\link{make.group}}. 
 #'
 #' @param from.group an integer: the group number of the group perform selection on.
-#' If a vector, the selection will be done on each group in the vector.
 #' @param low.score.best If FALSE, then the highest GEBVs are selected. If TRUE,
 #' then the lower ones are selected.
 #' @param percentage If this is a number and number and threshold are NULL, then 
@@ -199,8 +198,6 @@ select.by.gebv <- function(from.group, low.score.best=FALSE, percentage=NULL, nu
 #' them off into a new group.
 #'
 #' @param group an integer: the group number of the group to return the GEBVs of.
-#' If a vector, the dataframe returned will have multiple columns, each of which is
-#' the GEBVs of a group in the vector.
 #' @returns a dataframe whose columns are the GEBVs of the group members and 
 #' the indexes of the group members.
 #'

@@ -6,7 +6,7 @@
 \usage{
 cross.combinations(
   cross.file,
-  offpsring = 1,
+  offspring = 1,
   retain = TRUE,
   give.names = FALSE,
   name.prefix = NULL,
@@ -23,7 +23,7 @@ cross.combinations(
 to read and contain a tab-separated pair of names on each line. Each line
 represents a cross to make.}
 
-\item{offpsring}{The number of times each combination in the file is crossed.}
+\item{offspring}{The number of times each combination in the file is crossed.}
 
 \item{retain}{A boolean, repesenting whether to save the generated
 genotypes to memory or discard them. You may wish to discard them
@@ -78,7 +78,7 @@ The group number of the new crosses produced
 that the new genotypes were loaded into.
 }
 \details{
-The offpsring parameter represents the number of times each cross in the file
+The offspring parameter represents the number of times each cross in the file
 is carried out.
 
 The function searches for the parents of each cross by name, so parents must

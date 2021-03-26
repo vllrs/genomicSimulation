@@ -7,7 +7,7 @@ laid out in a file.}
 \usage{
 cross.dc.combinations(
   cross.file,
-  offpsring = 1,
+  offspring = 1,
   retain = TRUE,
   give.names = FALSE,
   name.prefix = NULL,
@@ -24,7 +24,7 @@ cross.dc.combinations(
 to read and contain a tab-separated quartet of names on each line. Each line
 represents a cross to make.}
 
-\item{offpsring}{The number of times each combination in the file is crossed.}
+\item{offspring}{The number of times each combination in the file is crossed.}
 
 \item{retain}{A boolean, repesenting whether to save the generated
 genotypes to memory or discard them. You may wish to discard them

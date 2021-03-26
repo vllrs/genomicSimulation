@@ -6,7 +6,7 @@
 \usage{
 make.doubled.haploids(
   group,
-  offpsring = 1,
+  offspring = 1,
   retain = TRUE,
   give.names = FALSE,
   name.prefix = NULL,
@@ -23,7 +23,7 @@ make.doubled.haploids(
 random crosses. If a vector, the parameters and breeding method 
 (eg. random crossing) will be applied to each group number in the vector.}
 
-\item{offpsring}{The number of doubled haploids to make from each group member.}
+\item{offspring}{The number of doubled haploids to make from each group member.}
 
 \item{retain}{A boolean, repesenting whether to save the generated
 genotypes to memory or discard them. You may wish to discard them
@@ -82,7 +82,7 @@ that the new genotypes were loaded into.
 The function generates a gamete from each genome in the original group. 
 Output genomes are therefore perfectly homozygous.
 
-The offpsring parameter represents the number of genotypes produced from each 
+The offspring parameter represents the number of genotypes produced from each 
 genotype in the original group. These genotypes from the same family are 
 independently produced from the original genotype (i.e. a different gamete
 to duplicate is generated for each of them)

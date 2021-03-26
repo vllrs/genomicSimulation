@@ -1,5 +1,6 @@
 *.o
 .Rproj.user
+.Rhistory
 vignettes/a.txt
 vignettes/af6-genome
 vignettes/b.txt

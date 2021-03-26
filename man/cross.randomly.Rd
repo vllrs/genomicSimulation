@@ -7,7 +7,7 @@
 cross.randomly(
   group,
   n.crosses = 5,
-  offpsring = 1,
+  offspring = 1,
   retain = TRUE,
   give.names = FALSE,
   name.prefix = NULL,
@@ -27,7 +27,7 @@ random crosses. If a vector, the parameters and breeding method
 \item{n.crosses}{The function will pick this many random pairs of parents
 to cross.}
 
-\item{offpsring}{The number of times to cross each randomly-chosen pair.}
+\item{offspring}{The number of times to cross each randomly-chosen pair.}
 
 \item{retain}{A boolean, repesenting whether to save the generated
 genotypes to memory or discard them. You may wish to discard them
@@ -83,7 +83,7 @@ produced due to an invalid parent group number being provided.
 that the new genotypes were loaded into. Selfing is not permitted.
 }
 \details{
-For random crossing, the offpsring parameter represents the number of 
+For random crossing, the offspring parameter represents the number of 
 random crosses to perform.
 
 Random crosses can only be performed within a group, not within the

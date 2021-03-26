@@ -7,7 +7,7 @@
 self.n.times(
   group,
   n,
-  offpsring = 1,
+  offspring = 1,
   retain = TRUE,
   give.names = FALSE,
   name.prefix = NULL,
@@ -26,7 +26,7 @@ random crosses. If a vector, the parameters and breeding method
 
 \item{n}{An integer representing the number of steps of selfing to perform.}
 
-\item{offpsring}{This many offspring of each group member will be produced at the 
+\item{offspring}{This many offspring of each group member will be produced at the 
 first selfing step. After that step, exactly one selfed offspring from each
 parent will be progressed, no matter this value.}
 
@@ -88,7 +88,7 @@ The function performs a selfing step (crosses each genotype
 with itself), then another on the output of that setp, etc., for a total of 
 n steps of selfing. 
 
-The offpsring parameter represents the number of genotypes produced from each 
+The offspring parameter represents the number of genotypes produced from each 
 genotype in the original group. These genotypes from the same family are 
 independently descended from the original genotype.
 }

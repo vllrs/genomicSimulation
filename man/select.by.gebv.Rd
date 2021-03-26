@@ -12,8 +12,7 @@ select.by.gebv(
 )
 }
 \arguments{
-\item{from.group}{an integer: the group number of the group perform selection on.
-If a vector, the selection will be done on each group in the vector.}
+\item{from.group}{an integer: the group number of the group perform selection on.}
 
 \item{low.score.best}{If FALSE, then the highest GEBVs are selected. If TRUE,
 then the lower ones are selected.}

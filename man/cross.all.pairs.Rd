@@ -7,7 +7,7 @@ in one direction}
 \usage{
 cross.all.pairs(
   group,
-  offpsring = 1,
+  offspring = 1,
   retain = TRUE,
   give.names = FALSE,
   name.prefix = NULL,
@@ -24,7 +24,7 @@ cross.all.pairs(
 random crosses. If a vector, the parameters and breeding method 
 (eg. random crossing) will be applied to each group number in the vector.}
 
-\item{offpsring}{The number of times each combination of group members is crossed.}
+\item{offspring}{The number of times each combination of group members is crossed.}
 
 \item{retain}{A boolean, repesenting whether to save the generated
 genotypes to memory or discard them. You may wish to discard them

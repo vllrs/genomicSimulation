@@ -7,7 +7,7 @@
 cross(
   parent1.index,
   parent2.index,
-  offpsring = 1,
+  offspring = 1,
   retain = TRUE,
   give.names = FALSE,
   name.prefix = NULL,
@@ -20,7 +20,7 @@ cross(
 )
 }
 \arguments{
-\item{offpsring}{The number of offspring to produce from this pair of parents}
+\item{offspring}{The number of offspring to produce from this pair of parents}
 
 \item{retain}{A boolean, repesenting whether to save the generated
 genotypes to memory or discard them. You may wish to discard them
@@ -77,7 +77,7 @@ achieve similar functionality to \code{\link{cross.combinations}} without
 needing to save the combinations to be performed to a file.
 }
 \details{
-The offpsring parameter represents the number of offspring to make from
+The offspring parameter represents the number of offspring to make from
 this pair of parents.
 }
 \seealso{
