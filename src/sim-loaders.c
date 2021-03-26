@@ -336,7 +336,6 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, cons
 	
 	// now we want to read the header columns. 
 	// There are num_columns-1 of these because of the 'name' entry	
-	// this will also create our unique ids
 	
 	// find the end of the AM chain so far
 	AlleleMatrix* last_am = d->m; 
@@ -345,6 +344,7 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, cons
 		last_am = last_am->next;
 		last_n_subjects += last_am->n_subjects;
 	}	
+	
 	// Create new AMs that will be populated from the file.
 	AlleleMatrix* current_am;
 	int n_to_go = t.num_columns - 1;
@@ -357,7 +357,7 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, cons
 		last_am->next = current_am;
 		n_to_go -= 1000;
 		while (n_to_go) {
-			if (n_to_go <= 1000) {
+			if (n_to_go < 1000) {
 				current_am->next = create_empty_allelematrix(d->n_markers, n_to_go);
 				n_to_go = 0;
 			} else {
@@ -368,9 +368,6 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, cons
 		}
 		current_am = last_am->next;
 	}
-	
-	// set the ids for the subjects we loaded
-	set_subject_ids(d, last_n_subjects, last_n_subjects + t.num_columns - 2);
 	
 	// load in the subject names from the header
 	for (int i = 0, i_am = 0; i < (t.num_columns-1); ++i, ++i_am) {
@@ -389,6 +386,10 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, cons
 	// get the rest of the line, to be clean
 	fscanf(fp, "%*[^\n]\n");
 	
+	
+	// set the ids for the subjects we loaded
+	set_subject_ids(d, last_n_subjects, last_n_subjects + t.num_columns - 2);
+	
 	// get space to put marker names and data we gathered
 	// now read the rest of the table.
 	char word2[30];
@@ -401,6 +402,8 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, cons
 		// get the row name, store in markers
 		fscanf(fp, "%s", word);
 		markeri = get_from_unordered_str_list(word, d->markers, d->n_markers);
+		
+		current_am = last_am;
 		
 		if (markeri >= 0) {
 			for (int i = 0, i_am = 0; i < (t.num_columns - 1); ++i, ++i_am) {
@@ -423,13 +426,13 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, cons
 				current_am->groups[i_am] = gp;
 			}
 		} else {
-			error( "Could not find the marker %s\n", word);
+			warning( "Could not find the marker %s\n", word);
 		}
 	}	
-	condense_allele_matrix(d);
-	
 	Rprintf("%d genotypes were loaded.\n", t.num_columns - 1);
 	fclose(fp);
+	
+	condense_allele_matrix(d);
 	return gp;
 }
 
