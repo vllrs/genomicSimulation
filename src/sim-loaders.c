@@ -337,7 +337,9 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, cons
 	// now we want to read the header columns. 
 	// There are num_columns-1 of these because of the 'name' entry	
 	
-	// find the end of the AM chain so far
+	// find the end of the AM chain so far. This will be the last AM
+	// and the index of that AM that is just past the end of the 
+	// previously-loaded subjects
 	AlleleMatrix* last_am = d->m; 
 	int last_n_subjects = last_am->n_subjects;
 	while (last_am->next != NULL) {
@@ -406,7 +408,7 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, cons
 		current_am = last_am;
 		
 		if (markeri >= 0) {
-			for (int i = 0, i_am = 0; i < (t.num_columns - 1); ++i, ++i_am) {
+			for (int i = 0, i_am = last_n_subjects; i < (t.num_columns - 1); ++i, ++i_am) {
 				// looping through the remaining columns in this row.
 				fscanf(fp, "\t%s", word2);
 				
