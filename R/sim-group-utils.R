@@ -215,4 +215,22 @@ see.group.gebvs <- function(group) {
 	return(d)
 }
 
+#' Get a string containing the ultimate/highest-scoring genotype.
+#'
+#' \code{see.optimal.genotype} allows you to extract the optimal genotype 
+#' according to the current loaded effect values as an R string. An error is 
+#' raised if no effect values have been loaded.
+#'
+#' @return A string containing the allele out of available alleles at that
+#' marker that has the highest effect value. The string will be ordered in
+#' genome order (lowest chromosome and lowest position to highest) according
+#' to the map that was included on initialisation.
+#'
+#' @family saving functions
+#' @useDynLib genomicSimulation SXP_get_best_genotype
+#' @export
+see.optimal.genotype <- function() {
+	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+	return(.Call(SXP_get_best_genotype, sim.data$p))
+}
 

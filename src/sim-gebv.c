@@ -497,3 +497,45 @@ void calculate_group_block_effects(SimData* d, const char* block_file, const cha
 	fclose(outfile);
 	return;
 }
+
+/** Takes a look at the currently-loaded effect values and creates a string
+ * containing the allele with the highest effect value for each marker as ordered
+ * in the SimData. Returns this as a null-terminated heap array of characters of 
+ * length d->n_markers + one null byte.
+ * The return value should be freed when usage is finished!
+ */
+char* calculate_ideal_genotype(SimData* d) {
+	if (d->e.effects.matrix == NULL || d->e.effects.rows < 1 || d->e.effect_names == NULL) {
+		error("No effect values are loaded\n");
+	}
+	
+char* optimal = get_malloc(sizeof(char)* (d->n_markers + 1));
+	char best_allele;
+	int best_score;
+	
+	for (int i = 0; i < d->n_markers; ++i) {
+		best_allele = d->e.effect_names[0];
+		best_score = d->e.effects.matrix[0][i];
+		for (int a = 1; a < d->e.effects.rows; ++a) {
+			if (d->e.effects.matrix[a][i] > best_score) {
+				best_score = d->e.effects.matrix[a][i];
+				best_allele = d->e.effect_names[a];
+			}
+		}
+		optimal[i] = best_allele;
+	}
+	optimal[d->n_markers] = '\0';
+	return optimal;
+}
+
+SEXP SXP_get_best_genotype(SEXP exd) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	char* best_genotype = calculate_ideal_genotype(d);
+	
+	SEXP out = PROTECT(allocVector(STRSXP, 1));
+	SET_STRING_ELT(out, 0, mkChar(best_genotype));
+	free(best_genotype);
+	UNPROTECT(1);
+	return out;
+}

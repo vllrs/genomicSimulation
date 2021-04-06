@@ -37,6 +37,7 @@ Other saving functions:
 \code{\link{save.local.GEBVs}()},
 \code{\link{save.pedigrees}()},
 \code{\link{see.group.data}()},
-\code{\link{see.group.gebvs}()}
+\code{\link{see.group.gebvs}()},
+\code{\link{see.optimal.genotype}()}
 }
 \concept{saving functions}

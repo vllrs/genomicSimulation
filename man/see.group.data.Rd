@@ -60,7 +60,8 @@ Other saving functions:
 \code{\link{save.genotypes}()},
 \code{\link{save.local.GEBVs}()},
 \code{\link{save.pedigrees}()},
-\code{\link{see.group.gebvs}()}
+\code{\link{see.group.gebvs}()},
+\code{\link{see.optimal.genotype}()}
 }
 \concept{grouping functions}
 \concept{saving functions}

@@ -1756,4 +1756,3 @@ SEXP SXP_get_group_data(SEXP exd, SEXP group, SEXP whatData) {
 		error("`data.type` parameter has unknown value.");
 	}
 }
-
