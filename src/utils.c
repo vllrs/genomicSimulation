@@ -15,7 +15,12 @@ const GenOptions BASIC_OPT = {
 };
 
 /** Replace calls to malloc direct with this function, which errors and exits
- * if memory allocation fails. */
+ * with status 2 if memory allocation fails. 
+ *
+ * @param size size of space to be allocated. Treat like the parameter of a 
+ * regular malloc call.
+ * @returns pointer to the allocated space.
+ */
 void* get_malloc(size_t size) {
 	void* v = malloc(size);
 	if (v == NULL) { 
@@ -26,16 +31,13 @@ void* get_malloc(size_t size) {
 }
 
 
-
 /** Creator for an empty AlleleMatrix object of a given size. Includes memory
- * allocation for `.alleles`.
+ * allocation for `n_subjects` worth of `.alleles`.
  *
  * @param n_markers number of rows/markers to create
  * @param n_subjects number of individuals to create. This includes filling the first
  * n_subjects entries of .alleles with heap char* of length n_markers, so that the
  * alleles for these can be added without further memory allocation.
- * @param starting_id pointer to the location where the current highest id tracker
- * is stored. This will be modified to be accurate to the added n_subjects.
  * @returns pointer to the empty created AlleleMatrix
  */
 AlleleMatrix* create_empty_allelematrix(int n_markers, int n_subjects) {
@@ -87,6 +89,14 @@ SimData* create_empty_simdata() {
 
 /*------------------------Supporter Functions--------------------------------*/
 
+/** Allocate lifetime-unique ids to each genotype in the range of whole
+ * SimData indexes `from_index` to `to_index` inclusive. Not intended to 
+ * be called by an end user.
+ *
+ * @param d the SimData struct on which to perform actions
+ * @param from_index the starting 0-based index of the range to allocate ids 
+ * @param to_index the last 0-based index in the range to allocate ids 
+ */
 void set_subject_ids(SimData* d, int from_index, int to_index) {
 	if (to_index < from_index) {
 		error( "Bad range for setting ids\n");
@@ -129,25 +139,11 @@ void set_subject_ids(SimData* d, int from_index, int to_index) {
 	}
 }
 
-/*LineGroup get_new_group(SimData* d, const char* groupName) {
-	LineGroup group;
-	group.gid = get_new_group_num(d);
-	if (groupName == NULL) {
-		group.name = NULL;
-	} else {
-		group.name = get_malloc(sizeof(char) * (strlen(groupName) + 1));
-		strcpy(group.name, groupName);
-	}
-	
-	return group;
-}*/
-
-
 /** Opens a table file and reads the number of columns and rows 
  * (including headers) separated by `sep` into a TableSize struct that is
- * returned.
+ * returned. 
  *
- * If the file fails to open, both num_rows and num_columns will be 0.
+ * If the file fails to open, the simulation exits.
  *
  * Rows must be either empty or have same number of columns as the first.
  * Empty rows are not counted.
@@ -157,7 +153,7 @@ void set_subject_ids(SimData* d, int from_index, int to_index) {
  * value in this case is arbitrary.
  *
  * @param filename the path/name to the table file whose dimensions we want
- * @param sep the character that separates columns in the file eg '\t'
+ * @param sep the character that separates columns in the file eg tab
  * @returns TableSize struct with .num_columns and .num_rows filled. These
  * counts include header rows/columns and exclude blank rows.
  */
@@ -311,7 +307,11 @@ void set_subject_names(AlleleMatrix* a, char* prefix, int suffix, int from_index
 	}
 }
 
-/** Count and return the number of digits in `i`. */
+/** Count and return the number of digits in `i`.
+ *
+ * @param i the integer whose digits are to be counted.
+ * @returns the number of digits to print `i`
+ */
 int get_integer_digits(int i) {
 	int digits = 0;
 	while (i != 0) {
@@ -367,7 +367,7 @@ int _simdata_pos_compare(const void *pp0, const void *pp1) {
  * them in descending order of the doubles they point to.
  * @see get_top_n_fitness_subject_indexes()
  *
- * Sorts lower numbers before higher numbers. If they are equal, their
+ * Sorts higher numbers before lower numbers. If they are equal, their
  * order after comparison is undefined. 
  */
 int _descending_double_comparer(const void* pp0, const void* pp1) {
@@ -380,6 +380,13 @@ int _descending_double_comparer(const void* pp0, const void* pp1) {
 	}
 }
 
+/** Comparator function for qsort. Used to compare an array of doubles* to sort
+ * them in ascending order of the doubles they point to.
+ * @see get_top_n_fitness_subject_indexes()
+ *
+ * Sorts lower numbers before higher numbers. If they are equal, their
+ * order after comparison is undefined. 
+ */
 int _ascending_double_comparer(const void* pp0, const void* pp1) {
 	double d0 = **(double **)pp0;
 	double d1 = **(double **)pp1;
@@ -407,6 +414,13 @@ int _ascending_float_comparer(const void* p0, const void* p1) {
 	}
 }
 
+/** Comparator function for qsort. Used to compare an array of integers to sort
+ * them in ascending order.
+ * @see get_existing_groups()
+ *
+ * Sorts lower numbers before higher numbers. If floats are equal, their
+ * order after comparison is undefined. 
+ */
 int _ascending_int_comparer(const void* p0, const void* p1) {
 	int f0 = *(int *)p0;
 	int f1 = *(int *)p1;
@@ -417,6 +431,12 @@ int _ascending_int_comparer(const void* p0, const void* p1) {
 	}
 }
 
+/** Comparator function for qsort. Used to compare an array of integers* to sort
+ * the integers pointed to in ascending order.
+ *
+ * Sorts lower numbers before higher numbers. If floats are equal, their
+ * order after comparison is undefined. 
+ */
 int _ascending_int_dcomparer(const void* pp0, const void* pp1) {
 	int f0 = **(int **)pp0;
 	int f1 = **(int **)pp1;
@@ -427,7 +447,23 @@ int _ascending_int_dcomparer(const void* pp0, const void* pp1) {
 	}
 }
 
-/*Does not assume that all entries are clustered at the start of the AM. */
+/** A function to tidy the internal storage of genotypes after addition
+ * or deletion of genotypes in the SimData. Not intended to be called by an
+ * end user - functions which require it should be calling it already.
+ *
+ * Ideally, we want all AlleleMatrix structs in the SimData's linked list
+ * to have no gaps. That is, if there are more than 1000 genotypes, the
+ * first AM should be full/contain 1000 genotypes, and so forth, and the 
+ * AM at the end should have its n genotypes having indexes < n (so all at
+ * the start of the AM with no gaps in-between). 
+ *
+ * This function achieves the cleanup by using two pointers: a filler out
+ * the front that identifies a genotype that needs to be shifted back/that
+ * occurs after a gap, and a filler that identifies each gap and copies
+ * the genotype at the filler back into it.
+ *
+ * @param d The SimData struct on which to operate.
+ */
 void condense_allele_matrix( SimData* d) {
 	int checker, filler;
 	AlleleMatrix* checker_m = d->m, *filler_m = d->m;
@@ -517,6 +553,23 @@ void condense_allele_matrix( SimData* d) {
 
 /*----------------------------------Locators---------------------------------*/
 
+/** Returns the name of the genotype with a given id.
+ *
+ * The function uses a bisection search on the AlleleMatrix where it should be
+ * found. Searching by id is therefore fast.
+ * @see get_from_ordered_uint_list()
+ *
+ * This function assumes that ids are never reshuffled in the SimData. As of 
+ * 2021.04.12 this condition is always true, but this function will need to 
+ * be revisited if this is no longer the case.
+ *
+ * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * the genotype with the provided id is assumed to be found.
+ * @param id the id of the genotype whose name is sought
+ * @returns the name of the genotype that has id `id`, as a copy of the pointer
+ * to the heap memory where the name is saved (so *don't* free the pointer returned
+ * from this function)
+ */
 char* get_name_of_id( AlleleMatrix* start, unsigned int id) {
 	if (id <= 0) {
 		warning("Invalid negative ID %d\n", id);
@@ -554,6 +607,24 @@ char* get_name_of_id( AlleleMatrix* start, unsigned int id) {
 	}	
 }
 
+/** Returns the alleles at each marker of the genotype with a given id.
+ *
+ * The function uses a bisection search on the AlleleMatrix where it should be
+ * found. Searching by id is therefore fast.
+ * @see get_from_ordered_uint_list()
+ *
+ * This function assumes that ids are never reshuffled in the SimData. As of 
+ * 2021.04.12 this condition is always true, but this function will need to 
+ * be revisited if this is no longer the case.
+ *
+ * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * the genotype with the provided id is assumed to be found.
+ * @param id the id of the genotype whose alleles are sought
+ * @returns the alleles of the genotype that has id `id`, as a copy of the pointer
+ * to the heap memory where the genotype is saved (so *don't* free the pointer returned
+ * from this function). It points to a sequence of characters, ordered according to
+ * the markers in the SimData to which the AlleleMatrix belongs.
+ */
 char* get_genes_of_id ( AlleleMatrix* start, unsigned int id) {
 	if (id <= 0) {
 		warning("Invalid negative ID %d\n", id);
@@ -592,6 +663,26 @@ char* get_genes_of_id ( AlleleMatrix* start, unsigned int id) {
 	}		
 }
 
+/** Saves the ids of the parents of a genotype with a particular id to
+ * the output array `output`. 
+ *
+ * The function uses a bisection search on the AlleleMatrix where it should be
+ * found. Searching by id is therefore fast.
+ * @see get_from_ordered_uint_list()
+ *
+ * This function assumes that ids are never reshuffled in the SimData. As of 
+ * 2021.04.12 this condition is always true, but this function will need to 
+ * be revisited if this is no longer the case.
+ *
+ * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * the genotype with the provided id is assumed to be found.
+ * @param id the id of the genotype whose parents are sought
+ * @param output An array which the calling function can access where this function
+ * will put its results.
+ * @returns 0 when the id is successfully identified and at least one parent's
+ * id is known, 1 otherwise. The ids of both parents if at least one parent is 
+ * known/nonzero are saved to the array `output`.
+ */
 int get_parents_of_id( AlleleMatrix* start, unsigned int id, unsigned int output[2]) {
 	if (id <= 0) {
 		return 1;	
@@ -632,6 +723,20 @@ int get_parents_of_id( AlleleMatrix* start, unsigned int id, unsigned int output
 	}	
 }
 
+/** Search for genotypes with certain names in a linked list of AlleleMatrix and
+ * save the ids of those names. Exits if any name cannot be found.
+ *
+ * This function must check every name in the linked list for matches, so will be 
+ * relatively slow.
+ *
+ * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * the genotype with the provided id is assumed to be found.
+ * @param n_names the length of the array of names which are being sought.
+ * @param names an array of names whose ids are being sought.
+ * @param output pointer to an array of length at least `n_names` which can
+ * be accessed by the calling function. The ids of each name are saved to corresponding
+ * indexes in the array this pointer points to.
+ */
 void get_ids_of_names( AlleleMatrix* start, int n_names, char* names[n_names], unsigned int* output) {
 	int found;
 	//int ids = malloc(sizeof(int) * n_names);
@@ -662,6 +767,19 @@ void get_ids_of_names( AlleleMatrix* start, int n_names, char* names[n_names], u
 	}
 }
 
+/** Search for a genotype with parentage matching two given parent ids in a linked 
+ * list of AlleleMatrix, and return its id. Exits if such a child cannot be found.
+ *
+ * This function must check every genotype in the linked list for matches, so will be 
+ * relatively slow.
+ *
+ * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * the child is assumed to be found.
+ * @param parent1id one of the parents of the genotype must have this id.
+ * @param parent2id the other parent of the genotype must have this id.
+ * @returns the id of the first sequentially located genotype whose parents match the
+ * two parent ids provided
+ */
 unsigned int get_id_of_child( AlleleMatrix* start, unsigned int parent1id, unsigned int parent2id) {
 	AlleleMatrix* m = start;
 	int j;
@@ -681,6 +799,19 @@ unsigned int get_id_of_child( AlleleMatrix* start, unsigned int parent1id, unsig
 	}
 }
 
+/** Search for a genotype with parentage matching two given parent ids in a linked 
+ * list of AlleleMatrix, and return its index. Exits if such a child cannot be found.
+ *
+ * This function must check every genotype in the linked list for matches, so will be 
+ * relatively slow.
+ *
+ * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * the child is assumed to be found.
+ * @param parent1id one of the parents of the genotype must have this id.
+ * @param parent2id the other parent of the genotype must have this id.
+ * @returns the index (0-based, starting at the start of `start`) of the first sequentially 
+ * located genotype whose parents match the two parent ids provided
+ */
 int get_index_of_child( AlleleMatrix* start, unsigned int parent1id, unsigned int parent2id) {
 	AlleleMatrix* m = start;
 	int j, total_j = 0;
@@ -700,6 +831,18 @@ int get_index_of_child( AlleleMatrix* start, unsigned int parent1id, unsigned in
 	}
 }
 
+/** Search for a genotype with a particular name in a linked 
+ * list of AlleleMatrix, and return its index. Exits if such a child cannot be found.
+ *
+ * This function must check every genotype in the linked list for matches, so will be 
+ * relatively slow.
+ *
+ * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * the genotype is assumed to be found.
+ * @param name a string to match to the subject_name of the target
+ * @returns the index (0-based, starting at the start of `start`) of the first sequentially 
+ * located genotype whose name is the same as the provided name.
+ */
 int get_index_of_name( AlleleMatrix* start, char* name) {
 	AlleleMatrix* m = start;
 	int j, total_j = 0;
@@ -718,7 +861,17 @@ int get_index_of_name( AlleleMatrix* start, char* name) {
 	}
 }
 
-
+/** Get the id of a genotype by its index. The index is assumed to be 0-based, 
+ * starting at the first entry of `start` and continuing through the linked list 
+ * to which `start` belongs. Exits if the linked list does not contain that index.
+ *
+ * @param start Pointer to the first of a linked list of AlleleMatrixes in which 
+ * to locate the id at a particular index.
+ * @param index the index of the target. It is assumed to start at 0 at the start 
+ * of the matrix in `start` and be incremented up until the last entry in the matrix
+ * of the last entry in the linked list.
+ * @returns the lifetime-unique id of the genotype found at that index.
+ */
 unsigned int get_id_of_index( AlleleMatrix* start, int index) {
 	AlleleMatrix* m = start;
 	int total_j = 0;
@@ -737,6 +890,20 @@ unsigned int get_id_of_index( AlleleMatrix* start, int index) {
 	}
 }
 
+/** Get the alleles of a genotype by its index. The index is assumed to be 0-based, 
+ * starting at the first entry of `start` and continuing through the linked list 
+ * to which `start` belongs. Exits if the linked list does not contain that index.
+ *
+ * @param start Pointer to the first of a linked list of AlleleMatrixes in which 
+ * to locate the id at a particular index.
+ * @param index the index of the target. It is assumed to start at 0 at the start 
+ * of the matrix in `start` and be incremented up until the last entry in the matrix
+ * of the last entry in the linked list.
+ * @returns the alleles of the genotype that has idnex `index`, as a copy of the pointer
+ * to the heap memory where the genotype is saved (so *don't* free the pointer returned
+ * from this function). It points to a sequence of characters, ordered according to
+ * the markers in the SimData to which the AlleleMatrix belongs.
+ */
 char* get_genes_of_index( AlleleMatrix* start, int index) {
 	if (index < 0) {
 		warning("Invalid negative index %d\n", index);
@@ -766,6 +933,17 @@ char* get_genes_of_index( AlleleMatrix* start, int index) {
 
 /*-----------------------------------Groups----------------------------------*/
 
+/** Combine a set of groups into one group.
+ *
+ * The function does so by setting the group membership of every genotype 
+ * belonging to one of the groups to the same group number. 
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param list_len the number of groups to be combined
+ * @param group_ids an array of group numbers containing the groups that
+ * are to be combined.
+ * @returns the group number of the new combined group.
+ */
 int combine_groups( SimData* d, int list_len, int group_ids[list_len]) {
 	int outGroup = group_ids[0];
 	if (list_len < 2) {
@@ -813,6 +991,16 @@ int combine_groups( SimData* d, int list_len, int group_ids[list_len]) {
 	}
 }
 
+/** Give every individual in the group a new group number that does not
+ * belong to any other existing group (thereby allocating each genotype 
+ * in the group to a new group of 1).
+ *
+ * Note: this does not return the group numbers of all the newly created 
+ * groups-of-one.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group to be split
+ */
 void split_into_individuals( SimData* d, int group_id) {
 	// get pre-existing numbers
 	int n_groups = 0;
@@ -936,6 +1124,16 @@ void split_into_families(SimData* d, int group_id) {
 	return total_subjects;
 }*/
 
+/** Identify every group number that currently has members.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param n_groups a pointer to a location that can be accessed by the 
+ * calling function. The number of groups/length of the returned array
+ * will be saved here.
+ * @returns a heap array of length [value saved at n_groups after this 
+ * function has run] containing the group numbers that appear in the 
+ * group memberships in `d`, sorted in ascending order.
+ */
 int* get_existing_groups( SimData* d, int* n_groups) {
 	int eg_size = 50;
 	int* existing_groups = malloc(sizeof(int)* eg_size);
@@ -979,6 +1177,7 @@ int* get_existing_groups( SimData* d, int* n_groups) {
 		}
 	}
 }
+
 
 int** get_existing_group_counts( SimData* d, int* n_groups) {
 	int eg_size = 50;
@@ -1059,6 +1258,19 @@ int** get_existing_group_counts( SimData* d, int* n_groups) {
 	}
 }
 
+/** Take a list of indexes and allocate the genotypes at those indexes
+ * to a new group.
+ *
+ * Does not check if all the indexes are valid/if all indexes have successfully
+ * had their groups changed.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param n the number of indexes provided
+ * @param indexes_to_split an array containing the indexes (0-based, starting
+ * at the first entry at `d->m`) of the genotypes to allocate to the new group.
+ * @returns the group number of the new group to which the provided indexes
+ * have been allocated. 
+ */
 int split_from_group( SimData* d, int n, int indexes_to_split[n]) {
 	int new_group = get_new_group_num(d);
 	
@@ -1083,7 +1295,17 @@ int split_from_group( SimData* d, int n, int indexes_to_split[n]) {
 	return new_group;
 }
 
-
+/** Function to identify the next sequential integer that does not 
+ * identify a group that currently has member(s). 
+ *
+ * This calls get_existing_groups() every time, so functions that 
+ * do repeated group creation, like split_into_individuals, are 
+ * recommended to use their own implementation rather than calling 
+ * this function repeatedly for best speed/memory usage.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @return the next sequential currently-unused group number.
+ */
 int get_new_group_num( SimData* d) {
 	int n_groups = 0;
 	int* existing_groups = get_existing_groups( d, &n_groups);
@@ -1102,7 +1324,21 @@ int get_new_group_num( SimData* d) {
 	return gn;
 }
 
-
+/** Function to count the number of genotypes that currently belong to
+ * the specified group.
+ * @see get_group_genes()
+ * @see get_group_names()
+ * @see get_group_ids()
+ * @see get_group_indexes()
+ *
+ * This goes through and checks every genotype in the SimData, because 
+ * there is currently no centralised tracking of groups.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group whose members need to
+ * be counted.
+ * @returns the number of genotypes currently belonging to this group.
+ */
 int get_group_size( SimData* d, int group_id) {
 	AlleleMatrix* m = d->m;
 	int size = 0;
@@ -1122,8 +1358,21 @@ int get_group_size( SimData* d, int group_id) {
 	}
 }
 
-/* Gets a shallow copy of the genes/alleles of each member of the group. If the
-* group size has already been calculated then it is the parameter, otherwise put in -1 */
+/** Gets a shallow copy of the genes/alleles of each member of the group.
+ * @see get_group_size()
+ * @see get_group_names()
+ * @see get_group_ids()
+ * @see get_group_indexes()
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group we want data from
+ * @param group_size if group_size has already been calculated, pass it too, otherwise
+ * put in -1. This enables fewer calls to get_group_size when using multiple
+ * group-data-getter functions.
+ * @returns a vector containing pointers to the genes of each member of the group.
+ * the vector itself is on the heap and should be freed, but its contents are only
+ * shallow copies so should not be freed.
+ */
 char** get_group_genes( SimData* d, int group_id, int group_size) {
 	AlleleMatrix* m = d->m;
 	char** genes;
@@ -1149,7 +1398,21 @@ char** get_group_genes( SimData* d, int group_id, int group_size) {
 	}	
 }
 
-/* Gets a shallow copy of the names of each member of the group */
+/** Gets a shallow copy of the names of each member of the group.
+ * @see get_group_size()
+ * @see get_group_genes()
+ * @see get_group_ids()
+ * @see get_group_indexes()
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group you want data from
+ * @param group_size if group_size has already been calculated, pass it too, otherwise
+ * put in -1. This enables fewer calls to get_group_size when using multiple
+ * group-data-getter functions.
+ * @returns a vector containing pointers to the names of each member of the group.
+ * the vector itself is on the heap and should be freed, but its contents are only
+ * shallow copies so should not be freed.
+ */
 char** get_group_names( SimData* d, int group_id, int group_size) {
 	AlleleMatrix* m = d->m;
 	char** names;
@@ -1175,6 +1438,20 @@ char** get_group_names( SimData* d, int group_id, int group_size) {
 	}	
 }
 
+/** Gets the ids of each member of the group.
+ * @see get_group_size()
+ * @see get_group_genes()
+ * @see get_group_names()
+ * @see get_group_indexes()
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group you want data from
+ * @param group_size if group_size has already been calculated, pass it too, otherwise
+ * put in -1. This enables fewer calls to get_group_size when using multiple
+ * group-data-getter functions.
+ * @returns a vector containing the ids of each memmber of the group.
+ * the vector itself is on the heap and should be freed.
+ */
 unsigned int* get_group_ids( SimData* d, int group_id, int group_size) {
 	AlleleMatrix* m = d->m;
 	unsigned int* gids;
@@ -1200,6 +1477,21 @@ unsigned int* get_group_ids( SimData* d, int group_id, int group_size) {
 	}	
 }
 
+/** Gets the indexes (0-based, from the start of the linked list in the SimData)
+ * of each member of the group.
+ * @see get_group_size()
+ * @see get_group_genes()
+ * @see get_group_names()
+ * @see get_group_ids()
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group you want data from
+ * @param group_size if group_size has already been calculated, pass it too, otherwise
+ * put in -1. This enables fewer calls to get_group_size when using multiple
+ * group-data-getter functions.
+ * @returns a vector containing the indexes of each member of the group.
+ * the vector itself is on the heap and should be freed.
+ */
 unsigned int* get_group_indexes(SimData* d, int group_id, int group_size) {
 	AlleleMatrix* m = d->m;
 	unsigned int* gis;
@@ -1225,12 +1517,12 @@ unsigned int* get_group_indexes(SimData* d, int group_id, int group_size) {
 	}	
 }
 
+
+
 /*------------------------------------------------------------------------*/
 /*----------------------Nicked from matrix-operations.c-------------------*/
 
 /** Generates a matrix of c columns, r rows with all 0.
- * 
- * @see generate_zero_imatrix()
  *
  * @param r the number of rows/first index for the new matrix.
  * @param c the number of columns/second index for the new matrix.
@@ -1256,11 +1548,6 @@ DecimalMatrix generate_zero_dmatrix(int r, int c) {
  *
  * Checks that `row_index` is a valid index.
  * it will throw an error if the index is not valid
- *
- * @see contiguous_subset_dmatrix()
- * @see subset_dmatrix()
- * @see subset_imatrix_row()
- * @see subset_dmatrix_col()
  *
  * @param m pointer to the DecimalMatrix whose subset we are taking.
  * @param row_index index in m of the row from m to take as a subset
@@ -1289,8 +1576,6 @@ DecimalMatrix subset_dmatrix_row(DecimalMatrix* m, int row_index) {
  * it will throw an error.
  *
  * The order of parameters a and b matters.
- *
- * @see multiply_imatrices() 
  *
  * @param a pointer to the first DecimalMatrix.
  * @param b pointer to the second DecimalMatrix.
@@ -1326,8 +1611,6 @@ DecimalMatrix multiply_dmatrices(DecimalMatrix* a, DecimalMatrix* b) {
  *
  * The ordering of the parameters does not matter.
  *
- * @see add_imatrices() 
- *
  * @param a pointer to the first DecimalMatrix. Add this to b.
  * @param b pointer to the second DecimalMatrix. Add this to a.
  * @returns a new DecimalMatrix containing the result of *a + *b.
@@ -1351,8 +1634,6 @@ void add_to_dmatrix(DecimalMatrix* a, DecimalMatrix* b) {
  * it will throw an error.
  *
  * The ordering of the parameters does not matter.
- *
- * @see add_imatrices() 
  *
  * @param a pointer to the first DecimalMatrix. Add this to b.
  * @param b pointer to the second DecimalMatrix. Add this to a.
@@ -1378,8 +1659,6 @@ DecimalMatrix add_dmatrices(DecimalMatrix* a, DecimalMatrix* b) {
 /** Deletes a DecimalMatrix and frees its memory. m will now refer 
  * to an empty matrix, with every pointer set to null and dimensions set to 0. 
  *
- * @see delete_imatrix() 
- *
  * @param m pointer to the matrix whose data is to be cleared and memory freed.
  */
 void delete_dmatrix(DecimalMatrix* m) {
@@ -1399,8 +1678,15 @@ void delete_dmatrix(DecimalMatrix* m) {
 
 /*--------------------------------Deleting-----------------------------------*/
 
-// Now uses condense_allele_matrix rather than shifting back one-at-a-time!
-// depends on the marker for non-existence being NULL alleles
+/** Clears memory of all genotypes and associated information belonging 
+ * to a particular group.
+ *
+ * Uses a call to condense_allele_matrix() to ensure that the SimData
+ * remains valid after deletion.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the subset of data to be cleared
+ */
 void delete_group(SimData* d, int group_id) {
 	AlleleMatrix* m = d->m;
 	int i, deleted, total_deleted = 0;

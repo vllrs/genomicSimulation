@@ -3,8 +3,9 @@
 #' \code{cross.randomly} returns the group number of the group
 #' that the new genotypes were loaded into. Selfing is not permitted.
 #'
-#' For random crossing, the offspring parameter represents the number of 
-#' random crosses to perform.
+#' For random crossing, the n.crosses parameter represents the number of 
+#' random crosses to perform. Each cross will be repeated a number of times
+#' determined by the offspring parameter.
 #'
 #' Random crosses can only be performed within a group, not within the
 #' whole set of genotypes tracked by the simulation.

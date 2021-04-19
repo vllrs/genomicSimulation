@@ -102,8 +102,17 @@ SEXP SXP_simple_selection_bypercent(SEXP exd, SEXP glen, SEXP groups, SEXP perce
 
 /*--------------------------------Fitness------------------------------------*/
 
-/** Takes the top `top_n` fitness individuals in the group and puts them in a new group.
- * The new group number is returned.*/
+/** Takes the top `top_n` fitness/GEBV individuals in the group and puts them in a new group.
+ * The new group number is returned.
+ *
+ * @param d pointer to the SimData object to which the groups and individuals belong.
+ * It must have a marker effect file loaded to successfully run this function.
+ * @param group group number from which to split the top individuals.
+ * @param top_n The number of individuals to put in the new group.
+ * @param lowIsBest boolean, if TRUE the `top_n` with the lowest fitness/GEBV score
+ * will be selected, if false the `top_n` with the highest fitness/GEBV score are.
+ * @returns the group number of the newly-created split-off group
+ */
 int split_group_by_fitness(SimData* d, int group, int top_n, int lowIsBest) {
 	// get fitnesses
 	unsigned int* group_contents = get_group_indexes( d, group, -1); // should be ordered same as next line would get
@@ -134,20 +143,21 @@ int split_group_by_fitness(SimData* d, int group, int top_n, int lowIsBest) {
 	return split_from_group(d, top_n, top_subjects);
 }
 
-/** Calculates the fitness metric for each column/subject in the AlleleMatrix
-* for generation `generation` in the SimData object.
+/** Calculates the fitness metric/GEBV for each genotype in the AlleleMatrix
+* in a certain group, and returns the results in a DecimalMatrix struct.
 *
-* This is calculated as: 
-* `Sum across all alleles (effect vector of this allele x count matrix of this allele)`
+* The GEBV is calculated for each genotype by taking the sum of (number of 
+* copies of this allele at this marker times this allele's effect at this marker) 
+* for each marker for each different allele. To do
+* this, the vector containing each allele's effect values is multiplied by a matrix 
+* containing the counts of that allele at each marker. 
 *
-* If either the effect matrix or the allele matrix for that generation does not
-* exist, the program exits with error status 2. 
+* The function exits with error code 1 if no marker effect file is loaded.
 *
-* @param d pointer to the SimData object containing the effect vector and AlleleMatrix
-* @param group integer representing the group for which to run these calculations
-* @param effect_row the single-character name of the effect row to use. If it cannot 
-* be found in `d->e.effect_names`, the first row is used.
-* @returns A DecimalMatrix containing the score for each column of the AlleleMatrix.
+* @param d pointer to the SimData object to which the groups and individuals belong.
+* It must have a marker effect file loaded to successfully run this function.
+* @param group calculate GEBVs for each genotype in the group with this group number.
+* @returns A DecimalMatrix containing the score for each individual in the group.
 */
 DecimalMatrix calculate_fitness_metric_of_group(SimData* d, int group) {
 	// check that both of the items to be multiplied exist.
@@ -183,6 +193,21 @@ DecimalMatrix calculate_fitness_metric_of_group(SimData* d, int group) {
 	return sum;
 }
 
+/** Calculates the fitness metric/GEBV for each genotype in the AlleleMatrix,
+ * and returns the results in a DecimalMatrix struct.
+ *
+ * The GEBV is calculated for each genotype by taking the sum of (number of 
+ * copies of this allele at this marker times this allele's effect at this marker) 
+ * for each marker for each different allele. To do
+ * this, the vector containing each allele's effect values is multiplied by a matrix 
+ * containing the counts of that allele at each marker. 
+ *
+ * The function exits with error code 1 if no marker effect file is loaded.
+ *
+ * @param m pointer to the AlleleMatrix object to which the genotypes belong.
+ * @param e pointer to the EffectMatrix that effect values have been loaded into.
+ * @returns A DecimalMatrix containing the score for each individual in the group.
+ */
 DecimalMatrix calculate_fitness_metric( AlleleMatrix* m, EffectMatrix* e) {
 	// check that both of the items to be multiplied exist.
 	if (e->effects.rows < 1 || m->alleles == NULL) {
@@ -213,18 +238,19 @@ DecimalMatrix calculate_fitness_metric( AlleleMatrix* m, EffectMatrix* e) {
 	return sum;
 }
 
-
-/** Calculates the number of times in each cell that a particular allele appears.
- * Returns the result as a DecimalMatrix. Useful for multiplying to effect matrix.
+/** Calculates the number of times at each marker that a particular allele appears
+ * for each genotype is a set of given genotype.
+ * Returns the result as a DecimalMatrix. Useful for multiplying to effect matrix
+ * to calculate GEBVs.
  *
- * Finds the `generation`th AlleleMatrix in the linked list whose 0th element is
- * stored in `d`, and counts the number of occurences of `allele` in each
- * two-allele cell.
- *
- * @param a pointer to the AlleleMatrix whose alleles are to be counted
+ * @param m pointer to the start of a linked list that contains the alleles 
+ * of each genotype in `for_ids`.
+ * @param for_ids poinder to an array of ids of different genotypes. 
+ * @param n_ids number of genotypes to calculate the counts of/length of 
+ * `for_ids`
  * @param allele the single-character allele to be counting.
- * @returns A DecimalMatrix countaining the number of `allele` occurences in 
- * each cell of the AlleleMatrix of the correct generation.
+ * @returns A DecimalMatrix countaining the number of `allele` occurences at 
+ * each row/marker for each column/genotype in `for_ids`.
  * */
 DecimalMatrix calculate_count_matrix_of_allele_for_ids( AlleleMatrix* m, unsigned int* for_ids, unsigned int n_ids, char allele) {
 	DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, n_ids);
@@ -254,17 +280,15 @@ DecimalMatrix calculate_count_matrix_of_allele_for_ids( AlleleMatrix* m, unsigne
 	return counts;
 }
 
-/** Calculates the number of times in each cell that a particular allele appears.
- * Returns the result as a DecimalMatrix. Useful for multiplying to effect matrix.
+/** Calculates the number of times at each marker that a particular allele appears
+ * for each genotype in a particular AlleleMatrix.
+ * Returns the result as a DecimalMatrix. Useful for multiplying to effect matrix
+ * to calculate GEBVs.
  *
- * Finds the `generation`th AlleleMatrix in the linked list whose 0th element is
- * stored in `d`, and counts the number of occurences of `allele` in each
- * two-allele cell.
- *
- * @param a pointer to the AlleleMatrix whose alleles are to be counted
+ * @param m pointer to the AlleleMatrix that contains the genotypes to count alleles.
  * @param allele the single-character allele to be counting.
- * @returns A DecimalMatrix countaining the number of `allele` occurences in 
- * each cell of the AlleleMatrix of the correct generation.
+ * @returns A DecimalMatrix countaining the number of `allele` occurences at 
+ * each row/marker for each column/genotype in the AlleleMatrix.
  * */
 DecimalMatrix calculate_full_count_matrix_of_allele( AlleleMatrix* m, char allele) {
 	DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, m->n_subjects);
@@ -398,16 +422,43 @@ void calculate_all_block_effects(SimData* d, const char* block_file, const char*
 	return;
 }
 
-/** For a block file 
- *(produced by SelectionTools output: columns Chrom Pos Name Class Markers(semicolon-separated-list)
- * calculate the effect value for alleles from the block separately for the first and second alleles
- * (so two effect values for each block, one from the sets of alleles inherited from each parent) 
- * then saves these results to a matrix file with columns being the lines, entries being those 
- * partial GEBVs/block effect values, and rows being [blockname]_1 and [blockname]_2 for the two
- * haplotypes of each block.
+/** Given a set of blocks of markers in a file, for each genotype in a group, 
+ * calculate the local GEBV for the first allele at each marker in the block, and 
+ * the local GEBV for the second allele at each marker in the block, then save
+ * the result to a file. This gives block effects for each haplotype of each 
+ * individual in the group.
  *
- * Reads the output from a block file and saves it to an output file.
+ * Note that this function is made to work on HPC, and not fixed to work on a regular
+ * device. If an array as long as the number of genotypes cannot fit contiguously into
+ * memory, the function will segfault. 
+ * 
+ * The block file is designed after the output from a call to the R SelectionTools
+ * package's `st.def.hblocks` function. It should have the format (tab-separated):
  *
+ * Chrom	Pos	Name	Class	Markers
+ *
+ * [ignored]	[ignored]	[ignored]	[ignored]	[semicolon];[separated];[list]
+ * ;[of];[marker];[names];[belonging];[to];[this];[block]
+ *
+ * ...
+ *
+ * The output file will have format: 
+ *
+ * [genotype name]_1 [effect for first block, first allele] 
+ * [effect for second block, second allele] ...
+ *
+ * [genotype name]_2 [effect for first block, second allele] [effect for second block,
+ * second allele] ...
+ *
+ * [genotype 2 name]_1 ...
+ *
+ * 
+ * @param d pointer to the SimData object to which the groups and individuals belong.
+ * It must have a marker effect file loaded to successfully run this function.
+ * @param block_file string containing filename of the file with blocks
+ * @param output_file string containing the filename of the file to which output 
+ * block effects/local GEBVs will be saved.
+ * @param group group number from which to split the top individuals.
  */
 void calculate_group_block_effects(SimData* d, const char* block_file, const char* output_file, int group) {
 	struct TableSize ts = get_file_dimensions(block_file, '\t');
@@ -502,7 +553,14 @@ void calculate_group_block_effects(SimData* d, const char* block_file, const cha
  * containing the allele with the highest effect value for each marker as ordered
  * in the SimData. Returns this as a null-terminated heap array of characters of 
  * length d->n_markers + one null byte.
+ *
  * The return value should be freed when usage is finished!
+ *
+ * The SimData must be initialised with marker effects for this function to succeed.
+ * 
+ * @param d pointer to the SimData containing markers and marker effects.
+ * @returns a heap array filled with a null-terminated string containing the highest
+ * scoring allele at each marker.
  */
 char* calculate_ideal_genotype(SimData* d) {
 	if (d->e.effects.matrix == NULL || d->e.effects.rows < 1 || d->e.effect_names == NULL) {
