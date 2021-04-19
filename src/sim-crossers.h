@@ -46,7 +46,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g);
 int make_doubled_haploids(SimData* d, int group, GenOptions g); //@add
 
 int make_all_unidirectional_crosses(SimData* d, int from_group, GenOptions g);
-int make_crosses_from_top_m_percent(SimData* d, int m, int group, GenOptions g);
+int make_n_crosses_from_top_m_percent(SimData* d, int n, int m, int group, GenOptions g);
 int make_crosses_from_file(SimData* d, const char* input_file, GenOptions g);
 int make_double_crosses_from_file(SimData* d, const char* input_file, GenOptions g);
 

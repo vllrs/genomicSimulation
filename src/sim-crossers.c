@@ -237,7 +237,11 @@ SEXP SXP_one_cross(SEXP exd, SEXP parent1_index, SEXP parent2_index, SEXP name,
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	return ScalarInteger(cross_this_pair(d, p1, p2, g));
+	int instructions[2][1];
+	instructions[0][0] = p1;
+	instructions[1][0] = p2;
+	
+	return ScalarInteger(cross_these_combinations(d, 1, instructions, g));
 }
 
 
@@ -507,156 +511,6 @@ void generate_doubled_haploid(SimData* d, char* parent_genome, char* output) {
 		
 	}
 	return;
-}
-
-
-int cross_this_pair(SimData* d, int parent1_index, int parent2_index, GenOptions g) {
-	char* p1_genes = get_genes_of_index(d->m, parent1_index);
-	char* p2_genes = get_genes_of_index(d->m, parent2_index);
-	int p1_id = 0;
-	int p2_id = 0;
-	
-	// create the buffer we'll use to save the output crosses before they're printed.
-	AlleleMatrix* crosses;
-	int n_to_go = g.family_size;
-	if (n_to_go < 1000) {
-		crosses = create_empty_allelematrix(d->n_markers, n_to_go);
-		n_to_go = 0;
-	} else {
-		crosses = create_empty_allelematrix(d->n_markers, 1000);
-		n_to_go -= 1000;
-	}
-	int fullness = 0;
-	
-	// set up pedigree/id allocation, if applicable
-	unsigned int cid = 0;
-	unsigned int* cross_current_id;
-	if (g.will_allocate_ids) {
-		cross_current_id = &(d->current_id);
-	} else {
-		cross_current_id = &cid;
-	}
-	if (g.will_track_pedigree) {
-		p1_id = get_id_of_index(d->m, parent1_index);
-		p2_id = get_id_of_index(d->m, parent2_index);
-	}
-	AlleleMatrix* last;
-	int output_group;
-	if (g.will_save_to_simdata) {
-		last = d->m; // for saving to simdata
-		while (last->next != NULL) {
-			last = last->next;
-		}
-		output_group = get_new_group_num( d);
-	}
-	
-	// open the output files, if applicable
-	char fname[100];
-	FILE* fp, * fe, * fg;
-	DecimalMatrix eff;
-	if (g.will_save_pedigree_to_file) {
-		strcpy(fname, g.filename_prefix);
-		strcat(fname, "-pedigree");
-		fp = fopen(fname, "w");
-	}
-	if (g.will_save_effects_to_file) {
-		strcpy(fname, g.filename_prefix);
-		strcat(fname, "-eff");
-		fe = fopen(fname, "w");
-	}
-	if (g.will_save_genes_to_file) {
-		strcpy(fname, g.filename_prefix);
-		strcat(fname, "-genome");
-		fg = fopen(fname, "w");
-	}
-	
-	GetRNGstate();
-	// loop through each combination
-	// do the cross.
-	for (int f = 0; f < g.family_size; ++f, ++fullness) {
-		R_CheckUserInterrupt();
-		// when cross buffer is full, save these outcomes to the file.
-		if (fullness >= 1000) {
-			crosses->n_subjects = 1000;
-			// give the subjects their ids and names
-			if (g.will_name_subjects) {
-				set_subject_names(crosses, g.subject_prefix, *cross_current_id, 0);
-			}
-			for (int j = 0; j < 1000; ++j) {
-				++ *cross_current_id;
-				crosses->ids[j] = *cross_current_id;
-			}
-			
-			// save the subjects to files if appropriate
-			if (g.will_save_pedigree_to_file) {
-				save_AM_pedigree( fp, crosses, d);
-			}
-			if (g.will_save_effects_to_file) {
-				eff = calculate_fitness_metric( crosses, &(d->e));
-				save_fitness( fe, &eff, crosses->ids, crosses->subject_names);
-				delete_dmatrix( &eff);
-			}
-			if (g.will_save_genes_to_file) {
-				save_allele_matrix( fg, crosses, d->markers);
-			}
-			
-			if (g.will_save_to_simdata) {	
-				last->next = crosses;
-				last = last->next;
-				if (n_to_go < 1000) {
-					crosses = create_empty_allelematrix(d->n_markers, n_to_go);
-					n_to_go = 0;
-				} else {
-					crosses = create_empty_allelematrix(d->n_markers, 1000);
-					n_to_go -= 1000;
-				}
-			}
-			
-			fullness = 0; //reset the count and start refilling the matrix
-		}
-		
-		generate_cross( d, p1_genes, p2_genes, crosses->alleles[fullness] );
-		crosses->groups[fullness] = output_group;
-		crosses->pedigrees[0][fullness] = p1_id;
-		crosses->pedigrees[1][fullness] = p2_id;
-	}
-		
-	PutRNGstate();
-	
-	// save the rest of the crosses to the file.
-	// give the subjects their ids and names
-	if (g.will_name_subjects) {
-		set_subject_names(crosses, g.subject_prefix, *cross_current_id, 0);
-	}
-	for (int j = 0; j < fullness; ++j) {
-		++ *cross_current_id;
-		crosses->ids[j] = *cross_current_id;
-	}
-	
-	// save the subjects to files if appropriate
-	if (g.will_save_pedigree_to_file) {
-		save_AM_pedigree( fp, crosses, d);
-		fclose(fp);
-	}
-	if (g.will_save_effects_to_file) {
-		eff = calculate_fitness_metric( crosses, &(d->e));
-		save_fitness( fe, &eff, crosses->ids, crosses->subject_names);
-		delete_dmatrix( &eff);
-		fclose(fe);
-	}
-	if (g.will_save_genes_to_file) {
-		save_allele_matrix( fg, crosses, d->markers);
-		fclose(fg);
-	}
-	if (g.will_save_to_simdata) {
-		last->next = crosses;
-		condense_allele_matrix( d );
-		return output_group;
-		
-	} else {
-		delete_allele_matrix( crosses );
-		return 0;
-	}	
 }
 
 /** Performs random crosses among members of a group. If the group does not 
@@ -1496,23 +1350,36 @@ int make_all_unidirectional_crosses(SimData* d, int from_group, GenOptions g) {
 	
 }
 
-/*int make_crosses_from_top_m_percent(SimData* d, int m, int group, GenOptions g) {
+/** Find the top m percent of a group and perform random crosses between those
+ * top individuals. The resulting offspring are allocated to a new group.
+ * 
+ * Preferences in GenOptions are applied to this cross.
+ *
+ * @param d pointer to the SimData object containing or markers and parent alleles
+ * @param n number of random crosses to make.
+ * @param m percentage (as a decimal, i.e. 0.2 for 20percent). Take the best [this portion]
+ * of the group for performing the random crosses.
+ * @param group group number from which to identify top parents and do crosses
+ * @param g options for the AlleleMatrix created. @see GenOptions
+ * @returns the group number of the group to which the produced offspring were allocated.
+ */
+int make_n_crosses_from_top_m_percent(SimData* d, int n, int m, int group, GenOptions g) {
 	// move the top m% to a new group
 	int group_size = get_group_size(d, group);
 	int n_top_group = group_size * m / 100; //@integer division?
-	Rprintf("There are %d lines in the top %d%%\n", n_top_group, m);
+	printf("There are %d lines in the top %d%%\n", n_top_group, m);
 	
 	int topgroup = split_group_by_fitness(d, group, n_top_group, FALSE);
 	
 	// do the random crosses
-	int gp = cross_random_individuals(d, topgroup, g);
+	int gp = cross_random_individuals(d, topgroup, n, g);
 
 	// unconvert from a group
 	int to_combine[] = {group, topgroup};
 	combine_groups(d, 2, to_combine);
 	
 	return gp;
-}*/
+}
 		
 /** Perform crosses between pairs of parents identified by name in a file
  * and allocate the resulting offspring to a new group.

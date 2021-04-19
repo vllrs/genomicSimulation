@@ -433,6 +433,7 @@ int _ascending_int_comparer(const void* p0, const void* p1) {
 
 /** Comparator function for qsort. Used to compare an array of integers* to sort
  * the integers pointed to in ascending order.
+ * @see get_existing_group_counts()
  *
  * Sorts lower numbers before higher numbers. If floats are equal, their
  * order after comparison is undefined. 
@@ -1052,7 +1053,19 @@ void split_into_individuals( SimData* d, int group_id) {
 	}
 }
 
-
+/** Split a group into a set of smaller groups, each of which contains the 
+ * genotypes in the original group that share a particular pair of parents.
+ * The number of new groups produced depends on the number of parent-combinations
+ * in the set of genotypes in the provided group.
+ *
+ * Individuals with both parents unknown will be grouped together.
+ *
+ * Note: this does not return the group numbers of all the newly created 
+ * groups-of-one.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group to be split
+ */
 void split_into_families(SimData* d, int group_id) {
 	// get pre-existing numbers
 	int n_groups = 0;
@@ -1178,7 +1191,22 @@ int* get_existing_groups( SimData* d, int* n_groups) {
 	}
 }
 
-
+/** Identify every group number that currently has members and 
+ * the number of genotypes currently allocated to that group.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param n_groups a pointer to a location that can be accessed by the 
+ * calling function. The number of groups/length of the returned array
+ * will be saved here.
+ * @returns a heap array of length [2][value saved at n_groups after this 
+ * function has run]. The array at the first index contains the group numbers, 
+ * and the array at the second index contains the number of members of that group,
+ * ordered correspondingly. The arrays are sorted in ascending order by group number.
+ * All three components of the returned value (2-long first-index array containing
+ * the pointers to the toehr 2, and the two data-containing arrays) are allocated
+ * from the heap so should be freed by the calling function when it finishes with
+ * them.
+ */
 int** get_existing_group_counts( SimData* d, int* n_groups) {
 	int eg_size = 50;
 	int** returnval = get_malloc(sizeof(int*) * 2);

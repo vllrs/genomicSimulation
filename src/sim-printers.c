@@ -644,6 +644,54 @@ void save_group_full_pedigree(FILE* f, SimData* d, int group) {
 	fflush(f);	
 }
 
+/** Print the full known pedigree of each genotype in the SimData 
+ * to a file. The following
+ * tab-separated format is used:
+ *
+ * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
+ *
+ * [id]	[name]=([parent pedigree])
+ *
+ * ...
+ *
+ * Note that this pedigree is recursively constructed, so if a genotype's
+ * parents are known, [parent pedigree] is replaced with a string of format
+ * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of 
+ * a genotype are the same individual (i.e. it was produced by selfing, the 
+ * comma and second parent pedigree are ommitted, as in the second line sample
+ * in the format above. 
+ *
+ * The parents of a genotype are identified by the two ids saved in the 
+ * genotype's pedigrees field in the AlleleMatrix struct. 
+ *
+ * If a group member or parent has no name, the name will be 
+ * replaced in the output file with its session-unique id. If the parent
+ * id of an individual is 0, the individual is printed without brackets or 
+ * parent pedigrees and recursion stops here.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the SimData containing all genotypes to print.
+ */
+void save_full_pedigree(FILE* f, SimData* d) {
+	const char newline[] = "\n";
+	
+	AlleleMatrix* m = d->m;
+	
+	do {
+		for (int i = 0; i < m->n_subjects; ++i) {
+			/*Group member name*/
+			fprintf(f, "%d\t", m->ids[i]);
+			if (m->subject_names[i] != NULL) {
+				fwrite(m->subject_names[i], sizeof(char), strlen(m->subject_names[i]), f);
+			}
+			
+			save_parents_of(f, d->m, m->ids[i]);
+			fwrite(newline, sizeof(char), 1, f);
+		}
+	} while ((m = m->next) != NULL);
+	fflush(f);
+}
+
 /** Print the full known pedigree of each genotype in a single AlleleMatrix 
  * to a file. The following
  * tab-separated format is used:
@@ -676,27 +724,6 @@ void save_group_full_pedigree(FILE* f, SimData* d, int group) {
  * @param parents pointer to an AlleleMatrix that heads the linked list
  * containing the parents and other ancestry of the given genotypes.
  */
-void save_full_pedigree(FILE* f, SimData* d) {
-	const char newline[] = "\n";
-	
-	AlleleMatrix* m = d->m;
-	
-	do {
-		for (int i = 0; i < m->n_subjects; ++i) {
-			/*Group member name*/
-			fprintf(f, "%d\t", m->ids[i]);
-			if (m->subject_names[i] != NULL) {
-				fwrite(m->subject_names[i], sizeof(char), strlen(m->subject_names[i]), f);
-			}
-			
-			save_parents_of(f, d->m, m->ids[i]);
-			fwrite(newline, sizeof(char), 1, f);
-		}
-	} while ((m = m->next) != NULL);
-	fflush(f);
-}
-
-
 void save_AM_pedigree(FILE* f, AlleleMatrix* m, SimData* parents) {
 	const char newline[] = "\n";
 	
