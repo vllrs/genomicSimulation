@@ -2,6 +2,7 @@
 
 SEXP SXP_group_eval(SEXP exd, SEXP group) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
 	int group_id = asInteger(group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
@@ -32,6 +33,7 @@ SEXP SXP_group_eval(SEXP exd, SEXP group) {
 
 SEXP SXP_simple_selection(SEXP exd, SEXP glen, SEXP groups, SEXP number, SEXP bestIsLow) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
 	int len = asInteger(glen);
 	int *gps = INTEGER(groups); 
@@ -63,6 +65,7 @@ SEXP SXP_simple_selection(SEXP exd, SEXP glen, SEXP groups, SEXP number, SEXP be
 
 SEXP SXP_simple_selection_bypercent(SEXP exd, SEXP glen, SEXP groups, SEXP percent, SEXP bestIsLow) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
 	int len = asInteger(glen);
 	int *gps = INTEGER(groups); 
