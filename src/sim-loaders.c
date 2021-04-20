@@ -6,10 +6,10 @@ SEXP clear_simdata(SEXP exd) {
 	return ScalarInteger(0);
 }
 
-SEXP load_data(SEXP alleleFile, SEXP mapFile, SEXP groupName) {
+SEXP load_data(SEXP alleleFile, SEXP mapFile) {
 	SimData* d = create_empty_simdata();
 	//d->current_id = 0; // reset ID counts
-	load_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)), CHAR(asChar(groupName)));
+	load_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)));
 	load_genmap_to_simdata(d, CHAR(asChar(mapFile)));
 	
 	get_sorted_markers(d, d->n_markers);
@@ -21,10 +21,10 @@ SEXP load_data(SEXP alleleFile, SEXP mapFile, SEXP groupName) {
 	return sdptr;
 }
 
-SEXP load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile, SEXP groupName) {
+SEXP load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile) {
 	SimData* d = create_empty_simdata();
 	//d->current_id = 0; // reset ID counts
-	load_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)), CHAR(asChar(groupName)));
+	load_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)));
 	load_genmap_to_simdata(d, CHAR(asChar(mapFile)));
 	load_effects_to_simdata(d, CHAR(asChar(effectFile)));
 
@@ -37,10 +37,9 @@ SEXP load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile, SEXP groupNa
 	return sdptr;
 }
 
-SEXP load_more_genotypes(SEXP exd, SEXP alleleFile, SEXP groupName) {
+SEXP load_more_genotypes(SEXP exd, SEXP alleleFile) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	return ScalarInteger(load_more_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)), 
-																CHAR(asChar(groupName))));
+	return ScalarInteger(load_more_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile))));
 	//return ScalarInteger(load_more_transposed_genes_to_simdata(&GlobalSim, CHAR(asChar(alleleFile))));
 }
 
@@ -81,7 +80,7 @@ SEXP load_new_effects(SEXP exd, SEXP effectFile) {
  * @returns the group number of the loaded genotypes. All genotypes are loaded into
  * the same group.
 */
-int load_transposed_genes_to_simdata(SimData* d, const char* filename, const char* groupName) {	
+int load_transposed_genes_to_simdata(SimData* d, const char* filename) {	
 	struct TableSize t = get_file_dimensions(filename, '\t');
 	FILE* fp;
 	const int gp = 1;
@@ -223,7 +222,7 @@ int load_transposed_genes_to_simdata(SimData* d, const char* filename, const cha
  * @returns the group number of the loaded genotypes. All genotypes are loaded into
  * the same group.
 */
-int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename, const char* groupName) {
+int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename) {
 	
 	struct TableSize t = get_file_dimensions(filename, '\t');
 	FILE* fp;
@@ -382,7 +381,7 @@ int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename, c
  * @returns the group number of the loaded genotypes. All genotypes are loaded into
  * the same group.
 */
-int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, const char* groupName) {
+int load_more_transposed_genes_to_simdata(SimData* d, const char* filename) {
 	struct TableSize t = get_file_dimensions(filename, '\t');
 	FILE* fp;
 	int gp = get_new_group_num(d);
@@ -871,7 +870,7 @@ void load_effects_to_simdata(SimData* d, const char* filename) {
 */
 int load_all_simdata(SimData* d, const char* data_file, const char* map_file, const char* effect_file) {
 	delete_simdata(d); // make this empty.
-	int gp = load_transposed_genes_to_simdata(d, data_file, NULL);
+	int gp = load_transposed_genes_to_simdata(d, data_file);
 	
 	load_genmap_to_simdata(d, map_file);
 	load_effects_to_simdata(d, effect_file);

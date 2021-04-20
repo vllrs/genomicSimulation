@@ -10,8 +10,6 @@
 #' a linkage map for the markers loaded from allele.file
 #' @param effect.file (optional) A string containing a filename. The
 #' file should contain effect values for calculating GEBVs of a trait
-#' @param group.name Name of the group to which the genotypes in the allele.file
-#' will be loaded. Set this parameter to NULL to not use a name.
 #' @return The group number of the genotypes loaded from allele.file. This is
 #' always 1 in the current implementation.
 #'
@@ -19,11 +17,11 @@
 #' @useDynLib genomicSimulation load_data
 #' @useDynLib genomicSimulation load_data_weff
 #' @export
-load.data <- function(allele.file, map.file, effect.file=NULL, group.name="Founders") {
+load.data <- function(allele.file, map.file, effect.file=NULL) {
 	if (is.null(effect.file)) {
-		sim.data$p <- .Call(load_data, allele.file, map.file, group.name)
+		sim.data$p <- .Call(load_data, allele.file, map.file)
 	} else {
-		sim.data$p <- .Call(load_data_weff, allele.file, map.file, effect.file, group.name)
+		sim.data$p <- .Call(load_data_weff, allele.file, map.file, effect.file)
 	}
 	#the group number of the first group is always 1
 	return(1L) 
@@ -41,9 +39,9 @@ load.data <- function(allele.file, map.file, effect.file=NULL, group.name="Found
 #' @family loader functions
 #' @useDynLib genomicSimulation load_more_genotypes
 #' @export
-load.more.genotypes <- function(allele.file, group.name=NULL) {
+load.more.genotypes <- function(allele.file) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(load_more_genotypes, sim.data$p, allele.file, group.name)) 
+	return(.Call(load_more_genotypes, sim.data$p, allele.file)) 
 }
 
 #' Replace effect values

@@ -4,17 +4,17 @@
 #include "utils.h"
 #include "sim-printers.h"
 
-SEXP load_data(SEXP alleleFile, SEXP mapFile, SEXP groupName);
-SEXP load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile, SEXP groupName);
-SEXP load_more_genotypes(SEXP exd, SEXP alleleFile, SEXP groupName);
+SEXP load_data(SEXP alleleFile, SEXP mapFile);
+SEXP load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile);
+SEXP load_more_genotypes(SEXP exd, SEXP alleleFile);
 SEXP load_new_effects(SEXP exd, SEXP effectFile);
 
 /* Loaders */
-int load_transposed_genes_to_simdata(SimData* d, const char* filename, const char* groupName);
-int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, const char* groupName);
+int load_transposed_genes_to_simdata(SimData* d, const char* filename);
+int load_more_transposed_genes_to_simdata(SimData* d, const char* filename);
 //int load_genes_to_simdata(SimData* d, const char* filename); //@ add
 //int load_more_genes_to_simdata(SimData* d, const char* filename); //@ add
-int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename, const char* groupName);
+int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename);
 void load_genmap_to_simdata(SimData* d, const char* filename);
 void get_sorted_markers(SimData* d, int actual_n_markers);
 void get_chromosome_locations(SimData *d);
