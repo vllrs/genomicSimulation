@@ -63,7 +63,7 @@ test_that("Other functions don't run without data being loaded", {
   expect_error(select.by.gebv(1L, number=2),"Please load.data first")
   expect_error(self.n.times(2L,1L),"Please load.data first")
   
-  g0 <- load.data("helper_genotypes.txt", "helper_map.txt")
+  capture_output(g0 <- load.data("helper_genotypes.txt", "helper_map.txt"), print=F)
   expect_error(see.group.gebvs(g0),"Need to load effect values before running this function")
   expect_error(save.GEBVs("imaginary"),"Need to load effect values before running this function")
   expect_error(select.by.gebv(g0, number=2),"Need to load effect values before running this function")
