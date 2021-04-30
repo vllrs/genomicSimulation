@@ -494,6 +494,19 @@ void condense_allele_matrix( SimData* d) {
 	while (1) {
 		for (checker = 0; checker < 1000; ++checker) {
 			if (checker_m->alleles[checker] == NULL) {
+				// check our filler has a substitute
+				while (filler_m->alleles[filler] == NULL) {
+					++filler;
+					if (filler >= 1000) {
+						// move to the next AM
+						if (filler_m->next != NULL) {
+							filler_m = filler_m->next;
+							filler = 0;
+						} else {
+							return;
+						}
+					}
+				}
 				
 				// put in the substitute
 				checker_m->alleles[checker] = filler_m->alleles[filler];
@@ -501,7 +514,7 @@ void condense_allele_matrix( SimData* d) {
 				checker_m->subject_names[checker] = filler_m->subject_names[filler];
 				filler_m->subject_names[filler] = NULL;
 				checker_m->ids[checker] = filler_m->ids[filler];
-				filler_m->ids[filler] = 0;
+				filler_m->ids[filler] = -1;
 				checker_m->pedigrees[0][checker] = filler_m->pedigrees[0][filler];
 				checker_m->pedigrees[1][checker] = filler_m->pedigrees[1][filler];
 				filler_m->pedigrees[0][filler] = 0;
@@ -511,34 +524,32 @@ void condense_allele_matrix( SimData* d) {
 				if (checker_m != filler_m) {
 					++ checker_m->n_subjects;
 					-- filler_m->n_subjects;
-				}
-			}
-			
-			// check our filler has a substitute for the next one
-			while (filler_m->alleles[filler] == NULL) {
-				++filler;
-				if (filler >= 1000) {
-					// move to the next AM
-					if (filler_m->next != NULL) {
-						filler_m = filler_m->next;
-						filler = 0;
-					} else {
-						
-						// loop through and remove empty AMs before returning
-						filler_m = d->m;
-						while (filler_m->next != NULL) {
-							if (filler_m->next->n_subjects == 0) {
-								delete_allele_matrix(filler_m->next);
-								filler_m->next = NULL;
-							} else {
-								filler_m = filler_m->next;
+					
+					if (filler_m->n_subjects == 0) {
+						// find the previous matrix in the linked list
+						AlleleMatrix* previous = checker_m;
+						while (previous->next != filler_m) {
+							previous = previous->next;
+							if (previous == NULL) {
+								fprintf(stderr, "Error: filler got somewhere checker can't go.\n");
+								exit(1);
 							}
 						}
-						return;
+						// delete this one and cut it out of the list
+						previous->next = filler_m->next;						
+						filler_m->next = NULL; // so we don't delete the rest of the list
+						delete_allele_matrix(filler_m);
+						// move our filler values on
+						if (previous->next == NULL) {
+							return;
+						} else {
+							filler_m = previous->next;
+							filler = 0;
+						}
+							
 					}
 				}
 			}
-			
 		}
 		
 		// We're done with the AM, move on to the next one.
