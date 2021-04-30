@@ -4,14 +4,11 @@
 \alias{load.more.genotypes}
 \title{Load more genotypes to the existing SimData object from a file}
 \usage{
-load.more.genotypes(allele.file, group.name = NULL)
+load.more.genotypes(allele.file)
 }
 \arguments{
 \item{allele.file}{A string containing a filename. The file should
 contain a matrix of markers and alleles}
-
-\item{group.name}{Name of the group to which the genotypes in the allele.file
-will be loaded. Set this parameter to NULL to not use a name.}
 }
 \value{
 The group number of the genotypes loaded from allele.file.

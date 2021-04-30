@@ -4,7 +4,7 @@
 \alias{load.data}
 \title{Create a new SimData object from data loaded from files}
 \usage{
-load.data(allele.file, map.file, effect.file = NULL, group.name = "Founders")
+load.data(allele.file, map.file, effect.file = NULL)
 }
 \arguments{
 \item{allele.file}{A string containing a filename. The file should
@@ -15,9 +15,6 @@ a linkage map for the markers loaded from allele.file}
 
 \item{effect.file}{(optional) A string containing a filename. The
 file should contain effect values for calculating GEBVs of a trait}
-
-\item{group.name}{Name of the group to which the genotypes in the allele.file
-will be loaded. Set this parameter to NULL to not use a name.}
 }
 \value{
 The group number of the genotypes loaded from allele.file. This is
