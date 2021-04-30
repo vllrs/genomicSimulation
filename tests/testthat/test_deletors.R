@@ -1,8 +1,10 @@
 test_that("After deleting a group, it is no longer in memory", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
+  #setup worked as expected
   expect_identical(length(see.group.data(g, "Indexes")), 6L)
   
+  #testing function
   expect_output(delete.group(g), "6 genotypes were deleted")
   
   expect_identical(length(see.group.data(g, "Indexes")), 0L)
