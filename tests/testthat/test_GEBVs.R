@@ -1,4 +1,32 @@
-test_that("GEBVs are correctly calculated", {})
+test_that("GEBVs are correctly calculated and shared with the see function", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  expect_equal(see.group.gebvs(g), data.frame("i"=c(0L,1L,2L,3L,4L,5L), "GEBV"=c(1.4,1.4,1.6,-0.1,0.6,-0.3)))
+})
+
+test_that("GEBVs are correctly calculated and shared with the save function", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  expect_equal(save.GEBVs("imaginary", group=g),0)
+  f_out <- readLines("imaginary")
+  expect_identical(length(f_out), 6L)
+  
+  f_out_split <- scan(text=f_out[1], what=" ", quiet=TRUE)
+  expect_identical(as.integer(f_out_split[1]), 1L)
+  expect_identical(f_out_split[2], "G01")
+  expect_equal(as.numeric(f_out_split[3]), 1.4)
+  
+  f_out_split <- scan(text=f_out[4], what=" ", quiet=TRUE)
+  expect_identical(as.integer(f_out_split[1]), 4L)
+  expect_identical(f_out_split[2], "G04")
+  expect_equal(as.numeric(f_out_split[3]), -0.1)
+  
+  f_out_split <- scan(text=f_out[6], what=" ", quiet=TRUE)
+  expect_identical(as.integer(f_out_split[1]), 6L)
+  expect_identical(f_out_split[2], "G06")
+  expect_equal(as.numeric(f_out_split[3]), -0.3)
+})
+
 
 test_that("Local GEBVs are correctly calculated and saved", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
