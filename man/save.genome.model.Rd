@@ -17,6 +17,14 @@ be written}
 \code{save.genome.model} saves the SNP names, their linkage map positions, 
 and the effect values for calculating GEBVs (if applicable) to a file.
 }
+\details{
+The output is printed with first a tab-separated header row, containing
+the column names "name", "chr", "pos", then all alleles for which the saved
+SimData has effect values, if it has any. The subsequent lines, also tab-separated,
+contain the name of a SNP, the chromosome on which it is found, the positions
+at which it is found, and then the contribution to the GEBV of every allele
+at that marker for which effects are loaded.
+}
 \seealso{
 Other saving functions: 
 \code{\link{save.GEBVs}()},

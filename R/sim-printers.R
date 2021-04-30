@@ -3,6 +3,13 @@
 #' \code{save.genome.model} saves the SNP names, their linkage map positions, 
 #' and the effect values for calculating GEBVs (if applicable) to a file.
 #'
+#' The output is printed with first a tab-separated header row, containing
+#' the column names "name", "chr", "pos", then all alleles for which the saved
+#' SimData has effect values, if it has any. The subsequent lines, also tab-separated,
+#' contain the name of a SNP, the chromosome on which it is found, the positions
+#' at which it is found, and then the contribution to the GEBV of every allele
+#' at that marker for which effects are loaded.
+#'
 #' @param filename A string containing a filename to which the output will
 #' be written
 #' @return 0 on success. On failure an error will be raised.
@@ -47,6 +54,12 @@ save.genotypes <- function(filename, group=NULL, type="R") {
 #' \code{save.allele.counts} counts the number of occurences of a given
 #' allele at each SNP of each genotype in the selected set, and prints
 #' the output to a file.
+#'
+#' The function prints its results to a tab-separated matrix file. The first line/
+#' column header gives the name (or id if the genotype does not have a name allocated)
+#' of each genotype that is having its counts printed. After that header row, all rows 
+#' begin with the name of a SNP, followed by the number of the given allele at that
+#' marker in the corresponding genotype from the header row.
 #'
 #' @param filename A string containing a filename to which the output will
 #' be written
@@ -120,6 +133,9 @@ save.pedigrees <- function(filename, group=NULL, type="R") {
 #' \code{save.GEBVs} calculates GEBVs for a set of genotypes using 
 #' the current effect values saved to the SimData, then saves those GEBVs 
 #' to a file.
+#'
+#' The function prints its results to a tab-separated file, where each
+#' row contains, in order, the genotype's ID, name, and calculated GEBV
 #'
 #' @param filename A string containing a filename to which the output will
 #' be written

@@ -25,6 +25,13 @@ allele to count.}
 allele at each SNP of each genotype in the selected set, and prints
 the output to a file.
 }
+\details{
+The function prints its results to a tab-separated matrix file. The first line/
+column header gives the name (or id if the genotype does not have a name allocated)
+of each genotype that is having its counts printed. After that header row, all rows 
+begin with the name of a SNP, followed by the number of the given allele at that
+marker in the corresponding genotype from the header row.
+}
 \seealso{
 Other saving functions: 
 \code{\link{save.GEBVs}()},

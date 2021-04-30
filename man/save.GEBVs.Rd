@@ -22,6 +22,10 @@ to that group.}
 the current effect values saved to the SimData, then saves those GEBVs 
 to a file.
 }
+\details{
+The function prints its results to a tab-separated file, where each
+row contains, in order, the genotype's ID, name, and calculated GEBV
+}
 \seealso{
 Other saving functions: 
 \code{\link{save.allele.counts}()},

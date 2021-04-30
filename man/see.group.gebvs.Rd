@@ -10,8 +10,8 @@ see.group.gebvs(group)
 \item{group}{an integer: the group number of the group to return the GEBVs of.}
 }
 \value{
-a dataframe whose columns are the GEBVs of the group members and 
-the indexes of the group members.
+a dataframe whose columns are the GEBVs of the group members, named "GEBV", and 
+the indexes of the group members, named "i".
 }
 \description{
 \code{see.group.gebvs} gives the R user a dataframe containing the GEBVs and a matching

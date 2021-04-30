@@ -200,8 +200,8 @@ select.by.gebv <- function(from.group, low.score.best=FALSE, percentage=NULL, nu
 #' them off into a new group.
 #'
 #' @param group an integer: the group number of the group to return the GEBVs of.
-#' @returns a dataframe whose columns are the GEBVs of the group members and 
-#' the indexes of the group members.
+#' @returns a dataframe whose columns are the GEBVs of the group members, named "GEBV", and 
+#' the indexes of the group members, named "i".
 #'
 #' @family grouping functions
 #' @family saving functions
