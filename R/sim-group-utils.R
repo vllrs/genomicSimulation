@@ -89,7 +89,7 @@ make.group <- function(indexes) {
 #'
 #' @return A dataframe containing two columns, the first, named "Group", 
 #' being the group numbers of every group in the SimData that currently 
-#' has members, the second, named "Group size", being 
+#' has members, the second, named "GroupSize", being 
 #' the number of genotypes currently allocated to that group
 #'
 #' @family grouping functions
@@ -98,7 +98,7 @@ make.group <- function(indexes) {
 see.existing.groups <- function() {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	d <- data.frame(.Call(SXP_get_groups, sim.data$p))
-	colnames(d) <- c("Group", "Group size")
+	colnames(d) <- c("Group", "GroupSize")
 	return(d)
 }
 

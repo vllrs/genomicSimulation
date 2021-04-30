@@ -9,7 +9,7 @@ see.existing.groups()
 \value{
 A dataframe containing two columns, the first, named "Group", 
 being the group numbers of every group in the SimData that currently 
-has members, the second, named "Group size", being 
+has members, the second, named "GroupSize", being 
 the number of genotypes currently allocated to that group
 }
 \description{
