@@ -254,6 +254,8 @@ make.doubled.haploids <- function(group, offspring=1, retain=TRUE, give.names=FA
 #' this pair of parents.
 #' 
 #' @inheritParams cross.randomly
+#' @param parent1.index index of the first parent to cross
+#' @param parent2.index index of the second parent to cross
 #' @param offspring The number of offspring to produce from this pair of parents
 #' @return The group number of the group that the generated offspring were loaded into.
 #'
