@@ -6,13 +6,14 @@ Description: Functions to simulate breeding programs on SNP markers, making simu
  phased genotypes, and functions to calculate or perform selection based on GEBVs from
  provided effect values.
 License: GPL (>= 2)
+URL: https://github.com/KiraVill/genomicSimulation
 Encoding: UTF-8
 RoxygenNote: 7.1.1
+VignetteBuilder: knitr, rmarkdown
 Suggests: 
     knitr,
     rmarkdown,
     reshape2,
     ggplot2,
     testthat (>= 3.0.0)
-VignetteBuilder: knitr
 Config/testthat/edition: 3

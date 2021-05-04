@@ -3,15 +3,15 @@ title: "genomicSimulation Vignette"
 author: "Kira Villiers"
 date: "`r Sys.Date()`"
 output:
-  html_document:
+  rmarkdown::html_vignette:
       fig_caption: true
       number_sections: true
       toc: true
-      theme: simplex
+      #theme: simplex
 vignette: >
-  \VignetteIndexEntry{gSvignette}
-  \VignetteEngine{knitr::rmarkdown}
-  \VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{genomicSimulation Vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\usepackage[utf8]{inputenc}
 ---
 
 ```{r, include = FALSE}
@@ -138,12 +138,14 @@ The assumed workflow for this package involves the following steps:
 The example below shows a how a typical workflow would save group numbers and call crossing functions.
 ```{R}
 # (Show the tiny example data set)
-read.csv("a-matrix.txt", sep='\t', header=T)
-read.csv("a-map.txt", sep='\t', header=T)
-read.csv("a-yield.txt", sep='\t')
+read.csv("../tests/testthat/helper_genotypes.txt", sep='\t', header=T)
+read.csv("../tests/testthat/helper_map.txt", sep='\t', header=T)
+read.csv("../tests/testthat/helper_eff.txt", sep='\t')
 
 # load the small initial data set
-g0 <- load.data("a-matrix.txt", "a-map.txt", "a-yield.txt")
+g0 <- load.data("../tests/testthat/helper_genotypes.txt",
+                "../tests/testthat/helper_map.txt",
+                "../tests/testthat/helper_eff.txt")
 
 # Do many random crosses from the data set. 
 f1 <- cross.randomly(g0, n.crosses=20, give.names=TRUE, name.prefix="F1.")
@@ -161,16 +163,21 @@ delete.group(f1)
 f2 <- cross.randomly(f1.selected, n.crosses=5)
 delete.group(f1.selected)
 
-# Complete 4 rounds of selfing.
+# Complete 4 rounds of selfing with save-as-you-go genotype saving
 f6 <- self.n.times(f2, 4, file.prefix="af6", save.genotype=TRUE)
 
-# (Show current state of groups)
+# Show current state of groups
 print(c(g0, f2, f6))
 see.existing.groups()
 
-# (Show these output files)
+# Show the save-as-you-go output file
 read.csv("af6-genome", sep='\t')
 
+
+# (cleanup)
+file.remove("a.txt")
+file.remove("b.txt")
+file.remove("af6-genome")
 ```
 
 ## Simple Example Breeding Scheme
@@ -437,7 +444,7 @@ A 0 refers to an unknown parentage. Non-zero values are the ID of the parent fro
 This function returns a dataframe with two columns:
 
 - `Group`, containing the group numbers of all existing groups
-- `Group size`, containing the number of genotypes currently allocated to that group number.
+- `GroupSize`, containing the number of genotypes currently allocated to that group number.
 
 ### `see.group.data`
 This function returns a vector containing the values of the chosen data type for each group member.
