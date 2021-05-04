@@ -6,7 +6,7 @@ This project is an R package that runs stochastic simulations of genetics in bre
 This package is not yet submitted to CRAN. [See the latest release here](https://github.com/KiraVill/genomicSimulation/releases).
 
 ### Documentation and Guides
-[The package vignette is available in the repository at this link](https://kiravill.github.io/genomicSimulation/vignettes/gSvignette.html). The vignette provides usage guides and an overview of the functions and simulation methodology of the package. 
+[The package vignette is available in the repository at this link](https://kiravill.github.io/genomicSimulation/doc/gSvignette.html). The vignette provides usage guides and an overview of the functions and simulation methodology of the package. 
 
 The docs folder contains the documentation files. These can also be viewed in R using the command `?[function name]`. 
 
