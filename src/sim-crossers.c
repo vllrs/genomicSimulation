@@ -564,12 +564,12 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, GenOptio
 	} else {
 		cross_current_id = &cid;
 	}
-	unsigned int* group_ids;
+	unsigned int* group_ids = NULL;
 	if (g.will_track_pedigree) {
 		group_ids = get_group_ids( d, from_group, g_size);
 	}
-	AlleleMatrix* last;
-	int output_group;
+	AlleleMatrix* last = NULL;
+	int output_group = 0;
 	if (g.will_save_to_simdata) {
 		last = d->m; // for saving to simdata
 		while (last->next != NULL) {
@@ -580,7 +580,7 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, GenOptio
 	
 	// open the output files, if applicable
 	char fname[100];
-	FILE* fp, * fe, * fg;
+	FILE* fp = NULL, * fe = NULL, * fg = NULL;
 	DecimalMatrix eff;
 	if (g.will_save_pedigree_to_file) {
 		strcpy(fname, g.filename_prefix);
@@ -743,8 +743,8 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 	} else {
 		cross_current_id = &cid;
 	}
-	AlleleMatrix* last;
-	int output_group;
+	AlleleMatrix* last = NULL;
+	int output_group = 0;
 	if (g.will_save_to_simdata) {
 		last = d->m; // for saving to simdata
 		while (last->next != NULL) {
@@ -755,7 +755,7 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 	
 	// open the output files, if applicable
 	char fname[100];
-	FILE* fp, * fe, * fg;
+	FILE* fp = NULL, * fe = NULL, * fg = NULL;
 	DecimalMatrix eff;
 	if (g.will_save_pedigree_to_file) {
 		strcpy(fname, g.filename_prefix);
@@ -921,12 +921,12 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	} else {
 		cross_current_id = &cid;
 	}
-	unsigned int* group_ids;
+	unsigned int* group_ids = NULL;
 	if (g.will_track_pedigree) {
 		group_ids = get_group_ids( d, group, group_size);
 	}
-	AlleleMatrix* last;
-	int output_group;
+	AlleleMatrix* last = NULL;
+	int output_group = 0;
 	if (g.will_save_to_simdata) {
 		last = d->m; // for saving to simdata
 		while (last->next != NULL) {
@@ -937,7 +937,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	
 	// open the output files, if applicable
 	char fname[100];
-	FILE* fp, * fe, * fg;
+	FILE* fp = NULL, * fe = NULL, * fg = NULL;
 	DecimalMatrix eff;
 	if (g.will_save_pedigree_to_file) {
 		strcpy(fname, g.filename_prefix);
@@ -1175,12 +1175,12 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 	} else {
 		cross_current_id = &cid;
 	}
-	unsigned int* group_ids;
+	unsigned int* group_ids = NULL;
 	if (g.will_track_pedigree) {
 		group_ids = get_group_ids( d, group, group_size);
 	}
-	AlleleMatrix* last;
-	int output_group;
+	AlleleMatrix* last = NULL;
+	int output_group = 0;
 	if (g.will_save_to_simdata) {
 		last = d->m; // for saving to simdata
 		while (last->next != NULL) {
@@ -1191,7 +1191,7 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 	
 	// open the output files, if applicable
 	char fname[100];
-	FILE* fp, * fe, * fg;
+	FILE* fp = NULL, * fe = NULL, * fg = NULL;
 	DecimalMatrix eff;
 	if (g.will_save_pedigree_to_file) {
 		strcpy(fname, g.filename_prefix);

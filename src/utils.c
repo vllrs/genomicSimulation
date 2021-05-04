@@ -280,7 +280,7 @@ int get_from_unordered_str_list(char* target, char** list, int list_len) {
  * @param from_index the new names are added to this index and all those following it in this
  * AlleleMatrix.
 */
-void set_subject_names(AlleleMatrix* a, char* prefix, int suffix, int from_index) {
+void set_subject_names(AlleleMatrix* a, const char* prefix, int suffix, int from_index) {
 	char sname[30];
 	char format[30];
 	if (prefix == NULL) {

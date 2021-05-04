@@ -76,14 +76,14 @@ typedef struct {
 */
 typedef struct {
 	int will_name_subjects;
-	char* subject_prefix;
+	const char* subject_prefix;
 	
 	int family_size;
 	
 	int will_track_pedigree;
 	int will_allocate_ids;
 	
-	char* filename_prefix;
+	const char* filename_prefix;
 	int will_save_pedigree_to_file;
 	int will_save_effects_to_file;
 	int will_save_genes_to_file;
@@ -229,7 +229,7 @@ char** get_group_names( SimData* d, int group_id, int group_size);
 unsigned int* get_group_ids( SimData* d, int group_id, int group_size);
 unsigned int* get_group_indexes(SimData* d, int group_id, int group_size);
 
-void set_subject_names(AlleleMatrix* a, char* prefix, int suffix, int from_index);
+void set_subject_names(AlleleMatrix* a, const char* prefix, int suffix, int from_index);
 void set_subject_ids(SimData* d, int from_index, int to_index);
 
 int get_integer_digits(int i);
