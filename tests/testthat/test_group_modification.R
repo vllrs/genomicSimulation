@@ -69,3 +69,19 @@ test_that("break.group.into.families runs successfully", {
   expect_identical(see.group.data(fs[2], "Name"), c("three8", "three9", "three10", "three11"))
   expect_identical(see.group.data(fs[3], "Name"), c("four12", "four13", "four14"))
 })
+
+test_that("select.by.gebv runs successfully", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  expect_identical(see.group.data(select.by.gebv(g, number=5), "I"), c(0L,1L,2L,3L,4L))
+  
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  expect_identical(see.group.data(select.by.gebv(g, low.score.best=T, number=2), "I"), c(3L,5L))
+  
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  expect_identical(see.group.data(select.by.gebv(g, percentage=50), "I"), c(0L,1L,2L))
+  
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  expect_identical(see.group.data(select.by.gebv(g, low.score.best=T, percentage=20), "I"), c(5L))
+  
+  clear.simdata()
+})
