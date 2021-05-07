@@ -43,7 +43,7 @@ GenOptions create_genoptions(SEXP name, SEXP namePrefix, SEXP familySize,
 	return go;
 }
 
-SEXP cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
 	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
@@ -79,7 +79,7 @@ SEXP cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP name, S
 	}
 }
 
-SEXP cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
 	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
@@ -93,7 +93,7 @@ SEXP cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEX
 	return ScalarInteger(make_crosses_from_file(d, fname, g));
 }
 
-SEXP dcross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_dcross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
 	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
@@ -108,7 +108,7 @@ SEXP dcross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SE
 	
 }
 
-SEXP cross_unidirectional(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_cross_unidirectional(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
 	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,

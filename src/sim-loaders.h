@@ -4,10 +4,10 @@
 #include "utils.h"
 #include "sim-printers.h"
 
-SEXP load_data(SEXP alleleFile, SEXP mapFile);
-SEXP load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile);
-SEXP load_more_genotypes(SEXP exd, SEXP alleleFile);
-SEXP load_new_effects(SEXP exd, SEXP effectFile);
+SEXP SXP_load_data(SEXP alleleFile, SEXP mapFile);
+SEXP SXP_load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile);
+SEXP SXP_load_more_genotypes(SEXP exd, SEXP alleleFile);
+SEXP SXP_load_new_effects(SEXP exd, SEXP effectFile);
 
 /* Loaders */
 int load_transposed_genes_to_simdata(SimData* d, const char* filename);
@@ -71,7 +71,7 @@ static inline int has_same_alleles_window(char* g1, char* g2, int start, int w) 
 int calculate_recombinations_from_file(SimData* d, const char* input_file, const char* output_file, 
 		int window_len, int certain);
 		
-SEXP find_crossovers(SEXP exd, SEXP parentFile, SEXP outFile, SEXP windowSize, SEXP certainty);
-SEXP send_map(SEXP exd);
+SEXP SXP_find_crossovers(SEXP exd, SEXP parentFile, SEXP outFile, SEXP windowSize, SEXP certainty);
+SEXP SXP_send_map(SEXP exd);
 
 #endif

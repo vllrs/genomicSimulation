@@ -6,7 +6,7 @@ SEXP clear_simdata(SEXP exd) {
 	return ScalarInteger(0);
 }
 
-SEXP load_data(SEXP alleleFile, SEXP mapFile) {
+SEXP SXP_load_data(SEXP alleleFile, SEXP mapFile) {
 	SimData* d = create_empty_simdata();
 	//d->current_id = 0; // reset ID counts
 	load_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)));
@@ -21,7 +21,7 @@ SEXP load_data(SEXP alleleFile, SEXP mapFile) {
 	return sdptr;
 }
 
-SEXP load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile) {
+SEXP SXP_load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile) {
 	SimData* d = create_empty_simdata();
 	//d->current_id = 0; // reset ID counts
 	load_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)));
@@ -37,13 +37,13 @@ SEXP load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile) {
 	return sdptr;
 }
 
-SEXP load_more_genotypes(SEXP exd, SEXP alleleFile) {
+SEXP SXP_load_more_genotypes(SEXP exd, SEXP alleleFile) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	return ScalarInteger(load_more_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile))));
 	//return ScalarInteger(load_more_transposed_genes_to_simdata(&GlobalSim, CHAR(asChar(alleleFile))));
 }
 
-SEXP load_new_effects(SEXP exd, SEXP effectFile) {
+SEXP SXP_load_new_effects(SEXP exd, SEXP effectFile) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	load_effects_to_simdata(d, CHAR(asChar(effectFile)));
 	return ScalarInteger(0);
@@ -1134,7 +1134,7 @@ int calculate_recombinations_from_file(SimData* d, const char* input_file, const
 }
 
 
-SEXP find_crossovers(SEXP exd, SEXP parentFile, SEXP outFile, SEXP windowSize, SEXP certainty) {
+SEXP SXP_find_crossovers(SEXP exd, SEXP parentFile, SEXP outFile, SEXP windowSize, SEXP certainty) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
 	const char* load_fname = CHAR(asChar(parentFile));
@@ -1149,7 +1149,7 @@ SEXP find_crossovers(SEXP exd, SEXP parentFile, SEXP outFile, SEXP windowSize, S
 	return ScalarInteger(calculate_recombinations_from_file(d, load_fname, save_fname, win, cert));
 }
 
-SEXP send_map(SEXP exd) {
+SEXP SXP_send_map(SEXP exd) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	MarkerPosition* mp = d->map.positions;
 	

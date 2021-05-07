@@ -8,16 +8,16 @@
 GenOptions create_genoptions(SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain);
-SEXP cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain);
-SEXP cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain);
-SEXP dcross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_dcross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain);
-SEXP cross_unidirectional(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_cross_unidirectional(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain);
 /*SEXP cross_top(SEXP exd, SEXP group, SEXP percent, SEXP name, SEXP namePrefix, SEXP familySize,

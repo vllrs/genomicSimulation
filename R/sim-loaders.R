@@ -17,9 +17,9 @@
 #' @export
 load.data <- function(allele.file, map.file, effect.file=NULL) {
 	if (is.null(effect.file)) {
-		sim.data$p <- .Call(load_data, allele.file, map.file)
+		sim.data$p <- .Call(SXP_load_data, allele.file, map.file)
 	} else {
-		sim.data$p <- .Call(load_data_weff, allele.file, map.file, effect.file)
+		sim.data$p <- .Call(SXP_load_data_weff, allele.file, map.file, effect.file)
 	}
 	#the group number of the first group is always 1
 	return(1L) 
@@ -38,7 +38,7 @@ load.data <- function(allele.file, map.file, effect.file=NULL) {
 #' @export
 load.more.genotypes <- function(allele.file) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(load_more_genotypes, sim.data$p, allele.file)) 
+	return(.Call(SXP_load_more_genotypes, sim.data$p, allele.file)) 
 }
 
 #' Replace effect values
@@ -55,7 +55,7 @@ load.more.genotypes <- function(allele.file) {
 #' @export
 load.different.effects <- function(effect.file) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(load_new_effects, sim.data$p, effect.file)) 
+	return(.Call(SXP_load_new_effects, sim.data$p, effect.file)) 
 }
 
 #' Clear the internal storage of all data
@@ -99,7 +99,7 @@ clear.simdata <- function() {
 #' @export
 find.crossovers <- function(parentage.file, out.file, window.size=1, certainty=TRUE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(find_crossovers, sim.data$p, parentage.file, out.file, window.size, certainty))
+	return(.Call(SXP_find_crossovers, sim.data$p, parentage.file, out.file, window.size, certainty))
 }
 
 #' Identify and plot historical crossover events
@@ -116,7 +116,7 @@ find.crossovers <- function(parentage.file, out.file, window.size=1, certainty=T
 #' @export
 find.plot.crossovers <- function(parentage.file, out.file, window.size=1, certainty=TRUE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	.Call(find_crossovers, sim.data$p, parentage.file, out.file, window.size, certainty)
+	.Call(SXP_find_crossovers, sim.data$p, parentage.file, out.file, window.size, certainty)
 	
 	my.palette = c("#cccccc", "#0077AA", "#66ccee", "#228833", "#DDCC77", "#EE6677", "#aa3377", "yellow",
            'green3', 'orange')
@@ -154,7 +154,7 @@ find.plot.crossovers <- function(parentage.file, out.file, window.size=1, certai
 
 send.map <- function() {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	m <- data.frame(.Call(send_map, sim.data$p))
+	m <- data.frame(.Call(SXP_send_map, sim.data$p))
 	colnames(m) <- c("SNP","chr","pos")
 	return(m)
 }

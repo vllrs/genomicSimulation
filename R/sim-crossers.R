@@ -61,7 +61,7 @@ cross.randomly <- function(group, n.crosses=5, offspring=1, retain=TRUE, give.na
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(cross_randomly, sim.data$p, length(group), group, n.crosses, give.names, name.prefix, 
+	return(.Call(SXP_cross_randomly, sim.data$p, length(group), group, n.crosses, give.names, name.prefix, 
 	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -89,7 +89,7 @@ cross.combinations <- function(cross.file, offspring=1, retain=TRUE, give.names=
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(cross_combinations, sim.data$p, cross.file, give.names, name.prefix, offspring, 
+	return(.Call(SXP_cross_combinations, sim.data$p, cross.file, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -119,7 +119,7 @@ cross.dc.combinations <- function(cross.file, offspring=1, retain=TRUE, give.nam
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(dcross_combinations, sim.data$p, cross.file, give.names, name.prefix, offspring, 
+	return(.Call(SXP_dcross_combinations, sim.data$p, cross.file, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -144,7 +144,7 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(cross_unidirectional, sim.data$p, length(group), group, give.names, name.prefix,
+	return(.Call(SXP_cross_unidirectional, sim.data$p, length(group), group, give.names, name.prefix,
 	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
