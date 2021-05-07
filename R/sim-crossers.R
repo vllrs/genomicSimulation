@@ -56,7 +56,6 @@
 #' produced due to an invalid parent group number being provided.
 #'
 #' @family crossing functions
-#' @useDynLib genomicSimulation cross_randomly
 #' @export
 cross.randomly <- function(group, n.crosses=5, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
@@ -85,7 +84,6 @@ cross.randomly <- function(group, n.crosses=5, offspring=1, retain=TRUE, give.na
 #' @return The group number of the new crosses produced
 #'
 #' @family crossing functions
-#' @useDynLib genomicSimulation cross_combinations
 #' @export
 cross.combinations <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
@@ -116,7 +114,6 @@ cross.combinations <- function(cross.file, offspring=1, retain=TRUE, give.names=
 #' @return The group number of the new crosses produced
 #'
 #' @family crossing functions
-#' @useDynLib genomicSimulation dcross_combinations
 #' @export
 cross.dc.combinations <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
@@ -142,7 +139,6 @@ cross.dc.combinations <- function(cross.file, offspring=1, retain=TRUE, give.nam
 #' produced due to an invalid parent group number being provided.
 #'
 #' @family crossing functions
-#' @useDynLib genomicSimulation cross_unidirectional
 #' @export
 cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
@@ -172,7 +168,6 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 # @return The group number of the new genotypes produced
 #
 # @family crossing functions
-# @useDynLib genomicSimulation cross_top
 # @export
 #cross.from.top.pc <- function(group, threshold, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 #		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
@@ -204,7 +199,6 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 #' produced due to an invalid parent group number being provided.
 #'
 #' @family crossing functions
-#' @useDynLib genomicSimulation SXP_selfing
 #' @export
 self.n.times <- function(group, n, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
@@ -233,7 +227,6 @@ self.n.times <- function(group, n, offspring=1, retain=TRUE, give.names=FALSE, n
 #' produced due to an invalid parent group number being provided.
 #'
 #' @family crossing functions
-#' @useDynLib genomicSimulation SXP_doubled
 #' @export
 make.doubled.haploids <- function(group, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
@@ -260,7 +253,6 @@ make.doubled.haploids <- function(group, offspring=1, retain=TRUE, give.names=FA
 #' @return The group number of the group that the generated offspring were loaded into.
 #'
 #' @family crossing functions
-#' @useDynLib genomicSimulation SXP_one_cross
 #' @export
 cross <- function(parent1.index, parent2.index, offspring=1, retain=TRUE, give.names=FALSE, 
 		name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 

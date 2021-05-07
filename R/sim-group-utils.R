@@ -8,7 +8,6 @@
 #' @return 0 on success. An error is raised on failure.
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_delete_group
 #' @export
 delete.group <- function(group) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -26,7 +25,6 @@ delete.group <- function(group) {
 #' @return the group number of the combined group
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_combine_groups
 #' @export
 combine.groups <- function(groups) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -42,7 +40,6 @@ combine.groups <- function(groups) {
 #' @return the group numbers of the new groups
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_split_individuals
 #' @export
 break.group.into.individuals <- function(group) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -58,7 +55,6 @@ break.group.into.individuals <- function(group) {
 #' @return the group numbers of the new groups
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_split_familywise
 #' @export
 break.group.into.families <- function(group) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -75,7 +71,6 @@ break.group.into.families <- function(group) {
 #' @return the group number of the new group
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_split_out
 #' @export
 make.group <- function(indexes) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -93,7 +88,6 @@ make.group <- function(indexes) {
 #' the number of genotypes currently allocated to that group
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_get_groups
 #' @export
 see.existing.groups <- function() {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -135,7 +129,6 @@ see.existing.groups <- function() {
 #'
 #' @family grouping functions
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_get_group_data
 #' @export
 see.group.data <- function(group, data.type) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -167,8 +160,6 @@ see.group.data <- function(group, data.type) {
 #' positively selected.
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_simple_selection
-#' @useDynLib genomicSimulation SXP_simple_selection_bypercent
 #' @export
 select.by.gebv <- function(from.group, low.score.best=FALSE, percentage=NULL, number=NULL) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -205,7 +196,6 @@ select.by.gebv <- function(from.group, low.score.best=FALSE, percentage=NULL, nu
 #'
 #' @family grouping functions
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_group_eval
 #' @export
 see.group.gebvs <- function(group) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -229,7 +219,6 @@ see.group.gebvs <- function(group) {
 #' to the map that was included on initialisation.
 #'
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_get_best_genotype
 #' @export
 see.optimal.genotype <- function() {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }

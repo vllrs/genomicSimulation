@@ -6,7 +6,7 @@
 #'
 #' @docType package
 #' @name genomicSimulation
-#' @useDynLib genomicSimulation
+#' @useDynLib genomicSimulation, .registration = TRUE
 NULL
 #> NULL
 

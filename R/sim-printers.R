@@ -15,7 +15,6 @@
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_save_simdata
 #' @export
 save.genome.model <- function(filename) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -42,7 +41,6 @@ save.genome.model <- function(filename) {
 #' @return 0 on success. On failure an error will be raised.
 #' 
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_save_genotypes
 #' @export
 save.genotypes <- function(filename, group=NULL, type="R") {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -71,7 +69,6 @@ save.genotypes <- function(filename, group=NULL, type="R") {
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_save_counts
 #' @export
 save.allele.counts <- function(filename, group=NULL, allele) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -121,7 +118,6 @@ save.allele.counts <- function(filename, group=NULL, allele) {
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_save_pedigrees
 #' @export
 save.pedigrees <- function(filename, group=NULL, type="R") {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -145,7 +141,6 @@ save.pedigrees <- function(filename, group=NULL, type="R") {
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_save_GEBVs
 #' @export
 save.GEBVs <- function(filename, group=NULL) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -178,7 +173,6 @@ save.GEBVs <- function(filename, group=NULL) {
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_save_block_effects
 #' @export
 save.local.GEBVs <- function(filename, block.file, group=NULL) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }

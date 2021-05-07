@@ -14,8 +14,6 @@
 #' always 1 in the current implementation.
 #'
 #' @family loader functions
-#' @useDynLib genomicSimulation load_data
-#' @useDynLib genomicSimulation load_data_weff
 #' @export
 load.data <- function(allele.file, map.file, effect.file=NULL) {
 	if (is.null(effect.file)) {
@@ -37,7 +35,6 @@ load.data <- function(allele.file, map.file, effect.file=NULL) {
 #' @return The group number of the genotypes loaded from allele.file.
 #'
 #' @family loader functions
-#' @useDynLib genomicSimulation load_more_genotypes
 #' @export
 load.more.genotypes <- function(allele.file) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -55,7 +52,6 @@ load.more.genotypes <- function(allele.file) {
 #' @return 0 on success.
 #'
 #' @family loader functions
-#' @useDynLib genomicSimulation load_new_effects
 #' @export
 load.different.effects <- function(effect.file) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -100,7 +96,6 @@ clear.simdata <- function() {
 #'
 #' @seealso \code{\link{find.plot.crossovers}}, which performs the same calculations
 #' but also produces a plot. 
-#' @useDynLib genomicSimulation find_crossovers
 #' @export
 find.crossovers <- function(parentage.file, out.file, window.size=1, certainty=TRUE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -157,7 +152,6 @@ find.plot.crossovers <- function(parentage.file, out.file, window.size=1, certai
 						breaks=sort(unique(crossovers$parent)))
 }
 
-#' @useDynLib genomicSimulation send_map
 send.map <- function() {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	m <- data.frame(.Call(send_map, sim.data$p))
