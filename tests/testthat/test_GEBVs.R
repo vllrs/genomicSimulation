@@ -7,8 +7,8 @@ test_that("GEBVs are correctly calculated and shared with the see function", {
 test_that("GEBVs are correctly calculated and shared with the save function", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
-  expect_equal(save.GEBVs("imaginary", group=g),0)
-  f_out <- readLines("imaginary")
+  expect_equal(save.GEBVs("imaginar", group=g),0)
+  f_out <- readLines("imaginar")
   expect_identical(length(f_out), 6L)
   
   f_out_split <- scan(text=f_out[1], what=" ", quiet=TRUE)
@@ -25,14 +25,17 @@ test_that("GEBVs are correctly calculated and shared with the save function", {
   expect_identical(as.integer(f_out_split[1]), 6L)
   expect_identical(f_out_split[2], "G06")
   expect_equal(as.numeric(f_out_split[3]), -0.3)
+  
+  file.remove("imaginar")
+  clear.simdata()
 })
 
 
 test_that("Local GEBVs are correctly calculated and saved", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
-  expect_equal(save.local.GEBVs("imaginary", "helper_blocks.txt", group=g),0)
-  f_out <- readLines("imaginary")
+  expect_equal(save.local.GEBVs("imaginar", "helper_blocks.txt", group=g),0)
+  f_out <- readLines("imaginar")
   expect_identical(length(f_out), 12L)
   
   f_out_split <- scan(text=f_out[1], what=" ", quiet=TRUE)
@@ -58,4 +61,7 @@ test_that("Local GEBVs are correctly calculated and saved", {
   expect_equal(as.numeric(f_out_split[2]), 0.4)
   expect_equal(as.numeric(f_out_split[3]), -0.1)
   expect_identical(length(f_out_split), 3L)
+  
+  file.remove("imaginar")
+  clear.simdata()
 })

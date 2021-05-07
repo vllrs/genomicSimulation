@@ -67,5 +67,6 @@ test_that("Other functions don't run without data being loaded", {
   expect_error(see.group.gebvs(g0),"Need to load effect values before running this function")
   expect_error(save.GEBVs("imaginary"),"Need to load effect values before running this function")
   expect_error(select.by.gebv(g0, number=2),"Need to load effect values before running this function")
+  
   clear.simdata()
 })
