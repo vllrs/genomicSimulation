@@ -10,8 +10,8 @@ see.group.gebvs(group)
 \item{group}{an integer: the group number of the group to return the GEBVs of.}
 }
 \value{
-a dataframe whose columns are the GEBVs of the group members and 
-the indexes of the group members.
+a dataframe whose columns are the GEBVs of the group members, named "GEBV", and 
+the indexes of the group members, named "i".
 }
 \description{
 \code{see.group.gebvs} gives the R user a dataframe containing the GEBVs and a matching
@@ -45,7 +45,8 @@ Other saving functions:
 \code{\link{save.genotypes}()},
 \code{\link{save.local.GEBVs}()},
 \code{\link{save.pedigrees}()},
-\code{\link{see.group.data}()}
+\code{\link{see.group.data}()},
+\code{\link{see.optimal.genotype}()}
 }
 \concept{grouping functions}
 \concept{saving functions}

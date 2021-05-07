@@ -20,6 +20,10 @@ cross(
 )
 }
 \arguments{
+\item{parent1.index}{index of the first parent to cross}
+
+\item{parent2.index}{index of the second parent to cross}
+
 \item{offspring}{The number of offspring to produce from this pair of parents}
 
 \item{retain}{A boolean, repesenting whether to save the generated

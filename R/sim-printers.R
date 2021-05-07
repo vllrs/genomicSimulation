@@ -3,12 +3,18 @@
 #' \code{save.genome.model} saves the SNP names, their linkage map positions, 
 #' and the effect values for calculating GEBVs (if applicable) to a file.
 #'
+#' The output is printed with first a tab-separated header row, containing
+#' the column names "name", "chr", "pos", then all alleles for which the saved
+#' SimData has effect values, if it has any. The subsequent lines, also tab-separated,
+#' contain the name of a SNP, the chromosome on which it is found, the positions
+#' at which it is found, and then the contribution to the GEBV of every allele
+#' at that marker for which effects are loaded.
+#'
 #' @param filename A string containing a filename to which the output will
 #' be written
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_save_simdata
 #' @export
 save.genome.model <- function(filename) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -35,7 +41,6 @@ save.genome.model <- function(filename) {
 #' @return 0 on success. On failure an error will be raised.
 #' 
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_save_genotypes
 #' @export
 save.genotypes <- function(filename, group=NULL, type="R") {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -48,6 +53,12 @@ save.genotypes <- function(filename, group=NULL, type="R") {
 #' allele at each SNP of each genotype in the selected set, and prints
 #' the output to a file.
 #'
+#' The function prints its results to a tab-separated matrix file. The first line/
+#' column header gives the name (or id if the genotype does not have a name allocated)
+#' of each genotype that is having its counts printed. After that header row, all rows 
+#' begin with the name of a SNP, followed by the number of the given allele at that
+#' marker in the corresponding genotype from the header row.
+#'
 #' @param filename A string containing a filename to which the output will
 #' be written
 #' @param group If not set/set to NULL, will count and print all genotypes.
@@ -58,7 +69,6 @@ save.genotypes <- function(filename, group=NULL, type="R") {
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_save_counts
 #' @export
 save.allele.counts <- function(filename, group=NULL, allele) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -108,7 +118,6 @@ save.allele.counts <- function(filename, group=NULL, allele) {
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_save_pedigrees
 #' @export
 save.pedigrees <- function(filename, group=NULL, type="R") {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -121,6 +130,9 @@ save.pedigrees <- function(filename, group=NULL, type="R") {
 #' the current effect values saved to the SimData, then saves those GEBVs 
 #' to a file.
 #'
+#' The function prints its results to a tab-separated file, where each
+#' row contains, in order, the genotype's ID, name, and calculated GEBV
+#'
 #' @param filename A string containing a filename to which the output will
 #' be written
 #' @param group If not set/set to NULL, will print all genotypes.
@@ -129,7 +141,6 @@ save.pedigrees <- function(filename, group=NULL, type="R") {
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_save_GEBVs
 #' @export
 save.GEBVs <- function(filename, group=NULL) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -162,7 +173,6 @@ save.GEBVs <- function(filename, group=NULL) {
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_save_block_effects
 #' @export
 save.local.GEBVs <- function(filename, block.file, group=NULL) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }

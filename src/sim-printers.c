@@ -151,23 +151,21 @@ SEXP SXP_save_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP group
 /*--------------------------------Printing-----------------------------------*/
 
 
-/** Prints the data inside a SimData to a file. Column separators are '\t'. Note:
- * does not print gene data saved in AlleleMatrix of the SimData
+/** Prints the setup data (everything except the actual genotypes) stored inside
+ * a SimData to a file. Column separators are tabs.
  *
  * The printing format is:
  *
- * name	chr	pos [effect row names]	
+ * name	chr	pos [allele to which these effects apply, 0+ columns]	
  *
- * [marker name]	[chr number]	[chr pos]	[effects]
+ * [marker name]	[chr number]	[chr pos]	[effects, 0+ columns]
  *
- * [marker name]	[chr number]	[chr pos]	[effects]
+ * [marker name]	[chr number]	[chr pos]	[effects, 0+ columns]
  *
  * ...
  *
  * If m->effects is NULL, m->ref_alleles is NULL, or m->genetic_map is NULL, 
  * then the relevant columns are omitted.
- *
- * @see save_allele_matrix() for details on allele table formats
  *
  * @param f file pointer opened for writing to put the output
  * @param m pointer to the SimData whose data we print
@@ -219,20 +217,23 @@ void save_simdata(FILE* f, SimData* m) {
 	fflush(f);
 }
 
-/** Prints all the gene data saved in the linked list starting with `m` to the 
- * file. Uses the following format:
+/** Prints all the geneotype data saved in the linked list of AlleleMatrices
+ * starting with `m` to a file. Uses the following format:
  *
  * 		[marker name]	[marker name]
  *
- * [subject id]:[subject name]	[allele pairs for each marker]
+ * [subject id]OR[subject name]	[allele pairs for each marker]
  *
- * [subject id]:[subject name] 	[allele pairs for each marker]
+ * [subject id]OR[subject name]	[allele pairs for each marker]
  *
  * ...
- * 
+ *
+ * Subject id will be printed if the genotype does not have a name saved
+ *
  * @param f file pointer opened for writing to put the output
  * @param m pointer to the AlleleMatrix whose data we print
  * @param markers array of strings that correspond to names of the markers.
+ * if this is null, the header row will be empty.
 */
 void save_allele_matrix(FILE* f, AlleleMatrix* m, char** markers) {
 	/* Print header */
@@ -274,15 +275,17 @@ void save_allele_matrix(FILE* f, AlleleMatrix* m, char** markers) {
 }
 
 /** Prints all the gene data saved in the linked list starting with `m` to the 
- * file. Has markers as columns and individual genomes as rows, in the following format:
+ * file. Uses the following format:
  *
- * 		[marker name]	[marker name]
+ * 		[subject id]OR[subject name]	[subject id]OR[subject name] ...
  *
- * [subject id]:[subject name]	[allele pairs for each marker]
+ * [marker name]	[allele pairs for each marker]
  *
- * [subject id]:[subject name] 	[allele pairs for each marker]
+ * [marker name]	[allele pairs for each marker]
  *
  * ...
+ *
+ * Subject id will be printed if the genotype does not have a name saved
  * 
  * @param f file pointer opened for writing to put the output
  * @param m pointer to the AlleleMatrix whose data we print
@@ -340,6 +343,24 @@ void save_transposed_allele_matrix(FILE* f, AlleleMatrix* m, char** markers) {
 	fflush(f);
 }
 
+/** Prints the genotypes of each individual in a given group to a file, with
+ * the following format.
+ *
+ * 		[marker name]	[marker name]
+ *
+ * [subject id]OR[subject name]	[allele pairs for each marker]
+ *
+ * [subject id]OR[subject name]	[allele pairs for each marker]
+ *
+ * ...
+ *
+ * Subject id will be printed if the genotype does not have a name saved
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the SimData containing the genotypes of the group and
+ * the marker names.
+ * @param group_id group number of the group of individuals whose genotypes to print.
+*/
 void save_group_alleles(FILE* f, SimData* d, int group_id) {
 	/* Get the stuff we'll be printing. */
 	int group_size = get_group_size( d, group_id);
@@ -387,6 +408,24 @@ void save_group_alleles(FILE* f, SimData* d, int group_id) {
 	
 }
 
+/** Prints the genotypes of each individual in a given group to a file, with
+ * the following format.
+ *
+* 		[subject id]OR[subject name]	[subject id]OR[subject name] ...
+ *
+ * [marker name]	[allele pairs for each marker]
+ *
+ * [marker name]	[allele pairs for each marker]
+ *
+ * ...
+ *
+ * Subject id will be printed if the genotype does not have a name saved
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the SimData containing the genotypes of the group and
+ * the marker names.
+ * @param group_id group number of the group of individuals whose genotypes to print.
+*/
 void save_transposed_group_alleles(FILE* f, SimData* d, int group_id) {
 	/* Get the stuff we'll be printing. */
 	int group_size = get_group_size( d, group_id);
@@ -425,6 +464,28 @@ void save_transposed_group_alleles(FILE* f, SimData* d, int group_id) {
 	
 }
 
+/** Print the parents of each genotype in a group to a file. The following
+ * tab-separated format is used:
+ *
+ * [group member name]	[parent 1 name]	[parent 2 name]
+ *
+ * [group member name]	[parent 1 name]	[parent 2 name]
+ *
+ * ...
+ *
+ * The parents are identified by the two ids saved in the genotype's 
+ * pedigrees field in the AlleleMatrix struct. 
+ *
+ * If a group member or parent has no name, the name will be 
+ * replaced in the output file with its session-unique id. If the parent
+ * id of an individual is 0 (which means the parent is unknown) no
+ * name or id is printed for that parent.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the SimData containing the group members.
+ * @param group group number of the group of individuals to print the 
+ * immediate parents of.
+ */
 void save_group_one_step_pedigree(FILE* f, SimData* d, int group) {
 	int group_size = get_group_size( d, group);
 	unsigned int* group_contents = get_group_ids( d, group, group_size);
@@ -458,7 +519,7 @@ void save_group_one_step_pedigree(FILE* f, SimData* d, int group) {
 			name = get_name_of_id( d->m, pedigree[1]);
 			if (name != NULL) {
 				fwrite(name, sizeof(char), strlen(name), f);
-			} else if (pedigree[0] > 0) {
+			} else if (pedigree[1] > 0) {
 				fprintf(f, "%d", pedigree[1]);
 				//fwrite(pedigree + 1, sizeof(int), 1, f);
 			}
@@ -470,6 +531,26 @@ void save_group_one_step_pedigree(FILE* f, SimData* d, int group) {
 	fflush(f);
 }
 
+/** Print the parents of each genotype in the SimData to a file. The following
+ * tab-separated format is used:
+ *
+ * [genotype name]	[parent 1 name]	[parent 2 name]
+ *
+ * [genotype name]	[parent 1 name]	[parent 2 name]
+ *
+ * ...
+ *
+ * The parents are identified by the two ids saved in the genotype's 
+ * pedigrees field in the AlleleMatrix struct. 
+ *
+ * If a group member or parent has no name, the name will be 
+ * replaced in the output file with its session-unique id. If the parent
+ * id is 0 (which means the parent is unknown) no
+ * name or id is printed for that parent.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the SimData containing the genotypes and their pedigrees
+ */
 void save_one_step_pedigree(FILE* f, SimData* d) {
 	unsigned int pedigree[2];
 	char* name;
@@ -501,7 +582,7 @@ void save_one_step_pedigree(FILE* f, SimData* d) {
 				name = get_name_of_id( d->m, pedigree[1]);
 				if (name != NULL) {
 					fwrite(name, sizeof(char), strlen(name), f);
-				} else if (pedigree[0] > 0) {
+				} else if (pedigree[1] > 0) {
 					fprintf(f, "%d", pedigree[1]);
 					//fwrite(pedigree + 1, sizeof(int), 1, f);
 				}
@@ -513,7 +594,35 @@ void save_one_step_pedigree(FILE* f, SimData* d) {
 	fflush(f);
 }
 
-
+/** Print the full known pedigree of each genotype in a group to a file. The following
+ * tab-separated format is used:
+ *
+ * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
+ *
+ * [id]	[name]=([parent pedigree])
+ *
+ * ...
+ *
+ * Note that this pedigree is recursively constructed, so if a genotype's
+ * parents are known, [parent pedigree] is replaced with a string of format
+ * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of 
+ * a genotype are the same individual (i.e. it was produced by selfing, the 
+ * comma and second parent pedigree are ommitted, as in the second line sample
+ * in the format above. 
+ *
+ * The parents of a genotype are identified by the two ids saved in the 
+ * genotype's pedigrees field in the AlleleMatrix struct. 
+ *
+ * If a group member or parent has no name, the name will be 
+ * replaced in the output file with its session-unique id. If the parent
+ * id of an individual is 0, the individual is printed without brackets or 
+ * parent pedigrees and recursion stops here.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the SimData containing the group members.
+ * @param group group number of the group of individuals to print the 
+ * pedigree of.
+ */
 void save_group_full_pedigree(FILE* f, SimData* d, int group) {
 	int group_size = get_group_size( d, group);
 	unsigned int* group_contents = get_group_ids( d, group, group_size);
@@ -535,7 +644,34 @@ void save_group_full_pedigree(FILE* f, SimData* d, int group) {
 	fflush(f);	
 }
 
-/*Saves pedigree of all in m.*/
+/** Print the full known pedigree of each genotype in the SimData 
+ * to a file. The following
+ * tab-separated format is used:
+ *
+ * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
+ *
+ * [id]	[name]=([parent pedigree])
+ *
+ * ...
+ *
+ * Note that this pedigree is recursively constructed, so if a genotype's
+ * parents are known, [parent pedigree] is replaced with a string of format
+ * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of 
+ * a genotype are the same individual (i.e. it was produced by selfing, the 
+ * comma and second parent pedigree are ommitted, as in the second line sample
+ * in the format above. 
+ *
+ * The parents of a genotype are identified by the two ids saved in the 
+ * genotype's pedigrees field in the AlleleMatrix struct. 
+ *
+ * If a group member or parent has no name, the name will be 
+ * replaced in the output file with its session-unique id. If the parent
+ * id of an individual is 0, the individual is printed without brackets or 
+ * parent pedigrees and recursion stops here.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the SimData containing all genotypes to print.
+ */
 void save_full_pedigree(FILE* f, SimData* d) {
 	const char newline[] = "\n";
 	
@@ -556,6 +692,38 @@ void save_full_pedigree(FILE* f, SimData* d) {
 	fflush(f);
 }
 
+/** Print the full known pedigree of each genotype in a single AlleleMatrix 
+ * to a file. The following
+ * tab-separated format is used:
+ *
+ * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
+ *
+ * [id]	[name]=([parent pedigree])
+ *
+ * ...
+ *
+ * Note that this pedigree is recursively constructed, so if a genotype's
+ * parents are known, [parent pedigree] is replaced with a string of format
+ * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of 
+ * a genotype are the same individual (i.e. it was produced by selfing, the 
+ * comma and second parent pedigree are ommitted, as in the second line sample
+ * in the format above. 
+ *
+ * The parents of a genotype are identified by the two ids saved in the 
+ * genotype's pedigrees field in the AlleleMatrix struct. 
+ *
+ * If a group member or parent has no name, the name will be 
+ * replaced in the output file with its session-unique id. If the parent
+ * id of an individual is 0, the individual is printed without brackets or 
+ * parent pedigrees and recursion stops here.
+ *
+ * Note this does not follow through the linked list of AlleleMatrix. 
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param m pointer to the AlleleMatrix containing the genotypes to print
+ * @param parents pointer to an AlleleMatrix that heads the linked list
+ * containing the parents and other ancestry of the given genotypes.
+ */
 void save_AM_pedigree(FILE* f, AlleleMatrix* m, SimData* parents) {
 	const char newline[] = "\n";
 	
@@ -572,8 +740,28 @@ void save_AM_pedigree(FILE* f, AlleleMatrix* m, SimData* parents) {
 	fflush(f);
 }
 
-
-/*Recursive, saves all parents and their parents.*/
+/** Recursively save the parents of a particular id to a file.
+ * 
+ * It saves using the following format:
+ *
+ * - no characters are saved if the parents of the id are unknown/0
+ *
+ * - if the id has one parent, repeated twice (it was produced by selfing),
+ * print "=(parentname)", where parentname is the name of the parent or its
+ * id if it does not have one, followed by whatever is printed by a call 
+ * to this function on the parent's id.
+ *
+ * - if the id has two separate parents, print "=(parent1name,parent2name)", 
+ * where parent1name and parent2name are the name2 of the two parents or their
+ * ids if they does not have names, each name immediately followed by whatever
+ * is printed by a call to this function on the corresponding parent's id.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param m pointer to an AlleleMatrix that heads the linked list
+ * containing the parents and other ancestry of the given id.
+ * @param id the session-unique id of the genotype whose parents 
+ * we wish to recursively save.
+ */
 void save_parents_of(FILE* f, AlleleMatrix* m, unsigned int id) {
 	unsigned int pedigree[2];
 	
@@ -624,7 +812,22 @@ void save_parents_of(FILE* f, AlleleMatrix* m, unsigned int id) {
 	}
 }
 
-
+/** Print the GEBV of each genotype in a group to a file. The following
+ * tab-separated format is used:
+ *
+ * [group member id]	[group member name]	[GEBV]
+ *
+ * [group member id]	[group member name]	[GEBV]
+ *
+ * ...
+ *
+ * The SimData must have loaded marker effects for this function to succeed.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the SimData containing the group members.
+ * @param group group number of the group of individuals to print the 
+ * GEBVs of.
+ */
 void save_group_fitness(FILE* f, SimData* d, int group) {
 	int group_size = get_group_size( d, group);
 	unsigned int* group_contents = get_group_ids( d, group, group_size);
@@ -652,6 +855,20 @@ void save_group_fitness(FILE* f, SimData* d, int group) {
 	fflush(f);	
 }
 
+/** Print the GEBV of each genotype in the SimData to a file. The following
+ * tab-separated format is used:
+ *
+ * [id]	[name]	[GEBV]
+ *
+ * [id]	[name]	[GEBV]
+ *
+ * ...
+ *
+ * The SimData must have loaded marker effects for this function to succeed.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the SimData containing the group members.
+ */
 void save_all_fitness(FILE* f, SimData* d) {
 	AlleleMatrix* am = d->m;
 	const char newline[] = "\n";
@@ -678,6 +895,25 @@ void save_all_fitness(FILE* f, SimData* d) {
 	fflush(f);
 }
 
+/** Print a set of pre-calculated GEBVs with provided names and ids to a file,
+ * with the same format as a regular call to `save_all_fitness` or `save_group_fitness`.
+ * The following tab-separated format is used:
+ *
+ * [id]	[name]	[GEBV]
+ *
+ * [id]	[name]	[GEBV]
+ *
+ * ...
+ *
+ * The function assumes the array of ids, array of names, and columns of the 
+ * DecimalMatrix are ordered the same, so a single index produces the corresponding
+ * value from each.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param e pointer to the DecimalMatrix containing the GEBVs in the first row.
+ * @param ids array of ids to print alongside the GEBVs.
+ * @param names array of names to print alongside the GEBVs.
+ */
 void save_fitness(FILE* f, DecimalMatrix* e, unsigned int* ids, char** names) {
 	char sep[] = "\t";
 	char newline[] = "\n";
@@ -699,6 +935,23 @@ void save_fitness(FILE* f, DecimalMatrix* e, unsigned int* ids, char** names) {
 	fflush(f);
 }
 
+/** Print the number of copies of a particular allele at each marker of each genotype 
+ * in the SimData to a file. The following tab-separated format is used:
+ *
+ * 		[subject id]OR[subject name]	[subject id]OR[subject name] ...
+ *
+ * [marker name]	[allele count for each marker]
+ *
+ * [marker name]	[allele count for each marker]
+ *
+ * ...
+ *
+ * Subject id will be printed if the genotype does not have a name saved.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the SimData containing the group members.
+ * @param allele the allele character to count
+ */
 void save_count_matrix(FILE* f, SimData* d, char allele) {
 	DecimalMatrix counts = calculate_full_count_matrix_of_allele(d->m, allele);
 	
@@ -738,6 +991,25 @@ void save_count_matrix(FILE* f, SimData* d, char allele) {
 	fflush(f);
 }
 
+/** Print the number of copies of a particular allele at each marker of each genotype 
+ * in a group to a file. The following tab-separated format is used:
+ *
+ * 		[subject id]OR[subject name]	[subject id]OR[subject name] ...
+ *
+ * [marker name]	[allele count for each marker]
+ *
+ * [marker name]	[allele count for each marker]
+ *
+ * ...
+ *
+ * Subject id will be printed if the genotype does not have a name saved.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the SimData containing the group members.
+ * @param group group number of the group of individuals to print the 
+ * allele count of.
+ * @param allele the allele character to count
+ */
 void save_count_matrix_of_group(FILE* f, SimData* d, char allele, int group) {
 	unsigned int group_size = get_group_size( d, group);
 	unsigned int* group_ids = get_group_ids( d, group, group_size);

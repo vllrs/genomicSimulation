@@ -10,20 +10,16 @@
 #' a linkage map for the markers loaded from allele.file
 #' @param effect.file (optional) A string containing a filename. The
 #' file should contain effect values for calculating GEBVs of a trait
-#' @param group.name Name of the group to which the genotypes in the allele.file
-#' will be loaded. Set this parameter to NULL to not use a name.
 #' @return The group number of the genotypes loaded from allele.file. This is
 #' always 1 in the current implementation.
 #'
 #' @family loader functions
-#' @useDynLib genomicSimulation load_data
-#' @useDynLib genomicSimulation load_data_weff
 #' @export
-load.data <- function(allele.file, map.file, effect.file=NULL, group.name="Founders") {
+load.data <- function(allele.file, map.file, effect.file=NULL) {
 	if (is.null(effect.file)) {
-		sim.data$p <- .Call(load_data, allele.file, map.file, group.name)
+		sim.data$p <- .Call(SXP_load_data, allele.file, map.file)
 	} else {
-		sim.data$p <- .Call(load_data_weff, allele.file, map.file, effect.file, group.name)
+		sim.data$p <- .Call(SXP_load_data_weff, allele.file, map.file, effect.file)
 	}
 	#the group number of the first group is always 1
 	return(1L) 
@@ -39,11 +35,10 @@ load.data <- function(allele.file, map.file, effect.file=NULL, group.name="Found
 #' @return The group number of the genotypes loaded from allele.file.
 #'
 #' @family loader functions
-#' @useDynLib genomicSimulation load_more_genotypes
 #' @export
-load.more.genotypes <- function(allele.file, group.name=NULL) {
+load.more.genotypes <- function(allele.file) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(load_more_genotypes, sim.data$p, allele.file, group.name)) 
+	return(.Call(SXP_load_more_genotypes, sim.data$p, allele.file)) 
 }
 
 #' Replace effect values
@@ -57,11 +52,10 @@ load.more.genotypes <- function(allele.file, group.name=NULL) {
 #' @return 0 on success.
 #'
 #' @family loader functions
-#' @useDynLib genomicSimulation load_new_effects
 #' @export
 load.different.effects <- function(effect.file) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(load_new_effects, sim.data$p, effect.file)) 
+	return(.Call(SXP_load_new_effects, sim.data$p, effect.file)) 
 }
 
 #' Clear the internal storage of all data
@@ -102,11 +96,10 @@ clear.simdata <- function() {
 #'
 #' @seealso \code{\link{find.plot.crossovers}}, which performs the same calculations
 #' but also produces a plot. 
-#' @useDynLib genomicSimulation find_crossovers
 #' @export
 find.crossovers <- function(parentage.file, out.file, window.size=1, certainty=TRUE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(find_crossovers, sim.data$p, parentage.file, out.file, window.size, certainty))
+	return(.Call(SXP_find_crossovers, sim.data$p, parentage.file, out.file, window.size, certainty))
 }
 
 #' Identify and plot historical crossover events
@@ -123,7 +116,7 @@ find.crossovers <- function(parentage.file, out.file, window.size=1, certainty=T
 #' @export
 find.plot.crossovers <- function(parentage.file, out.file, window.size=1, certainty=TRUE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	.Call(find_crossovers, sim.data$p, parentage.file, out.file, window.size, certainty)
+	.Call(SXP_find_crossovers, sim.data$p, parentage.file, out.file, window.size, certainty)
 	
 	my.palette = c("#cccccc", "#0077AA", "#66ccee", "#228833", "#DDCC77", "#EE6677", "#aa3377", "yellow",
            'green3', 'orange')
@@ -159,10 +152,9 @@ find.plot.crossovers <- function(parentage.file, out.file, window.size=1, certai
 						breaks=sort(unique(crossovers$parent)))
 }
 
-#' @useDynLib genomicSimulation send_map
 send.map <- function() {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	m <- data.frame(.Call(send_map, sim.data$p))
+	m <- data.frame(.Call(SXP_send_map, sim.data$p))
 	colnames(m) <- c("SNP","chr","pos")
 	return(m)
 }

@@ -6,10 +6,10 @@ SEXP clear_simdata(SEXP exd) {
 	return ScalarInteger(0);
 }
 
-SEXP load_data(SEXP alleleFile, SEXP mapFile, SEXP groupName) {
+SEXP SXP_load_data(SEXP alleleFile, SEXP mapFile) {
 	SimData* d = create_empty_simdata();
 	//d->current_id = 0; // reset ID counts
-	load_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)), CHAR(asChar(groupName)));
+	load_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)));
 	load_genmap_to_simdata(d, CHAR(asChar(mapFile)));
 	
 	get_sorted_markers(d, d->n_markers);
@@ -21,10 +21,10 @@ SEXP load_data(SEXP alleleFile, SEXP mapFile, SEXP groupName) {
 	return sdptr;
 }
 
-SEXP load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile, SEXP groupName) {
+SEXP SXP_load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile) {
 	SimData* d = create_empty_simdata();
 	//d->current_id = 0; // reset ID counts
-	load_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)), CHAR(asChar(groupName)));
+	load_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)));
 	load_genmap_to_simdata(d, CHAR(asChar(mapFile)));
 	load_effects_to_simdata(d, CHAR(asChar(effectFile)));
 
@@ -37,14 +37,13 @@ SEXP load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile, SEXP groupNa
 	return sdptr;
 }
 
-SEXP load_more_genotypes(SEXP exd, SEXP alleleFile, SEXP groupName) {
+SEXP SXP_load_more_genotypes(SEXP exd, SEXP alleleFile) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	return ScalarInteger(load_more_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)), 
-																CHAR(asChar(groupName))));
+	return ScalarInteger(load_more_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile))));
 	//return ScalarInteger(load_more_transposed_genes_to_simdata(&GlobalSim, CHAR(asChar(alleleFile))));
 }
 
-SEXP load_new_effects(SEXP exd, SEXP effectFile) {
+SEXP SXP_load_new_effects(SEXP exd, SEXP effectFile) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	load_effects_to_simdata(d, CHAR(asChar(effectFile)));
 	return ScalarInteger(0);
@@ -55,12 +54,8 @@ SEXP load_new_effects(SEXP exd, SEXP effectFile) {
 
 
 /** Populates a SimData combination with marker allele data.
- *
+ * @see load_transposed_encoded_genes_to_simdata()
  * Assumes it is starting from a clean/empty SimData.
- *
- * Since the lines are as columns, this function cannot load files of more than 
- * 1000 lines. If you want to load that, please transpose the file and then
- * call @see load_genes_to_simdata()
  *
  * Given a file with the following format:
  *
@@ -82,8 +77,10 @@ SEXP load_new_effects(SEXP exd, SEXP effectFile) {
  * @param d pointer to SimData to be populated
  * @param filename string containing name/path of file containing SNP marker 
  * allele data.
+ * @returns the group number of the loaded genotypes. All genotypes are loaded into
+ * the same group.
 */
-int load_transposed_genes_to_simdata(SimData* d, const char* filename, const char* groupName) {	
+int load_transposed_genes_to_simdata(SimData* d, const char* filename) {	
 	struct TableSize t = get_file_dimensions(filename, '\t');
 	FILE* fp;
 	const int gp = 1;
@@ -189,7 +186,43 @@ int load_transposed_genes_to_simdata(SimData* d, const char* filename, const cha
 	return gp;
 }
 
-int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename, const char* groupName) {
+/** Populates a SimData combination with marker allele data.
+ * @see load_transposed_genes_to_simdata()
+ * Assumes it is starting from a clean/empty SimData.
+ *
+ * Given a file with the following format:
+ *
+ * name [line] [line] [line] ... [line]
+ *
+ * [marker] [encoded] [encoded] [encoded] ... [encoded]
+ *
+ * [marker] [encoded] [encoded] [encoded] ... [encoded]
+ *
+ * ...
+ *
+ * Where [line] is a code for a line, [marker] is a code for a marker, and 
+ * [encoded] is the standard IUPAC encoding for a particular pair. Because this simulation
+ * tracks phase, and this encoding does not, the phase at heterozygous markers is 
+ * chosen randomly.
+ *
+ * Code => Alleles key: 
+ * A => AA    ; C => CC    ; G => GG    ; T => TT   ;
+ * R => AG    ; Y => CT    ; S => CG    ; W => AT   ; K => GT   ; M => AC
+ *
+ * Note: this function should be called first when populating a SimData object -
+ * it clears everything in the SimData. This is because all the data in SimData
+ * is based on what markers exist in the loaded marker allele file.
+ *
+ * An output message stating the number of genotypes and number of markers loaded 
+ * is printed to stdout.
+ *
+ * @param d pointer to SimData to be populated
+ * @param filename string containing name/path of file containing SNP marker 
+ * allele data.
+ * @returns the group number of the loaded genotypes. All genotypes are loaded into
+ * the same group.
+*/
+int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename) {
 	
 	struct TableSize t = get_file_dimensions(filename, '\t');
 	FILE* fp;
@@ -319,8 +352,36 @@ int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename, c
 	return gp;
 }
 
-/*Can't add to the number of markers available. */
-int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, const char* groupName) {
+/** Appends genotype data from a file to an existing SimData
+ * @see load_transposed_genes_to_simdata()
+ *
+ * Given a file with the following format:
+ *
+ * name [line] [line] [line] ... [line]
+ *
+ * [marker] [SNP pair] [SNP pair] [SNP pair] ... [SNP pair]
+ *
+ * [marker] [SNP pair] [SNP pair] [SNP pair] ... [SNP pair]
+ *
+ * ...
+ *
+ * Where [line] is a code for a line, [marker] is a code for a marker, and 
+ * [SNP pair] is eg TT, TA. 
+ *
+ * If a given marker does not exist in the SimData's set of markers, it is ignored.
+ * for the purposes of loading. No markers can be added to a SimData after the creation
+ * step.
+ *
+ * An output message stating the number of genotypes and number of markers loaded 
+ * is printed to stdout.
+ *
+ * @param d pointer to SimData to be populated
+ * @param filename string containing name/path of file containing SNP marker 
+ * allele data.
+ * @returns the group number of the loaded genotypes. All genotypes are loaded into
+ * the same group.
+*/
+int load_more_transposed_genes_to_simdata(SimData* d, const char* filename) {
 	struct TableSize t = get_file_dimensions(filename, '\t');
 	FILE* fp;
 	int gp = get_new_group_num(d);
@@ -437,7 +498,6 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename, cons
 	condense_allele_matrix(d);
 	return gp;
 }
-
 
 /** Populates a SimData combination with data from a genetic map. Map positions must be in cM.
  *
@@ -701,20 +761,15 @@ void get_chromosome_locations(SimData *d) {
  * list and no markers that will not be used for simulation.
  *
  * It loads in the file as rows of effects for each allele that appears in the
- * allele data out of 'A', 'C', 'G', 'T', encoded in the file as 1, 2, 3, 4
- * respectively.
+ * allele data out of 'A', 'C', 'G', 'T'.
  *
  * The file should have format:
- *
- * [n]
  *
  * [marker] [allele] [effect]
  *
  * [marker] [allele] [effect]
  *
  * ...
- *
- * The value of [n] in the file is ignored.
  *
  * The function assumes the maximum line length is 99 characters.
  * It also assumes that the array ref_alleles is the same
@@ -815,7 +870,7 @@ void load_effects_to_simdata(SimData* d, const char* filename) {
 */
 int load_all_simdata(SimData* d, const char* data_file, const char* map_file, const char* effect_file) {
 	delete_simdata(d); // make this empty.
-	int gp = load_transposed_genes_to_simdata(d, data_file, NULL);
+	int gp = load_transposed_genes_to_simdata(d, data_file);
 	
 	load_genmap_to_simdata(d, map_file);
 	load_effects_to_simdata(d, effect_file);
@@ -826,10 +881,40 @@ int load_all_simdata(SimData* d, const char* data_file, const char* map_file, co
 }
 
 
-
-
 /*--------------------------Recombination counts-----------------------------*/
 
+/** Identify markers in the genotype of `offspring` where recombination from its parents
+ * occured. This function is a little lower-level (see the kinds of parameters required) and
+ * so a wrapper like calculate_recombinations_from_file is suggested for end users.
+ * @see calculate_recombinations_from_file()
+ *
+ * The function reads start to end along each chromosome. At each marker, it checks if
+ * the alleles the offspring has could only have come from one parent/there is known parentage
+ * of that allele. If that is the case, it saves the provided id number of the source parent
+ * to the matching position in the result vector. If it is not the case, its behaviour depends
+ * on the `certain` parameter.
+ *
+ * Parents do not have to be directly identified as parents by the pedigree functionality of 
+ * this library. A sample usage is performing a cross then multiple generations of selfing,
+ * then comparing the final inbred to the original two lines of the cross.
+ *
+ * @param d pointer to the SimData struct whose genetic map matches the provided genotypes.
+ * @param parent1 a character vector containing one parent's alleles at each marker in the 
+ * SimData. 
+ * @param p1num an integer that will be used to identify areas of the genome that come 
+ * from the first parent in the returned vector.
+ * @param parent2 a character vector containing the other parent's alleles at each marker in the 
+ * SimData. 
+ * @param p2num an integer that will be used to identify areas of the genome that come 
+ * from the second parent in the returned vector.
+ * @param offspring a character vector containing the alleles at each marker in the 
+ * SimData of the genotype whose likely recombinations we want to identify.
+ * @param certain a boolean. If TRUE, markers where the parent of origin cannot be identified
+ * will be set to 0, if FALSE, the value will be set to the id of the parent that provided 
+ * the most recently identified allele in that chromosome.
+ * @returns a heap vector of length `d->n_markers` containing the id of the parent of origin
+ * at each marker in the `offspring` genotype.
+*/
 int* calculate_min_recombinations_fw1(SimData* d, char* parent1, unsigned int p1num, char* parent2, 
 		unsigned int p2num, char* offspring, int certain) {
 	int* origins = malloc(sizeof(int) * d->n_markers);
@@ -861,7 +946,44 @@ int* calculate_min_recombinations_fw1(SimData* d, char* parent1, unsigned int p1
 	return origins;
 }
 
-// window should be odd
+/** Identify markers in the genotype of `offspring` where recombination from its parents
+ * occured, as judged by the marker itself and a short window around it. 
+ * This function is a little lower-level (see the kinds of parameters required) and
+ * so a wrapper like calculate_recombinations_from_file is suggested for end users.
+ * @see calculate_recombinations_from_file()
+ *
+ * The function reads start to end along each chromosome. At each marker, it checks if
+ * the alleles the offspring has in the window centered at that marker could have come 
+ * from one parent but could not have come from the other/there is known parentage
+ * of that allele. If that is the case, it saves the provided id number of the source parent
+ * to the matching position in the result vector. If it is not the case, its behaviour depends
+ * on the `certain` parameter.
+ *
+ * Parents do not have to be directly identified as parents by the pedigree functionality of 
+ * this library. A sample usage is performing a cross then multiple generations of selfing,
+ * then comparing the final inbred to the original two lines of the cross.
+ *
+ * Behaviour when the window size is not an odd integer has not been tested.
+ *
+ * @param d pointer to the SimData struct whose genetic map matches the provided genotypes.
+ * @param parent1 a character vector containing one parent's alleles at each marker in the 
+ * SimData. 
+ * @param p1num an integer that will be used to identify areas of the genome that come 
+ * from the first parent in the returned vector.
+ * @param parent2 a character vector containing the other parent's alleles at each marker in the 
+ * SimData. 
+ * @param p2num an integer that will be used to identify areas of the genome that come 
+ * from the second parent in the returned vector.
+ * @param offspring a character vector containing the alleles at each marker in the 
+ * SimData of the genotype whose likely recombinations we want to identify.
+ * @param window_size an odd integer representing the number of markers to check for known parentage
+ * around each marker
+ * @param certain a boolean. If TRUE, markers where the parent of origin cannot be identified
+ * will be set to 0, if FALSE, the value will be set to the id of the parent that provided 
+ * the most recently identified allele in that chromosome.
+ * @returns a heap vector of length `d->n_markers` containing the id of the parent of origin
+ * at each marker in the `offspring` genotype.
+*/
 int* calculate_min_recombinations_fwn(SimData* d, char* parent1, unsigned int p1num, char* parent2, 
 		unsigned int p2num, char* offspring, int window_size, int certain) {
 	int* origins = malloc(sizeof(int) * d->n_markers);
@@ -919,6 +1041,42 @@ static inline int has_same_alleles_window(char* g1, char* g2, int start, int w) 
 	return same;
 } */
 
+/** Provides guesses as to the location of recombination events that led to the 
+ * creation of certain genotypes from certain other genotypes.
+ *
+ * The input file (which pairs up which targets and their parents the calculation 
+ * should be carried out on) should have format:
+ *
+ * [target name]	[parent1name]	[parent2name]
+ *
+ * [target name]	[parent1name]	[parent2name]
+ *
+ * ...
+ *
+ * The tab-separated output file produced by this function will have format:
+ *
+ * 	[marker 1 name]	[marker 2 name]...
+ *
+ * [target name]	[tab-separated recombination vector, containing the index at 
+ * each marker of the parent the function guesses the target's alleles came from, or
+ * 0 if this is unknow]
+ *
+ * ...
+ * 
+ * Parents do not have to be directly identified as parents by the pedigree functionality of 
+ * this library. A sample usage is performing a cross then multiple generations of selfing,
+ * then comparing the final inbred to the original two lines of the cross.
+ *
+ * @param d pointer to the SimData struct containing the genotypes and map under consideration.
+ * @param input_file string containing the name of the file with the pairs of parents
+ * and offsprings of which to calculate recombinations
+ * @param output_file string containing the filename to which to save the results.
+ * @param window_len an odd integer representing the number of markers to check for known parentage
+ * around each marker
+ * @param certain TRUE to fill locations where parentage is unknown with 0, FALSE
+ * to fill locations where parentage is unknown with the most recent known parent
+ * @returns 0 on success.
+ */
 int calculate_recombinations_from_file(SimData* d, const char* input_file, const char* output_file, 
 		int window_len, int certain) {
 	struct TableSize t = get_file_dimensions(input_file, '\t');
@@ -976,7 +1134,7 @@ int calculate_recombinations_from_file(SimData* d, const char* input_file, const
 }
 
 
-SEXP find_crossovers(SEXP exd, SEXP parentFile, SEXP outFile, SEXP windowSize, SEXP certainty) {
+SEXP SXP_find_crossovers(SEXP exd, SEXP parentFile, SEXP outFile, SEXP windowSize, SEXP certainty) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
 	const char* load_fname = CHAR(asChar(parentFile));
@@ -991,7 +1149,7 @@ SEXP find_crossovers(SEXP exd, SEXP parentFile, SEXP outFile, SEXP windowSize, S
 	return ScalarInteger(calculate_recombinations_from_file(d, load_fname, save_fname, win, cert));
 }
 
-SEXP send_map(SEXP exd) {
+SEXP SXP_send_map(SEXP exd) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	MarkerPosition* mp = d->map.positions;
 	

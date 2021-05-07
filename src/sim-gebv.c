@@ -2,6 +2,7 @@
 
 SEXP SXP_group_eval(SEXP exd, SEXP group) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
 	int group_id = asInteger(group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
@@ -32,6 +33,7 @@ SEXP SXP_group_eval(SEXP exd, SEXP group) {
 
 SEXP SXP_simple_selection(SEXP exd, SEXP glen, SEXP groups, SEXP number, SEXP bestIsLow) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
 	int len = asInteger(glen);
 	int *gps = INTEGER(groups); 
@@ -63,6 +65,7 @@ SEXP SXP_simple_selection(SEXP exd, SEXP glen, SEXP groups, SEXP number, SEXP be
 
 SEXP SXP_simple_selection_bypercent(SEXP exd, SEXP glen, SEXP groups, SEXP percent, SEXP bestIsLow) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
 	int len = asInteger(glen);
 	int *gps = INTEGER(groups); 
@@ -102,8 +105,17 @@ SEXP SXP_simple_selection_bypercent(SEXP exd, SEXP glen, SEXP groups, SEXP perce
 
 /*--------------------------------Fitness------------------------------------*/
 
-/** Takes the top `top_n` fitness individuals in the group and puts them in a new group.
- * The new group number is returned.*/
+/** Takes the top `top_n` fitness/GEBV individuals in the group and puts them in a new group.
+ * The new group number is returned.
+ *
+ * @param d pointer to the SimData object to which the groups and individuals belong.
+ * It must have a marker effect file loaded to successfully run this function.
+ * @param group group number from which to split the top individuals.
+ * @param top_n The number of individuals to put in the new group.
+ * @param lowIsBest boolean, if TRUE the `top_n` with the lowest fitness/GEBV score
+ * will be selected, if false the `top_n` with the highest fitness/GEBV score are.
+ * @returns the group number of the newly-created split-off group
+ */
 int split_group_by_fitness(SimData* d, int group, int top_n, int lowIsBest) {
 	// get fitnesses
 	unsigned int* group_contents = get_group_indexes( d, group, -1); // should be ordered same as next line would get
@@ -134,20 +146,21 @@ int split_group_by_fitness(SimData* d, int group, int top_n, int lowIsBest) {
 	return split_from_group(d, top_n, top_subjects);
 }
 
-/** Calculates the fitness metric for each column/subject in the AlleleMatrix
-* for generation `generation` in the SimData object.
+/** Calculates the fitness metric/GEBV for each genotype in the AlleleMatrix
+* in a certain group, and returns the results in a DecimalMatrix struct.
 *
-* This is calculated as: 
-* `Sum across all alleles (effect vector of this allele x count matrix of this allele)`
+* The GEBV is calculated for each genotype by taking the sum of (number of 
+* copies of this allele at this marker times this allele's effect at this marker) 
+* for each marker for each different allele. To do
+* this, the vector containing each allele's effect values is multiplied by a matrix 
+* containing the counts of that allele at each marker. 
 *
-* If either the effect matrix or the allele matrix for that generation does not
-* exist, the program exits with error status 2. 
+* The function exits with error code 1 if no marker effect file is loaded.
 *
-* @param d pointer to the SimData object containing the effect vector and AlleleMatrix
-* @param group integer representing the group for which to run these calculations
-* @param effect_row the single-character name of the effect row to use. If it cannot 
-* be found in `d->e.effect_names`, the first row is used.
-* @returns A DecimalMatrix containing the score for each column of the AlleleMatrix.
+* @param d pointer to the SimData object to which the groups and individuals belong.
+* It must have a marker effect file loaded to successfully run this function.
+* @param group calculate GEBVs for each genotype in the group with this group number.
+* @returns A DecimalMatrix containing the score for each individual in the group.
 */
 DecimalMatrix calculate_fitness_metric_of_group(SimData* d, int group) {
 	// check that both of the items to be multiplied exist.
@@ -183,6 +196,21 @@ DecimalMatrix calculate_fitness_metric_of_group(SimData* d, int group) {
 	return sum;
 }
 
+/** Calculates the fitness metric/GEBV for each genotype in the AlleleMatrix,
+ * and returns the results in a DecimalMatrix struct.
+ *
+ * The GEBV is calculated for each genotype by taking the sum of (number of 
+ * copies of this allele at this marker times this allele's effect at this marker) 
+ * for each marker for each different allele. To do
+ * this, the vector containing each allele's effect values is multiplied by a matrix 
+ * containing the counts of that allele at each marker. 
+ *
+ * The function exits with error code 1 if no marker effect file is loaded.
+ *
+ * @param m pointer to the AlleleMatrix object to which the genotypes belong.
+ * @param e pointer to the EffectMatrix that effect values have been loaded into.
+ * @returns A DecimalMatrix containing the score for each individual in the group.
+ */
 DecimalMatrix calculate_fitness_metric( AlleleMatrix* m, EffectMatrix* e) {
 	// check that both of the items to be multiplied exist.
 	if (e->effects.rows < 1 || m->alleles == NULL) {
@@ -213,18 +241,19 @@ DecimalMatrix calculate_fitness_metric( AlleleMatrix* m, EffectMatrix* e) {
 	return sum;
 }
 
-
-/** Calculates the number of times in each cell that a particular allele appears.
- * Returns the result as a DecimalMatrix. Useful for multiplying to effect matrix.
+/** Calculates the number of times at each marker that a particular allele appears
+ * for each genotype is a set of given genotype.
+ * Returns the result as a DecimalMatrix. Useful for multiplying to effect matrix
+ * to calculate GEBVs.
  *
- * Finds the `generation`th AlleleMatrix in the linked list whose 0th element is
- * stored in `d`, and counts the number of occurences of `allele` in each
- * two-allele cell.
- *
- * @param a pointer to the AlleleMatrix whose alleles are to be counted
+ * @param m pointer to the start of a linked list that contains the alleles 
+ * of each genotype in `for_ids`.
+ * @param for_ids poinder to an array of ids of different genotypes. 
+ * @param n_ids number of genotypes to calculate the counts of/length of 
+ * `for_ids`
  * @param allele the single-character allele to be counting.
- * @returns A DecimalMatrix countaining the number of `allele` occurences in 
- * each cell of the AlleleMatrix of the correct generation.
+ * @returns A DecimalMatrix countaining the number of `allele` occurences at 
+ * each row/marker for each column/genotype in `for_ids`.
  * */
 DecimalMatrix calculate_count_matrix_of_allele_for_ids( AlleleMatrix* m, unsigned int* for_ids, unsigned int n_ids, char allele) {
 	DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, n_ids);
@@ -254,17 +283,15 @@ DecimalMatrix calculate_count_matrix_of_allele_for_ids( AlleleMatrix* m, unsigne
 	return counts;
 }
 
-/** Calculates the number of times in each cell that a particular allele appears.
- * Returns the result as a DecimalMatrix. Useful for multiplying to effect matrix.
+/** Calculates the number of times at each marker that a particular allele appears
+ * for each genotype in a particular AlleleMatrix.
+ * Returns the result as a DecimalMatrix. Useful for multiplying to effect matrix
+ * to calculate GEBVs.
  *
- * Finds the `generation`th AlleleMatrix in the linked list whose 0th element is
- * stored in `d`, and counts the number of occurences of `allele` in each
- * two-allele cell.
- *
- * @param a pointer to the AlleleMatrix whose alleles are to be counted
+ * @param m pointer to the AlleleMatrix that contains the genotypes to count alleles.
  * @param allele the single-character allele to be counting.
- * @returns A DecimalMatrix countaining the number of `allele` occurences in 
- * each cell of the AlleleMatrix of the correct generation.
+ * @returns A DecimalMatrix countaining the number of `allele` occurences at 
+ * each row/marker for each column/genotype in the AlleleMatrix.
  * */
 DecimalMatrix calculate_full_count_matrix_of_allele( AlleleMatrix* m, char allele) {
 	DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, m->n_subjects);
@@ -294,206 +321,366 @@ DecimalMatrix calculate_full_count_matrix_of_allele( AlleleMatrix* m, char allel
 	return counts;
 }
 
-void calculate_all_block_effects(SimData* d, const char* block_file, const char* output_file) {
-	struct TableSize ts = get_file_dimensions(block_file, '\t');
-	int n_blocks = ts.num_rows - 2;
-  
-	FILE* infile, * outfile;
-	if ((infile = fopen(block_file, "r")) == NULL) {
-		error("Failed to open file %s.\n", block_file);
-	}
+/** Given a set of blocks of markers in a file, for each genotype in a group, 
+ * calculate the local GEBV for the first allele at each marker in the block, and 
+ * the local GEBV for the second allele at each marker in the block, then save
+ * the result to a file. This gives block effects for each haplotype of each 
+ * individual in the group.
+ *
+ * Note that this function is made to work on HPC, and not fixed to work on a regular
+ * device. If an array as long as the number of genotypes cannot fit contiguously into
+ * memory, the function will segfault. 
+ * 
+ * The block file is designed after the output from a call to the R SelectionTools
+ * package's `st.def.hblocks` function. It should have the format (tab-separated):
+ *
+ * Chrom	Pos	Name	Class	Markers
+ *
+ * [ignored]	[ignored]	[ignored]	[ignored]	[semicolon];[separated];[list]
+ * ;[of];[marker];[names];[belonging];[to];[this];[block]
+ *
+ * ...
+ *
+ * The output file will have format: 
+ *
+ * [genotype name]_1 [effect for first block, first allele] 
+ * [effect for second block, second allele] ...
+ *
+ * [genotype name]_2 [effect for first block, second allele] [effect for second block,
+ * second allele] ...
+ *
+ * [genotype 2 name]_1 ...
+ *
+ * 
+ * @param d pointer to the SimData object to which the groups and individuals belong.
+ * It must have a marker effect file loaded to successfully run this function.
+ * @param block_file string containing filename of the file with blocks
+ * @param output_file string containing the filename of the file to which output 
+ * block effects/local GEBVs will be saved.
+ * @param group group number from which to split the top individuals.
+ */
+void calculate_group_block_effects(SimData* d, const char* block_file, const char* output_file, int group) {
+	struct markerBlocks b = read_block_file(d, block_file);
+	
+	FILE* outfile;
 	if ((outfile = fopen(output_file, "w")) == NULL) {
 		error("Failed to open file %s.\n", output_file);
 	}
-  
-	// get the group members by index
-	int gsize = 0;
-	AlleleMatrix* m = d->m;
-	do {
-		gsize += m->n_subjects;
-	} while ((m = m->next) != NULL);
-  
+	
 	int bufferlen = 100;
 	char buffer[bufferlen];
-	//char blockname[bufferlen];
-	char markername[bufferlen];
-  
-	double beffects[gsize*2][n_blocks];
-  
-	// Ignore the first line
-	fscanf(infile, "%*[^\n]\n");
-  
-	// Loop through rows of the file (each row corresponds to a block)
-	//while (fscanf(infile, "%*d %*f %s %*s ", blockname) != EOF) {
-	for (int bi = 0; bi < n_blocks; ++bi) { 
-		// clear effect values
-		for (int i = 0; i < gsize * 2; ++i) {
-			beffects[i][bi] = 0;
-		}
-    
-		fscanf(infile, "%*d %*f %s %*s ", buffer);
 	
-		int c, k = 0;
-		while ((c = fgetc(infile)) != EOF && c !='\n') {
-			if (c == ';') {
-				markername[k] = '\0';
-        
-				// add the effects of that marker to our counts.
-				int markerindex = get_from_unordered_str_list(markername, d->markers, d->n_markers);
-				
-				m = d->m;
-				int total_i = 0;
-				do {
-					for (int i = 0; i < m->n_subjects; ++i, ++total_i) {
-						// add the effect of that allele at that marker.
-						for (int j = 0; j < d->e.effects.rows; ++j) {			
-							if (m->alleles[i][2*markerindex] == d->e.effect_names[j]) {
-								beffects[2*total_i + 0][bi] += d->e.effects.matrix[j][markerindex];
-							}
-							if (m->alleles[i][2*markerindex + 1] == d->e.effect_names[j]) {
-								beffects[2*total_i + 1][bi] += d->e.effects.matrix[j][markerindex];
-							}		
-						}
+	int gsize = get_group_size(d, group);
+	char** ggenos = get_group_genes(d, group, gsize);
+	char** gnames = get_group_names(d, group, gsize);
+	
+	double beffect;
+	
+	// for each group member
+	for (int i = 0; i < gsize; ++i) {
+		// for each block
+		sprintf(buffer, "%s_1", gnames[i]);
+		fwrite(buffer, sizeof(char), strlen(buffer), outfile);
+		
+		// for each block
+		for (int j = 0; j < b.num_blocks; ++j) {
+			beffect = 0;
+			
+			// calculate the local GEBV
+			for (int k = 0; k < b.num_markers_in_block[j]; ++k) {	
+				for (int q = 0; q < d->e.effects.rows; ++q) {			
+					if (ggenos[i][2 * b.markers_in_block[j][k]] == d->e.effect_names[q]) {
+						beffect += d->e.effects.matrix[q][b.markers_in_block[j][k]];
 					}
-				} while ((m = m->next) != NULL);
-        
-				k = 0;
-			} else {
-				markername[k] = c;
-				++k;
+				}	
 			}
+			
+			// print the local GEBV
+			fprintf(outfile, " %lf", beffect);
+			fflush(outfile);
 		}
+		
+		sprintf(buffer, "\n%s_2", gnames[i]);
+		fwrite(buffer, sizeof(char), strlen(buffer), outfile);
+		
+		// for each block for the second haplotype
+		for (int j = 0; j < b.num_blocks; ++j) {
+			beffect = 0;
+			// calculate the local GEBV
+			for (int k = 0; k < b.num_markers_in_block[j]; ++k) {	
+				for (int q = 0; q < d->e.effects.rows; ++q) {			
+					if (ggenos[i][2 * b.markers_in_block[j][k] + 1] == d->e.effect_names[q]) {
+						beffect += d->e.effects.matrix[q][b.markers_in_block[j][k]];
+					}		
+				}	
+			}
+			
+			// print the local GEBV
+			fprintf(outfile, " %lf", beffect);
+			fflush(outfile);
+		}
+		fwrite("\n", sizeof(char), 1, outfile);
 	}
 	
-	// Save those effects to the output file.
-	m = d->m;
-	int total_i = 0;
-	do {
-		for (int i = 0; i < m->n_subjects; ++i, ++total_i) {
-			if (m->subject_names[i] != NULL) {
-				sprintf(buffer, "%s", m->subject_names[i]);
-			} else {
-				sprintf(buffer, "G%d", total_i);
-			}
-			
-			fwrite(buffer, sizeof(char), strlen(buffer), outfile);
-			fprintf(outfile, "_1");
-			for (int j = 0; j < n_blocks; ++j) {
-				fprintf(outfile, " %lf", beffects[2*total_i][j]);
-			}
-			fwrite("\n", sizeof(char), 1, outfile);
-			
-			fwrite(buffer, sizeof(char), strlen(buffer), outfile);
-			fprintf(outfile, "_2");
-			for (int j = 0; j < n_blocks; ++j) {
-				fprintf(outfile, " %lf", beffects[2*total_i + 1][j]);
-			}
-			fwrite("\n", sizeof(char), 1, outfile);
-		}
-	} while ((m = m->next) != NULL);
-  
-	fclose(infile);
+	free(ggenos);
+	free(gnames);
+	for (int i = 0; i < b.num_blocks; ++i) {
+		free(b.markers_in_block[i]);
+	}
+	free(b.markers_in_block);
+	free(b.num_markers_in_block);
+	
 	fflush(outfile);
 	fclose(outfile);
 	return;
 }
 
-/** For a block file 
- *(produced by SelectionTools output: columns Chrom Pos Name Class Markers(semicolon-separated-list)
- * calculate the effect value for alleles from the block separately for the first and second alleles
- * (so two effect values for each block, one from the sets of alleles inherited from each parent) 
- * then saves these results to a matrix file with columns being the lines, entries being those 
- * partial GEBVs/block effect values, and rows being [blockname]_1 and [blockname]_2 for the two
- * haplotypes of each block.
+/** Given a file containing definitions of blocks of markers, process that file 
+ * and return a struct containing the definitions of those blocks.
+ * 
+ * The block file is designed after the output from a call to the R SelectionTools
+ * package's `st.def.hblocks` function. It should have the format (tab-separated):
  *
- * Reads the output from a block file and saves it to an output file.
+ * Chrom	Pos	Name	Class	Markers
  *
+ * [ignored]	[ignored]	[ignored]	[ignored]	[semicolon];[separated];[list]
+ * ;[of];[marker];[names];[belonging];[to];[this];[block];
+ *
+ * ...
+ *
+ * @param d pointer to the SimData object to which the groups and individuals belong.
+ * It must have a marker effect file loaded to successfully run this function.
+ * @param block_file string containing filename of the file with blocks
+ * @returns a struct containing the markers identified as belonging to each block
+ * according to their definitions in the file.
  */
-void calculate_group_block_effects(SimData* d, const char* block_file, const char* output_file, int group) {
+struct markerBlocks read_block_file(SimData* d, const char* block_file) {
 	struct TableSize ts = get_file_dimensions(block_file, '\t');
-	int n_blocks = ts.num_rows - 2;
-  
-	FILE* infile, * outfile;
+	
+	struct markerBlocks blocks;
+	blocks.num_blocks = ts.num_rows - 1;
+	blocks.num_markers_in_block = get_malloc(sizeof(int) * blocks.num_blocks);
+	blocks.markers_in_block = get_malloc(sizeof(int*) * blocks.num_blocks);
+	
+	FILE* infile;
 	if ((infile = fopen(block_file, "r")) == NULL) {
 		error("Failed to open file %s.\n", block_file);
 	}
-	if ((outfile = fopen(output_file, "w")) == NULL) {
-		error("Failed to open file %s.\n", output_file);
-	}
-  
-  // get the group members by index
-	int gsize = get_group_size(d, group);
-	char** ggenos = get_group_genes(d, group, gsize);
-	char** gnames = get_group_names(d, group, gsize);
-  
+	
 	int bufferlen = 100;
-	char buffer[bufferlen];
-	//char blockname[bufferlen];
 	char markername[bufferlen];
-  
-	double beffects[gsize*2][n_blocks];
-
-  
+	int markerbuffer[bufferlen];
+	int bi = 0; // block number
+	
 	// Ignore the first line
 	fscanf(infile, "%*[^\n]\n");
   
 	// Loop through rows of the file (each row corresponds to a block)
-	//while (fscanf(infile, "%*d %*f %s %*s ", blockname) != EOF) {
-	for (int bi = 0; bi < n_blocks; ++bi) { 
-		// clear effect values
-		for (int i = 0; i < gsize * 2; ++i) {
-			beffects[i][bi] = 0;
-		}
-    
-		fscanf(infile, "%*d %*f %s %*s ", buffer);
+	while (fscanf(infile, "%*d %*f %*s %*s ") != EOF) {
+	//for (int bi = 0; bi < n_blocks; ++bi) { 
 	
-		int c, k = 0;
+		// Indexes in play:
+		//		bi: index in the blocks struct's arrays of the current block/line in the file
+		//		ni: number of characters so far in the name of the next marker being read from the file
+		//		mi: number of markers that have so far been read from the file for this block
+		blocks.num_markers_in_block[bi] = 0;
+		int c, ni = 0, mi = 0;
+		
+		memset(markerbuffer, 0, sizeof(int) * bufferlen);
 		while ((c = fgetc(infile)) != EOF && c !='\n') {
 			if (c == ';') {
-				markername[k] = '\0';
+				markername[ni] = '\0';
         
-				// add the effects of that marker to our counts.
+				// identify the index of this marker and save it in the temporary marker buffer `markerbuffer`
 				int markerindex = get_from_unordered_str_list(markername, d->markers, d->n_markers);
-				for (int i = 0; i < gsize; ++i) {
-					// add the effect of that allele at that marker.
-					for (int j = 0; j < d->e.effects.rows; ++j) {			
-						if (ggenos[i][2*markerindex] == d->e.effect_names[j]) {
-							beffects[2*i + 0][bi] += d->e.effects.matrix[j][markerindex];
-						}
-						if (ggenos[i][2*markerindex + 1] == d->e.effect_names[j]) {
-							beffects[2*i + 1][bi] += d->e.effects.matrix[j][markerindex];
-						}		
-					}
+				if (markerindex >= 0) {
+					++(blocks.num_markers_in_block[bi]);
+					markerbuffer[mi] = markerindex;
+					++mi;
 				}
         
-				k = 0;
+				ni = 0;
 			} else {
-				markername[k] = c;
-				++k;
+				markername[ni] = c;
+				++ni;
 			}
 		}
+		
+		// copy the markers belonging to this block into the struct
+		blocks.markers_in_block[bi] = get_malloc(sizeof(int) * mi);
+		for (int i = 0; i < mi; ++i) {
+			blocks.markers_in_block[bi][i] = markerbuffer[i];
+		}
+		
+		++bi;
+	}
+
+	fclose(infile);
+	return blocks;
+}
+
+/** Given a set of blocks of markers in a file, for each genotype saved, 
+ * calculate the local GEBV for the first allele at each marker in the block, and 
+ * the local GEBV for the second allele at each marker in the block, then save
+ * the result to a file. This gives block effects for each haplotype of each 
+ * individual currently saved to the SimData.
+ *
+ * Note that this function is made to work on HPC, and not fixed to work on a regular
+ * device. If an array as long as the number of genotypes cannot fit contiguously into
+ * memory, the function will segfault. 
+ * 
+ * The block file is designed after the output from a call to the R SelectionTools
+ * package's `st.def.hblocks` function. It should have the format (tab-separated):
+ *
+ * Chrom	Pos	Name	Class	Markers
+ *
+ * [ignored]	[ignored]	[ignored]	[ignored]	[semicolon];[separated];[list]
+ * ;[of];[marker];[names];[belonging];[to];[this];[block]
+ *
+ * ...
+ *
+ * The output file will have format: 
+ *
+ * [genotype name]_1 [effect for first block, first allele] 
+ * [effect for second block, second allele] ...
+ *
+ * [genotype name]_2 [effect for first block, second allele] [effect for second block,
+ * second allele] ...
+ *
+ * [genotype 2 name]_1 ...
+ *
+ * 
+ * @param d pointer to the SimData object to which individuals belong.
+ * It must have a marker effect file loaded to successfully run this function.
+ * @param block_file string containing filename of the file with blocks
+ * @param output_file string containing the filename of the file to which output 
+ * block effects/local GEBVs will be saved.
+ */
+void calculate_all_block_effects(SimData* d, const char* block_file, const char* output_file) {
+	struct markerBlocks b = read_block_file(d, block_file);
+	
+	FILE* outfile;
+	if ((outfile = fopen(output_file, "w")) == NULL) {
+		error( "Failed to open file %s.\n", output_file);
 	}
 	
-	// Save those effects to the output file.
-	for (int i = 0; i < gsize; ++i) {
-		sprintf(buffer, "%s_1", gnames[i]);
-		fwrite(buffer, sizeof(char), strlen(buffer), outfile);
-		for (int j = 0; j < n_blocks; ++j) {
-			fprintf(outfile, " %lf", beffects[2*i][j]);
+	int bufferlen = 100;
+	char buffer[bufferlen];
+	
+	int gsize = 0;
+	AlleleMatrix* m = d->m;
+	do {
+		gsize += m->n_subjects;
+	} while ((m = m->next) != NULL);
+	
+	double beffect;
+	
+	// for each group member
+	m = d->m;
+	int total_i = 0;
+	do {
+		for (int i = 0; i < m->n_subjects; ++i, ++total_i) {
+			// for each block
+			sprintf(buffer, "%s_1", m->subject_names[i]);
+			fwrite(buffer, sizeof(char), strlen(buffer), outfile);
+			
+			// for each block
+			for (int j = 0; j < b.num_blocks; ++j) {
+				beffect = 0;
+				
+				// calculate the local GEBV
+				for (int k = 0; k < b.num_markers_in_block[j]; ++k) {	
+					for (int q = 0; q < d->e.effects.rows; ++q) {			
+						if (m->alleles[i][2 * b.markers_in_block[j][k]] == d->e.effect_names[q]) {
+							beffect += d->e.effects.matrix[q][b.markers_in_block[j][k]];
+						}
+					}	
+				}
+				
+				// print the local GEBV
+				fprintf(outfile, " %lf", beffect);
+				fflush(outfile);
+			}
+			
+			sprintf(buffer, "\n%s_2", m->subject_names[i]);
+			fwrite(buffer, sizeof(char), strlen(buffer), outfile);
+			
+			// for each block for the second haplotype
+			for (int j = 0; j < b.num_blocks; ++j) {
+				beffect = 0;
+				// calculate the local GEBV
+				for (int k = 0; k < b.num_markers_in_block[j]; ++k) {	
+					for (int q = 0; q < d->e.effects.rows; ++q) {			
+						if (m->alleles[i][2 * b.markers_in_block[j][k] + 1] == d->e.effect_names[q]) {
+							beffect += d->e.effects.matrix[q][b.markers_in_block[j][k]];
+						}		
+					}	
+				}
+				
+				// print the local GEBV
+				fprintf(outfile, " %lf", beffect);
+				fflush(outfile);
+			}
+			fwrite("\n", sizeof(char), 1, outfile);
 		}
+	} while ((m = m->next) != NULL);
 
-		sprintf(buffer, "\n%s_2", gnames[i]);
-		fwrite(buffer, sizeof(char), strlen(buffer), outfile);
-		for (int j = 0; j < n_blocks; ++j) {
-			fprintf(outfile, " %lf", beffects[2*i + 1][j]);
-		}
-		fwrite("\n", sizeof(char), 1, outfile);
+	for (int i = 0; i < b.num_blocks; ++i) {
+		free(b.markers_in_block[i]);
 	}
-  
-	free(gnames);
-	free(ggenos);
-	fclose(infile);
+	free(b.markers_in_block);
+	free(b.num_markers_in_block);
+	
 	fflush(outfile);
 	fclose(outfile);
 	return;
+}
+
+/** Takes a look at the currently-loaded effect values and creates a string
+ * containing the allele with the highest effect value for each marker as ordered
+ * in the SimData. Returns this as a null-terminated heap array of characters of 
+ * length d->n_markers + one null byte.
+ *
+ * The return value should be freed when usage is finished!
+ *
+ * The SimData must be initialised with marker effects for this function to succeed.
+ * 
+ * @param d pointer to the SimData containing markers and marker effects.
+ * @returns a heap array filled with a null-terminated string containing the highest
+ * scoring allele at each marker.
+ */
+char* calculate_ideal_genotype(SimData* d) {
+	if (d->e.effects.matrix == NULL || d->e.effects.rows < 1 || d->e.effect_names == NULL) {
+		error("No effect values are loaded\n");
+	}
+	
+char* optimal = get_malloc(sizeof(char)* (d->n_markers + 1));
+	char best_allele;
+	int best_score;
+	
+	for (int i = 0; i < d->n_markers; ++i) {
+		best_allele = d->e.effect_names[0];
+		best_score = d->e.effects.matrix[0][i];
+		for (int a = 1; a < d->e.effects.rows; ++a) {
+			if (d->e.effects.matrix[a][i] > best_score) {
+				best_score = d->e.effects.matrix[a][i];
+				best_allele = d->e.effect_names[a];
+			}
+		}
+		optimal[i] = best_allele;
+	}
+	optimal[d->n_markers] = '\0';
+	return optimal;
+}
+
+SEXP SXP_get_best_genotype(SEXP exd) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	char* best_genotype = calculate_ideal_genotype(d);
+	
+	SEXP out = PROTECT(allocVector(STRSXP, 1));
+	SET_STRING_ELT(out, 0, mkChar(best_genotype));
+	free(best_genotype);
+	UNPROTECT(1);
+	return out;
 }

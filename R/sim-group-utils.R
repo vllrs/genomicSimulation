@@ -8,7 +8,6 @@
 #' @return 0 on success. An error is raised on failure.
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_delete_group
 #' @export
 delete.group <- function(group) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -26,7 +25,6 @@ delete.group <- function(group) {
 #' @return the group number of the combined group
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_combine_groups
 #' @export
 combine.groups <- function(groups) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -42,7 +40,6 @@ combine.groups <- function(groups) {
 #' @return the group numbers of the new groups
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_split_individuals
 #' @export
 break.group.into.individuals <- function(group) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -58,7 +55,6 @@ break.group.into.individuals <- function(group) {
 #' @return the group numbers of the new groups
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_split_familywise
 #' @export
 break.group.into.families <- function(group) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -75,7 +71,6 @@ break.group.into.families <- function(group) {
 #' @return the group number of the new group
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_split_out
 #' @export
 make.group <- function(indexes) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -84,19 +79,20 @@ make.group <- function(indexes) {
 
 #' Get a list of the groups currently existing in the SimData
 #'
-#' \code{see.existing.groups} collects all groups that currently have genotypes
-#' allocated to them and returns the group numbers as a vector.
+#' \code{see.existing.groups} scans the saved data for groups that currently
+#' have members and returns their group numbers and number of members.
 #'
-#' @return A vector containing the numbers of every group in the SimData that 
-#' currently has members
+#' @return A dataframe containing two columns, the first, named "Group", 
+#' being the group numbers of every group in the SimData that currently 
+#' has members, the second, named "GroupSize", being 
+#' the number of genotypes currently allocated to that group
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_get_groups
 #' @export
 see.existing.groups <- function() {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	d <- data.frame(.Call(SXP_get_groups, sim.data$p))
-	colnames(d) <- c("Group", "Group size")
+	colnames(d) <- c("Group", "GroupSize")
 	return(d)
 }
 
@@ -133,7 +129,6 @@ see.existing.groups <- function() {
 #'
 #' @family grouping functions
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_get_group_data
 #' @export
 see.group.data <- function(group, data.type) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -165,8 +160,6 @@ see.group.data <- function(group, data.type) {
 #' positively selected.
 #'
 #' @family grouping functions
-#' @useDynLib genomicSimulation SXP_simple_selection
-#' @useDynLib genomicSimulation SXP_simple_selection_bypercent
 #' @export
 select.by.gebv <- function(from.group, low.score.best=FALSE, percentage=NULL, number=NULL) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -198,12 +191,11 @@ select.by.gebv <- function(from.group, low.score.best=FALSE, percentage=NULL, nu
 #' them off into a new group.
 #'
 #' @param group an integer: the group number of the group to return the GEBVs of.
-#' @returns a dataframe whose columns are the GEBVs of the group members and 
-#' the indexes of the group members.
+#' @returns a dataframe whose columns are the GEBVs of the group members, named "GEBV", and 
+#' the indexes of the group members, named "i".
 #'
 #' @family grouping functions
 #' @family saving functions
-#' @useDynLib genomicSimulation SXP_group_eval
 #' @export
 see.group.gebvs <- function(group) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -215,4 +207,21 @@ see.group.gebvs <- function(group) {
 	return(d)
 }
 
+#' Get a string containing the ultimate/highest-scoring genotype.
+#'
+#' \code{see.optimal.genotype} allows you to extract the optimal genotype 
+#' according to the current loaded effect values as an R string. An error is 
+#' raised if no effect values have been loaded.
+#'
+#' @return A string containing the allele out of available alleles at that
+#' marker that has the highest effect value. The string will be ordered in
+#' genome order (lowest chromosome and lowest position to highest) according
+#' to the map that was included on initialisation.
+#'
+#' @family saving functions
+#' @export
+see.optimal.genotype <- function() {
+	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+	return(.Call(SXP_get_best_genotype, sim.data$p))
+}
 

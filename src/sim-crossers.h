@@ -8,16 +8,16 @@
 GenOptions create_genoptions(SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain);
-SEXP cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain);
-SEXP cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain);
-SEXP dcross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_dcross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain);
-SEXP cross_unidirectional(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_cross_unidirectional(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain);
 /*SEXP cross_top(SEXP exd, SEXP group, SEXP percent, SEXP name, SEXP namePrefix, SEXP familySize,
@@ -46,7 +46,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g);
 int make_doubled_haploids(SimData* d, int group, GenOptions g); //@add
 
 int make_all_unidirectional_crosses(SimData* d, int from_group, GenOptions g);
-int make_crosses_from_top_m_percent(SimData* d, int m, int group, GenOptions g);
+int make_n_crosses_from_top_m_percent(SimData* d, int n, int m, int group, GenOptions g);
 int make_crosses_from_file(SimData* d, const char* input_file, GenOptions g);
 int make_double_crosses_from_file(SimData* d, const char* input_file, GenOptions g);
 

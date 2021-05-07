@@ -43,7 +43,7 @@ GenOptions create_genoptions(SEXP name, SEXP namePrefix, SEXP familySize,
 	return go;
 }
 
-SEXP cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
 	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
@@ -79,7 +79,7 @@ SEXP cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP name, S
 	}
 }
 
-SEXP cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
 	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
@@ -93,7 +93,7 @@ SEXP cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEX
 	return ScalarInteger(make_crosses_from_file(d, fname, g));
 }
 
-SEXP dcross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_dcross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
 	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
@@ -108,7 +108,7 @@ SEXP dcross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SE
 	
 }
 
-SEXP cross_unidirectional(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP namePrefix, SEXP familySize,
+SEXP SXP_cross_unidirectional(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
 	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
@@ -237,7 +237,11 @@ SEXP SXP_one_cross(SEXP exd, SEXP parent1_index, SEXP parent2_index, SEXP name,
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	return ScalarInteger(cross_this_pair(d, p1, p2, g));
+	int instructions[2][1];
+	instructions[0][0] = p1;
+	instructions[1][0] = p2;
+	
+	return ScalarInteger(cross_these_combinations(d, 1, instructions, g));
 }
 
 
@@ -430,6 +434,21 @@ void generate_cross(SimData* d, char* parent1_genome, char* parent2_genome, char
 	return;
 }
 
+/** Get the alleles of the outcome of producing a doubled haploid from 
+ * a gamete from a given parent.
+ *
+ * One gamete is generated, then doubled. The output will be perfectly 
+ * homozygous.
+ *
+ * @see generate_gamete(), on which this is based.
+ * 
+ * @param d pointer to the SimData object that includes genetic map data 
+ * needed to simulate meiosis and the value of n_markers
+ * @param parent_genome a 2x(n_markers) array of characters containing the 
+ * alleles of the first parent
+ * @param output a 2x(n_marker) array of chars which will be overwritten
+ * with the offspring genome.
+*/
 void generate_doubled_haploid(SimData* d, char* parent_genome, char* output) {
 	// assumes rand is already seeded
 	if (parent_genome == NULL) {
@@ -494,156 +513,23 @@ void generate_doubled_haploid(SimData* d, char* parent_genome, char* output) {
 	return;
 }
 
-int cross_this_pair(SimData* d, int parent1_index, int parent2_index, GenOptions g) {
-	char* p1_genes = get_genes_of_index(d->m, parent1_index);
-	char* p2_genes = get_genes_of_index(d->m, parent2_index);
-	int p1_id = 0;
-	int p2_id = 0;
-	
-	// create the buffer we'll use to save the output crosses before they're printed.
-	AlleleMatrix* crosses;
-	int n_to_go = g.family_size;
-	if (n_to_go < 1000) {
-		crosses = create_empty_allelematrix(d->n_markers, n_to_go);
-		n_to_go = 0;
-	} else {
-		crosses = create_empty_allelematrix(d->n_markers, 1000);
-		n_to_go -= 1000;
-	}
-	int fullness = 0;
-	
-	// set up pedigree/id allocation, if applicable
-	unsigned int cid = 0;
-	unsigned int* cross_current_id;
-	if (g.will_allocate_ids) {
-		cross_current_id = &(d->current_id);
-	} else {
-		cross_current_id = &cid;
-	}
-	if (g.will_track_pedigree) {
-		p1_id = get_id_of_index(d->m, parent1_index);
-		p2_id = get_id_of_index(d->m, parent2_index);
-	}
-	AlleleMatrix* last;
-	int output_group;
-	if (g.will_save_to_simdata) {
-		last = d->m; // for saving to simdata
-		while (last->next != NULL) {
-			last = last->next;
-		}
-		output_group = get_new_group_num( d);
-	}
-	
-	// open the output files, if applicable
-	char fname[100];
-	FILE* fp, * fe, * fg;
-	DecimalMatrix eff;
-	if (g.will_save_pedigree_to_file) {
-		strcpy(fname, g.filename_prefix);
-		strcat(fname, "-pedigree");
-		fp = fopen(fname, "w");
-	}
-	if (g.will_save_effects_to_file) {
-		strcpy(fname, g.filename_prefix);
-		strcat(fname, "-eff");
-		fe = fopen(fname, "w");
-	}
-	if (g.will_save_genes_to_file) {
-		strcpy(fname, g.filename_prefix);
-		strcat(fname, "-genome");
-		fg = fopen(fname, "w");
-	}
-	
-	GetRNGstate();
-	// loop through each combination
-	// do the cross.
-	for (int f = 0; f < g.family_size; ++f, ++fullness) {
-		R_CheckUserInterrupt();
-		// when cross buffer is full, save these outcomes to the file.
-		if (fullness >= 1000) {
-			crosses->n_subjects = 1000;
-			// give the subjects their ids and names
-			if (g.will_name_subjects) {
-				set_subject_names(crosses, g.subject_prefix, *cross_current_id, 0);
-			}
-			for (int j = 0; j < 1000; ++j) {
-				++ *cross_current_id;
-				crosses->ids[j] = *cross_current_id;
-			}
-			
-			// save the subjects to files if appropriate
-			if (g.will_save_pedigree_to_file) {
-				save_AM_pedigree( fp, crosses, d);
-			}
-			if (g.will_save_effects_to_file) {
-				eff = calculate_fitness_metric( crosses, &(d->e));
-				save_fitness( fe, &eff, crosses->ids, crosses->subject_names);
-				delete_dmatrix( &eff);
-			}
-			if (g.will_save_genes_to_file) {
-				save_allele_matrix( fg, crosses, d->markers);
-			}
-			
-			if (g.will_save_to_simdata) {	
-				last->next = crosses;
-				last = last->next;
-				if (n_to_go < 1000) {
-					crosses = create_empty_allelematrix(d->n_markers, n_to_go);
-					n_to_go = 0;
-				} else {
-					crosses = create_empty_allelematrix(d->n_markers, 1000);
-					n_to_go -= 1000;
-				}
-			}
-			
-			fullness = 0; //reset the count and start refilling the matrix
-		}
-		
-		generate_cross( d, p1_genes, p2_genes, crosses->alleles[fullness] );
-		crosses->groups[fullness] = output_group;
-		crosses->pedigrees[0][fullness] = p1_id;
-		crosses->pedigrees[1][fullness] = p2_id;
-	}
-		
-	PutRNGstate();
-	
-	// save the rest of the crosses to the file.
-	// give the subjects their ids and names
-	if (g.will_name_subjects) {
-		set_subject_names(crosses, g.subject_prefix, *cross_current_id, 0);
-	}
-	for (int j = 0; j < fullness; ++j) {
-		++ *cross_current_id;
-		crosses->ids[j] = *cross_current_id;
-	}
-	
-	// save the subjects to files if appropriate
-	if (g.will_save_pedigree_to_file) {
-		save_AM_pedigree( fp, crosses, d);
-		fclose(fp);
-	}
-	if (g.will_save_effects_to_file) {
-		eff = calculate_fitness_metric( crosses, &(d->e));
-		save_fitness( fe, &eff, crosses->ids, crosses->subject_names);
-		delete_dmatrix( &eff);
-		fclose(fe);
-	}
-	if (g.will_save_genes_to_file) {
-		save_allele_matrix( fg, crosses, d->markers);
-		fclose(fg);
-	}
-	if (g.will_save_to_simdata) {
-		last->next = crosses;
-		condense_allele_matrix( d );
-		return output_group;
-		
-	} else {
-		delete_allele_matrix( crosses );
-		return 0;
-	}	
-}
-
-
+/** Performs random crosses among members of a group. If the group does not 
+ * have at least two members, the simulation exits. Selfing/crossing an individual
+ * with itself is not permitted. The resulting genotypes are allocated to a new group.
+ *
+ * Preferences in GenOptions are applied to this cross. The family_size parameter
+ * in GenOptions allows you to repeat each particular randomly-chosen cross a 
+ * certain number of times.
+ *
+ * Parents are drawn uniformly from the group when picking which crosses to make.
+ *
+ * @param d pointer to the SimData object that contains the genetic map and 
+ * genotypes of the parent group.
+ * @param from_group group number from which to draw the parents.
+ * @param n_crosses number of random pairs of parents to cross.
+ * @param g options for the genotypes created. @see GenOptions
+ * @returns the group number of the group to which the produced offspring were allocated.
+*/
 int cross_random_individuals(SimData* d, int from_group, int n_crosses, GenOptions g) {
 	int g_size = get_group_size( d, from_group);
 	if (g_size < 2) {
@@ -678,12 +564,12 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, GenOptio
 	} else {
 		cross_current_id = &cid;
 	}
-	unsigned int* group_ids;
+	unsigned int* group_ids = NULL;
 	if (g.will_track_pedigree) {
 		group_ids = get_group_ids( d, from_group, g_size);
 	}
-	AlleleMatrix* last;
-	int output_group;
+	AlleleMatrix* last = NULL;
+	int output_group = 0;
 	if (g.will_save_to_simdata) {
 		last = d->m; // for saving to simdata
 		while (last->next != NULL) {
@@ -694,7 +580,7 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, GenOptio
 	
 	// open the output files, if applicable
 	char fname[100];
-	FILE* fp, * fe, * fg;
+	FILE* fp = NULL, * fe = NULL, * fg = NULL;
 	DecimalMatrix eff;
 	if (g.will_save_pedigree_to_file) {
 		strcpy(fname, g.filename_prefix);
@@ -816,16 +702,20 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, GenOptio
 	}
 }
 
-/** Performs the crosses of pairs of parents listed in `combinations` and saves the
- * results to a file.
+/** Performs the crosses of pairs of parents whose ids are provided in an array. The 
+ * resulting genotypes are allocated to a new group.
  *
- * @param d d pointer to the SimData object that includes genetic map data and
+ * Preferences in GenOptions are applied to this cross. The family_size parameter
+ * in GenOptions allows you to repeat each particular cross a 
+ * certain number of times.
+ *
+ * @param d pointer to the SimData object that includes genetic map data and
  * allele data needed to simulate crossing.
- * @param output_file the filename to which the results are to be saved.
  * @param combinations a 2D array of IDs, with the first dimension being parent 1 or 2,
  * and the second being the IDs of those parents for each combination to cross.
  * @param n_combinations the number of pairs of ids to cross/the length of `combinations`
- *
+ * @param g options for the genotypes created. @see GenOptions
+ * @returns the group number of the group to which the produced offspring were allocated.
  */
 int cross_these_combinations(SimData* d, int n_combinations, int combinations[2][n_combinations],  GenOptions g) {	
 	if (n_combinations < 1) {
@@ -853,8 +743,8 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 	} else {
 		cross_current_id = &cid;
 	}
-	AlleleMatrix* last;
-	int output_group;
+	AlleleMatrix* last = NULL;
+	int output_group = 0;
 	if (g.will_save_to_simdata) {
 		last = d->m; // for saving to simdata
 		while (last->next != NULL) {
@@ -865,7 +755,7 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 	
 	// open the output files, if applicable
 	char fname[100];
-	FILE* fp, * fe, * fg;
+	FILE* fp = NULL, * fe = NULL, * fg = NULL;
 	DecimalMatrix eff;
 	if (g.will_save_pedigree_to_file) {
 		strcpy(fname, g.filename_prefix);
@@ -984,17 +874,23 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 	}
 }
 
-/** Saves to a file the result of selfing the subjects in
- * the `gen`th entry in `d`'s linked list of AlleleMatrices `n` times.
+/** Selfs each member of a group for a certain number of generations.
+ * The resulting genotypes are allocated to a new group.
  *
- * @cond n > 0
- * @param d pointer to the SimData object that contains the start of the 
- * AlleleMatrix list, as well as genetic map data necessary to simulate selfing
- * @param output_file file to which to save the output of selfing.
+ * Only the genotype after all n generations is saved. Intermediate steps will be lost.
+ *
+ * Preferences in GenOptions are applied to this operation. The family_size parameter
+ * in GenOptions allows you to generate multiple selfed offspring from each member 
+ * of the group. These multiple selfed offspring all originate from independent
+ * processes of selfing the parent with itself then selfing that intermediate offspring
+ * with itself for the remaining n-1 generations.
+ *
+ * @param d pointer to the SimData object that contains the genetic map and 
+ * genotypes of the parent group.
  * @param n number of generations of selfing simulation to carry out.
- * @param g options for the AlleleMatrix created. @see GenOptions
- * @returns pointer to a new AlleleMatrix containing the alleles after n 
- * rounds of selfing
+ * @param group the genotypes on which to perform these n generations of selfing.
+ * @param g options for the genotypes created. @see GenOptions
+ * @returns the group number of the group to which the produced offspring were allocated.
 */
 int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	int group_size = get_group_size( d, group);
@@ -1025,12 +921,12 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	} else {
 		cross_current_id = &cid;
 	}
-	unsigned int* group_ids;
+	unsigned int* group_ids = NULL;
 	if (g.will_track_pedigree) {
 		group_ids = get_group_ids( d, group, group_size);
 	}
-	AlleleMatrix* last;
-	int output_group;
+	AlleleMatrix* last = NULL;
+	int output_group = 0;
 	if (g.will_save_to_simdata) {
 		last = d->m; // for saving to simdata
 		while (last->next != NULL) {
@@ -1041,7 +937,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	
 	// open the output files, if applicable
 	char fname[100];
-	FILE* fp, * fe, * fg;
+	FILE* fp = NULL, * fe = NULL, * fg = NULL;
 	DecimalMatrix eff;
 	if (g.will_save_pedigree_to_file) {
 		strcpy(fname, g.filename_prefix);
@@ -1239,6 +1135,20 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	}
 }
 
+/** Creates a doubled haploid from each member of a group.
+ * The resulting genotypes are allocated to a new group.
+ *
+ * Preferences in GenOptions are applied to this operation. The family_size parameter
+ * in GenOptions allows you to generate multiple doubled haploid offspring from each member 
+ * of the group. These multiple offspring all originate from independent
+ * processes of generating a gamete then doubling its alleles.
+ *
+ * @param d pointer to the SimData object that contains the genetic map and 
+ * genotypes of the parent group.
+ * @param group the genotypes on which to perform the operation.
+ * @param g options for the genotypes created. @see GenOptions
+ * @returns the group number of the group to which the produced offspring were allocated.
+*/
 int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 	int group_size = get_group_size( d, group);
 	if (group_size < 1) {
@@ -1265,12 +1175,12 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 	} else {
 		cross_current_id = &cid;
 	}
-	unsigned int* group_ids;
+	unsigned int* group_ids = NULL;
 	if (g.will_track_pedigree) {
 		group_ids = get_group_ids( d, group, group_size);
 	}
-	AlleleMatrix* last;
-	int output_group;
+	AlleleMatrix* last = NULL;
+	int output_group = 0;
 	if (g.will_save_to_simdata) {
 		last = d->m; // for saving to simdata
 		while (last->next != NULL) {
@@ -1281,7 +1191,7 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 	
 	// open the output files, if applicable
 	char fname[100];
-	FILE* fp, * fe, * fg;
+	FILE* fp = NULL, * fe = NULL, * fg = NULL;
 	DecimalMatrix eff;
 	if (g.will_save_pedigree_to_file) {
 		strcpy(fname, g.filename_prefix);
@@ -1397,12 +1307,16 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 }
 
 /** Perform crosses between all pairs of parents
- * in the group `from_group` and saves them to `output_file`
+ * in the group `from_group` and allocates the resulting offspring to a new group.
+ *
+ * If the group has n members, there will be n * (n-1) / 2 offspring produced.
+ *
+ * Preferences in GenOptions are applied to this cross. 
  *
  * @param d pointer to the SimData object containing or markers and parent alleles
- * @param output_file filename to which results will be saved.
  * @param from_group group number from which to do all these crosses.
  * @param g options for the AlleleMatrix created. @see GenOptions
+ * @returns the group number of the group to which the produced offspring were allocated.
  */
 int make_all_unidirectional_crosses(SimData* d, int from_group, GenOptions g) {
 	int group_size = get_group_size( d, from_group );
@@ -1436,24 +1350,57 @@ int make_all_unidirectional_crosses(SimData* d, int from_group, GenOptions g) {
 	
 }
 
-/*int make_crosses_from_top_m_percent(SimData* d, int m, int group, GenOptions g) {
+/** Find the top m percent of a group and perform random crosses between those
+ * top individuals. The resulting offspring are allocated to a new group.
+ * 
+ * Preferences in GenOptions are applied to this cross.
+ *
+ * @param d pointer to the SimData object containing or markers and parent alleles
+ * @param n number of random crosses to make.
+ * @param m percentage (as a decimal, i.e. 0.2 for 20percent). Take the best [this portion]
+ * of the group for performing the random crosses.
+ * @param group group number from which to identify top parents and do crosses
+ * @param g options for the AlleleMatrix created. @see GenOptions
+ * @returns the group number of the group to which the produced offspring were allocated.
+ */
+int make_n_crosses_from_top_m_percent(SimData* d, int n, int m, int group, GenOptions g) {
 	// move the top m% to a new group
 	int group_size = get_group_size(d, group);
 	int n_top_group = group_size * m / 100; //@integer division?
-	Rprintf("There are %d lines in the top %d%%\n", n_top_group, m);
+	printf("There are %d lines in the top %d%%\n", n_top_group, m);
 	
 	int topgroup = split_group_by_fitness(d, group, n_top_group, FALSE);
 	
 	// do the random crosses
-	int gp = cross_random_individuals(d, topgroup, g);
+	int gp = cross_random_individuals(d, topgroup, n, g);
 
 	// unconvert from a group
 	int to_combine[] = {group, topgroup};
 	combine_groups(d, 2, to_combine);
 	
 	return gp;
-}*/
+}
 		
+/** Perform crosses between pairs of parents identified by name in a file
+ * and allocate the resulting offspring to a new group.
+ *
+ * The input file should have format:
+ *
+ * [parent1 name] [parent2 name]
+ *
+ * [parent1 name] [parent2 name]
+ *
+ * ...
+ *
+ * where each row represents a separate cross to carry out.
+ *
+ * Preferences in GenOptions are applied to this cross. 
+ *
+ * @param d pointer to the SimData object containing or markers and parent alleles
+ * @param input_file file instructing which crosses to perform
+ * @param g options for the AlleleMatrix created. @see GenOptions
+ * @returns the group number of the group to which the produced offspring were allocated.
+ */
 int make_crosses_from_file(SimData* d, const char* input_file, GenOptions g) {
 	struct TableSize t = get_file_dimensions(input_file, '\t');
 	if (t.num_rows < 1) {
@@ -1480,7 +1427,32 @@ int make_crosses_from_file(SimData* d, const char* input_file, GenOptions g) {
 	return cross_these_combinations(d, t.num_rows, combinations, g);
 }
 	
-// for now works by name
+/** Perform crosses between previously-generated offspring of pairs of parents 
+ * identified by name in a file. The resulting offspring are allocated to a new
+ * group.
+ *
+ * The input file should have format:
+ *
+ * [gparent1 name] [gparent2 name] [gparent3 name] [gparent4 name]
+ *
+ * [gparent1 name] [gparent2 name] [gparent3 name] [gparent4 name]
+ *
+ * ...
+ *
+ * where each row represents a separate cross to carry out.
+ *
+ * Results of the cross [gparent1 name] x [gparent2 name] and 
+ * [gparent3 name] x [gparent4 name] must have already been generated 
+ * with pedigree tracking options turned on. Messages will be printed 
+ * to stderr if such offspring cannot be found.
+ *
+ * Preferences in GenOptions are applied to this cross. 
+ *
+ * @param d pointer to the SimData object containing or markers and parent alleles
+ * @param input_file file instructing which crosses to perform
+ * @param g options for the AlleleMatrix created. @see GenOptions
+ * @returns the group number of the group to which the produced offspring were allocated.
+ */
 int make_double_crosses_from_file(SimData* d, const char* input_file, GenOptions g) {
 	
 	struct TableSize t = get_file_dimensions(input_file, '\t');

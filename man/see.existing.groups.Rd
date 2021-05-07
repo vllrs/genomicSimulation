@@ -7,12 +7,14 @@
 see.existing.groups()
 }
 \value{
-A vector containing the numbers of every group in the SimData that 
-currently has members
+A dataframe containing two columns, the first, named "Group", 
+being the group numbers of every group in the SimData that currently 
+has members, the second, named "GroupSize", being 
+the number of genotypes currently allocated to that group
 }
 \description{
-\code{see.existing.groups} collects all groups that currently have genotypes
-allocated to them and returns the group numbers as a vector.
+\code{see.existing.groups} scans the saved data for groups that currently
+have members and returns their group numbers and number of members.
 }
 \seealso{
 Other grouping functions: 
