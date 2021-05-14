@@ -59,10 +59,6 @@ Other saving functions:
 \code{\link{save.allele.counts}()},
 \code{\link{save.genome.model}()},
 \code{\link{save.genotypes}()},
-\code{\link{save.local.GEBVs}()},
-\code{\link{see.group.data}()},
-\code{\link{see.group.gebvs}()},
-\code{\link{see.optimal.GEBV}()},
-\code{\link{see.optimal.genotype}()}
+\code{\link{save.local.GEBVs}()}
 }
 \concept{saving functions}
