@@ -2,6 +2,10 @@ test_that("GEBVs are correctly calculated and shared with the see function", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
   expect_equal(see.group.gebvs(g), data.frame("i"=c(0L,1L,2L,3L,4L,5L), "GEBV"=c(1.4,1.4,1.6,-0.1,0.6,-0.3)))
+  
+  capture_output(load.different.effects("helper_eff_2.txt"), print=F)
+  
+  expect_equal(see.group.gebvs(g), data.frame("i"=c(0L,1L,2L,3L,4L,5L), "GEBV"=c(0.804,0.804,1.404,2.502,-0.696,1.902)))
 })
 
 test_that("GEBVs are correctly calculated and shared with the save function", {
