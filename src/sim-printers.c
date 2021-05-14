@@ -628,6 +628,7 @@ void save_group_full_pedigree(FILE* f, SimData* d, int group) {
 	unsigned int* group_contents = get_group_ids( d, group, group_size);
 	char** group_names = get_group_names( d, group, group_size);
 	const char newline[] = "\n";
+	unsigned int pedigree[2];
 	
 	for (int i = 0; i < group_size; i++) {
 		/*Group member name*/
@@ -636,7 +637,9 @@ void save_group_full_pedigree(FILE* f, SimData* d, int group) {
 			fwrite(group_names[i], sizeof(char), strlen(group_names[i]), f);
 		}
 		
-		save_parents_of(f, d->m, group_contents[i]);
+		if (get_parents_of_id(d->m, group_contents[i], pedigree) == 0) {
+			save_parents_of(f, d->m, pedigree[0], pedigree[1]);
+		}
 		fwrite(newline, sizeof(char), 1, f);
 	}
 	free(group_names);
@@ -685,7 +688,7 @@ void save_full_pedigree(FILE* f, SimData* d) {
 				fwrite(m->subject_names[i], sizeof(char), strlen(m->subject_names[i]), f);
 			}
 			
-			save_parents_of(f, d->m, m->ids[i]);
+			save_parents_of(f, d->m, m->pedigrees[0][i], m->pedigrees[1][i]);
 			fwrite(newline, sizeof(char), 1, f);
 		}
 	} while ((m = m->next) != NULL);
@@ -726,7 +729,7 @@ void save_full_pedigree(FILE* f, SimData* d) {
  */
 void save_AM_pedigree(FILE* f, AlleleMatrix* m, SimData* parents) {
 	const char newline[] = "\n";
-	
+
 	for (int i = 0; i < m->n_subjects; ++i) {
 		/*Group member name*/
 		fprintf(f, "%d\t", m->ids[i]);
@@ -734,7 +737,7 @@ void save_AM_pedigree(FILE* f, AlleleMatrix* m, SimData* parents) {
 			fwrite(m->subject_names[i], sizeof(char), strlen(m->subject_names[i]), f);
 		}
 		
-		save_parents_of(f, parents->m, m->ids[i]);
+		save_parents_of(f, parents->m, m->pedigrees[0][i], m->pedigrees[1][i]);
 		fwrite(newline, sizeof(char), 1, f);
 	}
 	fflush(f);
@@ -762,54 +765,66 @@ void save_AM_pedigree(FILE* f, AlleleMatrix* m, SimData* parents) {
  * @param id the session-unique id of the genotype whose parents 
  * we wish to recursively save.
  */
-void save_parents_of(FILE* f, AlleleMatrix* m, unsigned int id) {
+void save_parents_of(FILE* f, AlleleMatrix* m, unsigned int p1, unsigned int p2) {
 	unsigned int pedigree[2];
 	
-	if (get_parents_of_id(m, id, pedigree) == 0) {
-		// open brackets
-		fwrite("=(", sizeof(char), 2, f);
-		char* name;
-		
-		if (pedigree[0] == pedigree[1]) {
-			// Selfed parent
-			name = get_name_of_id( m, pedigree[0]);
-			if (name != NULL) {
-				fwrite(name, sizeof(char), strlen(name), f);
-			} else if (pedigree[0] > 0) {
-				fprintf(f, "%d", pedigree[0]);
-				//fwrite(pedigree, sizeof(int), 1, f);
-			}
-			save_parents_of(f, m, pedigree[0]);
-					
-		} else {
-			// Parent 1
-			name = get_name_of_id( m, pedigree[0]);
-			if (name != NULL) {
-				fwrite(name, sizeof(char), strlen(name), f);
-			} else if (pedigree[0] > 0) {
-				fprintf(f, "%d", pedigree[0]);
-				//fwrite(pedigree, sizeof(int), 1, f);
-			}
-			save_parents_of(f, m, pedigree[0]);
-			
-			// separator
-			fwrite(",", sizeof(char), 1, f);
-			
-			// Parent 2
-			name = get_name_of_id( m, pedigree[1]);
-			if (name != NULL) {
-				fwrite(name, sizeof(char), strlen(name), f);
-			} else if (pedigree[1] > 0) {
-				fprintf(f, "%d", pedigree[1]);
-				//fwrite(pedigree + 1, sizeof(int), 1, f);
-			}
-			save_parents_of(f, m, pedigree[1]);
-			
-		}
-
-		// close brackets
-		fwrite(")", sizeof(char), 1, f);
+	// open brackets
+	fwrite("=(", sizeof(char), 2, f);
+	char* name;
+	
+	// enables us to print only the known parent if one is unknown
+	if (p1 == 0 || p2 == 0) {
+		p1 = (p1 >= p2) ? p1 : p2; //max of the two
+		p2 = p1;
 	}
+	
+	if (p1 == p2) {
+		if (p1 > 0) { //print nothing if both are unknown.
+			// Selfed parent
+			name = get_name_of_id( m, p1);
+			if (name != NULL) {
+				fwrite(name, sizeof(char), strlen(name), f);
+			} else if (p1 > 0) {
+				fprintf(f, "%d", p1);
+				//fwrite(pedigree, sizeof(int), 1, f);
+			}
+			
+			if (get_parents_of_id(m, p1, pedigree) == 0) {
+				save_parents_of(f, m, pedigree[0], pedigree[1]);
+			}
+		}
+	} else {
+		// Parent 1
+		name = get_name_of_id( m, p1);
+		if (name != NULL) {
+			fwrite(name, sizeof(char), strlen(name), f);
+		} else if (p1 > 0) {
+			fprintf(f, "%d", p1);
+			//fwrite(pedigree, sizeof(int), 1, f);
+		}
+		get_parents_of_id(m, p1, pedigree);
+		save_parents_of(f, m, pedigree[0], pedigree[1]);
+		
+		// separator
+		fwrite(",", sizeof(char), 1, f);
+		
+		// Parent 2
+		name = get_name_of_id( m, p2);
+		if (name != NULL) {
+			fwrite(name, sizeof(char), strlen(name), f);
+		} else if (p2 > 0) {
+			fprintf(f, "%d", p2);
+			//fwrite(pedigree + 1, sizeof(int), 1, f);
+		}
+		
+		if (get_parents_of_id(m, p2, pedigree) == 0) {
+			save_parents_of(f, m, pedigree[0], pedigree[1]);
+		}
+		
+	}
+
+	// close brackets
+	fwrite(")", sizeof(char), 1, f);
 }
 
 /** Print the GEBV of each genotype in a group to a file. The following

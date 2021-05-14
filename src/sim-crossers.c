@@ -1078,6 +1078,8 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 					free(genes);
 				}
 				
+				outcome->groups[fullness] = output_group;
+				
 			}
 		}
 		
@@ -1085,11 +1087,8 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 			fullness -= g.family_size;
 			int id = group_ids[i];
 			for (f = 0; f < g.family_size; ++f, ++fullness) {
-				outcome->groups[fullness] = output_group;
-				if (g.will_track_pedigree) {
-					outcome->pedigrees[0][fullness] = id;
-					outcome->pedigrees[1][fullness] = id;
-				}
+				outcome->pedigrees[0][fullness] = id;
+				outcome->pedigrees[1][fullness] = id;
 			}
 		}
 	}
