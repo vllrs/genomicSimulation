@@ -225,3 +225,18 @@ see.optimal.genotype <- function() {
 	return(.Call(SXP_get_best_genotype, sim.data$p))
 }
 
+#' Get the ultimate/highest-possible GEBV given the current loaded values.
+#'
+#' \code{see.optimal.GEBV} allows you to extract the optimal GEBV
+#' according to the current loaded effect values as an R string. An error is 
+#' raised if no effect values have been loaded.
+#'
+#' @return The highest possible GEBV
+#'
+#' @family saving functions
+#' @export
+see.optimal.GEBV <- function() {
+	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+	return(.Call(SXP_get_best_GEBV, sim.data$p))
+}
+

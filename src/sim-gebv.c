@@ -651,10 +651,11 @@ void calculate_all_block_effects(SimData* d, const char* block_file, const char*
  */
 char* calculate_ideal_genotype(SimData* d) {
 	if (d->e.effects.matrix == NULL || d->e.effects.rows < 1 || d->e.effect_names == NULL) {
-		error("No effect values are loaded\n");
+		fprintf(stderr, "No effect values are loaded\n");
+		return NULL;
 	}
 	
-char* optimal = get_malloc(sizeof(char)* (d->n_markers + 1));
+	char* optimal = get_malloc(sizeof(char)* (d->n_markers + 1));
 	char best_allele;
 	int best_score;
 	
@@ -673,6 +674,46 @@ char* optimal = get_malloc(sizeof(char)* (d->n_markers + 1));
 	return optimal;
 }
 
+/** Takes a look at the currently-loaded effect values returns the highest possible
+ * GEBV any genotype could score using those effect values.
+ *
+ * The SimData must be initialised with marker effects for this function to succeed.
+ * 
+ * @param d pointer to the SimData containing markers and marker effects.
+ * @returns the GEBV of the best/ideal genotype.
+ */
+double calculate_optimal_gebv(SimData* d) {
+	char* best_alleles = calculate_ideal_genotype(d);
+	double best_gebv = 0;
+	
+	DecimalMatrix counts = generate_zero_dmatrix(d->n_markers, 1);
+	DecimalMatrix effect_row, product;
+	
+	for (int i = 0; i < d->e.effects.rows; ++i) {
+		// fill the count matrix for this allele.
+		for (int j = 0; j < d->n_markers; ++j) {
+			if (best_alleles[j] == d->e.effect_names[i]) {
+				counts.matrix[j][0] = 2;
+			} else {
+				counts.matrix[j][0] = 0;
+			}
+		}
+		
+		// calculate the GEBV contribution from this allele
+		effect_row = subset_dmatrix_row(&(d->e.effects), i);
+		product = multiply_dmatrices(&effect_row, &counts);
+		
+		best_gebv += product.matrix[0][0];
+		delete_dmatrix(&effect_row);
+		delete_dmatrix(&product);
+	}
+	
+	delete_dmatrix(&counts);
+	free(best_alleles);
+	
+	return best_gebv;
+}
+
 SEXP SXP_get_best_genotype(SEXP exd) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
@@ -681,6 +722,17 @@ SEXP SXP_get_best_genotype(SEXP exd) {
 	SEXP out = PROTECT(allocVector(STRSXP, 1));
 	SET_STRING_ELT(out, 0, mkChar(best_genotype));
 	free(best_genotype);
+	UNPROTECT(1);
+	return out;
+}
+
+SEXP SXP_get_best_GEBV(SEXP exd) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	double best_GEBV = calculate_optimal_gebv(d);
+	
+	SEXP out = PROTECT(allocVector(REALSXP, 1));
+	REAL(out)[0] = best_GEBV;
 	UNPROTECT(1);
 	return out;
 }

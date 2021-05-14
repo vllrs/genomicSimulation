@@ -11,6 +11,7 @@ R_CallMethodDef calledMethods[] = {
 	{"SXP_combine_groups", (DL_FUNC) &SXP_combine_groups, 3},
 	{"SXP_delete_group", (DL_FUNC) &SXP_delete_group, 2},
 	{"SXP_get_best_genotype", (DL_FUNC) &SXP_get_best_genotype, 1},
+	{"SXP_get_best_GEBV", (DL_FUNC) &SXP_get_best_GEBV, 1},
 	{"SXP_get_group_data", (DL_FUNC) &SXP_get_group_data, 3},	
 	{"SXP_get_groups", (DL_FUNC) &SXP_get_groups, 1},	
 	{"SXP_group_eval", (DL_FUNC) &SXP_group_eval, 2},	

@@ -62,6 +62,7 @@ Other saving functions:
 \code{\link{save.local.GEBVs}()},
 \code{\link{see.group.data}()},
 \code{\link{see.group.gebvs}()},
+\code{\link{see.optimal.GEBV}()},
 \code{\link{see.optimal.genotype}()}
 }
 \concept{saving functions}

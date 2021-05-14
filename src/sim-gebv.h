@@ -31,7 +31,9 @@ struct markerBlocks read_block_file(SimData* d, const char* block_file);
 void calculate_all_block_effects(SimData* d, const char* block_file, const char* output_file);
 
 char* calculate_ideal_genotype(SimData* d);
+double calculate_optimal_gebv(SimData* d);
 SEXP SXP_get_best_genotype(SEXP exd);
+SEXP SXP_get_best_GEBV(SEXP exd);
 
 SEXP SXP_group_eval(SEXP exd, SEXP group);
 SEXP SXP_simple_selection(SEXP exd, SEXP glen, SEXP groups, SEXP number, SEXP bestIsLow);
