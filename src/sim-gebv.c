@@ -467,7 +467,7 @@ struct markerBlocks read_block_file(SimData* d, const char* block_file) {
 		error("Failed to open file %s.\n", block_file);
 	}
 	
-	int bufferlen = 100;
+	int bufferlen = d->n_markers;
 	char markername[bufferlen];
 	int markerbuffer[bufferlen];
 	int bi = 0; // block number
