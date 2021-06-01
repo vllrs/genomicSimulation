@@ -21,6 +21,22 @@ typedef struct {
 	float position;
 } MarkerPosition;
 
+/** A struct used to store a set of blocks of markers. 
+ *
+ * @param num_blocks the number of blocks whose details are stored here.
+ * @param num_markers_in_block pointer to a heap array of length num_blocks
+ * containing the number of markers that make up each block
+ * @param markers_in_block pointer to a heap array of length num_blocks, each
+ * entry in which is a pointer to a heap array with length corresponding to 
+ * the value of the corresponding entry in num_markers_in_block whose values
+ * are the indexes in the SimData of the markers that make up that block.
+ */
+typedef struct {
+	int num_blocks;
+	int* num_markers_in_block;
+	int** markers_in_block;
+} MarkerBlocks;
+
 /** A simple struct used for returning the dimensions of a matrix or table.*/
 struct TableSize {
 	int num_columns;
@@ -262,6 +278,7 @@ void delete_genmap(GeneticMap* m);
 void delete_allele_matrix(AlleleMatrix* m);
 void delete_effect_matrix(EffectMatrix* m);
 void delete_simdata(SimData* m);
+void delete_markerblocks(MarkerBlocks* b);
 void SXP_delete_simdata(SEXP sd);
 
 SEXP SXP_delete_group(SEXP exd, SEXP group);

@@ -138,9 +138,11 @@ SEXP SXP_save_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP group
 	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
 	if (isNull(group)) {
-		calculate_all_block_effects(d, CHAR(asChar(block_file)), CHAR(asChar(filename)));
+		MarkerBlocks b = read_block_file(d, CHAR(asChar(block_file)));
+		calculate_all_block_effects(d, b, CHAR(asChar(filename)));
 	} else if (asInteger(group) > 0) {
-		calculate_group_block_effects(d, CHAR(asChar(block_file)), CHAR(asChar(filename)), asInteger(group));
+		MarkerBlocks b = read_block_file(d, CHAR(asChar(block_file)));
+		calculate_group_block_effects(d, b, CHAR(asChar(filename)), asInteger(group));
 	} else {
 		error("Supplied group number is invalid.\n");
 	}
@@ -191,7 +193,7 @@ void save_simdata(FILE* f, SimData* m) {
 	/* Print the body. */
 	for (int j = 0; j < m->n_markers; j++) {
 		//fprintf(f, "%s\t", m->markers[j]);
-		fwrite(m->markers[j], strlen(m->markers[j]), 1, f);
+		fwrite(m->markers[j], sizeof(char) * strlen(m->markers[j]), 1, f);
 		fwrite("\t", sizeof(char), 1, f);
 		
 		if (m->map.positions != NULL) {
@@ -216,6 +218,51 @@ void save_simdata(FILE* f, SimData* m) {
 	}
 	fflush(f);
 }
+
+/** Prints the markers contained in a set of blocks to a file. Column separators are tabs.
+ *
+ * The printing format is:
+ *
+ * Chrom	Pos	Name	Class	Markers
+ *
+ * 0	0	b0	b	m1;m2;m3;m4;
+ *
+ * 0	0	b0	b	m7;m9;
+ *
+ * ...
+ *
+ * where m1, m2, m3, m4 are the names of the markers in the first block and 
+ * m7 and m9 are the names of the markers in the second block.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the SimData whose data we print
+ * @param b MarkerBlocks struct containing the groupings of markers to print.
+*/
+void save_marker_blocks(FILE* f, SimData* d, MarkerBlocks b) {
+	const char header[] = "Chrom\tPos\tName\tClass\tMarkers\n";
+	fwrite(header, sizeof(char)*strlen(header), 1, f);
+	
+	// for the moment we do not name or give locations of different blocks
+	const char unspecified[] = "0\t0\tb0\tb\t";
+	const int unspeci_length = strlen(unspecified);
+	
+	for (int i = 0; i < b.num_blocks; ++i) {
+		fwrite(unspecified, sizeof(char)*unspeci_length, 1, f);
+		
+		for (int j = 0; j < b.num_markers_in_block[i]; ++j) {
+			int k = b.markers_in_block[i][j];
+			
+			fwrite(d->markers[k], sizeof(char)*strlen(d->markers[k]), 1, f);
+		}
+		
+		fwrite("\n", sizeof(char), 1, f);
+	}
+	
+	fflush(f);
+	return;
+	
+}
+
 
 /** Prints all the geneotype data saved in the linked list of AlleleMatrices
  * starting with `m` to a file. Uses the following format:

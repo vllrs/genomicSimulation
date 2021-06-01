@@ -14,6 +14,8 @@ SEXP SXP_save_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP group
 /* Savers */
 void save_simdata(FILE* f, SimData* m);
 
+void save_marker_blocks(FILE* f, SimData* d, MarkerBlocks b);
+
 void save_allele_matrix(FILE* f, AlleleMatrix* m, char** markers);
 void save_transposed_allele_matrix(FILE* f, AlleleMatrix* m, char** markers);
 void save_group_alleles(FILE* f, SimData* d, int group_id);

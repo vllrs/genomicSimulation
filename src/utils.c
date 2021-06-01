@@ -70,6 +70,11 @@ AlleleMatrix* create_empty_allelematrix(int n_markers, int n_subjects) {
 	return m;
 }
 
+/** Creator for an empty SimData object on the heap. This is the main struct
+ * that will contain/manage simulation data.
+ *
+ * @returns pointer to the empty created SimData
+ */
 SimData* create_empty_simdata() {
 	SimData* d = get_malloc(sizeof(SimData));
 	d->n_markers = 0;
@@ -1832,10 +1837,9 @@ void delete_effect_matrix(EffectMatrix* m) {
 	m->effect_names = NULL;
 }
 
-/** Deletes a SimData object and frees its memory. m will now refer 
- * to an empty matrix, with every pointer set to null and dimensions set to 0. 
+/** Deletes a SimData object and frees its memory.
  *
- * @param m pointer to the matrix whose data is to be cleared and memory freed.
+ * @param m pointer to the struct whose data is to be cleared and memory freed.
  */
 void delete_simdata(SimData* m) {
 	if (m == NULL) {
@@ -1862,6 +1866,24 @@ void delete_simdata(SimData* m) {
 	
 	//m->current_id = 0;
 	free(m);
+}
+
+/** Deletes a MarkerBlocks object and frees its associated memory. b will now refer 
+ * to an empty struct, with every pointer set to null and number of markers set to 0. 
+ *
+ * @param b pointer to the struct whose data is to be cleared and memory freed.
+ */
+void delete_markerblocks(MarkerBlocks* b) {
+	for (int i = 0; i < b->num_blocks; ++i) {
+		free(b->markers_in_block[i]);
+	}
+	free(b->markers_in_block);
+	b->markers_in_block = NULL;
+	free(b->num_markers_in_block);
+	b->num_markers_in_block = NULL;
+	b->num_blocks = 0;
+	
+	return;
 }
 
 void SXP_delete_simdata(SEXP sd) {

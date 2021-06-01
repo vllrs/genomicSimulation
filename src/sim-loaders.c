@@ -705,6 +705,10 @@ void get_sorted_markers(SimData* d, int actual_n_markers) {
  * The function loops over all MarkerPosition in SimData.map.positions
  * twice, for flexible and minimal memory usage rather than maximum speed.
  *
+ * Chromosome lengths are intialised to 0 for chromosomes that contain 
+ * no markers, and to a flat (meaningless) value of 1 for chromosomes that
+ * contain exactly one marker.
+ *
  * @param d pointer to the SimData object for which the fields under `map` 
  * need to be initialised or updated.
  */
@@ -750,9 +754,15 @@ void get_chromosome_locations(SimData *d) {
 	
 	// calculate lengths
 	for (int i = 0; i < d->map.n_chr; i++) {
-		R_CheckUserInterrupt();
-		d->map.chr_lengths[i] = d->map.positions[d->map.chr_ends[i+1] - 1].position 
-				- d->map.positions[d->map.chr_ends[i]].position;
+		if (d->map.chr_ends[i+1] - 1 > d->map.chr_ends[i]) { //more than 1 marker in chr
+			d->map.chr_lengths[i] = d->map.positions[d->map.chr_ends[i+1] - 1].position 
+					- d->map.positions[d->map.chr_ends[i]].position;
+					
+		} else if (d->map.chr_ends[i+1] - 1 == d->map.chr_ends[i]) { // exactly 1 marker in chr
+			d->map.chr_lengths[i] = 1; //pretty much arbitrary, won't affect crossing anyway
+		} else { // no markers tracked at this chr
+			d->map.chr_lengths[i] = 0;
+		}
 	}
 }
 

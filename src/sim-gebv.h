@@ -10,25 +10,10 @@ DecimalMatrix calculate_fitness_metric( AlleleMatrix* m, EffectMatrix* e);
 DecimalMatrix calculate_count_matrix_of_allele_for_ids( AlleleMatrix* m, unsigned int* for_ids, unsigned int n_ids, char allele);
 DecimalMatrix calculate_full_count_matrix_of_allele( AlleleMatrix* m, char allele);
 
-/** A struct used to store a set of blocks of markers. 
- *
- * @param num_blocks the number of blocks whose details are stored here.
- * @param num_markers_in_block pointer to a heap array of length num_blocks
- * containing the number of markers that make up each block
- * @param markers_in_block pointer to a heap array of length num_blocks, each
- * entry in which is a pointer to a heap array with length corresponding to 
- * the value of the corresponding entry in num_markers_in_block whose values
- * are the indexes in the SimData of the markers that make up that block.
- */
-struct markerBlocks {
-	int num_blocks;
-	int* num_markers_in_block;
-	int** markers_in_block;
-};
-
-void calculate_group_block_effects(SimData* d, const char* block_file, const char* output_file, int group);
-struct markerBlocks read_block_file(SimData* d, const char* block_file);
-void calculate_all_block_effects(SimData* d, const char* block_file, const char* output_file);
+MarkerBlocks create_n_blocks_by_chr(SimData* d, int n);
+MarkerBlocks read_block_file(SimData* d, const char* block_file);
+void calculate_group_block_effects(SimData* d, MarkerBlocks b, const char* output_file, int group);
+void calculate_all_block_effects(SimData* d, MarkerBlocks b, const char* output_file);
 
 char* calculate_ideal_genotype(SimData* d);
 double calculate_optimal_gebv(SimData* d);
