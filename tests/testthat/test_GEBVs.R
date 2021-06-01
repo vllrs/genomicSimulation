@@ -69,3 +69,46 @@ test_that("Local GEBVs using blocks from file are correctly calculated and saved
   file.remove("imaginar")
   clear.simdata()
 })
+
+test_that("Local GEBVs using blocks from slicing are correctly calculated and saved", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff_2.txt"), print=F)
+  
+  expect_equal(save.local.GEBVs.by.chr("imagina", 2, group=g),0)
+  f_out <- readLines("imagina")
+  expect_identical(length(f_out), 12L)
+  
+  f_out_split <- scan(text=f_out[1], what=" ", quiet=TRUE)
+  expect_identical(f_out_split[1], "G01_1")
+  expect_equal(as.numeric(f_out_split[2]), 0.002)
+  expect_equal(as.numeric(f_out_split[3]), 0.7)
+  expect_equal(as.numeric(f_out_split[4]), -0.3)
+  expect_equal(as.numeric(f_out_split[5]), 0)
+  expect_identical(length(f_out_split), 5L)
+  
+  f_out_split <- scan(text=f_out[8], what=" ", quiet=TRUE)
+  expect_identical(f_out_split[1], "G04_2")
+  expect_equal(as.numeric(f_out_split[2]), 1.1)
+  expect_equal(as.numeric(f_out_split[3]), 0.7)
+  expect_equal(as.numeric(f_out_split[4]), 0.3)
+  expect_equal(as.numeric(f_out_split[5]), 0)
+  expect_identical(length(f_out_split), 5L)
+  
+  f_out_split <- scan(text=f_out[9], what=" ", quiet=TRUE)
+  expect_identical(f_out_split[1], "G05_1")
+  expect_equal(as.numeric(f_out_split[2]), 0.002)
+  expect_equal(as.numeric(f_out_split[3]), -0.05)
+  expect_equal(as.numeric(f_out_split[4]), -0.3)
+  expect_equal(as.numeric(f_out_split[5]), 0)
+  expect_identical(length(f_out_split), 5L)
+  
+  f_out_split <- scan(text=f_out[12], what=" ", quiet=TRUE)
+  expect_identical(f_out_split[1], "G06_2")
+  expect_equal(as.numeric(f_out_split[2]), 0.002)
+  expect_equal(as.numeric(f_out_split[3]), 0.7)
+  expect_equal(as.numeric(f_out_split[4]), -0.3)
+  expect_equal(as.numeric(f_out_split[5]), 0)
+  expect_identical(length(f_out_split), 5L)
+  
+  file.remove("imagina")
+  clear.simdata()
+})
