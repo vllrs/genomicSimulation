@@ -147,20 +147,14 @@ save.GEBVs <- function(filename, group=NULL) {
 	return(.Call(SXP_save_GEBVs, sim.data$p, filename, group))
 }
 
-#' Save the local GEBVs of each block in each selected line's haplotypes to a file. 
+#' Save the local GEBVs of each block in each selected line's haplotypes to a file, using
+#' blocks taken from a file.
 #'
-#' \code{save.local.GEBVs} calculates GEBVs for each block of markers listed in 
+#' \code{save.local.GEBVs.by.file} calculates GEBVs for each block of markers listed in 
 #' `block.file` for the maternal and paternal halves of its genotype. The results
 #' are saved to a file. The output file is formatted with the blocks as unlabelled columns
 #' and two rows for each genotype, named [line name]_1 and [line name]_2. The entries
 #' in this matrix are the calculated local GEBVs/block effects.
-#'
-#' Note that this function was written to run on an HPC cluster and so aims for speed rather
-#' than considering potential memory constraints. If the function crashes, it is likely
-#' that the system on which it is being run is not giving it enough memory to make a matrix
-#' of all lines and blocks. Try running the function on smaller groups of lines and concatenating
-#' the output files, or contact the package maintainer to ask them to have another look at
-#' this function and fix it up.
 #'
 #' @param filename A string containing a filename to which the output will
 #' be written
@@ -174,7 +168,31 @@ save.GEBVs <- function(filename, group=NULL) {
 #'
 #' @family saving functions
 #' @export
-save.local.GEBVs <- function(filename, block.file, group=NULL) {
+save.local.GEBVs.by.file <- function(filename, block.file, group=NULL) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_block_effects, sim.data$p, filename, block.file, group))
+	return(.Call(SXP_save_file_block_effects, sim.data$p, filename, block.file, group))
+}
+
+#' Save the local GEBVs of each block in each selected line's haplotypes to a file,
+#' using blocks created by slicing chromosomes into segments. 
+#'
+#' \code{save.local.GEBVs.by.chr} calculates GEBVs for each block of markers created by
+#' splitting each chromosome into `n.blocks.per.chr` same-length blocks for the maternal
+#' and paternal halves of its genotype. The results are saved to a file. The output file 
+#' is formatted with the blocks as unlabelled columns and two rows for each genotype, named 
+#' [line name]_1 and [line name]_2. The entries in this matrix are the calculated local 
+#' GEBVs/block effects.
+#'
+#' @param filename A string containing a filename to which the output will
+#' be written
+#' @param n.blocks.per.chr An integer containing the number of blocks each chromosome
+#' will be divided into.
+#' @param group Save only lines that belong to this group.
+#' @return 0 on success. On failure an error will be raised.
+#'
+#' @family saving functions
+#' @export
+save.local.GEBVs.by.chr <- function(filename, n.blocks.per.chr, group=NULL) {
+	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+	return(.Call(SXP_save_chrsplit_block_effects, sim.data$p, filename, n.blocks.per.chr, group))
 }

@@ -37,7 +37,8 @@ Other saving functions:
 \code{\link{save.GEBVs}()},
 \code{\link{save.genome.model}()},
 \code{\link{save.genotypes}()},
-\code{\link{save.local.GEBVs}()},
+\code{\link{save.local.GEBVs.by.chr}()},
+\code{\link{save.local.GEBVs.by.file}()},
 \code{\link{save.pedigrees}()}
 }
 \concept{saving functions}

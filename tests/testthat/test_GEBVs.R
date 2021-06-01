@@ -35,10 +35,10 @@ test_that("GEBVs are correctly calculated and shared with the save function", {
 })
 
 
-test_that("Local GEBVs are correctly calculated and saved", {
+test_that("Local GEBVs using blocks from file are correctly calculated and saved", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
-  expect_equal(save.local.GEBVs("imaginar", "helper_blocks.txt", group=g),0)
+  expect_equal(save.local.GEBVs.by.file("imaginar", "helper_blocks.txt", group=g),0)
   f_out <- readLines("imaginar")
   expect_identical(length(f_out), 12L)
   

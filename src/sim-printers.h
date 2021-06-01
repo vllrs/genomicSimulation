@@ -9,7 +9,8 @@ SEXP SXP_save_genotypes(SEXP exd, SEXP filename, SEXP group, SEXP type);
 SEXP SXP_save_counts(SEXP exd, SEXP filename, SEXP group, SEXP allele);
 SEXP SXP_save_pedigrees(SEXP exd, SEXP filename, SEXP group, SEXP type);
 SEXP SXP_save_GEBVs(SEXP exd, SEXP filename, SEXP group);
-SEXP SXP_save_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP group);
+SEXP SXP_save_file_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP group);
+SEXP SXP_save_chrsplit_block_effects(SEXP exd, SEXP filename, SEXP nslices, SEXP group);
 
 /* Savers */
 void save_simdata(FILE* f, SimData* m);

@@ -133,16 +133,37 @@ SEXP SXP_save_GEBVs(SEXP exd, SEXP filename, SEXP group) {
 	return ScalarInteger(0);
 }
 
-SEXP SXP_save_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP group) {
+SEXP SXP_save_file_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP group) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
 	if (isNull(group)) {
 		MarkerBlocks b = read_block_file(d, CHAR(asChar(block_file)));
 		calculate_all_block_effects(d, b, CHAR(asChar(filename)));
+		delete_markerblocks(&b);
 	} else if (asInteger(group) > 0) {
 		MarkerBlocks b = read_block_file(d, CHAR(asChar(block_file)));
 		calculate_group_block_effects(d, b, CHAR(asChar(filename)), asInteger(group));
+		delete_markerblocks(&b);
+	} else {
+		error("Supplied group number is invalid.\n");
+	}
+	
+	return ScalarInteger(0);	
+}
+
+SEXP SXP_save_chrsplit_block_effects(SEXP exd, SEXP filename, SEXP nslices, SEXP group) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
+	
+	if (isNull(group)) {
+		MarkerBlocks b = create_n_blocks_by_chr(d, asInteger(nslices));
+		calculate_all_block_effects(d, b, CHAR(asChar(filename)));
+		delete_markerblocks(&b);
+	} else if (asInteger(group) > 0) {
+		MarkerBlocks b = create_n_blocks_by_chr(d, asInteger(nslices));
+		calculate_group_block_effects(d, b, CHAR(asChar(filename)), asInteger(group));
+		delete_markerblocks(&b);
 	} else {
 		error("Supplied group number is invalid.\n");
 	}
