@@ -756,7 +756,9 @@ void save_full_pedigree(FILE* f, SimData* d) {
 				fwrite(m->subject_names[i], sizeof(char), strlen(m->subject_names[i]), f);
 			}
 			
-			save_parents_of(f, d->m, m->pedigrees[0][i], m->pedigrees[1][i]);
+			if (m->pedigrees[0][i] != 0 || m->pedigrees[1][i] != 0) {
+				save_parents_of(f, d->m, m->pedigrees[0][i], m->pedigrees[1][i]);
+			}
 			fwrite(newline, sizeof(char), 1, f);
 		}
 	} while ((m = m->next) != NULL);
@@ -805,7 +807,9 @@ void save_AM_pedigree(FILE* f, AlleleMatrix* m, SimData* parents) {
 			fwrite(m->subject_names[i], sizeof(char), strlen(m->subject_names[i]), f);
 		}
 		
-		save_parents_of(f, parents->m, m->pedigrees[0][i], m->pedigrees[1][i]);
+        if (m->pedigrees[0][i] != 0 || m->pedigrees[1][i] != 0) {
+            save_parents_of(f, parents->m, m->pedigrees[0][i], m->pedigrees[1][i]);
+        }
 		fwrite(newline, sizeof(char), 1, f);
 	}
 	fflush(f);
@@ -870,8 +874,9 @@ void save_parents_of(FILE* f, AlleleMatrix* m, unsigned int p1, unsigned int p2)
 			fprintf(f, "%d", p1);
 			//fwrite(pedigree, sizeof(int), 1, f);
 		}
-		get_parents_of_id(m, p1, pedigree);
-		save_parents_of(f, m, pedigree[0], pedigree[1]);
+		if (get_parents_of_id(m, p1, pedigree) == 0) {
+			save_parents_of(f, m, pedigree[0], pedigree[1]);
+		}
 		
 		// separator
 		fwrite(",", sizeof(char), 1, f);
