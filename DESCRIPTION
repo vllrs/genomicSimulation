@@ -1,10 +1,12 @@
 Package: genomicSimulation
 Version: 0.1-4
-Title: Simulate Breeding Schemes Across SNP Markers
+Title: Simulate Selection And Crossing On SNP Markers
 Authors@R: c(person("Kira", "Villiers", role = c("aut", "cre"), email="kirav@protonmail.com"))
-Description: Functions to simulate breeding programs on SNP markers, making simulated
- phased genotypes, and functions to calculate or perform selection based on GEBVs from
- provided effect values.
+Description: Fast functions to simulate breeding programs on SNP markers. 
+ Simulates random crossing, specific crossing, selfing, and doubling haploids.
+ Simulates crossovers and tracks phase in meiosis. Offers a selection of 
+ pre-made selection methods as well as an interface to develop custom selection
+ functions in R. 
 License: GPL (>= 2)
 URL: https://github.com/KiraVill/genomicSimulation
 Encoding: UTF-8
