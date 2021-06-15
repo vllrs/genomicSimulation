@@ -6,12 +6,6 @@
 #' method for accessing data, but this may be used to peek at the data or 
 #' make group adjustments during simulation time. 
 #'
-#' When loading genotypes as a group, some genotypes may have trailing nonsense
-#' characters. Only the first (number of SNPs * 2) characters are valid. These trailing
-#' characters occur because the C code does not allocate extra room for a null-terminating
-#' byte, which makes the R function converting the genotypes to strings not know where the
-#' end of the genotype is.
-#'
 #' @section Warning about indexes:
 #' Deleting a group (\code{\link{delete.group}}) may cause the indexes of group members to 
 #' change (as the positions/indexes that they are stored in the internal matrix may be

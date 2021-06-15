@@ -624,13 +624,30 @@ SEXP SXP_get_group_data(SEXP exd, SEXP group, SEXP whatData) {
 		if (c == 'N' || c == 'n') {
 			data = get_group_names(d, group_id, group_size);
 		} else {
-			data = get_group_genes(d, group_id, group_size);
+			char** rawdata = get_group_genes(d, group_id, group_size);
+			
+			// copy over to another array, adding string terminators
+			int glen = d->n_markers * 2; // genotype length
+			data = get_malloc(sizeof(char*) * group_size);
+			for (int i = 0; i < group_size; ++i) {
+				data[i] = get_malloc(sizeof(char) * (glen + 1));
+				for (int j = 0; j < glen; ++j) {
+					data[i][j] = rawdata[i][j];
+				}
+				data[i][glen] = '\0';
+			}
+			
 		}
 		
 		// save to an R vector
 		SEXP out = PROTECT(allocVector(STRSXP, group_size));
 		for (int i = 0; i < group_size; ++i) {
 			SET_STRING_ELT(out, i, mkChar(data[i]));
+		}
+		if (c == 'G' || c == 'g') {
+			for (int i = 0; i < group_size; ++i) {
+				free(data[i]);
+			}
 		}
 		free(data);
 		UNPROTECT(1);
