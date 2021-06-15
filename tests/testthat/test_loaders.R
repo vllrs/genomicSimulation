@@ -61,6 +61,7 @@ test_that("Other functions don't run without data being loaded", {
   expect_error(see.group.data(1L, "I"),"Please load.data first")
   expect_error(see.group.gebvs(1L),"Please load.data first")
   expect_error(see.optimal.genotype(),"Please load.data first")
+  expect_error(see.optimal.GEBV(),"Please load.data first")
   expect_error(select.by.gebv(1L, number=2),"Please load.data first")
   expect_error(self.n.times(2L,1L),"Please load.data first")
   
