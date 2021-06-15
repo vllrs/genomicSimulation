@@ -1,18 +1,10 @@
 #ifndef SIM_PRINTERS_H
 #define SIM_PRINTERS_H
 
-#include "utils.h"
-#include "sim-gebv.h"
+#include "sim-utils.h"
+#include "sim-fitness.h"
 
-SEXP SXP_save_simdata(SEXP exd, SEXP filename);
-SEXP SXP_save_genotypes(SEXP exd, SEXP filename, SEXP group, SEXP type);
-SEXP SXP_save_counts(SEXP exd, SEXP filename, SEXP group, SEXP allele);
-SEXP SXP_save_pedigrees(SEXP exd, SEXP filename, SEXP group, SEXP type);
-SEXP SXP_save_GEBVs(SEXP exd, SEXP filename, SEXP group);
-SEXP SXP_save_file_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP group);
-SEXP SXP_save_chrsplit_block_effects(SEXP exd, SEXP filename, SEXP nslices, SEXP group);
-
-/* Savers */
+/*--------------------------------Printing-----------------------------------*/
 void save_simdata(FILE* f, SimData* m);
 
 void save_marker_blocks(FILE* f, SimData* d, MarkerBlocks b);

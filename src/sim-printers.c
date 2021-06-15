@@ -1,176 +1,5 @@
 #include "sim-printers.h"
 
-SEXP SXP_save_simdata(SEXP exd, SEXP filename) {
-	FILE* f;
-	const char* fname = CHAR(asChar(filename));
-	if ((f = fopen(fname, "w")) == NULL) {
-		error( "Failed to open file %s.\n", fname);
-	}
-	
-	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	
-	save_simdata(f, d);
-	
-	fclose(f);
-	return ScalarInteger(0);
-}
-
-SEXP SXP_save_genotypes(SEXP exd, SEXP filename, SEXP group, SEXP type) {
-	FILE* f;
-	const char* fname = CHAR(asChar(filename));
-	if ((f = fopen(fname, "w")) == NULL) {
-		error( "Failed to open file %s.\n", fname);
-	}
-	
-	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	
-	const char t = CHAR(asChar(type))[0];	
-	if (t == 'R' || t == 'r') {
-		if (isNull(group)) {
-			save_allele_matrix(f, d->m, d->markers);
-		} else if (asInteger(group) >= 0) {
-			save_group_alleles(f, d, asInteger(group));
-		} else {
-			fclose(f);
-			error("Supplied group number is invalid.");
-		}
-	} else if (t == 'T' || t == 't') {
-		if (isNull(group)) {
-			save_transposed_allele_matrix(f, d->m, d->markers);
-		} else if (asInteger(group) >= 0) {
-			save_transposed_group_alleles(f, d, asInteger(group));
-		} else {
-			fclose(f);
-			error("Supplied group number is invalid.");
-		}
-	} else {
-		fclose(f);
-		error("Supplied printing format is invalid.");
-	}
-	
-	fclose(f);
-	return ScalarInteger(0);
-}
-
-SEXP SXP_save_counts(SEXP exd, SEXP filename, SEXP group, SEXP allele) {
-	FILE* f;
-	const char* fname = CHAR(asChar(filename));
-	if ((f = fopen(fname, "w")) == NULL) {
-		error( "Failed to open file %s.\n", fname);
-	}
-	
-	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	
-	const char t = CHAR(asChar(allele))[0];	
-	if (isNull(group)) {
-		save_count_matrix(f, d, t);
-	} else if (asInteger(group) >= 0) {
-		save_count_matrix_of_group(f, d, t, asInteger(group));
-	} else {
-		fclose(f);
-		error("Supplied group number is invalid.");
-	}
-	
-	fclose(f);
-	return ScalarInteger(0);
-}
-
-SEXP SXP_save_pedigrees(SEXP exd, SEXP filename, SEXP group, SEXP type) {
-	FILE* f;
-	const char* fname = CHAR(asChar(filename));
-	if ((f = fopen(fname, "w")) == NULL) {
-		error( "Failed to open file %s.\n", fname);
-	}
-	
-	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	
-	const char t = CHAR(asChar(type))[0];	
-	if (t == 'R' || t == 'r') { // full/recursive
-		if (isNull(group)) {
-			save_full_pedigree(f, d);
-		} else if (asInteger(group) >= 0) {
-			save_group_full_pedigree(f, d, asInteger(group));
-		} else {
-			error("Supplied group number is invalid.");
-		}
-	} else if (t == 'P' || t == 'p') { // one-step/parents
-		if (isNull(group)) {
-			save_one_step_pedigree(f, d);
-		} else if (asInteger(group) >= 0) {
-			save_group_one_step_pedigree(f, d, asInteger(group));
-		} else {
-			error("Supplied group number is invalid.");
-		}
-	} else {
-		fclose(f);
-		error("Supplied printing format is invalid.");
-	}
-	
-	fclose(f);
-	return ScalarInteger(0);	
-}
-
-SEXP SXP_save_GEBVs(SEXP exd, SEXP filename, SEXP group) {
-	FILE* f;
-	const char* fname = CHAR(asChar(filename));
-	if ((f = fopen(fname, "w")) == NULL) {
-		error( "Failed to open file %s.\n", fname);
-	}
-	
-	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
-	
-	if (isNull(group)) {
-		save_all_fitness(f, d);
-	} else if (asInteger(group) >= 0) {
-		save_group_fitness(f, d, asInteger(group));
-	} else {
-		fclose(f);
-		error("Supplied group number is invalid.");
-	}
-	
-	fclose(f);
-	return ScalarInteger(0);
-}
-
-SEXP SXP_save_file_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP group) {
-	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
-	
-	if (isNull(group)) {
-		MarkerBlocks b = read_block_file(d, CHAR(asChar(block_file)));
-		calculate_all_block_effects(d, b, CHAR(asChar(filename)));
-		delete_markerblocks(&b);
-	} else if (asInteger(group) > 0) {
-		MarkerBlocks b = read_block_file(d, CHAR(asChar(block_file)));
-		calculate_group_block_effects(d, b, CHAR(asChar(filename)), asInteger(group));
-		delete_markerblocks(&b);
-	} else {
-		error("Supplied group number is invalid.\n");
-	}
-	
-	return ScalarInteger(0);	
-}
-
-SEXP SXP_save_chrsplit_block_effects(SEXP exd, SEXP filename, SEXP nslices, SEXP group) {
-	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
-	
-	if (isNull(group)) {
-		MarkerBlocks b = create_n_blocks_by_chr(d, asInteger(nslices));
-		calculate_all_block_effects(d, b, CHAR(asChar(filename)));
-		delete_markerblocks(&b);
-	} else if (asInteger(group) > 0) {
-		MarkerBlocks b = create_n_blocks_by_chr(d, asInteger(nslices));
-		calculate_group_block_effects(d, b, CHAR(asChar(filename)), asInteger(group));
-		delete_markerblocks(&b);
-	} else {
-		error("Supplied group number is invalid.\n");
-	}
-	
-	return ScalarInteger(0);	
-}
-
 /*--------------------------------Printing-----------------------------------*/
 
 
@@ -531,6 +360,7 @@ void save_transposed_group_alleles(FILE* f, SimData* d, int group_id) {
 	fflush(f);
 	
 }
+
 
 /** Print the parents of each genotype in a group to a file. The following
  * tab-separated format is used:
@@ -899,6 +729,7 @@ void save_parents_of(FILE* f, AlleleMatrix* m, unsigned int p1, unsigned int p2)
 	// close brackets
 	fwrite(")", sizeof(char), 1, f);
 }
+
 
 /** Print the GEBV of each genotype in a group to a file. The following
  * tab-separated format is used:

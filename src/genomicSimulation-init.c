@@ -1,9 +1,5 @@
 #include <R_ext/Rdynload.h>
-#include "sim-crossers.h"
-#include "sim-gebv.h"
-#include "sim-printers.h"
-#include "sim-loaders.h"
-#include "utils.h"
+#include "r-wrappers.h"
 
 /*------------------------ R setup functions---------------------------------*/
 
