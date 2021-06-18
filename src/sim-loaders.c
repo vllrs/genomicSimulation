@@ -31,6 +31,15 @@
 */
 int load_transposed_genes_to_simdata(SimData* d, const char* filename) {	
 	struct TableSize t = get_file_dimensions(filename, '\t');
+  char cell[4] = "\t%s";
+  if (t.num_columns == 1) {
+    t = get_file_dimensions(filename, ' ');
+    cell[0] = ' ';
+  }
+  if (t.num_columns == 1) {
+    warning("Only found one column in file %s. File may be using an unsupported separator.\n", filename);
+  }
+  
 	FILE* fp;
 	const int gp = 1;
 	if ((fp = fopen(filename, "r")) == NULL) {
@@ -72,7 +81,7 @@ int load_transposed_genes_to_simdata(SimData* d, const char* filename) {
 	// load in the subject names from the header
 	for (int i = 0, i_am = 0; i < (t.num_columns-1); ++i, ++i_am) {
 		R_CheckUserInterrupt();
-		fscanf(fp, "\t%s", word);
+		fscanf(fp, cell, word);
 		
 		if (i_am >= current_am->n_subjects) {
 			i_am = 0;
@@ -111,7 +120,7 @@ int load_transposed_genes_to_simdata(SimData* d, const char* filename) {
 		//d->m->alleles[j] = get_malloc(sizeof(char) * d->m[0].n_subjects * 2);
 		for (int i = 0, i_am = 0; i < (t.num_columns - 1); ++i, ++i_am) {
 			// looping through the remaining columns in this row.
-			fscanf(fp, "\t%s", word2);
+			fscanf(fp, cell, word2);
 			
 			// save the two alleles.
 			if (strlen(word2) != 2) {
