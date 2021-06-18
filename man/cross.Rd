@@ -89,7 +89,7 @@ Other crossing functions:
 \code{\link{cross.all.pairs}()},
 \code{\link{cross.combinations.file}()},
 \code{\link{cross.combinations}()},
-\code{\link{cross.dc.combinations}()},
+\code{\link{cross.dc.combinations.file}()},
 \code{\link{cross.randomly}()},
 \code{\link{make.doubled.haploids}()},
 \code{\link{self.n.times}()}

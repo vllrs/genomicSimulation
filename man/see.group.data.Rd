@@ -49,7 +49,7 @@ Other grouping functions:
 Other data access functions: 
 \code{\link{see.group.gebvs}()},
 \code{\link{see.optimal.GEBV}()},
-\code{\link{see.optimal.genotype}()}
+\code{\link{see.optimal.haplotype}()}
 }
 \concept{data access functions}
 \concept{grouping functions}

@@ -176,7 +176,7 @@ SEXP SXP_cross_Rcombinations(SEXP exd, SEXP firstparents, SEXP secondparents,
 
 	return ScalarInteger(cross_these_combinations(d, ncrosses, combinations, g));
 	
-};
+}
 
 SEXP SXP_cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,

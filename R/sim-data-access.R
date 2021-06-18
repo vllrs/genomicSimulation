@@ -62,11 +62,12 @@ see.group.gebvs <- function(group) {
 }
 
 
-#' Get a string containing the ultimate/highest-scoring genotype.
+#' Get a string containing the ultimate/highest-scoring set of alleles.
 #'
-#' \code{see.optimal.genotype} allows you to extract the optimal genotype 
+#' \code{see.optimal.haplotype} allows you to extract the optimal haplotype 
 #' according to the current loaded effect values as an R string. An error is 
-#' raised if no effect values have been loaded.
+#' raised if no effect values have been loaded. The optimal genotype (assuming
+#' only additive allele effects) is just the doubled version of this haplotype.
 #'
 #' @return A string containing the allele out of available alleles at that
 #' marker that has the highest effect value. The string will be ordered in
@@ -75,7 +76,7 @@ see.group.gebvs <- function(group) {
 #'
 #' @family data access functions
 #' @export
-see.optimal.genotype <- function() {
+see.optimal.haplotype <- function() {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_get_best_genotype, sim.data$p))
 }
@@ -84,7 +85,7 @@ see.optimal.genotype <- function() {
 #' Get the ultimate/highest-possible GEBV given the current loaded values.
 #'
 #' \code{see.optimal.GEBV} allows you to extract the optimal GEBV
-#' according to the current loaded effect values as an R string. An error is 
+#' according to the current loaded effect values. An error is 
 #' raised if no effect values have been loaded.
 #'
 #' @return The highest possible GEBV

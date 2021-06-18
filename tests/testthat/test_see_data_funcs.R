@@ -28,12 +28,12 @@ test_that("see.group.data works", {
 test_that("Functions to see optimal genotype and GEBV work", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
-  expect_identical(see.optimal.genotype(), "TAA")
+  expect_identical(see.optimal.haplotype(), "TAA")
   expect_equal(see.optimal.GEBV(), 1.8)
   
   capture_output(load.different.effects("helper_eff_2.txt"), print=F)
   
-  expect_identical(see.optimal.genotype(), "AAA")
+  expect_identical(see.optimal.haplotype(), "AAA")
   expect_equal(see.optimal.GEBV(), 4.2)
   
   clear.simdata()

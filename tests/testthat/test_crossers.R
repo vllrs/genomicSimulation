@@ -46,12 +46,12 @@ test_that("cross.all.pairs works", {
   clear.simdata()
 })
 
-test_that("cross.dc.combinations works", {
+test_that("cross.dc.combinations.file works", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
   #Make sure it doesn't crash and creates right-size group
   f <- cross.all.pairs(g)
-  g2 <- cross.dc.combinations("helper_dcrosses.txt")
+  g2 <- cross.dc.combinations.file("helper_dcrosses.txt")
   expect_identical(see.existing.groups(), data.frame("Group"=c(g,f,g2),"GroupSize"=c(6L,15L,2L)))
   
   clear.simdata()

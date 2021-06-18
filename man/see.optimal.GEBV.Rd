@@ -11,13 +11,13 @@ The highest possible GEBV
 }
 \description{
 \code{see.optimal.GEBV} allows you to extract the optimal GEBV
-according to the current loaded effect values as an R string. An error is 
+according to the current loaded effect values. An error is 
 raised if no effect values have been loaded.
 }
 \seealso{
 Other data access functions: 
 \code{\link{see.group.data}()},
 \code{\link{see.group.gebvs}()},
-\code{\link{see.optimal.genotype}()}
+\code{\link{see.optimal.haplotype}()}
 }
 \concept{data access functions}

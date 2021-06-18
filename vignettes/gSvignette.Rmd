@@ -265,7 +265,7 @@ View data (pulls data into R dataframes):
 - `[dataframe containing current existing groups and their sizes] <- see.existing.groups()`
 - `[vector containing the chosen data] <- see.group.data(group, data.type)`
 - `[index and GEBV for each group member] <- see.group.gebvs(group)`
-- `[string containing best allele per SNP] <- see.optimal.genotype()`
+- `[string containing best allele per SNP] <- see.optimal.haplotype()`
 - `[float: the maximum possible GEBV] <- see.optimal.GEBV()`
 
 Identify recombination events:
