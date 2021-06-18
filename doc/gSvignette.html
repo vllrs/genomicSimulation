@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kira Villiers" />
 
-<meta name="date" content="2021-05-04" />
+<meta name="date" content="2021-06-18" />
 
 <title>genomicSimulation Vignette</title>
 
@@ -311,7 +311,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <h1 class="title toc-ignore">genomicSimulation Vignette</h1>
 <h4 class="author">Kira Villiers</h4>
-<h4 class="date">2021-05-04</h4>
+<h4 class="date">2021-06-18</h4>
 
 
 <div id="TOC">
@@ -477,10 +477,10 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <a class="sourceLine" id="cb2-3" title="3"><span class="co">#&gt; Warning in read.table(file = file, header = header, sep = sep, quote =</span></a>
 <a class="sourceLine" id="cb2-4" title="4"><span class="co">#&gt; quote, : incomplete final line found by readTableHeader on &#39;../tests/testthat/</span></a>
 <a class="sourceLine" id="cb2-5" title="5"><span class="co">#&gt; helper_genotypes.txt&#39;</span></a>
-<a class="sourceLine" id="cb2-6" title="6"><span class="co">#&gt;   name G01 G02 G03 G04 G05 G06</span></a>
-<a class="sourceLine" id="cb2-7" title="7"><span class="co">#&gt; 1   m1  TT  TT  TT  TA  TT  AT</span></a>
-<a class="sourceLine" id="cb2-8" title="8"><span class="co">#&gt; 2   m3  TT  TT  TA  TA  TT  TT</span></a>
-<a class="sourceLine" id="cb2-9" title="9"><span class="co">#&gt; 3   m2  AA  AA  AA  AA  TT  AA</span></a>
+<a class="sourceLine" id="cb2-6" title="6"><span class="co">#&gt;   name.G01.G02.G03.G04.G05.G06</span></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="co">#&gt; 1         m1 TT TT TT TA TT AT</span></a>
+<a class="sourceLine" id="cb2-8" title="8"><span class="co">#&gt; 2         m3 TT TT TA TA TT TT</span></a>
+<a class="sourceLine" id="cb2-9" title="9"><span class="co">#&gt; 3         m2 AA AA AA AA TT AA</span></a>
 <a class="sourceLine" id="cb2-10" title="10"><span class="kw">read.csv</span>(<span class="st">&quot;../tests/testthat/helper_map.txt&quot;</span>, <span class="dt">sep=</span><span class="st">&#39;</span><span class="ch">\t</span><span class="st">&#39;</span>, <span class="dt">header=</span>T)</a>
 <a class="sourceLine" id="cb2-11" title="11"><span class="co">#&gt; Warning in read.table(file = file, header = header, sep = sep, quote =</span></a>
 <a class="sourceLine" id="cb2-12" title="12"><span class="co">#&gt; quote, : incomplete final line found by readTableHeader on &#39;../tests/testthat/</span></a>
@@ -512,7 +512,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <a class="sourceLine" id="cb2-38" title="38"><span class="kw">save.pedigrees</span>(<span class="st">&quot;a.txt&quot;</span>, f1, <span class="dt">type=</span><span class="st">&quot;P&quot;</span>)</a>
 <a class="sourceLine" id="cb2-39" title="39"><span class="co">#&gt; [1] 0</span></a>
 <a class="sourceLine" id="cb2-40" title="40"><span class="kw">find.plot.crossovers</span>(<span class="st">&quot;a.txt&quot;</span>, <span class="st">&quot;b.txt&quot;</span>)</a></code></pre></div>
-<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"></a>
 <a class="sourceLine" id="cb3-2" title="2"><span class="co"># Make 40 random crosses from the 25% with the top GEBV</span></a>
 <a class="sourceLine" id="cb3-3" title="3">f1.selected &lt;-<span class="st"> </span><span class="kw">select.by.gebv</span>(f1, <span class="dt">percentage=</span><span class="dv">25</span>)</a>
@@ -613,8 +613,9 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <ul>
 <li><code>group &lt;- cross(parent1,parent2,[settings])</code></li>
 <li><code>group &lt;- cross.randomly(group,n.crosses,[settings])</code></li>
-<li><code>group &lt;- cross.combinations(cross.file,[settings])</code></li>
-<li><code>group &lt;- cross.dc.combinations(cross.file,[settings])</code></li>
+<li><code>group &lt;- cross.combinations(first.parents,second.parents,[settings])</code></li>
+<li><code>group &lt;- cross.combinations.file(cross.file,[settings])</code></li>
+<li><code>group &lt;- cross.dc.combinations.file(cross.file,[settings])</code></li>
 <li><code>group &lt;- cross.all.pairs(group,[settings])</code></li>
 <li><code>group &lt;- self.n.times(group,n,[settings])</code></li>
 <li><code>group &lt;- make.doubled.haploids(group,[settings])</code></li>
@@ -644,13 +645,16 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <li><code>save.allele.counts(filename, group = NULL, allele)</code></li>
 <li><code>save.pedigrees(filename, group = NULL, type = &quot;R&quot;)</code></li>
 <li><code>save.GEBVs(filename, group = NULL)</code></li>
-<li><code>save.local.GEBVs(filename, block.file, group = NULL)</code></li>
+<li><code>save.local.GEBVs.by.chr(filename, n.blocks.per.chr, group = NULL)</code></li>
+<li><code>save.local.GEBVs.by.file(filename, block.file, group = NULL)</code></li>
 </ul>
 <p>View data (pulls data into R dataframes):</p>
 <ul>
 <li><code>[dataframe containing current existing groups and their sizes] &lt;- see.existing.groups()</code></li>
 <li><code>[vector containing the chosen data] &lt;- see.group.data(group, data.type)</code></li>
 <li><code>[index and GEBV for each group member] &lt;- see.group.gebvs(group)</code></li>
+<li><code>[string containing best allele per SNP] &lt;- see.optimal.haplotype()</code></li>
+<li><code>[float: the maximum possible GEBV] &lt;- see.optimal.GEBV()</code></li>
 </ul>
 <p>Identify recombination events:</p>
 <ul>
@@ -687,7 +691,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 m1  TT  TT  TT  TA  TT  AT
 m3  TT  TT  TA  TA  TT  TT
 m2  AA  AA  AA  AA  TT  AA</code></pre>
-<p>where G01, G02, …, are the parent lines and m1, m2 and m3 are the SNPs. Cells are tab-separated. The value in the first cell (“name” in this example) is ignored.</p>
+<p>where G01, G02, …, are the parent lines and m1, m2 and m3 are the SNPs. Cells may be space-separated or tab-separated. The value in the first cell (“name” in this example) is ignored.</p>
 <p>To load more genotypes after original creation of the <code>SimData</code>, use the function <code>group &lt;- load.more.genotypes(allele.file)</code></p>
 </div>
 <div id="linkage-maps" class="section level3">
@@ -713,16 +717,16 @@ m2 T -0.5</code></pre>
 </div>
 <div id="combination-crossing-functions" class="section level3">
 <h3><span class="header-section-number">6.3.4</span> Combination crossing functions</h3>
-<p>Two crossing functions (<code>cross.combinations</code> and <code>cross.dc.combinations</code>) take instructions from files.</p>
+<p>Two crossing functions (<code>cross.combinations.file</code> and <code>cross.dc.combinations.file</code>) take instructions from files.</p>
 <ul>
-<li><code>cross.combinations</code> : Take a file containing tab-separated pairs of line names and perform those crosses. An example file looks like:</li>
+<li><code>cross.combinations.file</code> : Take a file containing tab-separated pairs of line names and perform those crosses. An example file looks like:</li>
 </ul>
 <pre><code>G01 G02
 G01 G03
 G05 G06
 G01 G04</code></pre>
 <ul>
-<li><code>cross.dc.combinations</code> : Supposes that only the names of the precursor lines are known but specific crosses between F1 individuals are wanted. Assumes that those F1 individuals have been produced with id allocation/pedigree tracking turned on. The function therefore reads in a tab-separated file that looks like the below to perform the cross between the offspring of G01 and G02, and the offspring of G03 and G05, and so forth.</li>
+<li><code>cross.dc.combinations.file</code> : Supposes that only the names of the precursor lines are known but specific crosses between F1 individuals are wanted. Assumes that those F1 individuals have been produced with id allocation/pedigree tracking turned on. The function therefore reads in a tab-separated file that looks like the below to perform the cross between the offspring of G01 and G02, and the offspring of G03 and G05, and so forth.</li>
 </ul>
 <pre><code>G01 G02 G03 G05
 G01 G03 G05 G06

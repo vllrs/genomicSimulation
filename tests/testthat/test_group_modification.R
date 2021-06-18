@@ -83,5 +83,8 @@ test_that("select.by.gebv runs successfully", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   expect_identical(see.group.data(select.by.gebv(g, low.score.best=T, percentage=20), "I"), c(5L))
   
+  expect_error(select.by.gebv(g, low.score.best=T),"Exactly one of parameters `percentage` and `number` must be set.")
+  expect_error(select.by.gebv(g, percentage=20, number=2),"Exactly one of parameters `percentage` and `number` must be set.")
+  
   clear.simdata()
 })

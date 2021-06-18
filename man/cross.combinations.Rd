@@ -2,10 +2,11 @@
 % Please edit documentation in R/sim-crossers.R
 \name{cross.combinations}
 \alias{cross.combinations}
-\title{Performs defined crosses as laid out in a file.}
+\title{Performs defined crosses as passed in as R vectors.}
 \usage{
 cross.combinations(
-  cross.file,
+  first.parents,
+  second.parents,
   offspring = 1,
   retain = TRUE,
   give.names = FALSE,
@@ -19,9 +20,11 @@ cross.combinations(
 )
 }
 \arguments{
-\item{cross.file}{a string containing a filename. The file should be available
-to read and contain a tab-separated pair of names on each line. Each line
-represents a cross to make.}
+\item{first.parents}{a vector identifying the first parent in each cross to
+be carried out. Can be a vector of names or of indexes.}
+
+\item{second.parents}{a vector identifying the second parent in each cross to 
+be carried out. Can be a vector of names or of indexes.}
 
 \item{offspring}{The number of times each combination in the file is crossed.}
 
@@ -81,13 +84,17 @@ that the new genotypes were loaded into.
 The offspring parameter represents the number of times each cross in the file
 is carried out.
 
-The function searches for the parents of each cross by name, so parents must
-have loaded names for this function to work.
+Parents of each cross can be identified by name or by index. The first 
+entry in the first.parents vector and the first entry in the second.parents 
+vector are crossed to make the first offspring, then the next offspring comes 
+from crossing the parent identified at first.parents[2] with the
+parent identified at second.parents[2], etc.
 }
 \seealso{
 Other crossing functions: 
 \code{\link{cross.all.pairs}()},
-\code{\link{cross.dc.combinations}()},
+\code{\link{cross.combinations.file}()},
+\code{\link{cross.dc.combinations.file}()},
 \code{\link{cross.randomly}()},
 \code{\link{cross}()},
 \code{\link{make.doubled.haploids}()},

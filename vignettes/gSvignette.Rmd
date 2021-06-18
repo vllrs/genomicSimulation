@@ -227,8 +227,9 @@ Simulating crossing:
 
 - `group <- cross(parent1,parent2,[settings])`
 - `group <- cross.randomly(group,n.crosses,[settings])`
-- `group <- cross.combinations(cross.file,[settings])`
-- `group <- cross.dc.combinations(cross.file,[settings])`
+- `group <- cross.combinations(first.parents,second.parents,[settings])`
+- `group <- cross.combinations.file(cross.file,[settings])`
+- `group <- cross.dc.combinations.file(cross.file,[settings])`
 - `group <- cross.all.pairs(group,[settings])`
 - `group <- self.n.times(group,n,[settings])`
 - `group <- make.doubled.haploids(group,[settings])`
@@ -256,13 +257,16 @@ Save data (saves results to files):
 - `save.allele.counts(filename, group = NULL, allele)`
 - `save.pedigrees(filename, group = NULL, type = "R")`
 - `save.GEBVs(filename, group = NULL)`
-- `save.local.GEBVs(filename, block.file, group = NULL)`
+- `save.local.GEBVs.by.chr(filename, n.blocks.per.chr, group = NULL)`
+- `save.local.GEBVs.by.file(filename, block.file, group = NULL)`
 
 View data (pulls data into R dataframes):
 
 - `[dataframe containing current existing groups and their sizes] <- see.existing.groups()`
 - `[vector containing the chosen data] <- see.group.data(group, data.type)`
 - `[index and GEBV for each group member] <- see.group.gebvs(group)`
+- `[string containing best allele per SNP] <- see.optimal.haplotype()`
+- `[float: the maximum possible GEBV] <- see.optimal.GEBV()`
 
 Identify recombination events:
 
@@ -297,7 +301,7 @@ m1	TT	TT	TT	TA	TT	AT
 m3	TT	TT	TA	TA	TT	TT
 m2	AA	AA	AA	AA	TT	AA
 ```
-where G01, G02, ..., are the parent lines and m1, m2 and m3 are the SNPs. Cells are tab-separated. The value in the first cell ("name" in this example) is ignored.
+where G01, G02, ..., are the parent lines and m1, m2 and m3 are the SNPs. Cells may be space-separated or tab-separated. The value in the first cell ("name" in this example) is ignored.
 
 To load more genotypes after original creation of the `SimData`, use the function `group <- load.more.genotypes(allele.file)`
 
@@ -330,16 +334,16 @@ m2 T -0.5
 The first column should be a SNP marker name, the second should be the allele this effect value corresponds to (as a single character), and then a decimal representing the effect value of that allele for that SNP.
 
 ### Combination crossing functions
-Two crossing functions (`cross.combinations` and `cross.dc.combinations`) take instructions from files.
+Two crossing functions (`cross.combinations.file` and `cross.dc.combinations.file`) take instructions from files.
 
-- `cross.combinations` : Take a file containing tab-separated pairs of line names and perform those crosses. An example file looks like:
+- `cross.combinations.file` : Take a file containing tab-separated pairs of line names and perform those crosses. An example file looks like:
 ```
 G01	G02
 G01	G03
 G05	G06
 G01	G04
 ```
-- `cross.dc.combinations` : Supposes that only the names of the precursor lines are known but specific crosses between F1 individuals are wanted. Assumes that those F1 individuals have been produced with id allocation/pedigree tracking turned on. The function therefore reads in a tab-separated file that looks like the below to perform the cross between the offspring of G01 and G02, and the offspring of G03 and G05, and so forth.
+- `cross.dc.combinations.file` : Supposes that only the names of the precursor lines are known but specific crosses between F1 individuals are wanted. Assumes that those F1 individuals have been produced with id allocation/pedigree tracking turned on. The function therefore reads in a tab-separated file that looks like the below to perform the cross between the offspring of G01 and G02, and the offspring of G03 and G05, and so forth.
 ```
 G01	G02	G03	G05
 G01	G03	G05	G06
