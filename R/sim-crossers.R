@@ -65,9 +65,43 @@ cross.randomly <- function(group, n.crosses=5, offspring=1, retain=TRUE, give.na
 	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
-#' Performs defined crosses as laid out in a file.
+#' Performs defined crosses as passed in as R vectors.
 #'
 #' \code{cross.combinations} returns the group number of the group
+#' that the new genotypes were loaded into. 
+#'
+#' The offspring parameter represents the number of times each cross in the file
+#' is carried out.
+#'
+#' Parents of each cross can be identified by name or by index. The first 
+#' entry in the first.parents vector and the first entry in the second.parents 
+#' vector are crossed to make the first offspring, then the next offspring comes 
+#' from crossing the parent identified at first.parents[2] with the
+#' parent identified at second.parents[2], etc.
+#'
+#' @param first.parents a vector identifying the first parent in each cross to
+#' be carried out. Can be a vector of names or of indexes.
+#' @param second.parents a vector identifying the second parent in each cross to 
+#' be carried out. Can be a vector of names or of indexes.
+#' @inheritParams cross.randomly
+#' @param offspring The number of times each combination in the file is crossed.
+#' @return The group number of the new crosses produced
+#'
+#' @family crossing functions
+#' @export
+cross.combinations <- function(first.parents, second.parents,
+		offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		save.gebv=FALSE, save.genotype=FALSE) {
+	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+	return(.Call(SXP_cross_Rcombinations, sim.data$p, first.parents, second.parents,
+				 give.names, name.prefix, offspring, track.pedigree, give.ids, 
+				 file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+}
+
+#' Performs defined crosses as laid out in a file.
+#'
+#' \code{cross.combinations.file} returns the group number of the group
 #' that the new genotypes were loaded into. 
 #'
 #' The offspring parameter represents the number of times each cross in the file
@@ -85,7 +119,7 @@ cross.randomly <- function(group, n.crosses=5, offspring=1, retain=TRUE, give.na
 #'
 #' @family crossing functions
 #' @export
-cross.combinations <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+cross.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -96,7 +130,7 @@ cross.combinations <- function(cross.file, offspring=1, retain=TRUE, give.names=
 #' Performs defined crosses between children of known parents as 
 #' laid out in a file.
 #'
-#' \code{cross.dc.combinations} returns the group number of the group
+#' \code{cross.dc.combinations.file} returns the group number of the group
 #' that the new genotypes were loaded into. 
 #'
 #' The function is designed for use in a situation where you wish to cross
@@ -115,7 +149,7 @@ cross.combinations <- function(cross.file, offspring=1, retain=TRUE, give.names=
 #'
 #' @family crossing functions
 #' @export
-cross.dc.combinations <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+cross.dc.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }

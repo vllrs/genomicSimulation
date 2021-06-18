@@ -87,6 +87,7 @@ this pair of parents.
 \seealso{
 Other crossing functions: 
 \code{\link{cross.all.pairs}()},
+\code{\link{cross.combinations.file}()},
 \code{\link{cross.combinations}()},
 \code{\link{cross.dc.combinations}()},
 \code{\link{cross.randomly}()},

@@ -19,7 +19,18 @@ test_that("cross.combinations works", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
   #Make sure it doesn't crash and creates right-size group
-  g2 <- cross.combinations("helper_crosses.txt")
+  g2 <- cross.combinations(first.parents=c(0L,1L), second.parents=c(3L,0L))
+  g3 <- cross.combinations(first.parents=c("G01", "G02", "G03"), second.parents=c("G06","G05","G04"))
+  expect_identical(see.existing.groups(), data.frame("Group"=c(g,g2,g3),"GroupSize"=c(6L,2L,3L)))
+  
+  clear.simdata()
+})
+
+test_that("cross.combinations.file works", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  #Make sure it doesn't crash and creates right-size group
+  g2 <- cross.combinations.file("helper_crosses.txt")
   expect_identical(see.existing.groups(), data.frame("Group"=c(g,g2),"GroupSize"=c(6L,2L)))
   
   clear.simdata()

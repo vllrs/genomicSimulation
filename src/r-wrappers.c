@@ -60,7 +60,7 @@ GenOptions create_genoptions(SEXP name, SEXP namePrefix, SEXP familySize,
 	go.subject_prefix = CHAR(asChar(namePrefix));
 	
 	b = asInteger(familySize);
-	if (b == NA_INTEGER) { error("`times` parameter is of invalid type.\n"); }
+	if (b == NA_INTEGER) { error("`offspring` parameter is of invalid type.\n"); }
 	go.family_size = b;
 	
 	b = asLogical(trackPedigree);
@@ -125,6 +125,58 @@ SEXP SXP_cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP nam
 		return out;
 	}
 }
+
+SEXP SXP_cross_Rcombinations(SEXP exd, SEXP firstparents, SEXP secondparents,
+		SEXP name, SEXP namePrefix, SEXP familySize,
+		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
+		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	if (length(firstparents) != length(secondparents)) {
+		error("Parent vectors must be the same length.\n");
+	}
+	
+	int ncrosses = length(firstparents);
+	
+	int combinations[2][ncrosses];
+	char pname[100];
+	
+	if (TYPEOF(firstparents) == STRSXP) {	
+		for (int i = 0; i < ncrosses; ++i) {
+			strncpy(pname, CHAR(STRING_ELT(firstparents, i)), sizeof(char)*100);
+			combinations[0][i] = get_index_of_name(d->m, pname);
+		}
+	} else if (TYPEOF(firstparents) == INTSXP) {
+		int* indexes = INTEGER(firstparents);
+		for (int i = 0; i < ncrosses; ++i) {
+			combinations[0][i] = indexes[i];
+		}
+	} else {
+		error("first.parents must be a vector of strings or integers.\n");
+	}
+	
+	if (TYPEOF(secondparents) == STRSXP) {
+		for (int i = 0; i < ncrosses; ++i) {
+			strncpy(pname, CHAR(STRING_ELT(secondparents, i)), sizeof(char)*100);
+			combinations[1][i] = get_index_of_name(d->m, pname);
+		}
+		
+	} else if (TYPEOF(secondparents) == INTSXP) {
+		int* indexes = INTEGER(secondparents);
+		for (int i = 0; i < ncrosses; ++i) {
+			combinations[1][i] = indexes[i];
+		}
+	} else {
+		error("second.parents must be a vector of strings or integers.\n");
+	}
+
+	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
+								 giveIds, filePrefix, savePedigree, saveEffects,
+								 saveGenes, retain);
+
+	return ScalarInteger(cross_these_combinations(d, ncrosses, combinations, g));
+	
+};
 
 SEXP SXP_cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
