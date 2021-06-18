@@ -183,6 +183,15 @@ int load_transposed_genes_to_simdata(SimData* d, const char* filename) {
 int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename) {
 	
 	struct TableSize t = get_file_dimensions(filename, '\t');
+  char cell[4] = "\t%s";
+  if (t.num_columns == 1) {
+    t = get_file_dimensions(filename, ' ');
+    cell[0] = ' ';
+  }
+  if (t.num_columns == 1) {
+    warning("Only found one column in file %s. File may be using an unsupported separator.\n", filename);
+  }
+  
 	FILE* fp;
 	const int gp = 1;
 	if ((fp = fopen(filename, "r")) == NULL) {
@@ -225,7 +234,7 @@ int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename) {
 	// load in the subject names from the header
 	for (int i = 0, i_am = 0; i < (t.num_columns-1); ++i, ++i_am) {
 		R_CheckUserInterrupt();
-		fscanf(fp, "\t%s", word);
+		fscanf(fp, cell, word);
 		
 		if (i_am >= current_am->n_subjects) {
 			i_am = 0;
@@ -251,6 +260,7 @@ int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename) {
 	GetRNGstate();
 	char c, decoded[2];
 	int r;
+	cell[2] = 'c';
 	for (int j = 0; j < (t.num_rows - 1); ++j) {
 		R_CheckUserInterrupt();
 		// looping through rows in the table.
@@ -264,7 +274,7 @@ int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename) {
 		//d->m->alleles[j] = get_malloc(sizeof(char) * d->m[0].n_subjects * 2);
 		for (int i = 0, i_am = 0; i < (t.num_columns - 1); ++i, ++i_am) {
 			// looping through the remaining columns in this row.
-			fscanf(fp, "\t%c", &c);
+			fscanf(fp, cell, &c);
 			
 			if (i_am >= current_am->n_subjects) {
 				i_am = 0;
@@ -340,7 +350,16 @@ int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename) {
  * the same group.
 */
 int load_more_transposed_genes_to_simdata(SimData* d, const char* filename) {
-	struct TableSize t = get_file_dimensions(filename, '\t');
+  struct TableSize t = get_file_dimensions(filename, '\t');
+  char cell[4] = "\t%s";
+  if (t.num_columns == 1) {
+    t = get_file_dimensions(filename, ' ');
+    cell[0] = ' ';
+  }
+  if (t.num_columns == 1) {
+    warning("Only found one column in file %s. File may be using an unsupported separator.\n", filename);
+  }
+  
 	FILE* fp;
 	int gp = get_new_group_num(d);
 	if ((fp = fopen(filename, "r")) == NULL) {
@@ -393,7 +412,7 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename) {
 	// load in the subject names from the header
 	for (int i = 0, i_am = 0; i < (t.num_columns-1); ++i, ++i_am) {
 		R_CheckUserInterrupt();
-		fscanf(fp, "\t%s", word);
+		fscanf(fp, cell, word);
 		
 		if (i_am >= current_am->n_subjects) {
 			i_am = 0;
@@ -429,7 +448,7 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename) {
 		if (markeri >= 0) {
 			for (int i = 0, i_am = last_n_subjects; i < (t.num_columns - 1); ++i, ++i_am) {
 				// looping through the remaining columns in this row.
-				fscanf(fp, "\t%s", word2);
+				fscanf(fp, cell, word2);
 				
 				// save the two alleles.
 				if (strlen(word2) != 2) {
