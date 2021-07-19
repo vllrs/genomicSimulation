@@ -26,9 +26,11 @@ library(genomicSimulation)
 ```
 
 # Introduction
-This package can be used to create 'digital twins' of breeding schemes. It is a state-based simulation tool that offers scripting functions to simulate crossing and genomic selection on SNP markers. It was created with self-pollinated plant species in mind. 
+genomicSimulation is a simple, fast scripting simulation tool for creating 'digital twins' of breeding schemes. The package tracks genotypes at an individual level, and performs stochastic simulation of meiosis (including crossing-over but not mutation) to simulate crossing.
 
-The package itself is an interface to a set of C functions. Using C to perform the computation-intensive parts of simulation allows for quick runtimes. 
+All core functionality is written in C. Performing the computation-intensive tasks at C-level allows for quick runtimes. Because it was initially created for simulating plant breeding programs, the package does not automatically track sex. 
+
+Contact the package maintainers for any feature requests or improvement requests, or to report any bug or crash. 
 
 Guides on using the package can be found in sections 4 and 5 of this vignette.
 
@@ -45,17 +47,21 @@ The C-level functions make no attempt to parallelise execution.
 
 # Package-Specific Details
 ## Understanding `sim.data`
-The package's functionality is state-based - that is, simulation is dependent on the current set of working data, which is stored in a C-level struct called `SimData`. An external pointer to this struct is saved in a package-global R variable called `sim.data$p`. `sim.data$p` is hidden during regular use. 
+The package has an internal state where it stores simulated genotypes and other details. The state is stored in a C-level struct called `SimData`. An external pointer to this struct is saved in a package-global R variable called `sim.data$p`. `sim.data$p` is hidden during regular use. 
 
-To reset the simulation/clear it of all data, the function `clear.simdata()` is provided. Currently functionality to have two concurrent simulation states does not exist.
+To reset the simulation/clear it of all data, the function `clear.simdata()` is provided. Currently, functionality to have two concurrent simulation states does not exist.
 
 ### Markers
-Each `SimData` is given a list of SNPs and a map for positioning these in the genome on creation. These details cannot be changed after creation without clearing the `SimData`. The `SimData` object saves names of markers as-is, as long as the name is under 30 characters long. Behaviour is undefined if any marker name is longer than 30 characters (To extend this limit, use the NAME_LENGTH setting (see Global Settings Index)).
+Each `SimData` is given a list of SNPs and a map for positioning these in the genome on creation. These details cannot be changed after creation without clearing the `SimData`. 
+
+The `SimData` object saves names of markers as-is, as long as the name is under 30 characters long. Behaviour is undefined if any marker name is longer than 30 characters (To extend this limit, use the NAME_LENGTH setting (see Global Settings Index)).
 
 Becauses the `SimData` stores its SNPs in genome order, any outputs produced will have the SNP markers ordered according to the genetic map loaded at its creation. If an output method provides genotypes as strings of alleles, the string will also be ordered according ot this genetic map.
 
 ### Effects
-The simulation cannot run without having a genetic map for the SNPs it tracks. However, it can run with no effect values loaded, so in cases where breeding values are not to be used, there is no need to provide an effect file.
+The simulation calculates breeding values for an arbitrary trait using an additive model and a set of effect values for a given allele at a given marker.
+
+The simulation cannot run without having a genetic map for the SNPs it tracks. However, it can run with no effect values loaded, so there is no need to provide them if GEBVs are not being used.
 
 Only one 'set' of effect values can be loaded at a time.
 
@@ -63,11 +69,11 @@ Only one 'set' of effect values can be loaded at a time.
 Each genotype/line may or may not be allocated a name. If loading names from a file, behaviour is undefined if any line name is longer than 30 characters (To extend this limit, use the NAME_LENGTH setting (see Global Settings Index)).
 
 ## Understanding Groups
-The SimData allows for lines to be treated in groups/categories. Automatically, the lines loaded from separate files are allocated to separate groups. Each crossing function also places the lines it produces in a new group.
+The SimData deals with genotypes in groups/categories. Automatically, the genotypes loaded from separate files are allocated to separate groups. Each crossing function also places the genotypes it produces in a new group.
 
-A line can only belong to one group, so functions that overwrite allocations (eg `make.group`) effectively pull lines out of their old group and put them in a new one. This ensures that lines can only be deleted once.
+A genotype can only belong to one group, so functions that overwrite allocations (eg `make.group`) effectively pull genotypes out of their old group and put them in a new one. This ensures that genotypes can only be deleted once.
 
-Group numbers are natural numbers starting at 1. Group numbers are not guaranteed to be allocated sequentially, because some crossing functions may create and delete temporary groups to carry out their task, which could result in the final group number they return being out of order.
+Group numbers are natural numbers starting at 1. Group numbers are not guaranteed to be allocated sequentially, because some crossing functions may create and delete temporary groups to carry out their task, so the final group number could be 'out of order'.
 
 Every function except those that pull data into R (functions whose names begin with `see.`) return either one integer or a vector of integers. If the integer is 0, it means the function succeeded but it is not a function that acts on groups. Otherwise, the return value is the group number(s) of the group(s) that were created.
 
@@ -106,7 +112,7 @@ read.csv("../tests/testthat/helper_genotypes.txt", sep='\t', header=T)
 read.csv("../tests/testthat/helper_map.txt", sep='\t', header=T)
 read.csv("../tests/testthat/helper_eff.txt", sep='\t')
 
-# load the small initial data set
+# Starting to use genomicSimulation: load the small initial data set
 g0 <- load.data("../tests/testthat/helper_genotypes.txt",
                 "../tests/testthat/helper_map.txt",
                 "../tests/testthat/helper_eff.txt")
@@ -114,7 +120,7 @@ g0 <- load.data("../tests/testthat/helper_genotypes.txt",
 # Do random crosses from the progenitor lines. 
 f1 <- cross.randomly(g0, n.crosses=20, give.names=TRUE, name.prefix="F1.")
 
-# Let's see what crossovers we got. For this few markers we don't get much information.
+#(Let's see what crossovers occured. For this few markers we don't get much information.)
 save.pedigrees("a.txt", f1, type="P")
 find.plot.crossovers("a.txt", "b.txt")
 
@@ -197,32 +203,6 @@ delete.group(f2)
 delete.group(f2.selected)
 ```
 
-
-## Writing Custom Crossing Plans in R
-Crossing plans refers to interactions between identities of genotypes and how you select for them. Making custom crossing plans will be a matter of splitting groups in order to perform finer-grained selection or further crossing. Because the range of possible crossing plans this guide cannot offer a solution but only some suggested starting points.
-
-Ideas for TODO the example:
-- Maintaining families: select some good ones from random crossing. Self (families) and pick the best from each row. Continue selfing with that one. This is pedigree selection.
-- Half-sib families, and picking the best from each??
-
-
-```{R}
-g0 <- load.data("../tests/testthat/helper_genotypes.txt",
-                "../tests/testthat/helper_map.txt",
-                "../tests/testthat/helper_eff.txt")
-
-# Simulate crosses
-f1 <- cross.randomly(g0, n.crosses=50)
-f1.selected <- select.by.gebv(f1, number=10)
-delete.group(f1)
-
-f2 <- self.n.times(f1.selected, 1, offspring=15)
-f2.families <- break.group.into.families(f2)
-for (family in f2.families) {
-  #something
-}
-
-```
 
 # Details and Methodology
 
