@@ -78,7 +78,7 @@ see.group.gebvs <- function(group) {
 #' @export
 see.optimal.haplotype <- function() {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_get_best_genotype, sim.data$p))
+	return(.Call(SXP_get_best_haplotype, sim.data$p))
 }
 
 
@@ -97,3 +97,17 @@ see.optimal.GEBV <- function() {
 	return(.Call(SXP_get_best_GEBV, sim.data$p))
 }
 
+#' Get the lowest-possible GEBV given the current loaded effect values.
+#'
+#' \code{see.minimum.GEBV} allows you to extract the lowest GEBV score
+#' possible according to the current loaded effect values. An error is 
+#' raised if no effect values have been loaded.
+#'
+#' @return The lowest possible GEBV
+#'
+#' @family data access functions
+#' @export
+see.minimum.GEBV <- function() {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_get_worst_GEBV, sim.data$p))
+}

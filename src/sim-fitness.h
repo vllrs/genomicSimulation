@@ -16,8 +16,9 @@ MarkerBlocks read_block_file(SimData* d, const char* block_file);
 void calculate_group_block_effects(SimData* d, MarkerBlocks b, const char* output_file, int group);
 void calculate_all_block_effects(SimData* d, MarkerBlocks b, const char* output_file);
 
-char* calculate_ideal_genotype(SimData* d);
+char* calculate_optimal_alleles(SimData* d);
 double calculate_optimal_gebv(SimData* d);
+double calculate_minimum_gebv(SimData* d);
 
 /* Recombination calculators */
 int* calculate_min_recombinations_fw1(SimData* d, char* parent1, unsigned int p1num, char* parent2, 

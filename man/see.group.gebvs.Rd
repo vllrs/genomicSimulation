@@ -40,6 +40,7 @@ Other grouping functions:
 
 Other data access functions: 
 \code{\link{see.group.data}()},
+\code{\link{see.minimum.GEBV}()},
 \code{\link{see.optimal.GEBV}()},
 \code{\link{see.optimal.haplotype}()}
 }

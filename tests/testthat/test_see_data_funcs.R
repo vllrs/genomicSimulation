@@ -30,11 +30,13 @@ test_that("Functions to see optimal genotype and GEBV work", {
   
   expect_identical(see.optimal.haplotype(), "TAA")
   expect_equal(see.optimal.GEBV(), 1.8)
+  expect_equal(see.minimum.GEBV(),-2.8)
   
   capture_output(load.different.effects("helper_eff_2.txt"), print=F)
   
   expect_identical(see.optimal.haplotype(), "AAA")
   expect_equal(see.optimal.GEBV(), 4.2)
+  expect_equal(see.minimum.GEBV(),-0.696)
   
   clear.simdata()
 })

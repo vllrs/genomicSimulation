@@ -57,8 +57,9 @@ SEXP SXP_simple_selection_bypercent(SEXP exd, SEXP glen, SEXP groups, SEXP perce
 
 
 /*-----------------Data access---------------*/
-SEXP SXP_get_best_genotype(SEXP exd);
+SEXP SXP_get_best_haplotype(SEXP exd);
 SEXP SXP_get_best_GEBV(SEXP exd);
+SEXP SXP_get_worst_GEBV(SEXP exd);
 
 SEXP SXP_find_crossovers(SEXP exd, SEXP parentFile, SEXP outFile, SEXP windowSize, SEXP certainty);
 SEXP SXP_send_map(SEXP exd);

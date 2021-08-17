@@ -571,10 +571,10 @@ SEXP SXP_simple_selection_bypercent(SEXP exd, SEXP glen, SEXP groups, SEXP perce
 
 /*----------------Data viewers---------------------*/
 
-SEXP SXP_get_best_genotype(SEXP exd) {
+SEXP SXP_get_best_haplotype(SEXP exd) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	char* best_genotype = calculate_ideal_genotype(d);
+	char* best_genotype = calculate_optimal_alleles(d);
 	
 	SEXP out = PROTECT(allocVector(STRSXP, 1));
 	SET_STRING_ELT(out, 0, mkChar(best_genotype));
@@ -590,6 +590,17 @@ SEXP SXP_get_best_GEBV(SEXP exd) {
 	
 	SEXP out = PROTECT(allocVector(REALSXP, 1));
 	REAL(out)[0] = best_GEBV;
+	UNPROTECT(1);
+	return out;
+}
+
+SEXP SXP_get_worst_GEBV(SEXP exd) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	double worst_GEBV = calculate_minimum_gebv(d);
+	
+	SEXP out = PROTECT(allocVector(REALSXP, 1));
+	REAL(out)[0] = worst_GEBV;
 	UNPROTECT(1);
 	return out;
 }
