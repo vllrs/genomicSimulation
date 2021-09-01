@@ -24,8 +24,7 @@ const GenOptions BASIC_OPT = {
 void* get_malloc(size_t size) {
 	void* v = malloc(size);
 	if (v == NULL) { 
-		fprintf(stderr, "Memory allocation of size %lu failed.\n", (unsigned long)size);
-		exit(3);
+		error("Memory allocation of size %lu failed.\n", (unsigned long)size);
 	}
 	return v;
 }
@@ -587,7 +586,8 @@ void condense_allele_matrix( SimData* d) {
  * @param id the id of the genotype whose name is sought
  * @returns the name of the genotype that has id `id`, as a copy of the pointer
  * to the heap memory where the name is saved (so *don't* free the pointer returned
- * from this function). Returns NULL if the ID does not exist.
+ * from this function). Returns NULL if the ID does not exist. Note the return value 
+ * might also be NULL if the genotype of this ID has no name.
  */
 char* get_name_of_id( AlleleMatrix* start, unsigned int id) {
 	if (id <= 0) {
@@ -971,6 +971,35 @@ char* get_genes_of_index( AlleleMatrix* start, int index) {
 	return total_subjects;
 }*/
 
+/** Function to identify the next sequential integer that does not 
+ * identify a group that currently has member(s). 
+ *
+ * This calls get_existing_groups() every time, so functions that 
+ * do repeated group creation, like split_into_individuals, are 
+ * recommended to use their own implementation rather than calling 
+ * this function repeatedly, for best speed/memory usage.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @return the next sequential currently-unused group number.
+ */
+int get_new_group_num( SimData* d) {
+	int n_groups = 0;
+	int* existing_groups = get_existing_groups( d, &n_groups);
+	int i = 0;
+	int gn = 1;
+
+	while (i < n_groups) {
+		if (gn < existing_groups[i]) {
+			break;
+		}
+		
+		++i;
+		++gn;
+	}
+	free(existing_groups);
+	return gn;
+}
+
 /** Identify every group number that currently has members.
  *
  * @param d the SimData struct on which to perform the operation
@@ -1121,227 +1150,8 @@ int** get_existing_group_counts( SimData* d, int* n_groups) {
 }
 
 
-/** Function to identify the next sequential integer that does not 
- * identify a group that currently has member(s). 
- *
- * This calls get_existing_groups() every time, so functions that 
- * do repeated group creation, like split_into_individuals, are 
- * recommended to use their own implementation rather than calling 
- * this function repeatedly for best speed/memory usage.
- *
- * @param d the SimData struct on which to perform the operation
- * @return the next sequential currently-unused group number.
- */
-int get_new_group_num( SimData* d) {
-	int n_groups = 0;
-	int* existing_groups = get_existing_groups( d, &n_groups);
-	int i = 0;
-	int gn = 1;
 
-	while (i < n_groups) {
-		if (gn < existing_groups[i]) {
-			break;
-		}
-		
-		++i;
-		++gn;
-	}
-	free(existing_groups);
-	return gn;
-}
 
-/** Function to count the number of genotypes that currently belong to
- * the specified group.
- * @see get_group_genes()
- * @see get_group_names()
- * @see get_group_ids()
- * @see get_group_indexes()
- *
- * This goes through and checks every genotype in the SimData, because 
- * there is currently no centralised tracking of groups.
- *
- * @param d the SimData struct on which to perform the operation
- * @param group_id the group number of the group whose members need to
- * be counted.
- * @returns the number of genotypes currently belonging to this group.
- */
-int get_group_size( SimData* d, int group_id) {
-	AlleleMatrix* m = d->m;
-	int size = 0;
-	int i;
-	while (1) {
-		for (i = 0; i < m->n_subjects; ++i) {
-			if (m->groups[i] == group_id) {
-				++size;
-			}
-		}		
-		
-		if (m->next == NULL) {
-			return size;
-		} else {
-			m = m->next;
-		}
-	}
-}
-
-/** Gets a shallow copy of the genes/alleles of each member of the group.
- * @see get_group_size()
- * @see get_group_names()
- * @see get_group_ids()
- * @see get_group_indexes()
- *
- * @param d the SimData struct on which to perform the operation
- * @param group_id the group number of the group we want data from
- * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1. This enables fewer calls to get_group_size when using multiple
- * group-data-getter functions.
- * @returns a vector containing pointers to the genes of each member of the group.
- * the vector itself is on the heap and should be freed, but its contents are only
- * shallow copies so should not be freed.
- */
-char** get_group_genes( SimData* d, int group_id, int group_size) {
-	AlleleMatrix* m = d->m;
-	char** genes;
-	if (group_size > 0) {
-		genes = get_malloc(sizeof(char*) * group_size);
-	} else {
-		genes = get_malloc(sizeof(char*) * get_group_size( d, group_id ));
-	}
-	int i, genes_i = 0;
-	while (1) {
-		for (i = 0; i < m->n_subjects; ++i) {
-			if (m->groups[i] == group_id) {
-				genes[genes_i] = m->alleles[i];
-				++genes_i;
-			}
-		}		
-		
-		if (m->next == NULL) {
-			return genes;
-		} else {
-			m = m->next;
-		}
-	}	
-}
-
-/** Gets a shallow copy of the names of each member of the group.
- * @see get_group_size()
- * @see get_group_genes()
- * @see get_group_ids()
- * @see get_group_indexes()
- *
- * @param d the SimData struct on which to perform the operation
- * @param group_id the group number of the group you want data from
- * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1. This enables fewer calls to get_group_size when using multiple
- * group-data-getter functions.
- * @returns a vector containing pointers to the names of each member of the group.
- * the vector itself is on the heap and should be freed, but its contents are only
- * shallow copies so should not be freed.
- */
-char** get_group_names( SimData* d, int group_id, int group_size) {
-	AlleleMatrix* m = d->m;
-	char** names;
-	if (group_size > 0) {
-		names = get_malloc(sizeof(char*) * group_size);
-	} else {
-		names = get_malloc(sizeof(char*) * get_group_size( d, group_id ));
-	}
-	int i, names_i = 0;
-	while (1) {
-		for (i = 0; i < m->n_subjects; ++i) {
-			if (m->groups[i] == group_id) {
-				names[names_i] = m->subject_names[i];
-				++names_i;
-			}
-		}		
-		
-		if (m->next == NULL) {
-			return names;
-		} else {
-			m = m->next;
-		}
-	}	
-}
-
-/** Gets the ids of each member of the group.
- * @see get_group_size()
- * @see get_group_genes()
- * @see get_group_names()
- * @see get_group_indexes()
- *
- * @param d the SimData struct on which to perform the operation
- * @param group_id the group number of the group you want data from
- * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1. This enables fewer calls to get_group_size when using multiple
- * group-data-getter functions.
- * @returns a vector containing the ids of each memmber of the group.
- * the vector itself is on the heap and should be freed.
- */
-unsigned int* get_group_ids( SimData* d, int group_id, int group_size) {
-	AlleleMatrix* m = d->m;
-	unsigned int* gids;
-	if (group_size > 0) {
-		gids = get_malloc(sizeof(unsigned int) * group_size);
-	} else {
-		gids = get_malloc(sizeof(unsigned int) * get_group_size( d, group_id ));
-	}
-	int i, ids_i = 0;
-	while (1) {
-		for (i = 0; i < m->n_subjects; ++i) {
-			if (m->groups[i] == group_id) {
-				gids[ids_i] = m->ids[i];
-				++ids_i;
-			}
-		}		
-		
-		if (m->next == NULL) {
-			return gids;
-		} else {
-			m = m->next;
-		}
-	}	
-}
-
-/** Gets the indexes (0-based, from the start of the linked list in the SimData)
- * of each member of the group.
- * @see get_group_size()
- * @see get_group_genes()
- * @see get_group_names()
- * @see get_group_ids()
- *
- * @param d the SimData struct on which to perform the operation
- * @param group_id the group number of the group you want data from
- * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1. This enables fewer calls to get_group_size when using multiple
- * group-data-getter functions.
- * @returns a vector containing the indexes of each member of the group.
- * the vector itself is on the heap and should be freed.
- */
-unsigned int* get_group_indexes(SimData* d, int group_id, int group_size) {
-	AlleleMatrix* m = d->m;
-	unsigned int* gis;
-	if (group_size > 0) {
-		gis = get_malloc(sizeof(unsigned int) * group_size);
-	} else {
-		gis = get_malloc(sizeof(unsigned int) * get_group_size( d, group_id ));
-	}
-	int i, total_i = 0, ids_i = 0;
-	while (1) {
-		for (i = 0; i < m->n_subjects; ++i, ++total_i) {
-			if (m->groups[i] == group_id) {
-				gis[ids_i] = total_i;
-				++ids_i;
-			}
-		}		
-		
-		if (m->next == NULL) {
-			return gis;
-		} else {
-			m = m->next;
-		}
-	}	
-}
 
 
 /*------------------------------------------------------------------------*/

@@ -681,48 +681,11 @@ SEXP SXP_get_group_data(SEXP exd, SEXP group, SEXP whatData) {
 	}
 	
 	char c = CHAR(asChar(whatData))[0];
+	char c2;
 	int group_size = get_group_size(d, group_id);
-	if (c == 'N' || c == 'n' || c == 'G' || c == 'g') {
-		char** data;
-		if (c == 'N' || c == 'n') {
-			data = get_group_names(d, group_id, group_size);
-		} else {
-			char** rawdata = get_group_genes(d, group_id, group_size);
-			
-			// copy over to another array, adding string terminators
-			int glen = d->n_markers * 2; // genotype length
-			data = get_malloc(sizeof(char*) * group_size);
-			for (int i = 0; i < group_size; ++i) {
-				data[i] = get_malloc(sizeof(char) * (glen + 1));
-				for (int j = 0; j < glen; ++j) {
-					data[i][j] = rawdata[i][j];
-				}
-				data[i][glen] = '\0';
-			}
-			
-		}
-		
-		// save to an R vector
-		SEXP out = PROTECT(allocVector(STRSXP, group_size));
-		for (int i = 0; i < group_size; ++i) {
-			SET_STRING_ELT(out, i, mkChar(data[i]));
-		}
-		if (c == 'G' || c == 'g') {
-			for (int i = 0; i < group_size; ++i) {
-				free(data[i]);
-			}
-		}
-		free(data);
-		UNPROTECT(1);
-		return out;
-		
-	} else if (c == 'D' || c == 'd' || c == 'I' || c == 'i') {
-		unsigned int *data;
-		if (c == 'D' || c == 'n') {
-			data = get_group_ids(d, group_id, group_size);
-		} else {
-			data = get_group_indexes(d, group_id, group_size);
-		}
+	
+	if (c == 'D') {
+		unsigned int *data = get_group_ids(d, group_id, group_size);
 		
 		// save to an R vector
 		SEXP out = PROTECT(allocVector(INTSXP, group_size));
@@ -734,11 +697,102 @@ SEXP SXP_get_group_data(SEXP exd, SEXP group, SEXP whatData) {
 		UNPROTECT(1);
 		return out;
 		
+	} else if (c == 'X') {
+		unsigned int *data = get_group_indexes(d, group_id, group_size);
+		
+		// save to an R vector
+		SEXP out = PROTECT(allocVector(INTSXP, group_size));
+		int* outc = INTEGER(out);
+		for (int i = 0; i < group_size; ++i) {
+			outc[i] = data[i];
+		}
+		free(data);
+		UNPROTECT(1);
+		return out;
+		
+	} else if (c == 'B') {
+		double* data = get_group_bvs(d, group_id, group_size);
+		
+		SEXP out = PROTECT(allocVector(REALSXP, group_size));
+		double* outc = REAL(out);
+		for (int i = 0; i < group_size; ++i) {
+			outc[i] = data[i];
+		}
+		free(data);
+		UNPROTECT(1);
+		return out;
+		
+	} else if (c == 'N') {
+		char** data = get_group_names(d, group_id, group_size);
+		
+		SEXP out = PROTECT(allocVector(STRSXP, group_size));
+		for (int i = 0; i < group_size; ++i) {
+			SET_STRING_ELT(out, i, mkChar(data[i]));
+		}
+		free(data);
+		UNPROTECT(1);
+		return out;
+		
+	} else if (c == 'G') {
+		char** rawdata = get_group_genes(d, group_id, group_size);
+		char** data;
+			
+		// copy over to another array, adding string terminators
+		int glen = d->n_markers * 2; // genotype length
+		data = get_malloc(sizeof(char*) * group_size);
+		for (int i = 0; i < group_size; ++i) {
+			data[i] = get_malloc(sizeof(char) * (glen + 1));
+			for (int j = 0; j < glen; ++j) {
+				data[i][j] = rawdata[i][j];
+			}
+			data[i][glen] = '\0';
+		}
+		
+		SEXP out = PROTECT(allocVector(STRSXP, group_size));
+		for (int i = 0; i < group_size; ++i) {
+			SET_STRING_ELT(out, i, mkChar(data[i]));
+			free(data[i]);
+		}
+		free(data);
+		UNPROTECT(1);
+		return out;
+		
+	} else if (c == 'P' && (c2 = CHAR(asChar(whatData))[1]) == 'E' && CHAR(asChar(whatData))[2] == 'D') {
+		char** data = get_group_pedigrees(d, group_id, group_size);
+		
+		SEXP out = PROTECT(allocVector(STRSXP, group_size));
+		for (int i = 0; i < group_size; ++i) {
+			SET_STRING_ELT(out, i, mkChar(data[i]));
+			free(data[i]);
+		}
+		free(data);
+		UNPROTECT(1);
+		return out;
+		
+	} else if (c == 'P' && (c2 == '1' || c2 == '2')) {
+		int parent = c2 == '1' ? 1 : 2;
+		char** data = get_group_parent_names(d, group_id, group_size, parent);
+		unsigned int* backupdata = get_group_parent_IDs(d, group_id, group_size, parent);
+		int maxlen = floor(log10(UINT_MAX)) + 1;
+		char buffer[maxlen]; // as long as value in limit.h is correct, can't overflow the buffer
+		
+		SEXP out = PROTECT(allocVector(STRSXP, group_size));
+		for (int i = 0; i < group_size; ++i) {
+			if (data[i] != NULL) {
+				SET_STRING_ELT(out, i, mkChar(data[i]));
+			} else {
+				sprintf(buffer, "%d", backupdata[i]);
+				SET_STRING_ELT(out, i, mkChar(buffer));
+			}
+		}
+		free(data);
+		UNPROTECT(1);
+		return out;
+	
 	} else {
-		error("`data.type` parameter has unknown value.");
+		error("`data.type` parameter is not a valid option.");
 	}
 }
-
 
 /*--------------------------------Printing-----------------------------------*/
 

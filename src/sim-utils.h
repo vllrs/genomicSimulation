@@ -249,15 +249,9 @@ int get_index_of_name( AlleleMatrix* start, char* name);
 unsigned int get_id_of_index( AlleleMatrix* start, int index);
 char* get_genes_of_index( AlleleMatrix* start, int index);
 
+int get_new_group_num( SimData* d);
 int* get_existing_groups( SimData* d, int* n_groups);
 int** get_existing_group_counts( SimData* d, int* n_groups);
-
-int get_new_group_num( SimData* d);
-int get_group_size( SimData* d, int group_id);
-char** get_group_genes( SimData* d, int group_id, int group_size);
-char** get_group_names( SimData* d, int group_id, int group_size);
-unsigned int* get_group_ids( SimData* d, int group_id, int group_size);
-unsigned int* get_group_indexes(SimData* d, int group_id, int group_size);
 
 /* Matrix operations*/
 DecimalMatrix generate_zero_dmatrix(int r, int c);

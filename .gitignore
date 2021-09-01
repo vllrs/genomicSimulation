@@ -4,5 +4,6 @@
 vignettes/a.txt
 vignettes/af6-genome
 vignettes/b.txt
+*.dll
 tests/testthat/imaginary*
 Meta

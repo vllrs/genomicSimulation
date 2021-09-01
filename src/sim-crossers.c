@@ -759,6 +759,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 				}
 				
 				generate_cross( d, genes, genes, outcome->alleles[fullness] );
+				outcome->groups[fullness] = output_group;
 			}
 			
 		} else {

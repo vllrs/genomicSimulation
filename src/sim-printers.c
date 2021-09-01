@@ -664,8 +664,8 @@ void save_AM_pedigree(FILE* f, AlleleMatrix* m, SimData* parents) {
  * @param f file pointer opened for writing to put the output
  * @param m pointer to an AlleleMatrix that heads the linked list
  * containing the parents and other ancestry of the given id.
- * @param id the session-unique id of the genotype whose parents 
- * we wish to recursively save.
+ * @param p1 the session-unique id of the first parent to be saved.
+ * @param p2 the session-unique id of the second parent to be saved.
  */
 void save_parents_of(FILE* f, AlleleMatrix* m, unsigned int p1, unsigned int p2) {
 	unsigned int pedigree[2];

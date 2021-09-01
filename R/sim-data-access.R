@@ -1,25 +1,33 @@
 #' Get data of all individuals that belong to a group.
 #'
-#' \code{see.group.data} allows you to extract the names or ids or indexes
-#' or genotypes of group members as an R vector. Printing to a file then 
-#' loading the data from the tab-separated text file is still the suggested
-#' method for accessing data, but this may be used to peek at the data or 
-#' make group adjustments during simulation time. 
+#' \code{see.group.data} allows you to extract the names, IDs, indexes, 
+#' genotypes (as strings), breeding values, or parentage of group members as an R vector.
+#' As long as the group is not modified in between calls, the same ordering of group
+#' members will be used, so this function can be used to construct tables of data, eg.
+#' \code{data.frame("i"=see.group.data(3,"X"),"GEBV"=see.group.data(3,"BV"))}
 #'
 #' @section Warning about indexes:
 #' Deleting a group (\code{\link{delete.group}}) may cause the indexes of group members to 
 #' change (as the positions/indexes that they are stored in the internal matrix may be
 #' rearranged). Therefore, you must ensure that there is no call to \code{\link{delete.group}}
 #' between loading indexes with this function and passing them to a function that takes indexes
-#' as inputs (eg \code{\link{make.group}}, \code{\link{cross}}). 
+#' as inputs (eg \code{\link{make.group}}, \code{\link{cross}}).
 #'
 #' @param group an integer: the group number of the group to have a look at
 #' @param data.type a string that will be used to identify the type of data
-#' to be extracted. If the first character is 'N' or 'n',
-#' the 'N'ames of group members will be extracted. If the first character is 
-#' 'D' or 'd', the I'D's of group members will be extracted. If the first character is
-#' 'I' or 'i', the 'I'ndexes of group members will be extracted. If the first character
-#' is 'G' or 'g', the 'G'enotypes of the group members will be extracted.
+#' to be extracted. String parsing is case-insensitive.
+#' If the first character is 'N', the 'N'ames of group members will be extracted. 
+#' If the first character is 'D', the I'D's of group members will be extracted. 
+#' If the first character is 'X', the Inde'X'es of group members will be extracted. 
+#' If the first character is 'G', the 'G'enotypes of the group members will be extracted. 
+#' If the first character is 'B', the 'b'reeding values/GEBVs of group members will be returned.
+#' If it starts with "P1", the first parent of each group member is returned. As usual in 
+#' genomicSimulation, if the parent has a name, its name will be what is returned, otherwise,
+#' it will be its ID.
+#' If it starts with "P2", the second parent of each group member is returned. As usual in 
+#' genomicSimulation, if the parent has a name, its name will be what is returned, otherwise,
+#' it will be its ID.
+#' If it starts with "ped", the full pedigree log of each group member is returned.
 #' @return A vector containing the desired data output for each member of the group.
 #'
 #' @family grouping functions
@@ -27,7 +35,7 @@
 #' @export
 see.group.data <- function(group, data.type) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_get_group_data, sim.data$p, group, data.type))
+	return(.Call(SXP_get_group_data, sim.data$p, group, toupper(data.type)))
 }
 
 

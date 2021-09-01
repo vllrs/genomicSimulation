@@ -468,7 +468,7 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename) {
 		} else {
 			warning( "Could not find the marker %s\n", word);
 		}
-	}	
+	}
 	Rprintf("%d genotypes were loaded.\n", t.num_columns - 1);
 	fclose(fp);
 	
