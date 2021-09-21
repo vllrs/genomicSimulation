@@ -321,28 +321,6 @@ SEXP SXP_doubled(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP namePrefix, S
 	}
 }
 
-SEXP SXP_one_cross(SEXP exd, SEXP parent1_index, SEXP parent2_index, SEXP name, 
-		SEXP namePrefix, SEXP familySize, SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, 
-		SEXP savePedigree, SEXP saveEffects, SEXP saveGenes, SEXP retain) {
-	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
-									 giveIds, filePrefix, savePedigree, saveEffects,
-									 saveGenes, retain);
-									 
-	int p1 = asInteger(parent1_index);
-	if (p1 == NA_INTEGER) { error("`parent1.index` parameter is of invalid type.\n"); }
-	
-	int p2 = asInteger(parent2_index);
-	if (p2 == NA_INTEGER) { error("`parent2.index` parameter is of invalid type.\n"); }
-	
-	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	
-	int instructions[2][1];
-	instructions[0][0] = p1;
-	instructions[1][0] = p2;
-	
-	return ScalarInteger(cross_these_combinations(d, 1, instructions, g));
-}
-
 
 /*-----------------------------------Groups----------------------------------*/
 SEXP SXP_combine_groups(SEXP exd, SEXP len, SEXP groups) {

@@ -270,30 +270,8 @@ make.doubled.haploids <- function(group, offspring=1, retain=TRUE, give.names=FA
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
-#' Perform a cross between two specific lines.
-#'
-#' \code{cross} allows you to perform crosses between specific lines. It 
-#' can be called in a for loop, looping over the rows of a dataframe, to 
-#' achieve similar functionality to \code{\link{cross.combinations}} without
-#' needing to save the combinations to be performed to a file.
-#'
-#' The offspring parameter represents the number of offspring to make from
-#' this pair of parents.
-#' 
-#' @inheritParams cross.randomly
-#' @param parent1.index index of the first parent to cross
-#' @param parent2.index index of the second parent to cross
-#' @param offspring The number of offspring to produce from this pair of parents
-#' @return The group number of the group that the generated offspring were loaded into.
-#'
-#' @family crossing functions
-#' @export
-cross <- function(parent1.index, parent2.index, offspring=1, retain=TRUE, give.names=FALSE, 
-		name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
-		save.gebv=FALSE, save.genotype=FALSE) {
-	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_one_cross, sim.data$p, parent1.index, parent2.index, give.names, 
-				 name.prefix, offspring, track.pedigree, give.ids, file.prefix, save.pedigree, 
-				 save.gebv, save.genotype, retain))
+# Message added 0.1-4002
+cross <- function() {
+  .Deprecated("cross.combinations")
+  return(0L)
 }
-
