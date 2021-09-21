@@ -476,7 +476,7 @@ double* get_group_bvs( SimData* d, int group_id, int group_size) {
 		bvs = get_malloc(sizeof(double) * get_group_size( d, group_id ));
 	}
 	
-	DecimalMatrix dm_bvs = calculate_fitness_metric_of_group(d, group_id);
+	DecimalMatrix dm_bvs = calculate_group_bvs(d, group_id);
 	
 	for (int i = 0; i < dm_bvs.cols; ++i) {
 		bvs[i] = dm_bvs.matrix[0][i];

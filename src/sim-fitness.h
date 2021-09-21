@@ -5,20 +5,20 @@
 #include "sim-groups.h"
 
 /* Fitness calculators */
-int split_group_by_fitness(SimData* d, int group, int top_n, int lowIsBest);
-DecimalMatrix calculate_fitness_metric_of_group(SimData* d, int group);
-DecimalMatrix calculate_fitness_metric( AlleleMatrix* m, EffectMatrix* e);
+int split_by_bv(SimData* d, int group, int top_n, int lowIsBest);
+DecimalMatrix calculate_group_bvs(SimData* d, int group);
+DecimalMatrix calculate_bvs( AlleleMatrix* m, EffectMatrix* e);
 DecimalMatrix calculate_count_matrix_of_allele_for_ids( AlleleMatrix* m, unsigned int* for_ids, unsigned int n_ids, char allele);
 DecimalMatrix calculate_full_count_matrix_of_allele( AlleleMatrix* m, char allele);
 
 MarkerBlocks create_n_blocks_by_chr(SimData* d, int n);
 MarkerBlocks read_block_file(SimData* d, const char* block_file);
-void calculate_group_block_effects(SimData* d, MarkerBlocks b, const char* output_file, int group);
-void calculate_all_block_effects(SimData* d, MarkerBlocks b, const char* output_file);
+void calculate_group_local_bvs(SimData* d, MarkerBlocks b, const char* output_file, int group);
+void calculate_local_bvs(SimData* d, MarkerBlocks b, const char* output_file);
 
 char* calculate_optimal_alleles(SimData* d);
-double calculate_optimal_gebv(SimData* d);
-double calculate_minimum_gebv(SimData* d);
+double calculate_optimum_bv(SimData* d);
+double calculate_minimum_bv(SimData* d);
 
 /* Recombination calculators */
 int* calculate_min_recombinations_fw1(SimData* d, char* parent1, unsigned int p1num, char* parent2, 

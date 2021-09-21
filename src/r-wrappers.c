@@ -477,7 +477,7 @@ SEXP SXP_group_eval(SEXP exd, SEXP group) {
 	
 	int group_size = get_group_size(d, group_id);
 	unsigned int* inds = get_group_indexes(d, group_id, group_size);
-	DecimalMatrix gebvs = calculate_fitness_metric_of_group(d, group_id);
+	DecimalMatrix gebvs = calculate_group_bvs(d, group_id);
 	
 	SEXP out = PROTECT(allocVector(VECSXP, 2));
 	SEXP index = PROTECT(allocVector(INTSXP, group_size));
@@ -516,12 +516,12 @@ SEXP SXP_simple_selection(SEXP exd, SEXP glen, SEXP groups, SEXP number, SEXP be
 	if (want_low == NA_LOGICAL) { error("`low.score.best` parameter is of invalid type.\n"); }
 	
 	if (len == 1) {
-		return ScalarInteger(split_group_by_fitness(d, gps[0], num_to_select, want_low));
+		return ScalarInteger(split_by_bv(d, gps[0], num_to_select, want_low));
 	} else {
 		SEXP out = PROTECT(allocVector(INTSXP, len));
 		int* outc = INTEGER(out);
 		for (int i = 0; i < len; ++i) {
-			outc[i] = split_group_by_fitness(d, gps[i], num_to_select, want_low);
+			outc[i] = split_by_bv(d, gps[i], num_to_select, want_low);
 		}
 		UNPROTECT(1);
 		return out;
@@ -551,7 +551,7 @@ SEXP SXP_simple_selection_bypercent(SEXP exd, SEXP glen, SEXP groups, SEXP perce
 		int group_size = get_group_size(d, gps[0]);
 		int num_to_select = group_size * pc_to_select / 100; // integer division, so take the floor
 		
-		return ScalarInteger(split_group_by_fitness(d, gps[0], num_to_select, want_low));
+		return ScalarInteger(split_by_bv(d, gps[0], num_to_select, want_low));
 	} else {
 		int num_to_select;
 		
@@ -560,7 +560,7 @@ SEXP SXP_simple_selection_bypercent(SEXP exd, SEXP glen, SEXP groups, SEXP perce
 		int* outc = INTEGER(out);
 		for (int i = 0; i < len; ++i) {
 			num_to_select = get_group_size(d, gps[i]) * pc_to_select / 100;
-			outc[i] = split_group_by_fitness(d, gps[i], num_to_select, want_low);
+			outc[i] = split_by_bv(d, gps[i], num_to_select, want_low);
 		}
 		UNPROTECT(1);
 		return out;
@@ -586,7 +586,7 @@ SEXP SXP_get_best_haplotype(SEXP exd) {
 SEXP SXP_get_best_GEBV(SEXP exd) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	double best_GEBV = calculate_optimal_gebv(d);
+	double best_GEBV = calculate_optimum_bv(d);
 	
 	SEXP out = PROTECT(allocVector(REALSXP, 1));
 	REAL(out)[0] = best_GEBV;
@@ -597,7 +597,7 @@ SEXP SXP_get_best_GEBV(SEXP exd) {
 SEXP SXP_get_worst_GEBV(SEXP exd) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	double worst_GEBV = calculate_minimum_gebv(d);
+	double worst_GEBV = calculate_minimum_bv(d);
 	
 	SEXP out = PROTECT(allocVector(REALSXP, 1));
 	REAL(out)[0] = worst_GEBV;
@@ -917,9 +917,9 @@ SEXP SXP_save_GEBVs(SEXP exd, SEXP filename, SEXP group) {
 	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
 	if (isNull(group)) {
-		save_all_fitness(f, d);
+		save_bvs(f, d);
 	} else if (asInteger(group) >= 0) {
-		save_group_fitness(f, d, asInteger(group));
+		save_group_bvs(f, d, asInteger(group));
 	} else {
 		fclose(f);
 		error("Supplied group number is invalid.");
@@ -935,11 +935,11 @@ SEXP SXP_save_file_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP 
 	
 	if (isNull(group)) {
 		MarkerBlocks b = read_block_file(d, CHAR(asChar(block_file)));
-		calculate_all_block_effects(d, b, CHAR(asChar(filename)));
+		calculate_local_bvs(d, b, CHAR(asChar(filename)));
 		delete_markerblocks(&b);
 	} else if (asInteger(group) > 0) {
 		MarkerBlocks b = read_block_file(d, CHAR(asChar(block_file)));
-		calculate_group_block_effects(d, b, CHAR(asChar(filename)), asInteger(group));
+		calculate_group_local_bvs(d, b, CHAR(asChar(filename)), asInteger(group));
 		delete_markerblocks(&b);
 	} else {
 		error("Supplied group number is invalid.\n");
@@ -954,11 +954,11 @@ SEXP SXP_save_chrsplit_block_effects(SEXP exd, SEXP filename, SEXP nslices, SEXP
 	
 	if (isNull(group)) {
 		MarkerBlocks b = create_n_blocks_by_chr(d, asInteger(nslices));
-		calculate_all_block_effects(d, b, CHAR(asChar(filename)));
+		calculate_local_bvs(d, b, CHAR(asChar(filename)));
 		delete_markerblocks(&b);
 	} else if (asInteger(group) > 0) {
 		MarkerBlocks b = create_n_blocks_by_chr(d, asInteger(nslices));
-		calculate_group_block_effects(d, b, CHAR(asChar(filename)), asInteger(group));
+		calculate_group_local_bvs(d, b, CHAR(asChar(filename)), asInteger(group));
 		delete_markerblocks(&b);
 	} else {
 		error("Supplied group number is invalid.\n");

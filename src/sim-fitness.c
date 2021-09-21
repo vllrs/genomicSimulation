@@ -13,10 +13,10 @@
  * will be selected, if false the `top_n` with the highest fitness/GEBV score are.
  * @returns the group number of the newly-created split-off group
  */
-int split_group_by_fitness(SimData* d, int group, int top_n, int lowIsBest) {
+int split_by_bv(SimData* d, int group, int top_n, int lowIsBest) {
 	// get fitnesses
 	unsigned int* group_contents = get_group_indexes( d, group, -1); // should be ordered same as next line would get
-	DecimalMatrix fits = calculate_fitness_metric_of_group( d, group );
+	DecimalMatrix fits = calculate_group_bvs( d, group );
 	
 	// get an array of pointers to those fitnesses
 	double* p_fits[fits.cols];
@@ -59,7 +59,7 @@ int split_group_by_fitness(SimData* d, int group, int top_n, int lowIsBest) {
 * @param group calculate GEBVs for each genotype in the group with this group number.
 * @returns A DecimalMatrix containing the score for each individual in the group.
 */
-DecimalMatrix calculate_fitness_metric_of_group(SimData* d, int group) {
+DecimalMatrix calculate_group_bvs(SimData* d, int group) {
 	// check that both of the items to be multiplied exist.
 	if (d->e.effects.rows < 1 || d->m->alleles == NULL) {
 		error( "Either effect matrix or allele matrix does not exist\n");
@@ -108,7 +108,7 @@ DecimalMatrix calculate_fitness_metric_of_group(SimData* d, int group) {
  * @param e pointer to the EffectMatrix that effect values have been loaded into.
  * @returns A DecimalMatrix containing the score for each individual in the group.
  */
-DecimalMatrix calculate_fitness_metric( AlleleMatrix* m, EffectMatrix* e) {
+DecimalMatrix calculate_bvs( AlleleMatrix* m, EffectMatrix* e) {
 	// check that both of the items to be multiplied exist.
 	if (e->effects.rows < 1 || m->alleles == NULL) {
 		error("Either effect matrix or allele matrix does not exist\n");
@@ -422,7 +422,7 @@ MarkerBlocks read_block_file(SimData* d, const char* block_file) {
  * block effects/local GEBVs will be saved.
  * @param group group number from which to split the top individuals.
  */
-void calculate_group_block_effects(SimData* d, MarkerBlocks b, const char* output_file, int group) {
+void calculate_group_local_bvs(SimData* d, MarkerBlocks b, const char* output_file, int group) {
 	
 	FILE* outfile;
 	if ((outfile = fopen(output_file, "w")) == NULL) {
@@ -515,7 +515,7 @@ void calculate_group_block_effects(SimData* d, MarkerBlocks b, const char* outpu
  * @param output_file string containing the filename of the file to which output 
  * block effects/local GEBVs will be saved.
  */
-void calculate_all_block_effects(SimData* d, MarkerBlocks b, const char* output_file) {
+void calculate_local_bvs(SimData* d, MarkerBlocks b, const char* output_file) {
 	FILE* outfile;
 	if ((outfile = fopen(output_file, "w")) == NULL) {
 		error( "Failed to open file %s.\n", output_file);
@@ -633,7 +633,7 @@ char* calculate_optimal_alleles(SimData* d) {
  * @param d pointer to the SimData containing markers and marker effects.
  * @returns the GEBV of the best/ideal genotype.
  */
-double calculate_optimal_gebv(SimData* d) {
+double calculate_optimum_bv(SimData* d) {
 	double best_gebv = 0;
 	double best_score;
 
@@ -661,7 +661,7 @@ double calculate_optimal_gebv(SimData* d) {
  * @param d pointer to the SimData containing markers and marker effects.
  * @returns the GEBV of the worst genotype.
  */
-double calculate_minimum_gebv(SimData* d) {
+double calculate_minimum_bv(SimData* d) {
 	double worst_gebv = 0;
 	double worst_score;
 

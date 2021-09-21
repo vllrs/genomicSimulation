@@ -81,7 +81,7 @@ typedef struct {
  * @param will_save_pedigree_to_file a boolean. If true, the full/recursive pedigrees
  * of every genotype generated in the cross are saved to "[filename_prefix]-pedigree",
  * even if the genotypes are not later saved to SimData.
- * @param will_save_effects_to_file a boolean. If true, the GEBVs
+ * @param will_save_effects_to_file a boolean. If true, the breeding values
  * of every genotype generated in the cross are saved to "[filename_prefix]-eff",
  * even if the genotypes are not later saved to SimData.
  * @param will_save_genes_to_file a boolean. If true, the set of alleles

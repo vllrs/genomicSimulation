@@ -383,8 +383,8 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, GenOptio
 					save_AM_pedigree( fp, crosses, d);
 				}
 				if (g.will_save_effects_to_file) {
-					eff = calculate_fitness_metric( crosses, &(d->e));
-					save_fitness( fe, &eff, crosses->ids, crosses->subject_names);
+					eff = calculate_bvs( crosses, &(d->e));
+					save_manual_bvs( fe, &eff, crosses->ids, crosses->subject_names);
 					delete_dmatrix( &eff);
 				}
 				if (g.will_save_genes_to_file) {
@@ -437,8 +437,8 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, GenOptio
 		fclose(fp);
 	}
 	if (g.will_save_effects_to_file) {
-		eff = calculate_fitness_metric( crosses, &(d->e));
-		save_fitness( fe, &eff, crosses->ids, crosses->subject_names);
+		eff = calculate_bvs( crosses, &(d->e));
+		save_manual_bvs( fe, &eff, crosses->ids, crosses->subject_names);
 		delete_dmatrix( &eff);
 		fclose(fe);
 	}
@@ -558,8 +558,8 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 						save_AM_pedigree( fp, crosses, d);
 					}
 					if (g.will_save_effects_to_file) {
-						eff = calculate_fitness_metric( crosses, &(d->e));
-						save_fitness( fe, &eff, crosses->ids, crosses->subject_names);
+						eff = calculate_bvs( crosses, &(d->e));
+						save_manual_bvs( fe, &eff, crosses->ids, crosses->subject_names);
 						delete_dmatrix( &eff);
 					}
 					if (g.will_save_genes_to_file) {
@@ -609,8 +609,8 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 		fclose(fp);
 	}
 	if (g.will_save_effects_to_file) {
-		eff = calculate_fitness_metric( crosses, &(d->e));
-		save_fitness( fe, &eff, crosses->ids, crosses->subject_names);
+		eff = calculate_bvs( crosses, &(d->e));
+		save_manual_bvs( fe, &eff, crosses->ids, crosses->subject_names);
 		delete_dmatrix( &eff);
 		fclose(fe);
 	}
@@ -736,8 +736,8 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 						save_AM_pedigree( fp, outcome, d);
 					}
 					if (g.will_save_effects_to_file) {
-						eff = calculate_fitness_metric( outcome, &(d->e));
-						save_fitness( fe, &eff, outcome->ids, outcome->subject_names);
+						eff = calculate_bvs( outcome, &(d->e));
+						save_manual_bvs( fe, &eff, outcome->ids, outcome->subject_names);
 						delete_dmatrix( &eff);
 					}
 					if (g.will_save_genes_to_file) {
@@ -788,8 +788,8 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 						save_AM_pedigree( fp, outcome, d);
 					}
 					if (g.will_save_effects_to_file) {
-						eff = calculate_fitness_metric( outcome, &(d->e));
-						save_fitness( fe, &eff, outcome->ids, outcome->subject_names);
+						eff = calculate_bvs( outcome, &(d->e));
+						save_manual_bvs( fe, &eff, outcome->ids, outcome->subject_names);
 						delete_dmatrix( &eff);
 					}
 					if (g.will_save_genes_to_file) {
@@ -871,8 +871,8 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 		fclose(fp);
 	}
 	if (g.will_save_effects_to_file) {
-		eff = calculate_fitness_metric( outcome, &(d->e));
-		save_fitness( fe, &eff, outcome->ids, outcome->subject_names);
+		eff = calculate_bvs( outcome, &(d->e));
+		save_manual_bvs( fe, &eff, outcome->ids, outcome->subject_names);
 		delete_dmatrix( &eff);
 		fclose(fe);
 	}
@@ -989,8 +989,8 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 					save_AM_pedigree( fp, outcome, d);
 				}
 				if (g.will_save_effects_to_file) {
-					eff = calculate_fitness_metric( outcome, &(d->e));
-					save_fitness( fe, &eff, outcome->ids, outcome->subject_names);
+					eff = calculate_bvs( outcome, &(d->e));
+					save_manual_bvs( fe, &eff, outcome->ids, outcome->subject_names);
 					delete_dmatrix( &eff);
 				}
 				if (g.will_save_genes_to_file) {
@@ -1042,8 +1042,8 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 		fclose(fp);
 	}
 	if (g.will_save_effects_to_file) {
-		eff = calculate_fitness_metric( outcome, &(d->e));
-		save_fitness( fe, &eff, outcome->ids, outcome->subject_names);
+		eff = calculate_bvs( outcome, &(d->e));
+		save_manual_bvs( fe, &eff, outcome->ids, outcome->subject_names);
 		delete_dmatrix( &eff);
 		fclose(fe);
 	}
@@ -1124,7 +1124,7 @@ int make_n_crosses_from_top_m_percent(SimData* d, int n, int m, int group, GenOp
 	int n_top_group = group_size * m / 100; //@integer division?
 	printf("There are %d lines in the top %d%%\n", n_top_group, m);
 	
-	int topgroup = split_group_by_fitness(d, group, n_top_group, FALSE);
+	int topgroup = split_by_bv(d, group, n_top_group, FALSE);
 	
 	// do the random crosses
 	int gp = cross_random_individuals(d, topgroup, n, g);

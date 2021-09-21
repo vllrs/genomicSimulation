@@ -747,11 +747,11 @@ void save_parents_of(FILE* f, AlleleMatrix* m, unsigned int p1, unsigned int p2)
  * @param group group number of the group of individuals to print the 
  * GEBVs of.
  */
-void save_group_fitness(FILE* f, SimData* d, int group) {
+void save_group_bvs(FILE* f, SimData* d, int group) {
 	int group_size = get_group_size( d, group);
 	unsigned int* group_contents = get_group_ids( d, group, group_size);
 	char** group_names = get_group_names( d, group, group_size);
-	DecimalMatrix effects = calculate_fitness_metric_of_group(d, group);
+	DecimalMatrix effects = calculate_group_bvs(d, group);
 	const char newline[] = "\n";
 	const char tab[] = "\t";
 	
@@ -788,14 +788,14 @@ void save_group_fitness(FILE* f, SimData* d, int group) {
  * @param f file pointer opened for writing to put the output
  * @param d pointer to the SimData containing the group members.
  */
-void save_all_fitness(FILE* f, SimData* d) {
+void save_bvs(FILE* f, SimData* d) {
 	AlleleMatrix* am = d->m;
 	const char newline[] = "\n";
 	const char tab[] = "\t";
 	DecimalMatrix effects;
 	
 	do {
-		effects = calculate_fitness_metric(am, &(d->e));
+		effects = calculate_bvs(am, &(d->e));
 		for (int i = 0; i < effects.cols; ++i) {
 			/*Group member name*/
 			//fwrite(group_contents + i, sizeof(int), 1, f);
@@ -815,12 +815,12 @@ void save_all_fitness(FILE* f, SimData* d) {
 }
 
 /** Print a set of pre-calculated GEBVs with provided names and ids to a file,
- * with the same format as a regular call to `save_all_fitness` or `save_group_fitness`.
+ * with the same format as a regular call to `save_bvs` or `save_group_bvs`.
  * The following tab-separated format is used:
  *
- * [id]	[name]	[GEBV]
+ * [id]	[name]	[BV]
  *
- * [id]	[name]	[GEBV]
+ * [id]	[name]	[BV]
  *
  * ...
  *
@@ -833,7 +833,7 @@ void save_all_fitness(FILE* f, SimData* d) {
  * @param ids array of ids to print alongside the GEBVs.
  * @param names array of names to print alongside the GEBVs.
  */
-void save_fitness(FILE* f, DecimalMatrix* e, unsigned int* ids, char** names) {
+void save_manual_bvs(FILE* f, DecimalMatrix* e, unsigned int* ids, char** names) {
 	char sep[] = "\t";
 	char newline[] = "\n";
 
