@@ -55,9 +55,9 @@ GenOptions create_genoptions(SEXP name, SEXP namePrefix, SEXP familySize,
 	
 	b = asLogical(name);
 	if (b == NA_LOGICAL) { error("`name` parameter is of invalid type.\n"); }
-	go.will_name_subjects = b;
+	go.will_name_offspring = b;
 	
-	go.subject_prefix = CHAR(asChar(namePrefix));
+	go.offspring_name_prefix = CHAR(asChar(namePrefix));
 	
 	b = asInteger(familySize);
 	if (b == NA_INTEGER) { error("`offspring` parameter is of invalid type.\n"); }
@@ -78,10 +78,10 @@ GenOptions create_genoptions(SEXP name, SEXP namePrefix, SEXP familySize,
 	go.will_save_pedigree_to_file = b;
 	b = asLogical(saveEffects);
 	if (b == NA_LOGICAL) { error("`save.gebv` parameter is of invalid type.\n"); }
-	go.will_save_effects_to_file = b;
+	go.will_save_bvs_to_file = b;
 	b = asLogical(saveGenes);
 	if (b == NA_LOGICAL) { error("`save.genotype` parameter is of invalid type.\n"); }
-	go.will_save_genes_to_file = b;
+	go.will_save_alleles_to_file = b;
 	
 	b = asLogical(retain);
 	if (b == NA_LOGICAL) { error("`retain` parameter is of invalid type.\n"); }
@@ -702,12 +702,20 @@ SEXP SXP_get_group_data(SEXP exd, SEXP group, SEXP whatData) {
 		
 	} else if (c == 'N') {
 		char** data = get_group_names(d, group_id, group_size);
-		
+		unsigned int* backupdata = get_group_ids(d, group_id, group_size);
+		char buffer[get_integer_digits(backupdata[group_size - 1]) + 1]; 
+	
 		SEXP out = PROTECT(allocVector(STRSXP, group_size));
 		for (int i = 0; i < group_size; ++i) {
-			SET_STRING_ELT(out, i, mkChar(data[i]));
+			if (data[i] != NULL) {
+				SET_STRING_ELT(out, i, mkChar(data[i]));
+			} else {
+				sprintf(buffer, "%d", backupdata[i]);
+				SET_STRING_ELT(out, i, mkChar(buffer));
+			}
 		}
 		free(data);
+		free(backupdata);
 		UNPROTECT(1);
 		return out;
 		
@@ -750,9 +758,8 @@ SEXP SXP_get_group_data(SEXP exd, SEXP group, SEXP whatData) {
 	} else if (c == 'P' && (c2 == '1' || c2 == '2')) {
 		int parent = c2 == '1' ? 1 : 2;
 		char** data = get_group_parent_names(d, group_id, group_size, parent);
-		unsigned int* backupdata = get_group_parent_IDs(d, group_id, group_size, parent);
-		int maxlen = floor(log10(UINT_MAX)) + 1;
-		char buffer[maxlen]; // as long as value in limit.h is correct, can't overflow the buffer
+		unsigned int* backupdata = get_group_parent_ids(d, group_id, group_size, parent);
+		char buffer[get_integer_digits(backupdata[group_size - 1]) + 1]; 
 		
 		SEXP out = PROTECT(allocVector(STRSXP, group_size));
 		for (int i = 0; i < group_size; ++i) {
@@ -764,6 +771,7 @@ SEXP SXP_get_group_data(SEXP exd, SEXP group, SEXP whatData) {
 			}
 		}
 		free(data);
+		free(backupdata);
 		UNPROTECT(1);
 		return out;
 	

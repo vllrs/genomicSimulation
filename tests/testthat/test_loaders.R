@@ -38,7 +38,6 @@ test_that("Other functions don't run without data being loaded", {
   expect_error(break.group.into.families(1L),"Please load.data first")
   expect_error(break.group.into.individuals(1L),"Please load.data first")
   expect_error(combine.groups(c(1L,2L)),"Please load.data first")
-  expect_error(cross(1L,2L),"Please load.data first")
   expect_error(cross.all.pairs(1L),"Please load.data first")
   expect_error(cross.combinations(1L,2L),"Please load.data first")
   expect_error(cross.combinations.file("imaginary"),"Please load.data first")

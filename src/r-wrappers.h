@@ -1,8 +1,4 @@
-#include "sim-crossers.h"
-#include "sim-fitness.h"
-#include "sim-loaders.h"
-#include "sim-printers.h"
-#include "sim-groups.h"
+#include "sim-operations.h"
 
 /*-------------------------- Loaders -------------------------*/
 

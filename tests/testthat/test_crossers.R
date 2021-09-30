@@ -76,13 +76,3 @@ test_that("make.doubled.haploids works", {
   
   clear.simdata()
 })
-
-test_that("cross works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
-  
-  #Make sure it doesn't crash and creates right-size group
-  g2 <- cross(0L,1L)
-  expect_identical(see.existing.groups(), data.frame("Group"=c(g,g2),"GroupSize"=c(6L,1L)))
-  
-  clear.simdata()
-})

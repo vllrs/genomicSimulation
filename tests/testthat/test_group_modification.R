@@ -53,9 +53,9 @@ test_that("break.group.into.families runs successfully", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
   #setup
-  g2 <- cross(0L,1L, give.names=T, name.prefix="two") #two7
-  g3 <- cross(0L,4L, offspring=4, give.names=T, name.prefix="three") #three8, three9, three10, three11
-  g4 <- cross(3L,6L, offspring=3, give.names=T, name.prefix="four") #four12, four13, four14
+  g2 <- cross.combinations(0L,1L, give.names=T, name.prefix="two") #two7
+  g3 <- cross.combinations(0L,4L, offspring=4, give.names=T, name.prefix="three") #three8, three9, three10, three11
+  g4 <- cross.combinations(3L,6L, offspring=3, give.names=T, name.prefix="four") #four12, four13, four14
   gcom <- combine.groups(c(g2,g3,g4))
   
   #setup works as expected
