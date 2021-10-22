@@ -1649,7 +1649,7 @@ double* get_group_bvs( SimData* d, int group_id, int group_size) {
 		bvs = get_malloc(sizeof(double) * get_group_size( d, group_id ));
 	}
 
-	DecimalMatrix dm_bvs = calculate_group_bvs(d, group_id);
+	DecimalMatrix dm_bvs = calculate_group_bvs(d, (unsigned int) group_id);
 
 	for (int i = 0; i < dm_bvs.cols; ++i) {
 		bvs[i] = dm_bvs.matrix[0][i];
@@ -1891,113 +1891,102 @@ DecimalMatrix generate_zero_dmatrix(int r, int c) {
 	return zeros;
 }
 
-/** Get a DecimalMatrix composed only of row `row_index` from `m`
+/** Multiply a DecimalMatrix to a vector, and add that product to the first column
+ * of a provided DecimalMatrix.
  *
- * Checks that `row_index` is a valid index.
- * it will throw an error if the index is not valid
+ * Performs the fused multiply-add operation: `result + a * b` and saves it to `result`.
  *
- * @param m pointer to the DecimalMatrix whose subset we are taking.
- * @param row_index index in m of the row/first index from m to take as a subset
- * @returns the row of `m` at `row_index` as a new independent DecimalMatrix.
-*/
-DecimalMatrix subset_dmatrix_row(DecimalMatrix* m, int row_index) {
-	if (row_index < 0 || row_index >= m->rows) {
-		error( "Invalid index for subsetting: %d\n", row_index);
-	}
-	DecimalMatrix subset;
-	subset.cols = m->cols;
-	subset.rows = 1;
-
-	subset.matrix = malloc(sizeof(double*) * subset.rows);
-	subset.matrix[0] = malloc(sizeof(double) * subset.cols);
-	for (int j = 0; j < subset.cols; j++) {
-		subset.matrix[0][j] = m->matrix[row_index][j];
-	}
-	return subset;
-}
-
-/** Perform matrix multiplication on two DecimalMatrix. Result is returned as
- * a new matrix.
+ * Assumes that the vector `b` has the same number of entries as `a` has columns. That
+ * is, assumes the dimensions are valid for multiplication.
  *
- * If the two matrices do not have dimensions that allow them to be multiplied,
- * it will throw an error.
- *
- * The order of parameters a and b matters.
- *
- * @param a pointer to the first DecimalMatrix.
- * @param b pointer to the second DecimalMatrix.
- * @returns the result of the matrix multiplication (*a) x (*b), as a new
- * DecimalMatrix.
+ * @param result pointer to the DecimalMatrix to whose first row the product a*b
+ * will be added.
+ * @param a pointer to the DecimalMatrix. Multiply this to b.
+ * @param b a vector of doubles, assumed to be the same length as `a` has columns.
+ * Multiplied to a.
+ * @returns 0 on success, nonzero on failure.
  */
-DecimalMatrix multiply_dmatrices(DecimalMatrix* a, DecimalMatrix* b) {
-	if (a->cols != b->rows) {
-		// multiplication was not possible for these dimensions
+int add_matrixvector_product_to_dmatrix(DecimalMatrix* result, DecimalMatrix* a, double* b) {
+    /*if (a->cols != b->rows) {
 		error( "Dimensions invalid for matrix multiplication.");
+	}*/
+
+	//if (result->rows != a->rows || result->cols != b->cols) {
+	if (result->cols != a->rows) { //these dimensions make it so result is one heap array, using only first row.
+        warning( "Dimensions invalid for adding to result: %d does not fit in %d\n", a->rows, result->cols);
+		return 1;
 	}
 
-	DecimalMatrix product = generate_zero_dmatrix(a->rows, b->cols);
+	double cell;
 
-	for (int i = 0; i < product.rows; i++) {
-		for (int j = 0; j < product.cols; j++) {
-			// we loop through every cell in the matrix.
-			for (int k = 0; k < a->cols; k++) {
-				// for each cell, we loop through each of the pairs adjacent to it.
-				product.matrix[i][j] += (a->matrix[i][k]) * (b->matrix[k][j]);
-			}
-		}
+	for (int i = 0; i < result->cols; ++i) {
+        cell = 0;
+        for (int j = 0; j < a->cols; ++j) {
+            // for each cell, we loop through each of the pairs adjacent to it.
+            cell += (a->matrix[i][j]) * b[j];
+        }
+
+        result->matrix[0][i] += cell;
 	}
 
-	return product;
+	return 0;
+
 }
 
-/** Add the two DecimalMatrix. The result is saved in the first DecimalMatrix.
+/** Multiply two sets of a DecimalMatrix and vector, and add both products to
+ * the first column of a provided DecimalMatrix.
  *
- * If the two matrices do not have the same dimensions, the matrix returned has
- * it will throw an error.
+ * Performs the double fused multiply-add operation:
+ * `result + amat * avec + bmat * bvec`
+ * and saves it to `result`.
  *
- * The ordering of the parameters does not matter.
+ * The matrices `amat` and `bmat` must have the same dimensions, and must have
+ * the same number of rows as `result` has columns.
  *
- * @param a pointer to the first DecimalMatrix. Add this to b.
- * @param b pointer to the second DecimalMatrix. Add this to a.
- * @returns a new DecimalMatrix containing the result of *a + *b.
+ * Assumes that the vectors have the same number of entries as their matrices have
+ * columns. That is, assumes the dimensions are valid for multiplication.
+ *
+ * @param result pointer to the DecimalMatrix to whose first row both products
+ * will be added.
+ * @param amat pointer to the first DecimalMatrix. Multiply this to avec.
+ * @param avec a vector of doubles, assumed to be the same length as `amat` has columns.
+ * Multiplied to `amat`.
+ * @param bmat pointer to the second DecimalMatrix. Multiply this to bvec.
+ * @param bvec a second vector of doubles, assumed to be the same length as
+ * `bmat` has columns. Multiplied to `bmat`.
+ * @returns 0 on success, nonzero on failure.
  */
-void add_to_dmatrix(DecimalMatrix* a, DecimalMatrix* b) {
-	if (a->cols != b->cols || a->rows != b->rows) {
-		error( "Invalid dimensions for addition\n");
+int add_doublematrixvector_product_to_dmatrix(DecimalMatrix* result, DecimalMatrix* amat, double* avec, DecimalMatrix* bmat, double* bvec) {
+
+	if (result->cols != amat->rows) { //these dimensions make it so result is one heap array, using only first row.
+        warning( "Dimensions invalid for adding to result: %d does not fit in %d\n", amat->rows, result->cols);
+		return 1;
+	}
+	if (result->cols != bmat->rows) {
+        warning( "Dimensions invalid for adding to result: %d does not fit in %d\n", bmat->rows, result->cols);
+		return 1;
+	}
+	if (amat->cols != bmat->cols) {
+        warning( "Dimensions of the two products are uneven: length %d does not match length %d\n", amat->cols, bmat->cols);
+		return 1;
 	}
 
-	for (int i = 0; i < a->rows; i++) {
-		for (int j = 0; j < a->cols; j++) {
-			a->matrix[i][j] += b->matrix[i][j];
-		}
+	double cell;
+
+	for (int i = 0; i < result->cols; ++i) {
+        cell = 0;
+        for (int j = 0; j < amat->cols; ++j) {
+            // for each cell, we loop through each of the pairs adjacent to it.
+            cell += (amat->matrix[i][j]) * avec[j];
+            cell += (bmat->matrix[i][j]) * bvec[j];
+        }
+
+        result->matrix[0][i] += cell;
 	}
+
+	return 0;
 }
 
-/** Add the two DecimalMatrix. The result is returned as a new DecimalMatrix.
- *
- * If the two matrices do not have the same dimensions, the matrix returned has
- * it will throw an error.
- *
- * The ordering of the parameters does not matter.
- * @param a pointer to the first DecimalMatrix. Add this to b.
- * @param b pointer to the second DecimalMatrix. Add this to a.
- * @returns a new DecimalMatrix containing the result of *a + *b.
- */
-DecimalMatrix add_dmatrices(DecimalMatrix* a, DecimalMatrix* b) {
-	if (a->cols != b->cols || a->rows != b->rows) {
-		error( "Invalid dimensions for addition\n");
-	}
-
-	DecimalMatrix sum = generate_zero_dmatrix(a->rows, a->cols);
-
-	for (int i = 0; i < sum.rows; i++) {
-		for (int j = 0; j < sum.cols; j++) {
-			sum.matrix[i][j] = a->matrix[i][j] + b->matrix[i][j];
-		}
-	}
-
-	return sum;
-}
 
 /** Deletes a DecimalMatrix and frees its memory. m will now refer
  * to an empty matrix, with every pointer set to null and dimensions set to 0.
@@ -3049,7 +3038,10 @@ int load_all_simdata(SimData* d, const char* data_file, const char* map_file, co
 	int gp = load_transposed_genes_to_simdata(d, data_file);
 
 	load_genmap_to_simdata(d, map_file);
-	load_effects_to_simdata(d, effect_file);
+
+	if (effect_file != NULL) {
+		load_effects_to_simdata(d, effect_file);
+	}
 
 	get_sorted_markers(d, d->n_markers);
 	get_chromosome_locations(d);
@@ -4637,7 +4629,7 @@ int split_by_bv(SimData* d, int group, int top_n, int lowIsBest) {
 }
 
 /** Calculates the fitness metric/breeding value for each genotype in the AlleleMatrix
-* in a certain group, and returns the results in a DecimalMatrix struct.
+* in a certain group, and returns the results in a DecimalMatrix.
 *
 * The breeding value is calculated for each genotype by taking the sum of (number of
 * copies of this allele at this marker times this allele's effect at this marker)
@@ -4652,37 +4644,34 @@ int split_by_bv(SimData* d, int group, int top_n, int lowIsBest) {
 * @param group calculate breeding values for each genotype in the group with this group number.
 * @returns A DecimalMatrix containing the score for each individual in the group.
 */
-DecimalMatrix calculate_group_bvs(SimData* d, int group) {
+DecimalMatrix calculate_group_bvs(SimData* d, unsigned int group) {
 	// check that both of the items to be multiplied exist.
 	if (d->e.effects.rows < 1 || d->m->alleles == NULL) {
 		error( "Either effect matrix or allele matrix does not exist\n");
 	}
 
 	int group_size = get_group_size( d, group );
-	unsigned int* group_members = get_group_ids( d, group, group_size);
-	DecimalMatrix sum, counts, effect_row, product;
-	// sum is the sum of the product across all alleles.
-	// Its dimensions are the same as those from multiplying a row of d->e.effects by
-	// a counts matrix the size of d->m.alleles
-	sum = generate_zero_dmatrix(1, group_size);
+	DecimalMatrix sum = generate_zero_dmatrix(1, group_size);
+	DecimalMatrix counts = generate_zero_dmatrix(group_size, d->n_markers);
+	DecimalMatrix counts2 = generate_zero_dmatrix(group_size, d->n_markers);
 
-	for (int i = 0; i < d->e.effects.rows; i++) {
-		// get the product for this allele
-		counts = calculate_count_matrix_of_allele_for_ids( d->m, group_members, group_size, d->e.effect_names[i]);
-		effect_row = subset_dmatrix_row(&(d->e.effects), i);
-		product = multiply_dmatrices(&effect_row, &counts);
-		delete_dmatrix(&counts);
-		delete_dmatrix(&effect_row);
+    int i = 0; // highest allele index
 
-		// add it to the total effect breeding value sum
-		add_to_dmatrix(&sum, &product);
-		///counts = sum; // use counts as a temp
-		//sum = add_dmatrices(&counts, &product);
-		//delete_dmatrix(&counts);
-		delete_dmatrix(&product);
+	for (; i < d->e.effects.rows - 1; i += 2) {
+		// get the allele counts in counts
+		calculate_group_doublecount_matrix_of_allele(d, group, d->e.effect_names[i], &counts, d->e.effect_names[i+1], &counts2);
+
+		// multiply counts with effects and add to bv sum
+		add_doublematrixvector_product_to_dmatrix(&sum, &counts, d->e.effects.matrix[i], &counts2, d->e.effects.matrix[i+1]);
+	}
+	if (i < d->e.effects.rows) { // deal with the last odd-numbered allele
+		calculate_group_count_matrix_of_allele(d, group, d->e.effect_names[i], &counts);
+		add_matrixvector_product_to_dmatrix(&sum, &counts, d->e.effects.matrix[i]);
 	}
 
-	free(group_members);
+	delete_dmatrix(&counts);
+	delete_dmatrix(&counts2);
+
 	return sum;
 }
 
@@ -4707,105 +4696,243 @@ DecimalMatrix calculate_bvs( AlleleMatrix* m, EffectMatrix* e) {
 		error( "Either effect matrix or allele matrix does not exist\n");
 	}
 
-	DecimalMatrix sum, counts, effect_row, product;
-	// sum is the sum of the product across all alleles.
-	// Its dimensions are the same as those from multiplying a row of d->e.effects by
-	// a counts matrix the size of d->m.alleles
-	sum = generate_zero_dmatrix(1, m->n_genotypes);
+	DecimalMatrix sum = generate_zero_dmatrix(1, m->n_genotypes);
+	DecimalMatrix counts = generate_zero_dmatrix(m->n_genotypes, m->n_markers);
+	DecimalMatrix counts2 = generate_zero_dmatrix(m->n_genotypes, m->n_markers);
 
-	for (int i = 0; i < e->effects.rows; i++) {
-		// get the product for this allele
-		counts = calculate_full_count_matrix_of_allele( m, e->effect_names[i]);
-		effect_row = subset_dmatrix_row(&(e->effects), i);
-		product = multiply_dmatrices(&effect_row, &counts);
-		delete_dmatrix(&counts);
-		delete_dmatrix(&effect_row);
+    int i = 0; // highest allele index
 
-		// add it to the total effect BV sum
-		counts = sum; // use counts as a temp
-		sum = add_dmatrices(&counts, &product);
-		delete_dmatrix(&counts);
-		delete_dmatrix(&product);
+	for (; i < e->effects.rows - 1; i += 2) {
+		// get the allele counts in counts
+		calculate_doublecount_matrix_of_allele(m, e->effect_names[i], &counts, e->effect_names[i+1], &counts2);
+
+		// multiply counts with effects and add to bv sum
+		add_doublematrixvector_product_to_dmatrix(&sum, &counts, e->effects.matrix[i], &counts2, e->effects.matrix[i+1]);
 	}
+	if (i < e->effects.rows) { // deal with the last odd-numbered allele
+		calculate_count_matrix_of_allele(m, e->effect_names[i], &counts);
+		add_matrixvector_product_to_dmatrix(&sum, &counts, e->effects.matrix[i]);
+	}
+
+	delete_dmatrix(&counts);
+	delete_dmatrix(&counts2);
 
 	return sum;
 }
 
 /** Calculates the number of times at each marker that a particular allele appears
- * for each genotype is a set of given genotype.
- * Returns the result as a DecimalMatrix. Useful for multiplying to effect matrix
- * to calculate breeding values.
+ * for each genotype in a group.
+ * Returns the result in a pre-created DecimalMatrix. Useful for multiplying to
+ * effect matrix to calculate breeding values.
  *
- * @param m pointer to the start of a linked list that contains the alleles
- * of each genotype in `for_ids`.
- * @param for_ids poinder to an array of ids of different genotypes.
- * @param n_ids number of genotypes to calculate the counts of/length of
- * `for_ids`
+ * @param d pointer to the SimData.
+ * @param group group number for which to calculate counts of the allele
  * @param allele the single-character allele to be counting.
- * @returns A DecimalMatrix countaining the number of `allele` occurences at
- * each row/marker for each column/genotype in `for_ids`.
+ * @param counts pointer to the DecimalMatrix into which to put the number
+ * of `allele` occurences at each row/marker for each column/genotype in the group.
+ * @returns 0 on success, nonzero on failure.
  * */
-DecimalMatrix calculate_count_matrix_of_allele_for_ids( AlleleMatrix* m, unsigned int* for_ids, unsigned int n_ids, char allele) {
-	DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, n_ids);
-	double cell_sum;
-	char* genes;
+int calculate_group_count_matrix_of_allele( SimData* d, unsigned int group, char allele, DecimalMatrix* counts) {
+	//DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, n_ids);
+	int groupSize = get_group_size(d, group);
+	if (counts->rows < groupSize || counts->cols < d->n_markers) {
+        fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
+                d->n_markers, groupSize, counts->rows, counts->cols);
+        return 1;
+	}
 
-	for (int i = 0; i < n_ids; i++) {
+	char** genes = get_group_genes(d, group, groupSize);
+
+	for (int i = 0; i < groupSize; ++i) {
 		R_CheckUserInterrupt();
-		genes = get_genes_of_id( m, for_ids[i] );
-
-		cell_sum = 0;
-		if (genes == NULL) {
+		if (genes[i] == NULL) {
 			continue;
 		}
 
-		for (int j = 0; j < m->n_markers; j++) {
-			cell_sum = 0;
-			if (genes[2*j] == allele) {
-				cell_sum += 1;
-			}
-			if (genes[2*j + 1] == allele) {
-				cell_sum += 1;
-			}
-			counts.matrix[j][i] = cell_sum;
+		for (int j = 0; j < d->n_markers; ++j) {
+			int cell_sum = 0;
+			if (genes[i][2*j] == allele)     cell_sum += 1;
+			if (genes[i][2*j + 1] == allele) cell_sum += 1;
+			counts->matrix[i][j] = cell_sum;
 		}
 	}
-	return counts;
+	return 0;
+}
+
+/** Calculates the number of times at each marker that two particular alleles appear
+ * for each genotype in a group.
+ * Returns the result in two pre-created DecimalMatrix. Useful for multiplying to
+ * effect matrix to calculate breeding values.
+ *
+ * This function is the same as calculate_group_count_matrix_of_allele(), but for
+ * two alleles at a time, for the purpose of loop unrolling in breeding value
+ * calculations.
+ *
+ * @param d pointer to the SimData.
+ * @param group group number for which to calculate counts of the allele
+ * @param allele the first single-character allele to be counting.
+ * @param counts pointer to the DecimalMatrix into which to put the number
+ * of `allele` occurences at each row/marker for each column/genotype in the group.
+ * @param allele2 the second single-character allele to be counting.
+ * @param counts2 pointer to the DecimalMatrix into which to put the number
+ * of `allele2` occurences at each row/marker for each column/genotype in the group.
+ * @returns 0 on success, nonzero on failure.
+ * */
+int calculate_group_doublecount_matrix_of_allele( SimData* d, unsigned int group, char allele, DecimalMatrix* counts, char allele2, DecimalMatrix* counts2) {
+	//DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, n_ids);
+	int groupSize = get_group_size(d, group);
+	if (counts->rows < groupSize || counts->cols < d->n_markers) {
+        fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
+                d->n_markers, groupSize, counts->rows, counts->cols);
+        return 1;
+	}
+    if (counts2->rows < groupSize || counts2->cols < d->n_markers) {
+        fprintf(stderr, "`counts2` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
+                d->n_markers, groupSize, counts2->rows, counts2->cols);
+        return 1;
+	}
+
+	char** genes = get_group_genes(d, group, groupSize);
+
+	for (int i = 0; i < groupSize; ++i) {
+		R_CheckUserInterrupt();
+		if (genes[i] == NULL) {
+			continue;
+		}
+
+		for (int j = 0; j < d->n_markers; ++j) {
+			int cell_sum = 0;
+			int cell_sum2 = 0;
+			if      (genes[i][2*j] == allele)      { ++cell_sum; }
+			else if (genes[i][2*j] == allele2)     { ++cell_sum2;}
+			if      (genes[i][2*j + 1] == allele)  { ++cell_sum; }
+			else if (genes[i][2*j + 1] == allele2) { ++cell_sum2;}
+			counts->matrix[i][j] = cell_sum;
+			counts2->matrix[i][j] = cell_sum2;
+		}
+	}
+	return 0;
 }
 
 /** Calculates the number of times at each marker that a particular allele appears
- * for each genotype in a particular AlleleMatrix.
- * Returns the result as a DecimalMatrix. Useful for multiplying to effect matrix
- * to calculate breeding values.
+ * for each genotype in a particular AlleleMatrix (does not go through the linked list).
+ * Returns the result in a pre-created DecimalMatrix. Useful for multiplying to
+ * effect matrix to calculate breeding values.
  *
  * @param m pointer to the AlleleMatrix that contains the genotypes to count alleles.
  * @param allele the single-character allele to be counting.
- * @returns A DecimalMatrix countaining the number of `allele` occurences at
- * each row/marker for each column/genotype in the AlleleMatrix.
+ * @param counts pointer to the DecimalMatrix into which to put the number
+ * of `allele` occurences at each row/marker for each column/genotype in the AlleleMatrix.
+ * @returns 0 on success, nonzero on failure.
  * */
-DecimalMatrix calculate_full_count_matrix_of_allele( AlleleMatrix* m, char allele) {
-	DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, m->n_genotypes);
-	double cell_sum;
-	char* genes;
+int calculate_count_matrix_of_allele( AlleleMatrix* m, char allele, DecimalMatrix* counts) {
+	//DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, m->n_genotypes);
+	if (counts->rows < m->n_genotypes || counts->cols < m->n_markers) {
+        warning( "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n", m->n_markers, m->n_genotypes, counts->rows, counts->cols);
+        return 1;
+	}
 
-	for (int i = 0; i < m->n_genotypes; i++) {
+	for (int i = 0; i < m->n_genotypes; ++i) {
 		R_CheckUserInterrupt();
-		genes = m->alleles[i];
-
-		cell_sum = 0;
-		if (genes == NULL) {
+		if (m->alleles[i] == NULL) {
 			continue;
 		}
 
-		for (int j = 0; j < m->n_markers; j++) {
-			cell_sum = 0;
-			if (genes[2*j] == allele) {
-				cell_sum += 1;
-			}
-			if (genes[2*j + 1] == allele) {
-				cell_sum += 1;
-			}
-			counts.matrix[j][i] = cell_sum;
+		for (int j = 0; j < m->n_markers; ++j) {
+			int cell_sum = 0;
+			if (m->alleles[i][2*j] == allele)     cell_sum += 1;
+			if (m->alleles[i][2*j + 1] == allele) cell_sum += 1;
+			counts->matrix[i][j] = cell_sum;
+		}
+	}
+	return 0;
+}
+
+/** Calculates the number of times at each marker that two particular alleles appear
+ * for each genotype in an AlleleMatrix (does not go through the linked list).
+ * Returns the result in two pre-created DecimalMatrix. Useful for multiplying to
+ * effect matrix to calculate breeding values.
+ *
+ * This function is the same as calculate_count_matrix_of_allele(), but for
+ * two alleles at a time, for the purpose of loop unrolling in breeding value
+ * calculations.
+ *
+ * @param m pointer to the AlleleMatrix that contains the genotypes to count alleles.
+ * @param allele the first single-character allele to be counting.
+ * @param counts pointer to the DecimalMatrix into which to put the number
+ * of `allele` occurences at each row/marker for each column/genotype in the group.
+ * @param allele2 the second single-character allele to be counting.
+ * @param counts2 pointer to the DecimalMatrix into which to put the number
+ * of `allele2` occurences at each row/marker for each column/genotype in the group.
+ * @returns 0 on success, nonzero on failure.
+ * */
+int calculate_doublecount_matrix_of_allele( AlleleMatrix* m, char allele, DecimalMatrix* counts, char allele2, DecimalMatrix* counts2) {
+	if (counts->rows < m->n_genotypes || counts->cols < m->n_markers) {
+        warning( "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n", m->n_markers, m->n_genotypes, counts->rows, counts->cols);
+        return 1;
+	}
+    if (counts2->rows < m->n_genotypes || counts2->cols < m->n_markers) {
+        warning( "`counts2` is the wrong size to be filled: needs %d by %d but is %d by %d\n", m->n_markers, m->n_genotypes, counts2->rows, counts2->cols);
+        return 1;
+	}
+
+	for (int i = 0; i < m->n_genotypes; ++i) {
+		R_CheckUserInterrupt();
+		if (m->alleles[i] == NULL) {
+			continue;
+		}
+
+		for (int j = 0; j < m->n_markers; ++j) {
+			int cell_sum = 0;
+			int cell_sum2 = 0;
+			if      (m->alleles[i][2*j] == allele)      { ++cell_sum; }
+			else if (m->alleles[i][2*j] == allele2)     { ++cell_sum2;}
+			if      (m->alleles[i][2*j + 1] == allele)  { ++cell_sum; }
+			else if (m->alleles[i][2*j + 1] == allele2) { ++cell_sum2;}
+			counts->matrix[i][j] = cell_sum;
+			counts2->matrix[i][j] = cell_sum2;
+		}
+	}
+	return 0;
+}
+
+/** Calculates the number of times at each marker that a particular allele appears
+ * for each genotype in the linked list starting at the given AlleleMatrix.
+ * Returns the result as a DecimalMatrix. Useful for multiplying to
+ * effect matrix to calculate breeding values.
+ *
+ * @param m pointer to the AlleleMatrix that contains the genotypes to count alleles.
+ * @param allele the single-character allele to be counting.
+ * @returns DecimalMatrix containing counts for every genotype in the AlleleMatrix
+ * linked list.
+ * */
+DecimalMatrix calculate_full_count_matrix_of_allele( AlleleMatrix* m, char allele) {
+	AlleleMatrix* currentm = m;
+	int size = 0;
+	do {
+		size += currentm->n_genotypes;
+	} while ((currentm = currentm->next) != NULL);
+
+	DecimalMatrix counts = generate_zero_dmatrix(size, m->n_markers);
+
+	currentm = m;
+	int currenti = 0;
+	for (int i = 0; i < size; ++i, ++currenti) {
+		R_CheckUserInterrupt();
+		if (currenti >= currentm->n_genotypes) {
+			currenti = 0;
+			currentm = currentm->next;
+		}
+
+		if (currentm->alleles[i] == NULL) {
+			continue;
+		}
+
+		for (int j = 0; j < m->n_markers; ++j) {
+			int cell_sum = 0;
+			if (currentm->alleles[i][2*j] == allele)     cell_sum += 1;
+			if (currentm->alleles[i][2*j + 1] == allele) cell_sum += 1;
+			counts.matrix[i][j] = cell_sum;
 		}
 	}
 	return counts;
@@ -6039,6 +6166,7 @@ void save_group_bvs(FILE* f, SimData* d, int group) {
 		fprintf(f, "%f", effects.matrix[0][i]);
 		fwrite(newline, sizeof(char), 1, f);
 	}
+
 	delete_dmatrix(&effects);
 	free(group_names);
 	free(group_contents);
@@ -6148,7 +6276,7 @@ void save_count_matrix(FILE* f, SimData* d, char allele) {
 
 	AlleleMatrix* currentm = d->m;
 	// print the header
-	for (int i = 0, currenti = 0; i < counts.cols; ++i, ++currenti) {
+	for (int i = 0, currenti = 0; i < counts.rows; ++i, ++currenti) {
 		if (currenti >= currentm->n_genotypes) {
 			currenti = 0;
 			currentm = currentm->next;
@@ -6168,12 +6296,12 @@ void save_count_matrix(FILE* f, SimData* d, char allele) {
 		}
 		fwrite("\t", sizeof(char), 1, f);
 
-		for (int j = 0; j < counts.cols; ++j) { // loop through genotypes
+		for (int j = 0; j < counts.rows; ++j) { // loop through genotypes
 			// print the matrix entries
-			fprintf(f, "%f ", counts.matrix[i][j]);
+			fprintf(f, "%d ", (int) counts.matrix[j][i]);
 		}
 		//print the newline
-		if (i + 1 < counts.cols) {
+		if (i + 1 < counts.rows) {
 			fwrite("\n", sizeof(char), 1, f);
 		}
 	}
@@ -6203,13 +6331,13 @@ void save_count_matrix(FILE* f, SimData* d, char allele) {
  */
 void save_count_matrix_of_group(FILE* f, SimData* d, char allele, int group) {
 	unsigned int group_size = get_group_size( d, group);
-	unsigned int* group_ids = get_group_ids( d, group, group_size);
 	char** group_names = get_group_names( d, group, group_size);
-	DecimalMatrix counts = calculate_count_matrix_of_allele_for_ids(d->m, group_ids, group_size, allele);
+	DecimalMatrix counts = generate_zero_dmatrix(group_size,d->n_markers);
+	calculate_group_count_matrix_of_allele(d,group,allele,&counts);
 
 	fprintf(f, "%d", group);
 	// print the header
-	for (int i = 0; i < counts.cols; ++i) {
+	for (int i = 0; i < group_size; ++i) {
 		fwrite("\t", sizeof(char), 1, f);
 		if (group_names[i] != NULL) {
 			fwrite(group_names[i], sizeof(char), strlen(group_names[i]), f);
@@ -6225,18 +6353,17 @@ void save_count_matrix_of_group(FILE* f, SimData* d, char allele, int group) {
 		}
 		fwrite("\t", sizeof(char), 1, f);
 
-		for (int j = 0; j < counts.cols; ++j) { // loop through genotypes
+		for (int j = 0; j < group_size; ++j) { // loop through genotypes
 			// print the matrix entries
-			fprintf(f, "%f ", counts.matrix[i][j]);
+			fprintf(f, "%d ", (int) counts.matrix[j][i]);
 		}
 		//print the newline
-		if (i + 1 < counts.cols) {
+		if (i + 1 < group_size) {
 			fwrite("\n", sizeof(char), 1, f);
 		}
 	}
 
 	delete_dmatrix(&counts);
-	free(group_ids);
 	free(group_names);
 	fflush(f);
 }

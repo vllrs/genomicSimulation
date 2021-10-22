@@ -11,7 +11,7 @@ This package is not yet submitted to CRAN. [See the latest release here](https:/
 The docs folder contains the documentation files. These can also be viewed in R using the command `?[function name]`. 
 
 ### Additional help files
-[A guide to installing package (specifically for the UQ HPC system) is available here.](vignettes/gSinstallguide.md)
+[A guide to installing package (specifically for the UQ HPC system) is available here.](doc/gSinstallguide.md)
 
 ### C version
 [The C functions that form the base of this package are also provided on GitHub under the name genomicSimulationC.](https://github.com/vllrs/genomicSimulationC) This version allows you to run the simulation using C function calls.

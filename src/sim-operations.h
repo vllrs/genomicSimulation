@@ -18,51 +18,51 @@
  * To be added
  *
  */
- 
+
  /** \page Methods Simulation Methodology
  *
- * For the moment, please refer to the R package vignette for 
- * descriptions of simulation methodologies and assumptions. 
+ * For the moment, please refer to the R package vignette for
+ * descriptions of simulation methodologies and assumptions.
  *
  * [genomicSimulation (R package)](https://kiravill.github.io/genomicSimulation/)
  *
  */
- 
+
  /* This section contains settings for the simulation that users can modify if they have the need.
  * To apply the modified settings the simulation tool must be re-compiled.
  * To modify a setting, replace the number (eg 1000) with the new value without modifying the name
  */
- 
+
 /** The largest contiguous block of memory that could be requested in the
- * process of simulation is CONTIG_WIDTH integers. This setting's default value 
+ * process of simulation is CONTIG_WIDTH integers. This setting's default value
  * is 1000.
  *
- * This could be decreased to help long simulations or lower-end machines. 
- * Increasing this may provide some speed gain. 
+ * This could be decreased to help long simulations or lower-end machines.
+ * Increasing this may provide some speed gain.
  */
 #define CONTIG_WIDTH 1000
- 
+
  /** The maximum number of characters allowed in a name field.
- * These include names of SNPs, names of genotypes loaded from files, 
+ * These include names of SNPs, names of genotypes loaded from files,
  * names of generated genotypes, and save-as-you-go filenames. Default is 30.
  *
- * Increase this if there is a risk some names may be longer than 
+ * Increase this if there is a risk some names may be longer than
  * this value.
  */
 #define NAME_LENGTH 30
- 
+
 
 /** @defgroup structs Data Structures
  *
  * How the simulation stores data.
  *
  * genomicSimulation is a state-based package. These data structures
- * are used to store the library's data/state. Many use dynamically 
+ * are used to store the library's data/state. Many use dynamically
  * allocated memory so call the relevant delete_ function if one exists
  * when you are finished with them.
  *
  * SimData is the central state/data
- * storage struct, and so is a required parameter to most user-facing functions. 
+ * storage struct, and so is a required parameter to most user-facing functions.
  * It contains pointers to a GeneticMap (storing the loaded genome map), an
  * EffectMatrix (storing the loaded allele effects), and an AlleleMatrix
  * (storing metadata and genotypes of founders and simulated offspring).
@@ -93,17 +93,17 @@ struct TableSize {
  */
 typedef struct {
     /** The number of blocks whose details are stored here. */
-	int num_blocks; 
-    
+	int num_blocks;
+
     /** Pointer to a heap array of length num_blocks
       * containing the number of markers that make up each block */
-	int* num_markers_in_block; 
-    
+	int* num_markers_in_block;
+
     /** Pointer to a heap array of length num_blocks, each
      * entry in which is a pointer to a heap array with length corresponding to
      * the value of the corresponding entry in num_markers_in_block whose values
      * are the indexes in the SimData of the markers that make up that block. */
-	int** markers_in_block; 
+	int** markers_in_block;
 } MarkerBlocks;
 
 
@@ -134,35 +134,35 @@ typedef struct {
 */
 typedef struct {
 	int will_name_offspring; /**< A boolean: whether generated offspring should be given names. */
-	char* offspring_name_prefix; /**< If `will_name_offspring` is true, generated 
+	char* offspring_name_prefix; /**< If `will_name_offspring` is true, generated
                            * offspring are named [offspring_name_prefix][index]. */
 
 	int family_size; /**< The number of offspring to produce from each cross.*/
 
 	int will_track_pedigree; /**< A boolean: whether to track parentage of generated offspring.*/
 	int will_allocate_ids; /**< A boolean: whether to allocate generated offspring session-
-                            * unique IDs. IDs are used for pedigree tracking. The 
+                            * unique IDs. IDs are used for pedigree tracking. The
                             * offspring of an anonymous individual (one without an ID)
                             * cannot identify that individual as their parent. */
 
 	char* filename_prefix; /**< A string used in save-as-you-go file names. */
-	int will_save_pedigree_to_file; /**< A boolean. If true, the full/recursive 
+	int will_save_pedigree_to_file; /**< A boolean. If true, the full/recursive
                             * pedigrees of every offspring generated in the cross
-                            * are saved to "[filename_prefix}-pedigree.txt", even 
-                            * if `will_save_to_simdata` is false. 
+                            * are saved to "[filename_prefix}-pedigree.txt", even
+                            * if `will_save_to_simdata` is false.
                             * Pedigrees are saved in the format of save_full_pedigree()*/
 	int will_save_bvs_to_file; /**< A boolean. If true, the breeding values
                             * of every offspring generated in the cross
-                            * are saved to "[filename_prefix}-bv.txt", even 
-                            * if `will_save_to_simdata` is false. 
+                            * are saved to "[filename_prefix}-bv.txt", even
+                            * if `will_save_to_simdata` is false.
                             * BVs are saved in the format of save_bvs() */
 	int will_save_alleles_to_file; /**< A boolean. If true, the set of alleles
                             * of every offspring generated in the cross
-                            * are saved to "[filename_prefix}-genotype.txt", even 
-                            * if `will_save_to_simdata` is false. 
+                            * are saved to "[filename_prefix}-genotype.txt", even
+                            * if `will_save_to_simdata` is false.
                             * Genotypes are saved in the format of save_group_alleles()*/
-	int will_save_to_simdata; /**< A boolean. If true, the generated offspring exist 
-                            * in the SimData struct after the function executes. 
+	int will_save_to_simdata; /**< A boolean. If true, the generated offspring exist
+                            * in the SimData struct after the function executes.
                             * If false, they are discarded after creation. */
 } GenOptions;
 
@@ -173,20 +173,20 @@ typedef struct {
  * Chr n includes all markers in `positions` starting at index chr_ends[n-1] up
  * but not including the marker at index chr_ends[n]
  *
- * Chromosomes must be numbered. All chromosomes from 1 up to and including the 
+ * Chromosomes must be numbered. All chromosomes from 1 up to and including the
  * highest chromosome number found in the loaded map are represented in these
  * arrays.
  *
 */
 typedef struct {
-	int n_chr; /**< The number of chromosomes represented in the map. This 
+	int n_chr; /**< The number of chromosomes represented in the map. This
                 * corresponds to the highest numbered chromosome with a tracked
                 * marker (some chromosomes in between may be empty) */
 	int* chr_ends; /**< An array of ints. The entry at index i is the index in
-                * `positions` of the first marker that belongs to Chr(i + 1). 
+                * `positions` of the first marker that belongs to Chr(i + 1).
                 * The array is n_chr + 1 integers long.*/
 	float* chr_lengths; /**< An array of floats. The entry at index i is the length
-                * of Chr(i + 1), calculated by 
+                * of Chr(i + 1), calculated by
                 * `position of last marker - position of first marker`.
                 * The array is n_chr entries long. */
 
@@ -199,35 +199,35 @@ typedef struct {
 typedef struct AlleleMatrix AlleleMatrix;
 struct AlleleMatrix {
     /** A matrix of SNP markers by lines/genotypes containing pairs of alleles
-     * eg TT, TA. Use `alleles[line index][marker index * 2]` to get the 
-     * first allele and `alleles[lines index][marker index * 2 + 1]` to 
-     * get the second. If CONTIG_WIDTH lines are saved here, another 
+     * eg TT, TA. Use `alleles[line index][marker index * 2]` to get the
+     * first allele and `alleles[lines index][marker index * 2 + 1]` to
+     * get the second. If CONTIG_WIDTH lines are saved here, another
      * AlleleMatrix is added to the linked list when there's a need to save more.*/
 	char* alleles[CONTIG_WIDTH];
-    
+
 	int n_genotypes; /**< Number of genotypes currently loaded in this matrix.*/
 	int n_markers; /**< Number of markers across which genotypes are tracked. This has
                     * redundancy with SimData and other members of its linked list
                     * but it's good to know how big your own `alleles` array is.*/
 
-    char* names[CONTIG_WIDTH]; /**< Array of dynamically allocated strings 
-                    * containing the names of the lines/genotypes in this matrix. 
+    char* names[CONTIG_WIDTH]; /**< Array of dynamically allocated strings
+                    * containing the names of the lines/genotypes in this matrix.
                     * Guaranteed to be NULL if they do not have names. */
 	unsigned int ids[CONTIG_WIDTH]; /**< Unique ID for each genotype. */
-	unsigned int pedigrees[2][CONTIG_WIDTH]; /**< Two lists of integer IDs of the 
+	unsigned int pedigrees[2][CONTIG_WIDTH]; /**< Two lists of integer IDs of the
                     * parents of this genotype (if tracked), or 0 if we don't know/care.*/
 	unsigned int groups[CONTIG_WIDTH]; /**< Group allocation of each genotype. */
-    
-	AlleleMatrix* next; /**< Pointer to the next AlleleMatrix in the linked list, 
+
+	AlleleMatrix* next; /**< Pointer to the next AlleleMatrix in the linked list,
                          * or NULL if this entry is the last. */
 };
 
 /** A type that stores a matrix of effect values and their names.
  */
 typedef struct {
-	DecimalMatrix effects; /**< Effect on breeding value of alleles at markers. 
+	DecimalMatrix effects; /**< Effect on breeding value of alleles at markers.
         * Rows correspond to `effect_names`/alleles, columns to markers. */
-	char* effect_names; /**< Character array containing allele characters ordered 
+	char* effect_names; /**< Character array containing allele characters ordered
         * to match rows of `effects`. */
 } EffectMatrix;
 
@@ -243,7 +243,7 @@ typedef struct {
 	GeneticMap map; /**< A GeneticMap. If this is set, then `markers`
                      * will be ordered and all markers have a known position.*/
 	AlleleMatrix* m; /**< Pointer to an AlleleMatrix, which stores data and
-                      * metadata of founders and simulated offspring. The 
+                      * metadata of founders and simulated offspring. The
                       * AlleleMatrix is start of a linked list if there are
                       * many genotypes. */
 	EffectMatrix e; /**< An EffectMatrix, optional for the use of the simulation.
@@ -251,7 +251,7 @@ typedef struct {
                      * a genotype has at each marker.*/
 
 	unsigned int current_id; /**< Highest SimData-unique ID that has been generated
-                              * so far. Used to track which IDs have already been 
+                              * so far. Used to track which IDs have already been
                               * given out.*/
 } SimData;
 
@@ -261,18 +261,16 @@ const GenOptions BASIC_OPT;
 
 /** @defgroup maths Mathematical functions
  *
- * For mathematical and statistical operations as required by the package. 
+ * For mathematical and statistical operations as required by the package.
  *
- * Includes matrix operations defined on a DecimalMatrix struct, and 
+ * Includes matrix operations defined on a DecimalMatrix struct, and
  * draws from certain random distributions.
  *
  * @{
  */
 DecimalMatrix generate_zero_dmatrix(int r, int c);
-DecimalMatrix subset_dmatrix_row(DecimalMatrix* m, int row_index);
-DecimalMatrix add_dmatrices(DecimalMatrix* a, DecimalMatrix* b);
-void add_to_dmatrix(DecimalMatrix* a, DecimalMatrix* b);
-DecimalMatrix multiply_dmatrices(DecimalMatrix* a, DecimalMatrix* b);
+int add_matrixvector_product_to_dmatrix(DecimalMatrix* result, DecimalMatrix* a, double* b);
+int add_doublematrixvector_product_to_dmatrix(DecimalMatrix* result, DecimalMatrix* amat, double* avec, DecimalMatrix* bmat, double* bvec);
 /** @} */
 
 /** @defgroup supporters Utils/Supporting Functions
@@ -368,7 +366,7 @@ void delete_dmatrix(DecimalMatrix* m);
  */
 AlleleMatrix* create_empty_allelematrix(int n_markers, int n_genotypes);
 SimData* create_empty_simdata();
- 
+
 int load_transposed_genes_to_simdata(SimData* d, const char* filename);
 int load_more_transposed_genes_to_simdata(SimData* d, const char* filename);
 int load_genes_to_simdata(SimData* d, const char* filename); //@ add
@@ -379,9 +377,9 @@ void load_effects_to_simdata(SimData* d, const char* filename);
 int load_all_simdata(SimData* d, const char* data_file, const char* map_file, const char* effect_file);
 /** @} */
 
-/** @defgroup recomb Recombination Calculators 
+/** @defgroup recomb Recombination Calculators
  *
- * Experimental functions for retroactively calculating number of recombinations. 
+ * Experimental functions for retroactively calculating number of recombinations.
  *
  * This functionality is for interest only. It is not clear, or tidy,
  * or checked against real data.
@@ -441,12 +439,12 @@ int calculate_recombinations_from_file(SimData* d, const char* input_file, const
 /** @defgroup crossers Crossing and Progression Simulation Functions
  *
  * For simulation of progression steps in breeding programs.
- * 
+ *
  * @{
  */
- 
+
     /** @defgroup meiosis Meiosis Simulation Functions
-     * 
+     *
      * For simulation of meiosis.
      *
      * @{
@@ -467,16 +465,19 @@ int make_crosses_from_file(SimData* d, const char* input_file, GenOptions g);
 int make_double_crosses_from_file(SimData* d, const char* input_file, GenOptions g);
 /**@}*/
 
-/** @defgroup calculators Breeding Value and Allele Count Calculators 
+/** @defgroup calculators Breeding Value and Allele Count Calculators
  *
  * For calculations related to the loaded allele effects and internal additive breeding value model.
  *
  * @{
  */
 int split_by_bv(SimData* d, int group, int top_n, int lowIsBest);
-DecimalMatrix calculate_group_bvs(SimData* d, int group);
+DecimalMatrix calculate_group_bvs(SimData* d, unsigned int group);
 DecimalMatrix calculate_bvs( AlleleMatrix* m, EffectMatrix* e);
-DecimalMatrix calculate_count_matrix_of_allele_for_ids( AlleleMatrix* m, unsigned int* for_ids, unsigned int n_ids, char allele);
+int calculate_group_count_matrix_of_allele( SimData* d, unsigned int group, char allele, DecimalMatrix* counts);
+int calculate_group_doublecount_matrix_of_allele( SimData* d, unsigned int group, char allele, DecimalMatrix* counts, char allele2, DecimalMatrix* counts2);
+int calculate_count_matrix_of_allele( AlleleMatrix* m, char allele, DecimalMatrix* counts);
+int calculate_doublecount_matrix_of_allele( AlleleMatrix* m , char allele, DecimalMatrix* counts, char allele2, DecimalMatrix* counts2);
 DecimalMatrix calculate_full_count_matrix_of_allele( AlleleMatrix* m, char allele);
 
 MarkerBlocks create_n_blocks_by_chr(SimData* d, int n);
@@ -490,9 +491,9 @@ double calculate_minimum_bv(SimData* d);
 /**@}*/
 
 /** @defgroup savers Saving Functions
- * 
+ *
  * For saving persistent simulation results.
- * 
+ *
  * @{
  */
 void save_simdata(FILE* f, SimData* m);
