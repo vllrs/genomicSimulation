@@ -18,6 +18,17 @@ the indexes of the group members, named "i".
 index for each genotype in a group. This can be used in conjunction with \code{\link{make.group}}
 to perform a custom selection on a group.
 }
+\section{Deprecation}{
+
+In the history of this package, there was no way to get GEBVs using \code{\link{see.group.data}},
+because that function only dealt with data that required no calculation step. However, it 
+now includes that capability, and this function has become nothing but a wrapper. Deprecating it
+and exposing the underlying call:
+\code{data.frame("i"=see.group.data(...,data.type="X"),"GEBV"=see.group.data(...,data.type="BV")))}
+demystifies this function and allows users to see how they can use \code{\link{see.group.data}} for 
+flexible data access.
+}
+
 \section{Usual workflow}{
 
 The suggested workflow involves using this function to get GEBVs and matching indexes,
@@ -40,6 +51,7 @@ Other grouping functions:
 
 Other data access functions: 
 \code{\link{see.group.data}()},
+\code{\link{see.minimum.GEBV}()},
 \code{\link{see.optimal.GEBV}()},
 \code{\link{see.optimal.haplotype}()}
 }

@@ -75,15 +75,19 @@ you to still get results.}
 The group number of the group that the generated offspring were loaded into.
 }
 \description{
-\code{cross} allows you to perform crosses between specific lines. It 
-can be called in a for loop, looping over the rows of a dataframe, to 
-achieve similar functionality to \code{\link{cross.combinations}} without
-needing to save the combinations to be performed to a file.
+\code{cross} allows you to perform crosses between specific lines.
 }
 \details{
 The offspring parameter represents the number of offspring to make from
 this pair of parents.
 }
+\section{Deprecated}{
+
+This function is deprecated because it causes too many namespace collisions 
+with other packages. Its full functionality is exactly covered by a 
+call to \code{\link{cross.combinations}} with the same parameters.
+}
+
 \seealso{
 Other crossing functions: 
 \code{\link{cross.all.pairs}()},

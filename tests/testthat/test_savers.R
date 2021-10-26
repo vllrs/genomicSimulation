@@ -177,7 +177,7 @@ test_that("save.pedigrees in recursive format with group works", {
   capture_output(delete.group(g), print=F)
   capture_output(f <- cross.all.pairs(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
   capture_output(fd <- cross.all.pairs(f, give.names = T, give.ids = T, name.prefix = "D"), print=F)
-  capture_output(fe <- cross(1L, 1L, give.names = T, give.ids = T, name.prefix = "E"), print=F)
+  capture_output(fe <- cross.combinations(1L, 1L, give.names = T, give.ids = T, name.prefix = "E"), print=F)
   capture_output(f <- combine.groups(c(f,fd,fe)), print=F)
   
   save.pedigrees("imaginary6", group=f, type="R")
@@ -201,7 +201,7 @@ test_that("save.pedigrees in recursive format without group works", {
   capture_output(delete.group(g), print=F)
   capture_output(f <- cross.all.pairs(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
   capture_output(fd <- cross.all.pairs(f, give.names = T, give.ids = T, name.prefix = "D"), print=F)
-  capture_output(fe <- cross(1L, 1L, give.names = T, give.ids = T, name.prefix = "E"), print=F)
+  capture_output(fe <- cross.combinations(1L, 1L, give.names = T, give.ids = T, name.prefix = "E"), print=F)
   
   save.pedigrees("imaginary6", type="R")
   f_out <- readLines("imaginary6")
