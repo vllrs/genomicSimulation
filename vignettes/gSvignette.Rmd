@@ -144,13 +144,13 @@ see.existing.groups()
 print(c(g0, f2, f6))
 
 # Show the save-as-you-go output file
-read.csv("af6-genome", sep='\t')
+read.csv("af6-genotype.txt", sep='\t')
 
 
 # (cleanup)
 file.remove("a.txt")
 file.remove("b.txt")
-file.remove("af6-genome")
+file.remove("af6-genotype.txt")
 ```
 
 ## Writing Custom Selection Methods in R
@@ -188,7 +188,7 @@ g0 <- load.data("../tests/testthat/helper_genotypes.txt",
 # Simulate crosses
 f1 <- cross.randomly(g0, n.crosses=15, offspring=3)
 # Apply custom selection method
-f1.info <- see.group.gebvs(f1)
+f1.info <- data.frame("i"=see.group.data(f1,data.type="X"),"GEBV"=see.group.data(f1,data.type="BV"))
 f1.selected <- make.group(get.top.10.phenotypes(f1.info, 0.3))
 # (delete the non-selected genotypes)
 delete.group(f1)
@@ -223,11 +223,12 @@ Note that this means that allele order in parents matters, and the simulate geno
 
 The R package uses the R random generators, so will follow the R seed.
 
-This procedure is displayed visually in the images below.
+This procedure is displayed visually in the image below.
 
-![Random draws for each chromosome](meiosisdists.png){width=100%}
+<!--![Random draws for each chromosome](meiosisdists.png){width=100%}
+![Using those random values to generate a gamete](meiosis.png){width=100%}-->
 
-![Using those random values to generate a gamete](meiosis.png){width=100%}
+![Meiosis simulation process.](meiosis.png){width=100%}
 
 
 ## Methodology: Counting Recombinations
@@ -274,9 +275,9 @@ Performing selection:
 
 - `selected.group <- select.by.gebv(from.group, low.score.best = FALSE, percentage OR number)`
 - For more customised selection, use the process
-  - `info <- see.group.gebvs(group)`
-  - `selected.info <- `[some R manipulation on `info` that performs the custom selection]
-  - `selected.group <- make.group(selected.info$I)`
+  - `info <- data.frame("i" = see.group.data(from.group,"X"), "Data"=see.group.data(from.group,...))`
+  - `selected.info <- `[some R manipulation on `info` that discards rows not selected under the custom selection]
+  - `selected.group <- make.group(selected.info$i)`
 
 Modify groupings:
 
@@ -303,6 +304,7 @@ View data (pulls data into R dataframes):
 - `[index and GEBV for each group member] <- see.group.gebvs(group)`
 - `[string containing best allele per SNP] <- see.optimal.haplotype()`
 - `[float: the maximum possible GEBV] <- see.optimal.GEBV()`
+- `[float: the minimum possible GEBV] <- see.minimum.GEBV()`
 
 Identify recombination events:
 
@@ -491,7 +493,18 @@ This function returns a dataframe with two columns:
 - `GroupSize`, containing the number of genotypes currently allocated to that group number.
 
 ### `see.group.data`
-This function returns a vector containing the values of the chosen data type for each group member.
+This function returns a vector containing the values of the chosen data type for each group member. The parameter `data.type` is case-insensitive and matched to the beginning of the string, so `data.type="N"` and `data.type="names"` both will return data of type 'N'.
+
+Available data types: Description (`data.type` parameter value)
+
+- Names (N)
+- IDs (D)
+- Indexes (X)
+- Genotypes (G)
+- GEBVs/breeding values (B)
+- Name of the first parent, or the first parent's ID if it has no name (P1)
+- Name of the second parent, or the second parent's ID if it has no name (P2)
+- Full/recursive known pedigree, as a string (PED)
 
 ### `see.group.gebvs`
 This function returns a dataframe with two columns:

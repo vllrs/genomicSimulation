@@ -689,6 +689,10 @@ SEXP SXP_get_group_data(SEXP exd, SEXP group, SEXP whatData) {
 		return out;
 		
 	} else if (c == 'B') {
+		if (d->e.effects.matrix == NULL) {
+			error("Need to load effect values before running this function\n");
+		}
+		
 		double* data = get_group_bvs(d, group_id, group_size);
 		
 		SEXP out = PROTECT(allocVector(REALSXP, group_size));

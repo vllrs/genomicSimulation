@@ -10,21 +10,29 @@ see.group.data(group, data.type)
 \item{group}{an integer: the group number of the group to have a look at}
 
 \item{data.type}{a string that will be used to identify the type of data
-to be extracted. If the first character is 'N' or 'n',
-the 'N'ames of group members will be extracted. If the first character is 
-'D' or 'd', the I'D's of group members will be extracted. If the first character is
-'I' or 'i', the 'I'ndexes of group members will be extracted. If the first character
-is 'G' or 'g', the 'G'enotypes of the group members will be extracted.}
+to be extracted. String parsing is case-insensitive.
+If the first character is 'N', the 'N'ames of group members will be extracted. 
+If the first character is 'D', the I'D's of group members will be extracted. 
+If the first character is 'X', the Inde'X'es of group members will be extracted. 
+If the first character is 'G', the 'G'enotypes of the group members will be extracted. 
+If the first character is 'B', the 'b'reeding values/GEBVs of group members will be returned.
+If it starts with "P1", the first parent of each group member is returned. As usual in 
+genomicSimulation, if the parent has a name, its name will be what is returned, otherwise,
+it will be its ID.
+If it starts with "P2", the second parent of each group member is returned. As usual in 
+genomicSimulation, if the parent has a name, its name will be what is returned, otherwise,
+it will be its ID.
+If it starts with "ped", the full pedigree log of each group member is returned.}
 }
 \value{
 A vector containing the desired data output for each member of the group.
 }
 \description{
-\code{see.group.data} allows you to extract the names or ids or indexes
-or genotypes of group members as an R vector. Printing to a file then 
-loading the data from the tab-separated text file is still the suggested
-method for accessing data, but this may be used to peek at the data or 
-make group adjustments during simulation time.
+\code{see.group.data} allows you to extract the names, IDs, indexes, 
+genotypes (as strings), breeding values, or parentage of group members as an R vector.
+As long as the group is not modified in between calls, the same ordering of group
+members will be used, so this function can be used to construct tables of data, eg.
+\code{data.frame("i"=see.group.data(3,"X"),"GEBV"=see.group.data(3,"BV"))}.
 }
 \section{Warning about indexes}{
 

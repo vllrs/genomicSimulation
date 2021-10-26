@@ -45,13 +45,13 @@ see.existing.groups()
 print(c(g0, f2, f6))
 
 # Show the save-as-you-go output file
-read.csv("af6-genome", sep='\t')
+read.csv("af6-genotype.txt", sep='\t')
 
 
 # (cleanup)
 file.remove("a.txt")
 file.remove("b.txt")
-file.remove("af6-genome")
+file.remove("af6-genotype.txt")
 
 ## -----------------------------------------------------------------------------
 get.top.10.phenotypes <- function(group.info, H2) {
@@ -75,7 +75,7 @@ g0 <- load.data("../tests/testthat/helper_genotypes.txt",
 # Simulate crosses
 f1 <- cross.randomly(g0, n.crosses=15, offspring=3)
 # Apply custom selection method
-f1.info <- see.group.gebvs(f1)
+f1.info <- data.frame("i"=see.group.data(f1,data.type="X"),"GEBV"=see.group.data(f1,data.type="BV"))
 f1.selected <- make.group(get.top.10.phenotypes(f1.info, 0.3))
 # (delete the non-selected genotypes)
 delete.group(f1)

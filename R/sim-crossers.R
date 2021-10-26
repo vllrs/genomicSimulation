@@ -270,8 +270,32 @@ make.doubled.haploids <- function(group, offspring=1, retain=TRUE, give.names=FA
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
-# Message added 0.1-4002
-cross <- function() {
+#' Perform a cross between two specific lines.
+#'
+#' \code{cross} allows you to perform crosses between specific lines.
+#'
+#' The offspring parameter represents the number of offspring to make from
+#' this pair of parents.
+#' 
+#' @section Deprecated:
+#' This function is deprecated because it causes too many namespace collisions 
+#' with other packages. Its full functionality is exactly covered by a 
+#' call to \code{\link{cross.combinations}} with the same parameters.
+#' 
+#' @inheritParams cross.randomly
+#' @param parent1.index index of the first parent to cross
+#' @param parent2.index index of the second parent to cross
+#' @param offspring The number of offspring to produce from this pair of parents
+#' @return The group number of the group that the generated offspring were loaded into.
+#'
+#' @family crossing functions
+#' @export
+cross <- function(parent1.index, parent2.index, offspring=1, retain=TRUE, give.names=FALSE, 
+                   name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+                   save.gebv=FALSE, save.genotype=FALSE) {
   .Deprecated("cross.combinations")
-  return(0L)
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_cross_Rcombinations, sim.data$p, c(parent1.index), c(parent2.index),
+               give.names, name.prefix, offspring, track.pedigree, give.ids, 
+               file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }

@@ -547,8 +547,7 @@ void condense_allele_matrix( SimData* d) {
 						while (previous->next != filler_m) {
 							previous = previous->next;
 							if (previous == NULL) {
-								warning( "Error: filler got somewhere checker can't go.\n");
-								exit(1);
+								error( "Error: filler got somewhere checker can't go.\n");
 							}
 						}
 						// delete this one and cut it out of the list
@@ -570,7 +569,7 @@ void condense_allele_matrix( SimData* d) {
 
 		// We're done with the AM, move on to the next one.
 		if (checker_m->next == NULL) {
-			warning( "During allele matrix condensing, checker got ahead of filler somehow\n");exit(1);
+			error( "During allele matrix condensing, checker got ahead of filler somehow\n");
 		} else {
 			checker_m = checker_m->next;
 		}
@@ -3355,7 +3354,7 @@ void generate_gamete(SimData* d, char* parent_genome, char* output) {
 		// TASK 3: choose points where those crossovers occur
 		// by randomly generating a point along the length of the chromosome
 		for (int i = 0; i < num_crossovers; ++i) {
-			p_crossover_where[i] = ((double)rand() / (double)RAND_MAX)
+			p_crossover_where[i] = unif_rand()
 				* d->map.chr_lengths[chr - 1]
 				+ d->map.positions[d->map.chr_ends[chr - 1]].position;
 		}
@@ -3439,12 +3438,12 @@ void generate_cross(SimData* d, char* parent1_genome, char* parent2_genome, char
 		// TASK 3: choose points where those crossovers occur
 		// by randomly generating a point along the length of the chromosome
 		for (int i = 0; i < num_crossovers[0]; ++i) {
-			p_crossover_where[0][i] = ((double)rand() / (double)RAND_MAX)
+			p_crossover_where[0][i] = unif_rand()
 				* d->map.chr_lengths[chr - 1]
 				+ d->map.positions[d->map.chr_ends[chr - 1]].position;
 		}
 		for (int i = 0; i < num_crossovers[1]; ++i) {
-			p_crossover_where[1][i] = ((double)rand() / (double)RAND_MAX)
+			p_crossover_where[1][i] = unif_rand()
 				* d->map.chr_lengths[chr - 1]
 				+ d->map.positions[d->map.chr_ends[chr - 1]].position;
 		}
@@ -3535,7 +3534,7 @@ void generate_doubled_haploid(SimData* d, char* parent_genome, char* output) {
 		// TASK 3: choose points where those crossovers occur
 		// by randomly generating a point along the length of the chromosome
 		for (int i = 0; i < num_crossovers; ++i) {
-			p_crossover_where[i] = ((double)rand() / (double)RAND_MAX)
+			p_crossover_where[i] = unif_rand()
 				* d->map.chr_lengths[chr - 1]
 				+ d->map.positions[d->map.chr_ends[chr - 1]].position;
 		}
