@@ -281,6 +281,32 @@ int get_from_unordered_str_list(char* target, char** list, int list_len) {
 	return -1; // did not find a match.
 }
 
+/**Produce a random ordering of the first n elements in an array of integers
+ * using a (partial) Fisher-Yates shuffle.
+ *
+ * Modified from https://benpfaff.org/writings/clc/shuffle.html
+ *
+ * @param sequence the array
+ * @param total_n length of the array
+ * @param n_to_shuffle After calling this function, the first n_to_shuffle
+ * integers in the array will be randomly ordered by a Fischer-Yates shuffle
+ */
+void shuffle_up_to(int* sequence, size_t total_n, size_t n_to_shuffle) {
+	if (n_to_shuffle > 1) {
+        size_t maxi = total_n > n_to_shuffle ? n_to_shuffle - 1 : total_n - 1;
+		size_t i;
+        for (i = 0; i < maxi; ++i) {
+			// items before i are already shuffled
+			size_t j = i + rand() / (RAND_MAX / (total_n - i) + 1);
+
+			// add the next chosen value to the end of the shuffle
+			int t = sequence[j];
+			sequence[j] = sequence[i];
+			sequence[i] = t;
+		}
+	}
+}
+
 /** Fills the designated section of the `.names` array in an
  * AlleleMatrix with the pattern `prefix`index. This function is not intended
  * to be called by an end user.
@@ -1036,17 +1062,56 @@ int combine_groups( SimData* d, int list_len, int group_ids[list_len]) {
 	}
 }
 
+/** Take a list of indexes and allocate the genotypes at those indexes
+ * to a new group.
+ *
+ * Does not check if all the indexes are valid/if all indexes have successfully
+ * had their groups changed.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param n the number of indexes provided
+ * @param indexes_to_split an array containing the indexes (0-based, starting
+ * at the first entry at `d->m`) of the genotypes to allocate to the new group.
+ * @returns the group number of the new group to which the provided indexes
+ * have been allocated.
+ */
+int split_from_group( SimData* d, int n, int indexes_to_split[n]) {
+	int new_group = get_new_group_num(d);
+
+	// Order the indexes
+	qsort(indexes_to_split, n, sizeof(int), _ascending_int_comparer);
+
+	AlleleMatrix* m = d->m;
+	int total_i = 0;
+
+	for (int i = 0; i < n; ++i) {
+		while (indexes_to_split[i] >= total_i + m->n_genotypes) {
+			if (m->next == NULL) {
+				warning( "Only found %d out of %d indexes\n", i, n);
+				return new_group;
+			}
+			total_i += m->n_genotypes;
+			m = m->next;
+		}
+
+		m->groups[indexes_to_split[i] - total_i] = new_group;
+	}
+	return new_group;
+}
+
 /** Give every individual in the group a new group number that does not
  * belong to any other existing group (thereby allocating each genotype
  * in the group to a new group of 1).
  *
- * Note: this does not return the group numbers of all the newly created
- * groups-of-one.
- *
  * @param d the SimData struct on which to perform the operation
  * @param group_id the group number of the group to be split
+ * @param results NULL if the caller does not care to know the identifiers of the
+ * groups created, or a pointer to an array to which these identifiers
+ * should be saved. It is assumed that the array is long enough to store the
+ * identifiers of all groups created. The array's length should be the number
+ * of members of group_id.
  */
-void split_into_individuals( SimData* d, int group_id) {
+void split_into_individuals( SimData* d, int group_id, int* results) {
 	// get pre-existing numbers
 	int n_groups = 0;
 	int* existing_groups = get_existing_groups( d, &n_groups);
@@ -1055,24 +1120,14 @@ void split_into_individuals( SimData* d, int group_id) {
 
 	// looping through all entries
 	AlleleMatrix* m = d->m;
-	int i;
+	int n_found = 0; //number of group members reallocated.
 	int next_id = 0;
 	while (1) {
 		// check all lines to see if this one belongs to the group.
-		for (i = 0; i < m->n_genotypes; ++i) {
+		for (int i = 0; i < m->n_genotypes; ++i) {
 			if (m->groups[i] == group_id) {
 				// change it to a new unique group
 				// first, find the next unused group;
-				/*while (1) {
-					if (next_id > existing_groups[level]) { // need to deal with when level is not a valid index anymore.
-						++level;
-					} else {
-						++next_id;
-						if (level >= n_groups || next_id < existing_groups[level]) {
-							break;
-						}
-					}
-				}*/
 				++next_id;
 				while (level < n_groups) {
 					if (next_id < existing_groups[level]) {
@@ -1085,7 +1140,11 @@ void split_into_individuals( SimData* d, int group_id) {
 
 				// save this entry as a member of that new group
 				m->groups[i] = next_id;
-				++next_id;
+				if (results != NULL) {
+					results[n_found] = next_id;
+					++n_found;
+				}
+				//++next_id;
 			}
 		}
 
@@ -1105,30 +1164,38 @@ void split_into_individuals( SimData* d, int group_id) {
  *
  * Individuals with both parents unknown will be grouped together.
  *
- * Note: this does not return the group numbers of all the newly created
- * groups-of-one.
- *
  * @param d the SimData struct on which to perform the operation
  * @param group_id the group number of the group to be split
+ * @param results NULL if the caller does not care to know the identifiers of the
+ * family groups created, or a pointer to an array to which these identifiers
+ * should be saved. It is assumed that the array is long enough to store the
+ * identifiers of all groups created. For safety, unless you know how many
+ * groups will be created, the array's length should be the number
+ * of members of group_id.
  */
-void split_into_families(SimData* d, int group_id) {
+void split_into_families(SimData* d, int group_id, int* results) {
 	// get pre-existing numbers
 	int n_groups = 0;
 	int* existing_groups = get_existing_groups( d, &n_groups);
 	// have another variable for the next id we can't allocate so we can still free the original.
 	int level = 0;
 
+	// maximum number of families is the number of members in the group
+	// but this could be greater than our maximum allocation, so we
+	// will have to go through in batches
 	int families_found = 0;
 	unsigned int family_groups[CONTIG_WIDTH];
 	unsigned int family_identities[2][CONTIG_WIDTH];
 
+
 	// looping through all entries
 	AlleleMatrix* m = d->m;
-	int i;
+	AlleleMatrix* bookmarkm = NULL;
+	int n_found = 0; // number of groups created, for saving results
 	int next_id = 0;
 	while (1) {
 		// check all genotypes to see if this one belongs to the group.
-		for (i = 0; i < m->n_genotypes; ++i) {
+		for (int i = 0; i < m->n_genotypes; ++i) {
 			if (m->groups[i] == group_id) {
 				// First, see if it is a member of a family we already know.
 				for (int j = 0; j < families_found; ++j) {
@@ -1142,29 +1209,543 @@ void split_into_families(SimData* d, int group_id) {
 				// if the group number has not been updated in the above loop
 				// (so we don't know this family yet)
 				if (m->groups[i] == group_id) {
-					// find the next unused group;
-					++next_id;
-					while (level < n_groups) {
-						if (next_id < existing_groups[level]) {
-							break;
+					if (families_found < CONTIG_WIDTH) {
+						// find the next unused group;
+						++next_id;
+						while (level < n_groups) {
+							if (next_id < existing_groups[level]) {
+								break;
+							}
+
+							++level;
+							++next_id;
 						}
 
-						++level;
-						++next_id;
-					}
+						// save this entry as a member of that new group
+						m->groups[i] = next_id;
+						family_groups[families_found] = next_id;
+						family_identities[0][families_found] = m->pedigrees[0][i];
+						family_identities[1][families_found] = m->pedigrees[1][i];
+						++families_found;
 
-					// save this entry as a member of that new group
-					m->groups[i] = next_id;
-					family_groups[families_found] = next_id;
-					family_identities[0][families_found] = m->pedigrees[0][i];
-					family_identities[1][families_found] = m->pedigrees[1][i];
-					++families_found;
+						if (results != NULL) {
+							results[n_found] = next_id;
+							++n_found;
+						}
+
+					} else if (bookmarkm == NULL) {
+						// if we are here, then there are more families than we
+						// can track at a time. Save the place and come back for the
+						// extra families later.
+						bookmarkm = m;
+					} // else we have a bookmark already and so will be coming back here
 				}
 			}
 		}
 
 		if (m->next == NULL) {
 			free(existing_groups);
+			if (bookmarkm == NULL) {
+				// we have processed all members of the original group
+				return;
+			} else {
+				// we need to go back and process remaining members of the group
+				m = bookmarkm;
+				families_found = 0;
+				existing_groups = get_existing_groups( d, &n_groups);
+				level = 0;
+				next_id = 0;
+			}
+		} else {
+			m = m->next;
+		}
+	}
+}
+
+/** Split a group into a set of smaller groups, each containing the
+ * genotypes from the original group that share one parent.
+ * The shared parent can be either the first or second parent,
+ * based on the value of the parameter parent. That is, if parent is 1,
+ * within the halfsib families produced, all genotypes will share the
+ * same first parent, but may have different second parents.
+ * The number of new groups produced depends on the number of unique
+ * first/second parents in the set of genotypes in the provided group.
+ *
+ * Individuals with unknown parent will be grouped together.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group to be split
+ * @param parent 1 to group together genotypes that share the same first parent,
+ * 2 group those with the same second parent. Raises an error
+ * if this parameter is not either of those values.
+ * @param results NULL if the caller does not care to know the identifiers of the
+ * family groups created, or a pointer to an array to which these identifiers
+ * should be saved. It is assumed that the array is long enough to store the
+ * identifiers of all groups created. For safety, unless you know how many
+ * groups will be created, the array's length should be the number
+ * of members of group_id.
+ */
+void split_into_halfsib_families( SimData* d, int group_id, int parent, int* results) {
+	if (!(parent == 1 || parent == 2)) {
+		warning( "Value error: `parent` must be 1 or 2.");
+		return;
+	}
+	--parent;
+
+	// get pre-existing numbers
+	int n_groups = 0;
+	int* existing_groups = get_existing_groups( d, &n_groups);
+	// have another variable for the next id we can't allocate so we can still free the original.
+	int level = 0;
+
+	int families_found = 0;
+	unsigned int family_groups[CONTIG_WIDTH];
+	unsigned int family_identities[CONTIG_WIDTH];
+
+	// looping through all entries
+	AlleleMatrix* m = d->m;
+	AlleleMatrix* bookmarkm = NULL;
+	int n_found = 0; // number of families, for saving to results
+	int next_id = 0;
+	while (1) {
+		// check all genotypes to see if this one belongs to the group.
+		for (int i = 0; i < m->n_genotypes; ++i) {
+			if (m->groups[i] == group_id) {
+				// First, see if it is a member of a family we already know.
+				for (int j = 0; j < families_found; ++j) {
+					if (m->pedigrees[parent][i] == family_identities[j]) {
+						m->groups[i] = family_groups[j];
+						break;
+					}
+				}
+
+				// if the group number has not been updated in the above loop
+				// (so we don't know this family yet)
+				if (m->groups[i] == group_id) {
+					if (families_found < CONTIG_WIDTH) {
+						// find the next unused group;
+						++next_id;
+						while (level < n_groups) {
+							if (next_id < existing_groups[level]) {
+								break;
+							}
+
+							++level;
+							++next_id;
+						}
+
+						// save this entry as a member of that new group
+						m->groups[i] = next_id;
+						family_groups[families_found] = next_id;
+						family_identities[families_found] = m->pedigrees[parent][i];
+						++families_found;
+
+						if (results != NULL) {
+							results[n_found] = next_id;
+							++n_found;
+						}
+
+					} else if (bookmarkm == NULL) {
+						// if we are here, then there are more families than we
+						// can track at a time. Save the place and come back for the
+						// extra families later.
+						bookmarkm = m;
+					} // else we have a bookmark already and so will be coming back here
+				}
+			}
+		}
+
+		if (m->next == NULL) {
+			free(existing_groups);
+			if (bookmarkm == NULL) {
+				// we have processed all members of the original group
+				return;
+			} else {
+				// we need to go back and process remaining members of the group
+				m = bookmarkm;
+				families_found = 0;
+				existing_groups = get_existing_groups( d, &n_groups);
+				level = 0;
+				next_id = 0;
+			}
+		} else {
+			m = m->next;
+		}
+	}
+}
+
+/** Split a group into two groups of equal size (or size differing only
+ * by one, if the original group had an odd number of members) using a
+ * random permutation of the group members to determine which goes where.
+ *
+ * Of the two groups produced, one has the same group number as the original
+ * group (parameter group_id) and the other has the return value as its
+ * group number.
+ *
+ * If the original group size was odd, the new group/the return value
+ * will have the slightly smaller size.
+ *
+ * A more general approach to this task: split_evenly_into_n()
+ *
+ * An alternate approach to splitting a group in two: split_randomly_into_two()
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group to be split
+ * @returns the group number of the new group to which half the members
+ * of the old group have been allocated.
+ */
+int split_evenly_into_two(SimData* d, int group_id) {
+	// get the shuffle to be our even allocations
+	int size = get_group_size(d, group_id);
+	int even_half = size / 2;
+	int allocations[size];
+	for (int i = 0; i < size; ++i) {
+		allocations[i] = i;
+	}
+	shuffle_up_to(allocations, size, even_half);
+
+	int new_group = get_new_group_num(d);
+	AlleleMatrix* m = d->m;
+	int groupi = 0;
+	int i;
+
+	// loop through group members
+	while (1) {
+		for (i = 0; i < m->n_genotypes; ++i) {
+			if (m->groups[i] == group_id) {
+				// See if it should be allocated to the new group
+				for (int j = 0; j < even_half; ++j) {
+					if (allocations[j] == groupi) {
+						m->groups[i] = new_group;
+						break;
+					}
+				}
+				++groupi;
+			}
+		}
+
+		if (m->next == NULL) {
+			return new_group;
+		} else {
+			m = m->next;
+		}
+	}
+}
+
+/** Split a group into n groups of equal size (or size differing only
+ * by one, if n does not perfectly divide the group size.), using a
+ * random permutation of the group members to determine which goes where.
+ *
+ * Of the split groups produced, the first has the same group number as the original
+ * group (parameter group_id).
+ *
+ * A more general approach to this task: split_by_specific_counts_into_n()
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group to be split
+ * @param n the number of groups among which to randomly distribute group
+ * members.
+ * @param results NULL if the caller does not care to know the identifiers of the
+ * groups created, or a pointer to an array to which these identifiers
+ * should be saved. It is assumed that the array is long enough to store
+ * n identifiers.
+ */
+void split_evenly_into_n(SimData* d, int group_id, int n, int* results) {
+    if (n <= 1) {
+		warning( "Cannot distribute between %d groups\n", n);
+		return;
+	}
+
+	// get the shuffle to be our even allocations
+	int size = get_group_size(d, group_id);
+
+	int each_size = size / n;
+	int extra = size % n;
+	int boxes[n];
+	for (int i = 0; i < n; ++i) {
+		boxes[i] = each_size;
+		if (i < extra) {
+			boxes[i] ++;
+		}
+	}
+
+	// no code simplification just from having equal sizes is possible so:
+	split_by_specific_counts_into_n(d, group_id, n, boxes, results);
+
+}
+
+/** Split a group into n groups of equal size (or size differing only
+ * by one, if n does not perfectly divide the group size), using a
+ * random permutation of the group members to determine which goes where.
+ *
+ * Of the split groups produced, the first has the same group number as the original
+ * group (parameter group_id).
+ *
+ * The number of members staying
+ * in the old group (group_id) is counts[0]. The number going to the
+ * first new group is counts[1], etc.. The number going to the
+ * nth group is group_id's group size - sum(counts).
+ *
+ * The function calculates a random permutation of the group members,
+ * then uses cumulative sums to determine to which group the group member
+ * is allocated. If the sum of the desired group sizes adds up to more than
+ * the number of group members, a warning is raised, and the group numbers for
+ * which the cumulative sum of counts is greater than the group size will not
+ * be allocated members. That is, the group capacities are filled from first to
+ * last, leaving later groups unfilled if there are not enough group members to
+ * occupy all capacities.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group to be split
+ * @param n the number of groups among which to randomly distribute group
+ * members.
+ * @param counts pointer to an array of length at least n-1 containing the number of
+ * members to allocate to each group. The number of members in the last
+ * group is group_id's group size - sum(counts).
+ * @param results NULL if the caller does not care to know the identifiers of the
+ * groups created, or a pointer to an array to which these identifiers
+ * should be saved. It is assumed that the array is long enough to store
+ * n identifiers.
+ */
+void split_by_specific_counts_into_n(SimData* d, int group_id, int n, int* counts, int* results) {
+    if (n <= 1) {
+		warning( "Cannot distribute between %d groups\n", n);
+		return;
+	}
+
+	int size = get_group_size(d, group_id);
+
+	int cumulative_counts[n-1];
+	int sum = 0;
+	for (int j = 0; j < n - 1; ++j) {
+		sum += counts[j];
+		cumulative_counts[j] = sum;
+		if (cumulative_counts[j] >= size) {
+            warning( "Provided capacities are larger than actual group: some buckets will not be filled\n");
+			//don't bother to calculate more
+			break;
+		}
+	}
+
+	int allocations[size];
+	for (int i = 0; i < size; ++i) {
+		allocations[i] = i;
+	}
+    shuffle_up_to(allocations, size, cumulative_counts[n-2]);
+
+	int new_group[n-1];
+	get_n_new_group_nums(d,n-1, new_group);
+
+	if (results != NULL) {
+		results[0] = group_id;
+		memcpy(results + 1, new_group, sizeof(int) * (n-1));
+	}
+
+	AlleleMatrix* m = d->m;
+	int groupi = 0;
+	int i;
+
+	// loop through group members
+	while (1) {
+		for (i = 0; i < m->n_genotypes; ++i) {
+			if (m->groups[i] == group_id) {
+				// See where it was shuffled
+				for (int j = 0; j < size; ++j) {
+					if (allocations[j] == groupi) {
+						// allocate it to its correct group
+						for (int k = n-2; k >=0; --k) {
+                            if (j >= cumulative_counts[k]) {
+                                m->groups[i] = new_group[k];
+                                break;
+                            }
+						}
+                        // else is already in the first group, where it belongs
+						break;
+					}
+				}
+				++groupi;
+			}
+		}
+
+		if (m->next == NULL) {
+			return;
+		} else {
+			m = m->next;
+		}
+	}
+
+}
+
+/** Flip a coin for each member of the group to decide if it should
+ * be moved to the new group.
+ *
+ * There is no guarantee that there will be any genotypes in the new group
+ * (if all coin flips were 0) or any genotypes in the old group (if all
+ * coin flips were 1). There is no guarantee the two groups will be
+ * near the same size.
+ *
+ * This could be useful for allocating a sex to genotypes.
+ *
+ * A more general approach to this task: split_randomly_into_n()
+ *
+ * An alternate approach to splitting a group in two: split_evenly_into_two()
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group to be split
+ * @returns the group number of the new group to which some members
+ * of the old group may have been randomly allocated.
+ */
+int split_randomly_into_two(SimData* d, int group_id) {
+	int new_group = get_new_group_num(d);
+
+	AlleleMatrix* m = d->m;
+	int i;
+	while (1) {
+		for (i = 0; i < m->n_genotypes; ++i) {
+			if (m->groups[i] == group_id && (unif_rand() > 0.5)) {
+				m->groups[i] = new_group;
+			}
+		}
+
+		if (m->next == NULL) {
+			return new_group;
+		} else {
+			m = m->next;
+		}
+	}
+}
+
+/** Allocate each member of the group to
+ * one of n groups with equal probability.
+ *
+ * There is no guarantee that all groups will have members.
+ * There is no guarantee the groups will be near the same size.
+ *
+ * Each genotype has equal probability of being allocated to
+ * each of n groups. The old group number (group_id) is included
+ * as one of these n possible groups.
+ *
+ * To split by uneven probabilities instead: split_by_probabilities_into_n()
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group to be split
+ * @param n the number of groups among which to randomly distribute group
+ * members.
+ * @param results NULL if the caller does not care to know the identifiers of the
+ * groups created, or a pointer to an array to which these identifiers
+ * should be saved. It is assumed that the array is long enough to store
+ * n identifiers.
+ */
+void split_randomly_into_n(SimData* d, int group_id, int n, int* results) {
+    if (n <= 1) {
+		warning( "Cannot distribute between %d groups\n", n);
+		return;
+	}
+
+	// get the n group numbers
+	int new_groups[n-1];
+	get_n_new_group_nums(d, n-1, new_groups);
+
+	// save the results
+	if (results != NULL) {
+		results[0] = group_id;
+		memcpy(results + 1, new_groups, sizeof(int) * (n-1));
+	}
+
+	AlleleMatrix* m = d->m;
+	int i, randgroup;
+	while (1) {
+		for (i = 0; i < m->n_genotypes; ++i) {
+			randgroup = round(unif_rand() * (n-1));
+			if (m->groups[i] == group_id && randgroup) {
+				m->groups[i] = new_groups[randgroup - 1];
+			}
+		}
+
+		if (m->next == NULL) {
+			return;
+		} else {
+			m = m->next;
+		}
+	}
+}
+
+/** Allocate each member of the group to
+ * one of n groups with custom probabilities for each group.
+ *
+ * There is no guarantee that all groups will have members.
+ * There is no guarantee the groups will be near the same size.
+ *
+ * The probability of staying
+ * in the old group (group_id) is probs[0]. The probability of going to the
+ * first new group is probs[1], etc.. The probability of going to the
+ * nth group is 1 minus the sum of all probabilities in probs.
+ *
+ * The function draws from a uniform distribution, then uses cumulative
+ * sums to determine to which group the group member is allocated.
+ * If the sum of the probabilities in probs adds up to more than 1,
+ * a warning is raised, and the group numbers for which the cumulative
+ * sum of probs is greater than 1 have no chance of being allocated members.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group_id the group number of the group to be split
+ * @param n the number of groups among which to randomly distribute group
+ * members.
+ * @param probs pointer to an array of length n-1 containing the probability
+ * of being allocated to each group. The probability of going to the last
+ * group is 1 - sum(probs).
+ * @param results NULL if the caller does not care to know the identifiers of the
+ * groups created, or a pointer to an array to which these identifiers
+ * should be saved. It is assumed that the array is long enough to store
+ * n identifiers.
+ */
+void split_by_probabilities_into_n(SimData* d, int group_id, int n, double* probs, int* results) {
+    if (n <= 1) {
+		warning( "Cannot distribute between %d groups\n", n);
+		return;
+	}
+
+	// Check the probabilities
+	double cumulative_probs[n-1];
+	double sum = 0;
+	for (int j = 0; j < n - 1; ++j) {
+		sum += probs[j];
+		cumulative_probs[j] = sum;
+		if (cumulative_probs[j] >= 1) {
+            warning( "Provided probabilities add up to 1 or more: some buckets will not be filled\n");
+			//don't bother to calculate more
+			break;
+		}
+	}
+
+	// get the n group numbers
+	int new_groups[n-1];
+	get_n_new_group_nums(d, n-1, new_groups);
+
+	// save the results
+	if (results != NULL) {
+		results[0] = group_id;
+		memcpy(results + 1, new_groups, sizeof(int) * (n-1));
+	}
+
+	AlleleMatrix* m = d->m;
+	int i;
+	double randdraw;
+	while (1) {
+		for (i = 0; i < m->n_genotypes; ++i) {
+			if (m->groups[i] == group_id) {
+				// Allocate to a random group based on probabilities
+				randdraw = unif_rand();
+				for (int j = n-2; j >= 0; --j) {
+                    if (randdraw > cumulative_probs[j]) {
+                        m->groups[i] = new_groups[j];
+                        break;
+                    }
+				}
+			}
+		}
+
+		if (m->next == NULL) {
 			return;
 		} else {
 			m = m->next;
@@ -1321,68 +1902,15 @@ int** get_existing_group_counts( SimData* d, int* n_groups) {
 	}
 }
 
-/** Take a list of indexes and allocate the genotypes at those indexes
- * to a new group.
- *
- * Does not check if all the indexes are valid/if all indexes have successfully
- * had their groups changed.
- *
- * @param d the SimData struct on which to perform the operation
- * @param n the number of indexes provided
- * @param indexes_to_split an array containing the indexes (0-based, starting
- * at the first entry at `d->m`) of the genotypes to allocate to the new group.
- * @returns the group number of the new group to which the provided indexes
- * have been allocated.
- */
-int split_from_group( SimData* d, int n, int indexes_to_split[n]) {
-	int new_group = get_new_group_num(d);
-
-	// Order the indexes
-	qsort(indexes_to_split, n, sizeof(int), _ascending_int_comparer);
-
-	AlleleMatrix* m = d->m;
-	int total_i = 0;
-
-	for (int i = 0; i < n; ++i) {
-		while (indexes_to_split[i] >= total_i + m->n_genotypes) {
-			if (m->next == NULL) {
-				warning( "Only found %d out of %d indexes\n", i, n);
-				return new_group;
-			}
-			total_i += m->n_genotypes;
-			m = m->next;
-		}
-
-		m->groups[indexes_to_split[i] - total_i] = new_group;
-	}
-	return new_group;
-
-	/*AlleleMatrix* m = d->m;
-	int i, total_i = 0;
-	while (1) {
-		// for each genotype, check all group numbers.
-		for (i = 0; i < n; ++i) {
-			if (indexes_to_split[i] >= total_i && indexes_to_split[i] < total_i + m->n_genotypes) {
-				m->groups[indexes_to_split[i] - total_i] = new_group;
-			}
-		}
-
-		if (m->next == NULL) {
-			return new_group;
-		} else {
-			total_i += m->n_genotypes;
-			m = m->next;
-		}
-	}*/
-}
-
 /** Function to identify the next sequential integer that does not
  * identify a group that currently has member(s).
  *
- * This calls get_existing_groups() every time, so functions that
- * do repeated group creation, like split_into_individuals, are
- * recommended to use their own implementation rather than calling
- * this function repeatedly for best speed/memory usage.
+ * This calls get_existing_groups() every time, so for better
+ * speed, functions that do repeated group creation, like
+ * split_into_individuals(), are
+ * recommended to use get_n_new_group_nums() (if they know the
+ * number of groups they need) or their own implementation, rather
+ * than calling this function repeatedly.
  *
  * @param d the SimData struct on which to perform the operation
  * @return the next sequential currently-unused group number.
@@ -1403,6 +1931,35 @@ int get_new_group_num( SimData* d) {
 	}
 	free(existing_groups);
 	return gn;
+}
+
+/** Function to identify the next n sequential integers that do not
+ * identify a group that currently has member(s).
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param n the number of group numbers to generate
+ * @param result pointer to an array of length at least n where
+ * the new group numbers generated can be saved.
+ */
+void get_n_new_group_nums( SimData* d, int n, int* result) {
+	int n_groups = 0;
+	int* existing_groups = get_existing_groups( d, &n_groups);
+	int existingi = 0;
+	int gn = 0;
+
+	for (int i = 0; i < n; ++i) {
+		++gn;
+		while (existingi < n_groups) {
+			if (gn < existing_groups[i]) {
+				break;
+			}
+
+			++existingi;
+			++gn;
+		}
+		result[i] = gn;
+	}
+	free(existing_groups);
 }
 
 

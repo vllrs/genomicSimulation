@@ -92,7 +92,6 @@ Other crossing functions:
 \code{\link{cross.combinations.file}()},
 \code{\link{cross.combinations}()},
 \code{\link{cross.randomly}()},
-\code{\link{cross}()},
 \code{\link{make.doubled.haploids}()},
 \code{\link{self.n.times}()}
 }

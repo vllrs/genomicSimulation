@@ -1,5 +1,5 @@
 ---
-title: "genomicSimulation (v0.1-5) Vignette"
+title: "genomicSimulation (v0.2.0.dev) Vignette"
 author: "Kira Villiers"
 date: "`r Sys.Date()`"
 output:
@@ -195,7 +195,8 @@ delete.group(f1)
 
 # ... repeat for further generations
 f2 <- cross.randomly(f1.selected, n.crosses=100)
-f2.selected <- make.group(get.top.10.phenotypes(see.group.gebvs(f2), 0.5))
+f2.info <- data.frame("i"=see.group.data(f2,data.type="X"),"GEBV"=see.group.data(f2,data.type="BV"))
+f2.selected <- make.group(get.top.10.phenotypes(f2.info, 0.5))
 
 # ...
 delete.group(f1.selected)
@@ -286,6 +287,11 @@ Modify groupings:
 - `group <- make.group(indexes)`
 - `[vector of groups] <- break.group.into.individuals(group)`
 - `[vector of groups] <- break.group.into.families(group)`
+- `[vector of groups] <- break.group.into.halfsib.families(group)`
+- `[vector of groups] <- break.group.evenly(group, into.n = 2)`
+- `[vector of groups] <- break.group.into.buckets(group, [vector of buckets])`
+- `[vector of groups] <- break.group.randomly(group, into.n = 2)`
+- `[vector of groups] <- break.group.with.probabilities(group, [vector of probabilities])`
 
 Save data (saves results to files):
 

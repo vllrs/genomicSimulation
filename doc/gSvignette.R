@@ -82,7 +82,8 @@ delete.group(f1)
 
 # ... repeat for further generations
 f2 <- cross.randomly(f1.selected, n.crosses=100)
-f2.selected <- make.group(get.top.10.phenotypes(see.group.gebvs(f2), 0.5))
+f2.info <- data.frame("i"=see.group.data(f2,data.type="X"),"GEBV"=see.group.data(f2,data.type="BV"))
+f2.selected <- make.group(get.top.10.phenotypes(f2.info, 0.5))
 
 # ...
 delete.group(f1.selected)

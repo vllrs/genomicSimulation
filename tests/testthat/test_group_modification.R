@@ -63,12 +63,112 @@ test_that("break.group.into.families runs successfully", {
   
   #function works
   fs <- break.group.into.families(gcom)
-  expect_identical(see.existing.groups(), data.frame("Group"=c(g,fs),"GroupSize"=c(6L,1L,4L,3L)))
+  df <- see.existing.groups()
+  expect_identical(df$Group, c(g,fs))
+  expect_identical(df$GroupSize, c(6L,1L,4L,3L))
   
   expect_identical(see.group.data(fs[1], "Name"), c("two7"))
   expect_identical(see.group.data(fs[2], "Name"), c("three8", "three9", "three10", "three11"))
   expect_identical(see.group.data(fs[3], "Name"), c("four12", "four13", "four14"))
 })
+
+
+test_that("break.group.into.halfsib.families runs successfully", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  #setup
+  g2 <- cross.combinations(0L,1L, give.names=T, name.prefix="two") #two7
+  g3 <- cross.combinations(0L,4L, offspring=4, give.names=T, name.prefix="three") #three8, three9, three10, three11
+  g4 <- cross.combinations(3L,6L, offspring=3, give.names=T, name.prefix="four") #four12, four13, four14
+  gcom <- combine.groups(c(g2,g3,g4))
+  
+  #setup works as expected
+  expect_identical(see.existing.groups(), data.frame("Group"=c(g,gcom),"GroupSize"=c(6L,8L)))
+  
+  #function works
+  fs <- break.group.into.halfsib.families(gcom,1L)
+  df <- see.existing.groups()
+  expect_identical(df$Group, c(g,fs))
+  expect_identical(df$GroupSize, c(6L,5L,3L))
+  
+  expect_identical(see.group.data(fs[1], "Name"), c("two7", "three8", "three9", "three10", "three11"))
+  expect_identical(see.group.data(fs[2], "Name"), c("four12", "four13", "four14"))
+})
+
+test_that("break.group.randomly runs successfully", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  #setup
+  g2 <- cross.randomly(g, 2000)
+  
+  fs <- break.group.randomly(g2)
+  
+  df <- see.existing.groups()
+  
+  expect_identical(df$Group, c(g,fs))
+  expect_gt(df$GroupSize[[2]], 800)
+  expect_lt(df$GroupSize[[2]], 1200)
+  expect_identical(df$GroupSize[[2]] + df$GroupSize[[3]], 2000L)
+  #does not check that the groups are shuffled properly
+  
+})
+
+
+test_that("break.group.with.probabilities runs successfully", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  #setup
+  g2 <- cross.randomly(g, 2000)
+  
+  fs <- break.group.with.probabilities(g2, c(0.2,0.5))
+  
+  df <- see.existing.groups()
+  
+  expect_identical(df$Group, c(g,fs))
+  expect_gt(df$GroupSize[[2]], 200)
+  expect_lt(df$GroupSize[[2]], 600)
+  expect_gt(df$GroupSize[[3]], 800)
+  expect_lt(df$GroupSize[[3]], 1200)
+  expect_identical(df$GroupSize[[2]] + df$GroupSize[[3]] + df$GroupSize[[4]], 2000L)
+  #does not check that the groups are shuffled properly
+  
+  # does-not-crash test:
+  expect_warning(break.group.with.probabilities(df$Group[[3]], c(0.1,0.6,0.7)),
+                 "Provided probabilities add up to 1 or more: some buckets will not be filled")
+  
+})
+
+
+test_that("break.group.evenly runs successfully", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  #setup
+  g2 <- cross.randomly(g, 20)
+  
+  fs <- break.group.evenly(g)
+  f2s <- break.group.evenly(g2, 3)
+  
+  expect_identical(see.existing.groups(), data.frame("Group"=sort(c(fs,f2s)),"GroupSize"=c(3L,7L,3L, 7L, 6L)))
+  #does not check that the groups are shuffled properly
+  
+})
+
+test_that("break.group.into.buckets runs successfully", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  #setup
+  g2 <- cross.randomly(g, 20)
+  
+  fs <- break.group.into.buckets(g2, c(3L,13L))
+  
+  expect_identical(see.existing.groups(), data.frame("Group"=sort(c(g,fs)),"GroupSize"=c(6L,3L,13L,4L)))
+  #does not check that the groups are shuffled properly
+  
+  #does-not-crash test
+  expect_warning(break.group.into.buckets(fs[[2]], c(2L,2L,2L,20L)), 
+                 "Provided capacities are larger than actual group: some buckets will not be filled")
+})
+
 
 test_that("select.by.gebv runs successfully", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)

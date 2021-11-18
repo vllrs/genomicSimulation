@@ -1,3 +1,5 @@
+- adding new group splitter functions. Added tests for them.
+
 # genomicSimulation 0.2
 
 - Introduces new version numbering scheme. This update would be numbered 0.1-5 under the old numbering scheme instead of 0.2, but it is not a more significant update than v0.1-3 -> v0.1-4. The new numbering scheme is as suggested by Hadley & Bryan in *R Packages*. It uses the second digit rather than the third for minor releases.
@@ -60,4 +62,4 @@
 
 # genomicSimulation 0.1-1
 
-- Initial relase
+- Initial release
