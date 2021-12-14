@@ -1,7 +1,7 @@
 # genomicSimulation
 *[GitHub Pages link](https://vllrs.github.io/genomicSimulation/)*
 
-This project is an R package that runs stochastic simulations of genetics in breeding schemes. The core of the package is written in C.
+This project is an R package that runs stochastic simulations of genetics in breeding schemes. The core of the package is written in C. [An overview of the tool is available at this link.](https://doi.org/10.1101/2021.12.12.472291).
 
 This package is not yet submitted to CRAN. [See the latest release here](https://github.com/vllrs/genomicSimulation/releases).
 

@@ -154,7 +154,7 @@ file.remove("af6-genotype.txt")
 ```
 
 ## Writing Custom Selection Methods in R
-The only inbuilt selection method in genomicSimulation is `select.by.gebv`. However, custom selection methods can be written in R thanks to the `make.group` function, which takes an arbitrary set of indices and moves them into a new group. Indices of genotypes can be accessed via `see.group.gebvs` or `see.group.data` with data type parameter `I`, operated on, then passed back to `make.group` to perform selection.
+The only inbuilt selection method in genomicSimulation is `select.by.gebv`. However, custom selection methods can be written in R thanks to the `make.group` function, which takes an arbitrary set of indices and moves them into a new group. Indices of genotypes can be accessed via `see.group.data` with data type parameter `X`, operated on, then passed back to `make.group` to perform selection.
 
 For an example, consider that a user wants to implement a custom selection method wherein they select the top 10 simulated crosses by phenotype. Because genomicSimulation offers no internal method for simulating phenotypes, the user must simulate them in R then use the custom selection method interface to perform their selection.
 
@@ -307,7 +307,6 @@ View data (pulls data into R dataframes):
 
 - `[dataframe containing current existing groups and their sizes] <- see.existing.groups()`
 - `[vector containing the chosen data] <- see.group.data(group, data.type)`
-- `[index and GEBV for each group member] <- see.group.gebvs(group)`
 - `[string containing best allele per SNP] <- see.optimal.haplotype()`
 - `[float: the maximum possible GEBV] <- see.optimal.GEBV()`
 - `[float: the minimum possible GEBV] <- see.minimum.GEBV()`
@@ -511,12 +510,5 @@ Available data types: Description (`data.type` parameter value)
 - Name of the first parent, or the first parent's ID if it has no name (P1)
 - Name of the second parent, or the second parent's ID if it has no name (P2)
 - Full/recursive known pedigree, as a string (PED)
-
-### `see.group.gebvs`
-This function returns a dataframe with two columns:
-
-- `i`, containing the indexes of the group members
-- `GEBV`, containing the GEBVs of the group member with that index
-
 
 
