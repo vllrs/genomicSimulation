@@ -322,7 +322,7 @@ int get_group_size( SimData* d, int group_id);
 char** get_group_genes( SimData* d, int group_id, int group_size);
 char** get_group_names( SimData* d, int group_id, int group_size);
 unsigned int* get_group_ids( SimData* d, int group_id, int group_size);
-unsigned int* get_group_indexes(SimData* d, int group_id, int group_size);
+int* get_group_indexes(SimData* d, int group_id, int group_size);
 double* get_group_bvs( SimData* d, int group_id, int group_size);
 unsigned int* get_group_parent_ids( SimData* d, int group_id, int group_size, int parent);
 char** get_group_parent_names( SimData* d, int group_id, int group_size, int parent);

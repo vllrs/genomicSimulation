@@ -1,3 +1,4 @@
+- Fix segfault in select.by.gebv when trying to select more individuals than exist in the group (e.g. asking for the best 5 members of a group of 2). Now, it just moves all group members to the new selected group, and doesn't worry about the missing requested remainder.
 - adding new group splitter functions. Added tests for them.
 
 # genomicSimulation 0.2

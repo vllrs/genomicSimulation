@@ -2154,13 +2154,13 @@ unsigned int* get_group_ids( SimData* d, int group_id, int group_size) {
  * @returns a vector containing the indexes of each member of the group.
  * The vector itself is on the heap and should be freed.
  */
-unsigned int* get_group_indexes(SimData* d, int group_id, int group_size) {
+int* get_group_indexes(SimData* d, int group_id, int group_size) {
 	AlleleMatrix* m = d->m;
-	unsigned int* gis;
+    int* gis;
 	if (group_size > 0) {
-		gis = get_malloc(sizeof(unsigned int) * group_size);
+        gis = get_malloc(sizeof(int) * group_size);
 	} else {
-		gis = get_malloc(sizeof(unsigned int) * get_group_size( d, group_id ));
+        gis = get_malloc(sizeof(int) * get_group_size( d, group_id ));
 	}
 	int i, total_i = 0, ids_i = 0;
 	while (1) {
@@ -4954,7 +4954,7 @@ int make_all_unidirectional_crosses(SimData* d, int from_group, GenOptions g) {
 		return 0;
 	}
 	//unsigned int* group_ids = get_group_ids( d, from_group, group_size);
-	unsigned int* group_indexes = get_group_indexes( d, from_group, group_size);
+    int* group_indexes = get_group_indexes( d, from_group, group_size);
 
 	// number of crosses = number of entries in upper triangle of matrix
 	//    = half of (n entries in matrix - length of diagonal)
@@ -5154,11 +5154,20 @@ int make_double_crosses_from_file(SimData* d, const char* input_file, GenOptions
  * will be selected, if false the `top_n` with the highest breeding value are.
  * @returns the group number of the newly-created split-off group
  */
-int split_by_bv(SimData* d, int group, int top_n, int lowIsBest) {
-	// get fitnesses
-	unsigned int* group_contents = get_group_indexes( d, group, -1); // should be ordered same as next line would get
-	DecimalMatrix fits = calculate_group_bvs( d, group );
-
+int split_by_bv(SimData* d, int group, int top_n, int lowIsBest) {	
+	unsigned int group_size = get_group_size( d, group );
+    int* group_contents = get_group_indexes( d, group, group_size);
+	
+	if (group_size <= top_n) {
+		// well we'll just have to move em all
+		int migration = split_from_group(d, group_size, group_contents);
+		free(group_contents);
+		return migration;
+	}
+	
+	// This should be ordered the same as the indexes
+	DecimalMatrix fits = calculate_group_bvs( d, group ); // 1 by group_size matrix
+	
 	// get an array of pointers to those fitnesses
 	double* p_fits[fits.cols];
 	for (int i = 0; i < fits.cols; i++) {
