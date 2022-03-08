@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kira Villiers" />
 
-<meta name="date" content="2021-11-18" />
+<meta name="date" content="2022-03-08" />
 
 <title>genomicSimulation (v0.2.0.dev) Vignette</title>
 
@@ -311,7 +311,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <h1 class="title toc-ignore">genomicSimulation (v0.2.0.dev) Vignette</h1>
 <h4 class="author">Kira Villiers</h4>
-<h4 class="date">2021-11-18</h4>
+<h4 class="date">2022-03-08</h4>
 
 
 <div id="TOC">
@@ -357,7 +357,6 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <li><a href="#r-output-formats"><span class="toc-section-number">6.6</span> R Output Formats</a><ul>
 <li><a href="#see.existing.groups"><span class="toc-section-number">6.6.1</span> <code>see.existing.groups</code></a></li>
 <li><a href="#see.group.data"><span class="toc-section-number">6.6.2</span> <code>see.group.data</code></a></li>
-<li><a href="#see.group.gebvs"><span class="toc-section-number">6.6.3</span> <code>see.group.gebvs</code></a></li>
 </ul></li>
 </ul></li>
 </ul>
@@ -476,7 +475,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <a class="sourceLine" id="cb2-32" title="32"><span class="kw">save.pedigrees</span>(<span class="st">&quot;a.txt&quot;</span>, f1, <span class="dt">type=</span><span class="st">&quot;P&quot;</span>)</a>
 <a class="sourceLine" id="cb2-33" title="33"><span class="co">#&gt; [1] 0</span></a>
 <a class="sourceLine" id="cb2-34" title="34"><span class="kw">find.plot.crossovers</span>(<span class="st">&quot;a.txt&quot;</span>, <span class="st">&quot;b.txt&quot;</span>)</a></code></pre></div>
-<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"></a>
 <a class="sourceLine" id="cb3-2" title="2"><span class="co"># Find the 25% with the top breeding value/GEBV</span></a>
 <a class="sourceLine" id="cb3-3" title="3">f1.selected &lt;-<span class="st"> </span><span class="kw">select.by.gebv</span>(f1, <span class="dt">percentage=</span><span class="dv">25</span>)</a>
@@ -511,9 +510,9 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <a class="sourceLine" id="cb3-32" title="32"><span class="co">#&gt;    X m1 m2 m3</span></a>
 <a class="sourceLine" id="cb3-33" title="33"><span class="co">#&gt; 1 32 TT AA TT</span></a>
 <a class="sourceLine" id="cb3-34" title="34"><span class="co">#&gt; 2 33 TT AA TT</span></a>
-<a class="sourceLine" id="cb3-35" title="35"><span class="co">#&gt; 3 34 TT AA AA</span></a>
+<a class="sourceLine" id="cb3-35" title="35"><span class="co">#&gt; 3 34 TT AA TT</span></a>
 <a class="sourceLine" id="cb3-36" title="36"><span class="co">#&gt; 4 35 TT AA TT</span></a>
-<a class="sourceLine" id="cb3-37" title="37"><span class="co">#&gt; 5 36 TT AA TT</span></a>
+<a class="sourceLine" id="cb3-37" title="37"><span class="co">#&gt; 5 36 TT AA AA</span></a>
 <a class="sourceLine" id="cb3-38" title="38"></a>
 <a class="sourceLine" id="cb3-39" title="39"></a>
 <a class="sourceLine" id="cb3-40" title="40"><span class="co"># (cleanup)</span></a>
@@ -525,22 +524,24 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <a class="sourceLine" id="cb3-46" title="46"><span class="co">#&gt; [1] TRUE</span></a></code></pre></div>
 <div id="writing-custom-selection-methods-in-r" class="section level2">
 <h2><span class="header-section-number">4.1</span> Writing Custom Selection Methods in R</h2>
-<p>The only inbuilt selection method in genomicSimulation is <code>select.by.gebv</code>. However, custom selection methods can be written in R thanks to the <code>make.group</code> function, which takes an arbitrary set of indices and moves them into a new group. Indices of genotypes can be accessed via <code>see.group.gebvs</code> or <code>see.group.data</code> with data type parameter <code>I</code>, operated on, then passed back to <code>make.group</code> to perform selection.</p>
+<p>The only inbuilt selection method in genomicSimulation is <code>select.by.gebv</code>. However, custom selection methods can be written in R thanks to the <code>make.group</code> function, which takes an arbitrary set of indices and moves them into a new group. Indices of genotypes can be accessed via <code>see.group.data</code> with data type parameter <code>X</code>, operated on, then passed back to <code>make.group</code> to perform selection.</p>
 <p>For an example, consider that a user wants to implement a custom selection method wherein they select the top 10 simulated crosses by phenotype. Because genomicSimulation offers no internal method for simulating phenotypes, the user must simulate them in R then use the custom selection method interface to perform their selection.</p>
 <p>Suppose the user chooses the following model for their simulated phenotype. The phenotypic values will be made equal to the breeding value plus a draw from a normally distributed distribution with variance equal to <span class="math inline">\(V_e\)</span> (environmental variance), where <span class="math inline">\(V_e\)</span> comes from the equation <span class="math inline">\(H^2 = V_g/(V_g + V_e)\)</span>. For the user’s purposes, <span class="math inline">\(H^2\)</span> is a known broad-sense heritability estimate and <span class="math inline">\(V_g\)</span> is the variation in breeding values in the set of crosses from which they are selecting. Therefore, the steps to simulate phenotypes are: 1. calculate the magnitude of <span class="math inline">\(V_e\)</span> using the set of breeding values from the crosses on which selection is being performed 2. draw from a normal distribution to get simulated phenotypes</p>
 <p>The user creates the following R function to perform their selection:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">get.top.<span class="fl">10.</span>phenotypes &lt;-<span class="st"> </span><span class="cf">function</span>(group.info, H2) {</a>
-<a class="sourceLine" id="cb4-2" title="2">  <span class="co"># calculate Ve</span></a>
-<a class="sourceLine" id="cb4-3" title="3">  Vg &lt;-<span class="st"> </span><span class="kw">var</span>(group.info<span class="op">$</span>GEBV)</a>
-<a class="sourceLine" id="cb4-4" title="4">  Ve &lt;-<span class="st"> </span>Vg<span class="op">/</span>H2 <span class="op">-</span><span class="st"> </span>Vg</a>
-<a class="sourceLine" id="cb4-5" title="5">  </a>
-<a class="sourceLine" id="cb4-6" title="6">  <span class="co"># Simulate phenotypes</span></a>
-<a class="sourceLine" id="cb4-7" title="7">  group.info<span class="op">$</span>pheno &lt;-<span class="st"> </span>group.info<span class="op">$</span>GEBV <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="kw">length</span>(group.info<span class="op">$</span>GEBV), <span class="dt">mean=</span><span class="dv">0</span>, <span class="dt">sd =</span> <span class="kw">sqrt</span>(Ve))</a>
-<a class="sourceLine" id="cb4-8" title="8">  </a>
-<a class="sourceLine" id="cb4-9" title="9">  <span class="co"># Pick the best 10 and return their indices</span></a>
-<a class="sourceLine" id="cb4-10" title="10">  sorted &lt;-<span class="st"> </span>group.info[<span class="kw">order</span>(group.info<span class="op">$</span>pheno, <span class="dt">decreasing=</span><span class="ot">TRUE</span>),]</a>
-<a class="sourceLine" id="cb4-11" title="11">  <span class="kw">return</span>(sorted<span class="op">$</span>i[<span class="dv">1</span><span class="op">:</span><span class="dv">10</span>])</a>
-<a class="sourceLine" id="cb4-12" title="12">}</a></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">get.top.<span class="fl">10.</span>phenotypes &lt;-<span class="st"> </span><span class="cf">function</span>(group, heritability) {</a>
+<a class="sourceLine" id="cb4-2" title="2">  info &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Index=</span><span class="kw">see.group.data</span>(group,<span class="st">&quot;X&quot;</span>),</a>
+<a class="sourceLine" id="cb4-3" title="3">                     <span class="dt">GEBV=</span><span class="kw">see.group.data</span>(group,<span class="st">&quot;BV&quot;</span>))</a>
+<a class="sourceLine" id="cb4-4" title="4">  </a>
+<a class="sourceLine" id="cb4-5" title="5">  <span class="co"># simulate phenotype = genotype + environmental variation</span></a>
+<a class="sourceLine" id="cb4-6" title="6">  <span class="co"># using normally distributed Ve and heritability H^2 = (Ve + Vg)/Vg</span></a>
+<a class="sourceLine" id="cb4-7" title="7">  Vg &lt;-<span class="st"> </span><span class="kw">var</span>(info<span class="op">$</span>GEBV)</a>
+<a class="sourceLine" id="cb4-8" title="8">  Ve &lt;-<span class="st"> </span>Vg<span class="op">/</span>heritability <span class="op">-</span><span class="st"> </span>Vg</a>
+<a class="sourceLine" id="cb4-9" title="9">  info<span class="op">$</span>Pheno &lt;-<span class="st"> </span>info<span class="op">$</span>GEBV <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="kw">length</span>(info<span class="op">$</span>GEBV), <span class="dt">mean=</span><span class="dv">0</span>, <span class="dt">sd =</span> <span class="kw">sqrt</span>(Ve))</a>
+<a class="sourceLine" id="cb4-10" title="10">  </a>
+<a class="sourceLine" id="cb4-11" title="11">  <span class="co"># Select those with the top phenotype</span></a>
+<a class="sourceLine" id="cb4-12" title="12">  <span class="kw">return</span>( info[<span class="kw">order</span>(info<span class="op">$</span>Pheno, <span class="dt">decreasing=</span><span class="ot">TRUE</span>),]<span class="op">$</span>Index[<span class="dv">1</span><span class="op">:</span><span class="dv">10</span>] )</a>
+<a class="sourceLine" id="cb4-13" title="13"></a>
+<a class="sourceLine" id="cb4-14" title="14">}</a></code></pre></div>
 <p>and uses it via the make.group interface:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1">g0 &lt;-<span class="st"> </span><span class="kw">load.data</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>,</a>
 <a class="sourceLine" id="cb5-2" title="2">                <span class="st">&quot;../tests/testthat/helper_map.txt&quot;</span>,</a>
@@ -552,28 +553,22 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <a class="sourceLine" id="cb5-8" title="8"><span class="co"># Simulate crosses</span></a>
 <a class="sourceLine" id="cb5-9" title="9">f1 &lt;-<span class="st"> </span><span class="kw">cross.randomly</span>(g0, <span class="dt">n.crosses=</span><span class="dv">15</span>, <span class="dt">offspring=</span><span class="dv">3</span>)</a>
 <a class="sourceLine" id="cb5-10" title="10"><span class="co"># Apply custom selection method</span></a>
-<a class="sourceLine" id="cb5-11" title="11">f1.info &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="st">&quot;i&quot;</span>=<span class="kw">see.group.data</span>(f1,<span class="dt">data.type=</span><span class="st">&quot;X&quot;</span>),<span class="st">&quot;GEBV&quot;</span>=<span class="kw">see.group.data</span>(f1,<span class="dt">data.type=</span><span class="st">&quot;BV&quot;</span>))</a>
-<a class="sourceLine" id="cb5-12" title="12">f1.selected &lt;-<span class="st"> </span><span class="kw">make.group</span>(<span class="kw">get.top.10.phenotypes</span>(f1.info, <span class="fl">0.3</span>))</a>
-<a class="sourceLine" id="cb5-13" title="13"><span class="co"># (delete the non-selected genotypes)</span></a>
-<a class="sourceLine" id="cb5-14" title="14"><span class="kw">delete.group</span>(f1)</a>
-<a class="sourceLine" id="cb5-15" title="15"><span class="co">#&gt; 35 genotypes were deleted</span></a>
-<a class="sourceLine" id="cb5-16" title="16"><span class="co">#&gt; [1] 0</span></a>
-<a class="sourceLine" id="cb5-17" title="17"></a>
-<a class="sourceLine" id="cb5-18" title="18"><span class="co"># ... repeat for further generations</span></a>
-<a class="sourceLine" id="cb5-19" title="19">f2 &lt;-<span class="st"> </span><span class="kw">cross.randomly</span>(f1.selected, <span class="dt">n.crosses=</span><span class="dv">100</span>)</a>
-<a class="sourceLine" id="cb5-20" title="20">f2.info &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="st">&quot;i&quot;</span>=<span class="kw">see.group.data</span>(f2,<span class="dt">data.type=</span><span class="st">&quot;X&quot;</span>),<span class="st">&quot;GEBV&quot;</span>=<span class="kw">see.group.data</span>(f2,<span class="dt">data.type=</span><span class="st">&quot;BV&quot;</span>))</a>
-<a class="sourceLine" id="cb5-21" title="21">f2.selected &lt;-<span class="st"> </span><span class="kw">make.group</span>(<span class="kw">get.top.10.phenotypes</span>(f2.info, <span class="fl">0.5</span>))</a>
-<a class="sourceLine" id="cb5-22" title="22"></a>
-<a class="sourceLine" id="cb5-23" title="23"><span class="co"># ...</span></a>
-<a class="sourceLine" id="cb5-24" title="24"><span class="kw">delete.group</span>(f1.selected)</a>
+<a class="sourceLine" id="cb5-11" title="11">f1.selected &lt;-<span class="st"> </span><span class="kw">make.group</span>(<span class="kw">get.top.10.phenotypes</span>(f1, <span class="fl">0.3</span>))</a>
+<a class="sourceLine" id="cb5-12" title="12"><span class="co"># (delete the non-selected genotypes)</span></a>
+<a class="sourceLine" id="cb5-13" title="13"><span class="kw">delete.group</span>(f1)</a>
+<a class="sourceLine" id="cb5-14" title="14"><span class="co">#&gt; 35 genotypes were deleted</span></a>
+<a class="sourceLine" id="cb5-15" title="15"><span class="co">#&gt; [1] 0</span></a>
+<a class="sourceLine" id="cb5-16" title="16"></a>
+<a class="sourceLine" id="cb5-17" title="17"><span class="co"># ... repeat for further generations</span></a>
+<a class="sourceLine" id="cb5-18" title="18">f2 &lt;-<span class="st"> </span><span class="kw">cross.randomly</span>(f1.selected, <span class="dt">n.crosses=</span><span class="dv">100</span>)</a>
+<a class="sourceLine" id="cb5-19" title="19">f2.selected &lt;-<span class="st"> </span><span class="kw">make.group</span>(<span class="kw">get.top.10.phenotypes</span>(f2, <span class="fl">0.5</span>))</a>
+<a class="sourceLine" id="cb5-20" title="20"></a>
+<a class="sourceLine" id="cb5-21" title="21"><span class="co"># ...</span></a>
+<a class="sourceLine" id="cb5-22" title="22"><span class="kw">delete.group</span>(<span class="kw">c</span>(f1.selected,f2,f2.selected))</a>
+<a class="sourceLine" id="cb5-23" title="23"><span class="co">#&gt; 10 genotypes were deleted</span></a>
+<a class="sourceLine" id="cb5-24" title="24"><span class="co">#&gt; 90 genotypes were deleted</span></a>
 <a class="sourceLine" id="cb5-25" title="25"><span class="co">#&gt; 10 genotypes were deleted</span></a>
-<a class="sourceLine" id="cb5-26" title="26"><span class="co">#&gt; [1] 0</span></a>
-<a class="sourceLine" id="cb5-27" title="27"><span class="kw">delete.group</span>(f2)</a>
-<a class="sourceLine" id="cb5-28" title="28"><span class="co">#&gt; 90 genotypes were deleted</span></a>
-<a class="sourceLine" id="cb5-29" title="29"><span class="co">#&gt; [1] 0</span></a>
-<a class="sourceLine" id="cb5-30" title="30"><span class="kw">delete.group</span>(f2.selected)</a>
-<a class="sourceLine" id="cb5-31" title="31"><span class="co">#&gt; 10 genotypes were deleted</span></a>
-<a class="sourceLine" id="cb5-32" title="32"><span class="co">#&gt; [1] 0</span></a></code></pre></div>
+<a class="sourceLine" id="cb5-26" title="26"><span class="co">#&gt; [1] 0</span></a></code></pre></div>
 </div>
 </div>
 <div id="details-and-methodology" class="section level1">
@@ -656,7 +651,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </ul>
 <p>Modify groupings:</p>
 <ul>
-<li><code>delete.group(group)</code></li>
+<li><code>delete.group(groups)</code></li>
 <li><code>group &lt;- combine.groups(groups)</code></li>
 <li><code>group &lt;- make.group(indexes)</code></li>
 <li><code>[vector of groups] &lt;- break.group.into.individuals(group)</code></li>
@@ -681,7 +676,6 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <ul>
 <li><code>[dataframe containing current existing groups and their sizes] &lt;- see.existing.groups()</code></li>
 <li><code>[vector containing the chosen data] &lt;- see.group.data(group, data.type)</code></li>
-<li><code>[index and GEBV for each group member] &lt;- see.group.gebvs(group)</code></li>
 <li><code>[string containing best allele per SNP] &lt;- see.optimal.haplotype()</code></li>
 <li><code>[float: the maximum possible GEBV] &lt;- see.optimal.GEBV()</code></li>
 <li><code>[float: the minimum possible GEBV] &lt;- see.minimum.GEBV()</code></li>
@@ -865,14 +859,6 @@ F10 0   1   0</code></pre>
 <li>Name of the first parent, or the first parent’s ID if it has no name (P1)</li>
 <li>Name of the second parent, or the second parent’s ID if it has no name (P2)</li>
 <li>Full/recursive known pedigree, as a string (PED)</li>
-</ul>
-</div>
-<div id="see.group.gebvs" class="section level3">
-<h3><span class="header-section-number">6.6.3</span> <code>see.group.gebvs</code></h3>
-<p>This function returns a dataframe with two columns:</p>
-<ul>
-<li><code>i</code>, containing the indexes of the group members</li>
-<li><code>GEBV</code>, containing the GEBVs of the group member with that index</li>
 </ul>
 </div>
 </div>

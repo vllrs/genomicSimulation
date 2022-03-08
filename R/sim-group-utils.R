@@ -4,14 +4,14 @@
 #' them from the SimData object's storage. A message is printed explaining
 #' how many genotypes were deleted.
 #'
-#' @param group an integer representing the group number of the group to be deleted
+#' @param group an vector containing the group numbers of the groups to be deleted
 #' @return 0 on success. An error is raised on failure.
 #'
 #' @family grouping functions
 #' @export
-delete.group <- function(group) {
+delete.group <- function(groups) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_delete_group, sim.data$p, group))
+	return(.Call(SXP_delete_group, sim.data$p, length(groups), groups))
 }
 
 #' Assign multiple groups' worth of genotypes to a single group

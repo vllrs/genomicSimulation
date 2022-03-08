@@ -1106,15 +1106,20 @@ SEXP clear_simdata(SEXP exd) {
 	return ScalarInteger(0);
 }
 
-SEXP SXP_delete_group(SEXP exd, SEXP group) {
+SEXP SXP_delete_group(SEXP exd, SEXP len, SEXP groups) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int group_id = asInteger(group);
-	if (group_id == NA_INTEGER || group_id < 0) { 
-		error("`group` parameter is of invalid type.\n");
+	int n = asInteger(len);
+	int *gps = INTEGER(groups); 
+	if (n == NA_INTEGER) { 
+		error("`len` parameter is of invalid type or `groups` vector is invalid.\n");
 	}
-	
-	delete_group(d, group_id);
+	for (int i = 0; i < n; ++i) {
+		if (gps[i] == NA_INTEGER || gps[i] < 0) { 
+			error("Field %d in `group` parameter is of invalid type.\n", i);
+		}
+		delete_group(d, gps[i]);
+	}
 	
 	return ScalarInteger(0);
 }

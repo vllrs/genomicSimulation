@@ -165,17 +165,19 @@ Suppose the user chooses the following model for their simulated phenotype. The 
 The user creates the following R function to perform their selection:
 
 ```{R}
-get.top.10.phenotypes <- function(group.info, H2) {
-  # calculate Ve
-  Vg <- var(group.info$GEBV)
-  Ve <- Vg/H2 - Vg
+get.top.10.phenotypes <- function(group, heritability) {
+  info <- data.frame(Index=see.group.data(group,"X"),
+                     GEBV=see.group.data(group,"BV"))
   
-  # Simulate phenotypes
-  group.info$pheno <- group.info$GEBV + rnorm(length(group.info$GEBV), mean=0, sd = sqrt(Ve))
+  # simulate phenotype = genotype + environmental variation
+  # using normally distributed Ve and heritability H^2 = (Ve + Vg)/Vg
+  Vg <- var(info$GEBV)
+  Ve <- Vg/heritability - Vg
+  info$Pheno <- info$GEBV + rnorm(length(info$GEBV), mean=0, sd = sqrt(Ve))
   
-  # Pick the best 10 and return their indices
-  sorted <- group.info[order(group.info$pheno, decreasing=TRUE),]
-  return(sorted$i[1:10])
+  # Select those with the top phenotype
+  return( info[order(info$Pheno, decreasing=TRUE),]$Index[1:10] )
+
 }
 ```
 
@@ -188,20 +190,16 @@ g0 <- load.data("../tests/testthat/helper_genotypes.txt",
 # Simulate crosses
 f1 <- cross.randomly(g0, n.crosses=15, offspring=3)
 # Apply custom selection method
-f1.info <- data.frame("i"=see.group.data(f1,data.type="X"),"GEBV"=see.group.data(f1,data.type="BV"))
-f1.selected <- make.group(get.top.10.phenotypes(f1.info, 0.3))
+f1.selected <- make.group(get.top.10.phenotypes(f1, 0.3))
 # (delete the non-selected genotypes)
 delete.group(f1)
 
 # ... repeat for further generations
 f2 <- cross.randomly(f1.selected, n.crosses=100)
-f2.info <- data.frame("i"=see.group.data(f2,data.type="X"),"GEBV"=see.group.data(f2,data.type="BV"))
-f2.selected <- make.group(get.top.10.phenotypes(f2.info, 0.5))
+f2.selected <- make.group(get.top.10.phenotypes(f2, 0.5))
 
 # ...
-delete.group(f1.selected)
-delete.group(f2)
-delete.group(f2.selected)
+delete.group(c(f1.selected,f2,f2.selected))
 ```
 
 
@@ -282,7 +280,7 @@ Performing selection:
 
 Modify groupings:
 
-- `delete.group(group)`
+- `delete.group(groups)`
 - `group <- combine.groups(groups)`
 - `group <- make.group(indexes)`
 - `[vector of groups] <- break.group.into.individuals(group)`
