@@ -31,3 +31,17 @@ test_that("After deleting a group, other data is shuffled correctly in memory", 
   expect_identical(see.group.data(g3, "XIndexes"), c(0L:1002L))
   
 })
+
+test_that("Multiple groups can be deleted in a single command", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(g2 <- load.more.genotypes("helper_genotypes.txt"), print=F)
+  capture_output(g3 <- load.more.genotypes("helper_genotypes.txt"), print=F)
+  
+  #do the delete and check correct number were deleted
+  expect_output(delete.group(c(g,g2)), "6 genotypes were deleted\n6 genotypes were deleted")
+  
+  #Check the undeleted groups remain
+  expect_identical(see.group.data(g3, "XIndexes"), c(0L, 1L, 2L, 3L, 4L, 5L))
+  
+
+})

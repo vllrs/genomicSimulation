@@ -17,7 +17,6 @@ raised if no effect values have been loaded.
 \seealso{
 Other data access functions: 
 \code{\link{see.group.data}()},
-\code{\link{see.group.gebvs}()},
 \code{\link{see.minimum.GEBV}()},
 \code{\link{see.optimal.haplotype}()}
 }

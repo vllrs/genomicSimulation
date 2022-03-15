@@ -1,3 +1,8 @@
+# genomicSimulation dev
+- Fix segfault in select.by.gebv when trying to select more individuals than exist in the group (e.g. asking for the best 5 members of a group of 2). Now, it just moves all group members to the new selected group, and doesn't worry about the missing requested remainder.
+- adding new group splitter functions. Added tests for them.
+- `delete.group` can now be passed a vector of group ids to delete from memory. Previously it could only delete a single group at a time. 
+
 # genomicSimulation 0.2
 
 - Introduces new version numbering scheme. This update would be numbered 0.1-5 under the old numbering scheme instead of 0.2, but it is not a more significant update than v0.1-3 -> v0.1-4. The new numbering scheme is as suggested by Hadley & Bryan in *R Packages*. It uses the second digit rather than the third for minor releases.
@@ -60,4 +65,4 @@
 
 # genomicSimulation 0.1-1
 
-- Initial relase
+- Initial release

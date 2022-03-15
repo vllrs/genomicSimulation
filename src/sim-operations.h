@@ -279,7 +279,8 @@ int add_doublematrixvector_product_to_dmatrix(DecimalMatrix* result, DecimalMatr
  */
 struct TableSize get_file_dimensions(const char* filename, char sep);
 int get_from_ordered_uint_list(unsigned int target, unsigned int* list, unsigned int list_len);
-int get_from_unordered_str_list(char* target, char** list, int list_len) ;
+int get_from_unordered_str_list(char* target, char** list, int list_len);
+void shuffle_up_to(int* sequence, size_t total_n, size_t n_to_shuffle);
 
 void get_sorted_markers(SimData* d, int actual_n_markers);
 void get_chromosome_locations(SimData *d);
@@ -288,6 +289,7 @@ void set_names(AlleleMatrix* a, char* prefix, int suffix, int from_index);
 void set_ids(SimData* d, int from_index, int to_index);
 int get_integer_digits(int i);
 int get_new_group_num( SimData* d);
+void get_n_new_group_nums( SimData* d, int n, int* result);
 void set_group_list( SimData* d, int by_n, int new_group);
 void condense_allele_matrix( SimData* d);
 void* get_malloc(size_t size);
@@ -320,7 +322,7 @@ int get_group_size( SimData* d, int group_id);
 char** get_group_genes( SimData* d, int group_id, int group_size);
 char** get_group_names( SimData* d, int group_id, int group_size);
 unsigned int* get_group_ids( SimData* d, int group_id, int group_size);
-unsigned int* get_group_indexes(SimData* d, int group_id, int group_size);
+int* get_group_indexes(SimData* d, int group_id, int group_size);
 double* get_group_bvs( SimData* d, int group_id, int group_size);
 unsigned int* get_group_parent_ids( SimData* d, int group_id, int group_size, int parent);
 char** get_group_parent_names( SimData* d, int group_id, int group_size, int parent);
@@ -337,9 +339,17 @@ int** get_existing_group_counts( SimData* d, int* n_groups);
  * @{
  */
 int combine_groups( SimData* d, int list_len, int group_ids[list_len]);
-void split_into_individuals( SimData* d, int group_id);
-void split_into_families(SimData* d, int group_id);
+void split_into_individuals( SimData* d, int group_id, int* results);
+void split_into_families(SimData* d, int group_id, int* results);
+void split_into_halfsib_families( SimData* d, int group_id, int parent, int* results);
 int split_from_group( SimData* d, int n, int indexes_to_split[n]);
+
+int split_evenly_into_two(SimData* d, int group_id);
+void split_evenly_into_n(SimData* d, int group_id, int n, int* results);
+void split_by_specific_counts_into_n(SimData* d, int group_id, int n, int* counts, int* results);
+int split_randomly_into_two(SimData* d, int group_id);
+void split_randomly_into_n(SimData* d, int group_id, int n, int* results);
+void split_by_probabilities_into_n(SimData* d, int group_id, int n, double* probs, int* results);
 /**@}*/
 
 /** @defgroup deletors Deletor Functions

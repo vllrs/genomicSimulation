@@ -338,44 +338,25 @@ SEXP SXP_combine_groups(SEXP exd, SEXP len, SEXP groups) {
 SEXP SXP_split_individuals(SEXP exd, SEXP group) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	// track groups before we affect them
-	int old_n_groups = 0;
-	int* old_groups = get_existing_groups(d, &old_n_groups);
-	
 	int group_id = asInteger(group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
 		error("`group` parameter is of invalid type.\n");
 	}
 	
+	int group_size = get_group_size(d, group_id);
+	int results[group_size];
+	memset(results, 0, sizeof(int) * group_size);
+	
 	// do the actual split
-	split_into_individuals(d, group_id);
-	
-	//track groups after the split
-	int new_n_groups = 0;
-	int* new_groups = get_existing_groups(d, &new_n_groups);
-	
+	split_into_individuals(d, group_id, results);
+		
 	// Get an R vector of the same length as the number of new size 1 groups created
-	SEXP out = PROTECT(allocVector(INTSXP, new_n_groups - old_n_groups + 1));
+	SEXP out = PROTECT(allocVector(INTSXP, group_size));
 	int* outc = INTEGER(out);
-	int outi = 0;
-	// Find the size 1 groups and save them to this vector
-	// They're identified as the group nums that didn't exist before the split
-	int is_new;
-	for (int i = 0; i < new_n_groups; ++i) {
-		is_new = TRUE;
-		for (int j = 0; j < old_n_groups; ++j) {
-			if (old_groups[j] == new_groups[i]) {
-				is_new = FALSE;
-				break;
-			}
-		}
-		if (is_new) {
-			outc[outi] = new_groups[i];
-			++outi;
-		}
+	for (int i = 0; i < group_size; ++i) {
+		outc[i] = results[i];
 	}
-	free(old_groups);
-	free(new_groups);
+	
 	UNPROTECT(1);
 	return out;
 }
@@ -383,47 +364,199 @@ SEXP SXP_split_individuals(SEXP exd, SEXP group) {
 SEXP SXP_split_familywise(SEXP exd, SEXP group) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	// track groups before we affect them
-	int old_n_groups = 0;
-	int* old_groups = get_existing_groups(d, &old_n_groups);
+	int group_id = asInteger(group);
+	if (group_id == NA_INTEGER || group_id < 0) { 
+		error("`group` parameter is of invalid type.\n");
+	}
+	
+	int group_size = get_group_size(d, group_id);
+	int results[group_size];
+	memset(results, 0, sizeof(int) * group_size);
+		
+	// do the actual split
+	split_into_families(d, group_id, results);
+	
+	// calculate how many groups were created
+	int groups_created = group_size;
+	for (int i = 0; i < group_size; ++i) {
+		if (results[i] == 0) { // because if a group was created it would not be 0
+			groups_created = i;
+			break;
+		}
+	}
+	
+	// Get an R vector of the same length as the number of new groups created
+	SEXP out = PROTECT(allocVector(INTSXP, groups_created));
+	int* outc = INTEGER(out);
+	for (int i = 0; i < groups_created; ++i) {
+		outc[i] = results[i];
+	}
+	
+	UNPROTECT(1);
+	return out;
+}
+
+SEXP SXP_split_halfsibwise(SEXP exd, SEXP group, SEXP parent) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
 	int group_id = asInteger(group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
 		error("`group` parameter is of invalid type.\n");
 	}
 	
+	int parent_num = asInteger(parent);
+	if (parent_num == NA_INTEGER || parent_num < 0) { 
+		error("`parent` parameter is of invalid type.\n");
+	}
+	
+	int group_size = get_group_size(d, group_id);
+	int results[group_size];
+	memset(results, 0, sizeof(int) * group_size);
+		
 	// do the actual split
-	split_into_families(d, group_id);
+	split_into_halfsib_families(d, group_id, parent_num, results);
 	
-	//track groups after the split
-	int new_n_groups = 0;
-	int* new_groups = get_existing_groups(d, &new_n_groups);
-	
-	// Get an R vector of the same length as the number of new size 1 groups created
-	SEXP out = PROTECT(allocVector(INTSXP, new_n_groups - old_n_groups + 1));
-	int* outc = INTEGER(out);
-	int outi = 0;
-	// Find the size 1 groups and save them to this vector
-	// They're identified as the group nums that didn't exist before the split
-	int is_new;
-	for (int i = 0; i < new_n_groups; ++i) {
-		is_new = TRUE;
-		for (int j = 0; j < old_n_groups; ++j) {
-			if (old_groups[j] == new_groups[i]) {
-				is_new = FALSE;
-				break;
-			}
-		}
-		if (is_new) {
-			outc[outi] = new_groups[i];
-			++outi;
+	// calculate how many groups were created
+	int groups_created = group_size;
+	for (int i = 0; i < group_size; ++i) {
+		if (results[i] == 0) { // because if a group was created it would not be 0
+			groups_created = i;
+			break;
 		}
 	}
-	free(old_groups);
-	free(new_groups);
+	
+	// Get an R vector of the same length as the number of newgroups created
+	SEXP out = PROTECT(allocVector(INTSXP, groups_created));
+	int* outc = INTEGER(out);
+	for (int i = 0; i < groups_created; ++i) {
+		outc[i] = results[i];
+	}
+	
 	UNPROTECT(1);
-	return out;	
+	return out;
 }
+
+SEXP SXP_split_randomly(SEXP exd, SEXP group, SEXP n) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	int group_id = asInteger(group);
+	if (group_id == NA_INTEGER || group_id < 0) { 
+		error("`group` parameter is of invalid type.\n");
+	}
+	
+	int n_groups = asInteger(n);
+	if (n_groups == NA_INTEGER || n_groups < 0) { 
+		error("`n` parameter is of invalid type.\n");
+	}
+	
+	if (n_groups == 1) {
+		return group;
+		
+	} else if (n_groups == 2) {
+		SEXP out = PROTECT(allocVector(INTSXP, 2));
+		int* outc = INTEGER(out);
+		outc[0] = group_id;
+		outc[1] = split_randomly_into_two(d, group_id);
+		
+		UNPROTECT(1);
+		return out;
+		
+	} else {
+		SEXP out = PROTECT(allocVector(INTSXP, n_groups));
+		int* outc = INTEGER(out);
+		
+		split_randomly_into_n(d, group_id, n_groups, outc);
+		
+		UNPROTECT(1);
+		return out;
+	}
+}
+
+SEXP SXP_split_evenly(SEXP exd, SEXP group, SEXP n) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	int group_id = asInteger(group);
+	if (group_id == NA_INTEGER || group_id < 0) { 
+		error("`group` parameter is of invalid type.\n");
+	}
+	
+	int n_groups = asInteger(n);
+	if (n_groups == NA_INTEGER || n_groups < 0) { 
+		error("`n` parameter is of invalid type.\n");
+	}
+	
+	if (n_groups == 1) {
+		return group;
+		
+	} else if (n_groups == 2) {
+		SEXP out = PROTECT(allocVector(INTSXP, 2));
+		int* outc = INTEGER(out);
+		outc[0] = group_id;
+		outc[1] = split_evenly_into_two(d, group_id);
+		
+		UNPROTECT(1);
+		return out;
+		
+	} else {
+		SEXP out = PROTECT(allocVector(INTSXP, n_groups));
+		int* outc = INTEGER(out);
+		
+		split_evenly_into_n(d, group_id, n_groups, outc);
+		
+		UNPROTECT(1);
+		return out;
+	}
+}
+
+SEXP SXP_split_buckets(SEXP exd, SEXP group, SEXP buckets) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	int group_id = asInteger(group);
+	if (group_id == NA_INTEGER || group_id < 0) { 
+		error("`group` parameter is of invalid type.\n");
+	}
+	
+	if (TYPEOF(buckets) != INTSXP) { // check param name
+		error("`buckets` parameter must be a vector of integers.\n");
+	}
+	
+	int n_groups = length(buckets)+1;
+	int* counts = INTEGER(buckets);
+	
+	SEXP out = PROTECT(allocVector(INTSXP, n_groups));
+	int* outc = INTEGER(out);
+		
+	split_by_specific_counts_into_n(d, group_id, n_groups, counts, outc);
+		
+	UNPROTECT(1);
+	return out;
+}
+
+SEXP SXP_split_probabilities(SEXP exd, SEXP group, SEXP probs) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	int group_id = asInteger(group);
+	if (group_id == NA_INTEGER || group_id < 0) { 
+		error("`group` parameter is of invalid type.\n");
+	}
+	
+	if (TYPEOF(probs) != REALSXP) { // check param name
+		error("`probabilies` parameter must be a vector of decimals.\n");
+	}
+	
+	int n_groups = length(probs)+1;
+	double* probabilities = REAL(probs);
+	
+	SEXP out = PROTECT(allocVector(INTSXP, n_groups));
+	int* outc = INTEGER(out);
+		
+	split_by_probabilities_into_n(d, group_id, n_groups, probabilities, outc);
+		
+	UNPROTECT(1);
+	return out;
+}
+
+
 
 SEXP SXP_split_out(SEXP exd, SEXP len, SEXP indexes) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
@@ -973,15 +1106,20 @@ SEXP clear_simdata(SEXP exd) {
 	return ScalarInteger(0);
 }
 
-SEXP SXP_delete_group(SEXP exd, SEXP group) {
+SEXP SXP_delete_group(SEXP exd, SEXP len, SEXP groups) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int group_id = asInteger(group);
-	if (group_id == NA_INTEGER || group_id < 0) { 
-		error("`group` parameter is of invalid type.\n");
+	int n = asInteger(len);
+	int *gps = INTEGER(groups); 
+	if (n == NA_INTEGER) { 
+		error("`len` parameter is of invalid type or `groups` vector is invalid.\n");
 	}
-	
-	delete_group(d, group_id);
+	for (int i = 0; i < n; ++i) {
+		if (gps[i] == NA_INTEGER || gps[i] < 0) { 
+			error("Field %d in `group` parameter is of invalid type.\n", i);
+		}
+		delete_group(d, gps[i]);
+	}
 	
 	return ScalarInteger(0);
 }

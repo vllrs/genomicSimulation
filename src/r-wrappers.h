@@ -44,6 +44,12 @@ SEXP SXP_one_cross(SEXP exd, SEXP parent1_index, SEXP parent2_index, SEXP name,
 SEXP SXP_combine_groups(SEXP exd, SEXP len, SEXP groups);
 SEXP SXP_split_individuals(SEXP exd, SEXP group);
 SEXP SXP_split_familywise(SEXP exd, SEXP group);
+SEXP SXP_split_halfsibwise(SEXP exd, SEXP group, SEXP parent);
+SEXP SXP_split_randomly(SEXP exd, SEXP group, SEXP n);
+SEXP SXP_split_evenly(SEXP exd, SEXP group, SEXP n);
+SEXP SXP_split_buckets(SEXP exd, SEXP group, SEXP buckets);
+SEXP SXP_split_probabilities(SEXP exd, SEXP group, SEXP probs);
+
 SEXP SXP_split_out(SEXP exd, SEXP len, SEXP indexes);
 
 /*-----------------Fitness-------------------*/
@@ -75,4 +81,4 @@ SEXP SXP_save_chrsplit_block_effects(SEXP exd, SEXP filename, SEXP nslices, SEXP
 /*--------------------------------Deletors------------------------------------*/
 SEXP clear_simdata(SEXP exd);
 void SXP_delete_simdata(SEXP sd);
-SEXP SXP_delete_group(SEXP exd, SEXP group);
+SEXP SXP_delete_group(SEXP exd, SEXP len, SEXP groups);

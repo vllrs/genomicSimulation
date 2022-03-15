@@ -5,10 +5,6 @@
 #' As long as the group is not modified in between calls, the same ordering of group
 #' members will be used, so this function can be used to construct tables of data, eg.
 #' \code{data.frame("i"=see.group.data(3,"X"),"GEBV"=see.group.data(3,"BV"))}.
-#' 
-#' @Section Deprecation:
-#' To avoid confusion, the data.type parameter code for indexes has been changed from 'I' to
-#' 'X' to reduce ambiguity with the data type IDs ('D'). 
 #'
 #' @section Warning about indexes:
 #' Deleting a group (\code{\link{delete.group}}) may cause the indexes of group members to 
@@ -39,52 +35,7 @@
 #' @export
 see.group.data <- function(group, data.type) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  if (substr(toupper(data.type),1,1) == "I") {
-    warning("Data type code \"I\" is deprecated; to get group indexes, please use \"X\".", call. = FALSE)
-    return(.Call(SXP_get_group_data, sim.data$p, group, "X"))
-  }
 	return(.Call(SXP_get_group_data, sim.data$p, group, toupper(data.type)))
-}
-
-
-#' Get GEBVs of a group
-#'
-#' \code{see.group.gebvs} gives the R user a dataframe containing the GEBVs and a matching
-#' index for each genotype in a group. This can be used in conjunction with \code{\link{make.group}}
-#' to perform a custom selection on a group.
-#'
-#' @section Deprecation:
-#' In the history of this package, there was no way to get GEBVs using \code{\link{see.group.data}},
-#' because that function only dealt with data that required no calculation step. However, it 
-#' now includes that capability, and this function has become nothing but a wrapper. Deprecating it
-#' and exposing the underlying call:
-#' \code{data.frame("i"=see.group.data(...,data.type="X"),"GEBV"=see.group.data(...,data.type="BV")))}
-#' demystifies this function and allows users to see how they can use \code{\link{see.group.data}} for 
-#' flexible data access.
-#'
-#' @section Usual workflow:
-#' The suggested workflow involves using this function to get GEBVs and matching indexes,
-#' performing some transformation on the GEBVs (eg environmental masking then
-#' sorting), identifying some of the entries for selection, and passing
-#' the indexes of those entries to \code{\link{make.group}} in order to split
-#' them off into a new group.
-#'
-#' @param group an integer: the group number of the group to return the GEBVs of.
-#' @returns a dataframe whose columns are the GEBVs of the group members, named "GEBV", and 
-#' the indexes of the group members, named "i".
-#'
-#' @family grouping functions
-#' @family data access functions
-#' @export
-see.group.gebvs <- function(group) {
-  .Deprecated("data.frame(\"i\"=see.group.data(...,\"X\"),\"GEBV\"=see.group.data(...,\"BV\"))")
-	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	evals <- list()
-	for (g in group) {
-		d <- data.frame(.Call(SXP_group_eval, sim.data$p, group))
-		colnames(d) <- c("i","GEBV")
-	} 
-	return(d)
 }
 
 

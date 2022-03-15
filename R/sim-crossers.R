@@ -182,35 +182,6 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
-# Performs random crosses between a high-scoring subset of the group of genotypes
-#
-# \code{cross.from.top.pc} returns the group number of the group
-# that the new genotypes were loaded into. Only the alleles at SNPs
-# already tracked by the SimData are saved.
-#
-# The function calculates the GEBVs of the genotypes in the given group,
-# then takes the genotypes that are in the top [threshold]% of the group
-# by GEBV and performs random crosses betwee them.
-#
-#
-# The offspring parameter represents the number of random crosses performed.
-#
-# @param threshold The percent threshold with the highest GEBVs to subset and do 
-# random crosses of. Should not be the decimal version of a percentage: eg for top 5%, 
-# threshold should be 5, not 0.05
-# @inheritParams cross.randomly
-# @return The group number of the new genotypes produced
-#
-# @family crossing functions
-# @export
-#cross.from.top.pc <- function(group, threshold, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-#		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
-#		save.gebv=FALSE, save.genotype=FALSE) {
-#	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-#	return(.Call(cross_top, sim.data$p, group, threshold, give.names, name.prefix, offspring, track.pedigree, 
-#				 give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
-#}
-
 #' Performs n selfing steps on the lines in a group
 #'
 #' \code{self.n.times} returns the group number of the group
@@ -268,34 +239,4 @@ make.doubled.haploids <- function(group, offspring=1, retain=TRUE, give.names=FA
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_doubled, sim.data$p, length(group), group, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
-}
-
-#' Perform a cross between two specific lines.
-#'
-#' \code{cross} allows you to perform crosses between specific lines.
-#'
-#' The offspring parameter represents the number of offspring to make from
-#' this pair of parents.
-#' 
-#' @section Deprecated:
-#' This function is deprecated because it causes too many namespace collisions 
-#' with other packages. Its full functionality is exactly covered by a 
-#' call to \code{\link{cross.combinations}} with the same parameters.
-#' 
-#' @inheritParams cross.randomly
-#' @param parent1.index index of the first parent to cross
-#' @param parent2.index index of the second parent to cross
-#' @param offspring The number of offspring to produce from this pair of parents
-#' @return The group number of the group that the generated offspring were loaded into.
-#'
-#' @family crossing functions
-#' @export
-cross <- function(parent1.index, parent2.index, offspring=1, retain=TRUE, give.names=FALSE, 
-                   name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
-                   save.gebv=FALSE, save.genotype=FALSE) {
-  .Deprecated("cross.combinations")
-  if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_cross_Rcombinations, sim.data$p, c(parent1.index), c(parent2.index),
-               give.names, name.prefix, offspring, track.pedigree, give.ids, 
-               file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }

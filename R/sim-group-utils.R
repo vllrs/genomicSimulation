@@ -4,14 +4,14 @@
 #' them from the SimData object's storage. A message is printed explaining
 #' how many genotypes were deleted.
 #'
-#' @param group an integer representing the group number of the group to be deleted
+#' @param group an vector containing the group numbers of the groups to be deleted
 #' @return 0 on success. An error is raised on failure.
 #'
 #' @family grouping functions
 #' @export
-delete.group <- function(group) {
+delete.group <- function(groups) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_delete_group, sim.data$p, group))
+	return(.Call(SXP_delete_group, sim.data$p, length(groups), groups))
 }
 
 #' Assign multiple groups' worth of genotypes to a single group
@@ -61,6 +61,111 @@ break.group.into.families <- function(group) {
 	return(.Call(SXP_split_familywise, sim.data$p, group))
 }
 
+#' Assign all genotypes inside a group that share one parent 
+#' to separate new groups
+#'
+#' \code{break.group.into.halfsib.families} allocates all genotypes in the
+#' group that share one same parent (either the same first or the same 
+#' second parent) to separate new groups. 
+#'
+#' @param group an integer: the group number of the group to be split
+#' @param parent an integer: 1 to group by the first parent, 2 to group 
+#' by the second
+#' @return the group numbers of the new groups
+#'
+#' @family grouping functions
+#' @export
+break.group.into.halfsib.families <- function(group, parent) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_split_halfsibwise, sim.data$p, group, parent))
+}
+
+#' Randomly assign each genotype inside a group to one of n groups, with equal
+#' probability.
+#'
+#' The sizes of the resulting groups are dependent on the random draws.
+#'
+#' @param group an integer: the group number of the group to be split
+#' @param into.n an integer: the number of groups into which to break this one
+#' @return the group numbers of the new groups
+#'
+#' @family grouping functions
+#' @export
+break.group.randomly <- function(group, into.n=2) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_split_randomly, sim.data$p, group, into.n))  
+}
+
+#' Randomly split all genotypes in a group between n identical-size groups.
+#'
+#' The sizes of the resulting groups will differ by at most 1, in the case 
+#' where n does not divide the number of group members perfectly.
+#'
+#' @param group an integer: the group number of the group to be split
+#' @param into.n an integer: the number of groups into which to break this one
+#' @return the group numbers of the new groups
+#'
+#' @family grouping functions
+#' @export
+break.group.evenly <- function(group, into.n=2) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_split_evenly, sim.data$p, group, into.n))  
+}
+
+#' Randomly split all genotypes in a group between a set of specified-capacity
+#' buckets
+#' 
+#' Given a `buckets` parameter of length n, n+1 groups will be created, with the 
+#' last group containing (number of group members) - (sum of other bucket 
+#' capacities) genotypes. That is, it is assumed that the sum of the input 
+#' capacities is less than the number of group members, and the leftover amount 
+#' goes in the last bucket.
+#'
+#' If the bucket capacities add up to more than the number of group members, 
+#' a warning will be raised, but the function will still run. Note, though, that
+#' buckets are filled first to last. 
+#' If the total capacity of the set of buckets is greater than the number of 
+#' group members, later buckets in the list will not be filled to capacity. 
+#'
+#' @param group an integer: the group number of the group to be split
+#' @param buckets a vector of integers: the number of genotypes to be allocated 
+#' to the first, second, third, etc. buckets.
+#' @return the group numbers of length(buckets)+1 groups into which the genotypes were split
+#'
+#' @family grouping functions
+#' @export
+break.group.into.buckets <- function(group, buckets) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_split_buckets, sim.data$p, group, buckets))  
+}
+
+#' Randomly split all genotypes in a group between a set of buckets with provided 
+#' probabilities.
+#' 
+#' Given a `probabilities` parameter of length n, n+1 groups will be created, with 
+#'  1 - (sum of other probabilities) probability of being in the last group. If 
+#' probabilities add up to 1, a warning will be raised but no extra group will 
+#' be created.
+#' That is, it is assumed that the sum of `probabilities` is less than 1, 
+#' with the remaining probability falling towards a last group.
+#'
+#' If the bucket capacities add up to more than 1, 
+#' a warning will be raised, but the function will still run. Note, though, that
+#' genotypes are allocated to buckets using cumulative probabilities, so groups 
+#' with cumulative probabilities of more than 1 will get no members.
+#'
+#' @param group an integer: the group number of the group to be split
+#' @param probabilities a vector of decimals: the probability a genotypes will be 
+#' allocated to the first, second, third, etc. buckets.
+#' @return the group numbers of the new groups
+#'
+#' @family grouping functions
+#' @export
+break.group.with.probabilities <- function(group, probabilities) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_split_probabilities, sim.data$p, group, probabilities))  
+}
+
 #' Assign certain genotypes to a new group
 #'
 #' \code{make.group} allocates the genotypes with indexes in the vector
@@ -106,7 +211,7 @@ see.existing.groups <- function() {
 #'
 #' @section Custom selection:
 #' For more complex selection than by true/unmasked GEBV, use the function
-#' \code{\link{see.group.gebvs}}, use R scripting to identify which to select,
+#' \code{\link{see.group.data}}, use R scripting to identify which to select,
 #' and split them into a new group using \code{\link{make.group}}. 
 #'
 #' @param from.group an integer: the group number of the group perform selection on.
