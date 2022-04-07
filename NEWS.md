@@ -2,6 +2,7 @@
 - Fix segfault in select.by.gebv when trying to select more individuals than exist in the group (e.g. asking for the best 5 members of a group of 2). Now, it just moves all group members to the new selected group, and doesn't worry about the missing requested remainder.
 - adding new group splitter functions. Added tests for them.
 - `delete.group` can now be passed a vector of group ids to delete from memory. Previously it could only delete a single group at a time. 
+- Add function `cross.randomly.between` to perform crosses where one parent is picked randomly from one group and the other from another group. It also performs crosses between a selected individual and individuals randomly picked from a group.
 
 # genomicSimulation 0.2
 

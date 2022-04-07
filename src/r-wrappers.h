@@ -14,6 +14,10 @@ GenOptions create_genoptions(SEXP name, SEXP namePrefix, SEXP familySize,
 SEXP SXP_cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
 		SEXP saveEffects, SEXP saveGenes, SEXP retain);
+SEXP SXP_cross_randomly_btwn(SEXP exd, SEXP group1, SEXP group2, SEXP setp1flag, SEXP setp2flag,
+		SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
+		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
+		SEXP saveEffects, SEXP saveGenes, SEXP retain);
 SEXP SXP_cross_Rcombinations(SEXP exd, SEXP firstparents, SEXP secondparents,
 		SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,

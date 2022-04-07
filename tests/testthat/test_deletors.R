@@ -8,7 +8,7 @@ test_that("After deleting a group, it is no longer in memory", {
   expect_output(delete.group(g), "6 genotypes were deleted")
   
   expect_identical(length(see.group.data(g, "XIndexes")), 0L)
-          })
+})
 
 test_that("After deleting a group, other data is shuffled correctly in memory", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)

@@ -261,8 +261,8 @@ Loading data:
 
 Simulating crossing:
 
-- `group <- cross(parent1,parent2,[settings])`
 - `group <- cross.randomly(group,n.crosses,[settings])`
+- `group <- cross.randomly.between(group1,group2,set.parent1,set.parent2,n.crosses,[settings])`
 - `group <- cross.combinations(first.parents,second.parents,[settings])`
 - `group <- cross.combinations.file(cross.file,[settings])`
 - `group <- cross.dc.combinations.file(cross.file,[settings])`

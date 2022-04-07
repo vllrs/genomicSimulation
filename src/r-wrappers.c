@@ -126,6 +126,32 @@ SEXP SXP_cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP nam
 	}
 }
 
+SEXP SXP_cross_randomly_btwn(SEXP exd, SEXP group1, SEXP group2, SEXP setp1flag, SEXP setp2flag,
+		SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
+		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
+		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
+	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
+									 giveIds, filePrefix, savePedigree, saveEffects,
+									 saveGenes, retain);
+
+	int group1_c = INTEGER(group1)[0];
+	if (group1_c == NA_INTEGER || group1_c < 0) { error("The parameter `group1` is invalid.\n"); }
+	int group2_c = INTEGER(group2)[0];
+	if (group2_c == NA_INTEGER || group2_c < 0) { error("The parameter `group2` is invalid.\n"); }
+	
+	int setp1 = LOGICAL(setp1flag)[0];
+	if (setp1 == NA_LOGICAL) { error("The parameter `set.parent1` should not be NA.\n"); }
+	int setp2 = INTEGER(setp2flag)[0];
+	if (setp2 == NA_LOGICAL) { error("The parameter `set.parent2` should not be NA.\n"); }
+	
+	int n = asInteger(crosses);
+	if (n < 0 || n == NA_INTEGER) { error("`n.crosses` parameter is invalid.\n"); }
+	
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	return ScalarInteger(cross_randomly_between(d, group1_c, group2_c, n, setp1, setp2, g));
+}
+
 SEXP SXP_cross_Rcombinations(SEXP exd, SEXP firstparents, SEXP secondparents,
 		SEXP name, SEXP namePrefix, SEXP familySize,
 		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
@@ -794,6 +820,9 @@ SEXP SXP_get_group_data(SEXP exd, SEXP group, SEXP whatData) {
 	char c = CHAR(asChar(whatData))[0];
 	char c2;
 	int group_size = get_group_size(d, group_id);
+	if (group_size == 0) {
+		error("The group is empty\n");
+	}
 	
 	if (c == 'D') {
 		unsigned int *data = get_group_ids(d, group_id, group_size);

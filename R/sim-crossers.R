@@ -5,7 +5,8 @@
 #'
 #' For random crossing, the n.crosses parameter represents the number of 
 #' random crosses to perform. Each cross will be repeated a number of times
-#' determined by the offspring parameter.
+#' determined by the offspring parameter. Each member of a group becomes 
+#' a parent with equal probability.
 #'
 #' Random crosses can only be performed within a group, not within the
 #' whole set of genotypes tracked by the simulation.
@@ -64,6 +65,55 @@ cross.randomly <- function(group, n.crosses=5, offspring=1, retain=TRUE, give.na
 	return(.Call(SXP_cross_randomly, sim.data$p, length(group), group, n.crosses, give.names, name.prefix, 
 	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
+
+
+#' Performs random crosses between two groups.
+#'
+#' \code{cross.randomly.between} performs crosses where the first parent comes 
+#' from one group and the second from another. It returns the group number of the group
+#' that the new genotypes were loaded into.
+#'
+#' For random crossing, the n.crosses parameter represents the number of 
+#' random crosses to perform. Each cross will be repeated a number of times
+#' determined by the offspring parameter. Each member of a group becomes 
+#' a parent with equal probability.
+#' 
+#' If the user only wants one parent to be randomly chosen, the flag `set.parent1`
+#' can be set to TRUE, in which case `group1` will instead be interpreted as the 
+#' index of an individual genotype, to which members of the other group will be crossed.
+#' (and similarly the second parent can be set using `set.parent2`. A reminder 
+#' that parent order affects nothing but pedigree printing, so pick whichever.)
+#'
+#' @param group1 The group number from which to draw the first parent of the random 
+#' crosses (unless `set.parent1` is TRUE, in which case this is the index of the 
+#' set/guaranteed first parent)
+#' @param group2 The group number from which to draw the second parent of the random 
+#' crosses (unless `set.parent2` is TRUE, in which case this is the index of the 
+#' set/guaranteed second parent)
+#' @param set.parent1 If FALSE, the first parent of each random cross is drawn uniformly
+#' from the members of `group1`. If TRUE, `group1` is interpreted as the index of 
+#' the set/guaranteed first parent of every random cross.
+#' @param set.parent2 If FALSE, the second parent of each random cross is drawn uniformly
+#' from the members of `group2`. If TRUE, `group2` is interpreted as the index of 
+#' the set/guaranteed second parent of every random cross.
+#' @inheritParams cross.randomly
+#' @return The group number of the new crosses produced, or 0 if they could not be
+#' produced due to an invalid parent group number being provided.
+#'
+#' @family crossing functions
+#' @export
+cross.randomly.between <- function(group1, group2, set.parent1=FALSE, set.parent2=FALSE, 
+		n.crosses=5, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		save.gebv=FALSE, save.genotype=FALSE) {
+	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  
+	return(.Call(SXP_cross_randomly_btwn, sim.data$p, as.integer(group1), 
+	             as.integer(group2), set.parent1, set.parent2,
+				 n.crosses, give.names, name.prefix, offspring, track.pedigree, give.ids, 
+				 file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+}
+
 
 #' Performs defined crosses as passed in as R vectors.
 #'

@@ -12,8 +12,16 @@ test_that("cross.randomly works", {
   #break.group.into.families(g2)
   #expect_identical(see.existing.groups()$GroupSize, "GroupSize"=c(6L,2L,2L,2L))
   
+  # and check cross.randomly.between works (simple check, C version has more)
+  g3 <- cross.randomly.between(g, g2, n.crosses=3, offspring=2)
+  g4 <- cross.randomly.between(8L, g, set.parent1=TRUE, set.parent2=FALSE, n.crosses=30)
+
+  expect_identical(see.existing.groups(), data.frame("Group"=c(g,g2,g3,g4),"GroupSize"=c(6L,6L,6L,30L)))
+  
   clear.simdata()
 })
+
+
 
 test_that("cross.combinations works", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)

@@ -4,10 +4,10 @@
 \alias{delete.group}
 \title{Delete a group's worth of genotypes}
 \usage{
-delete.group(group)
+delete.group(groups)
 }
 \arguments{
-\item{group}{an integer representing the group number of the group to be deleted}
+\item{group}{an vector containing the group numbers of the groups to be deleted}
 }
 \value{
 0 on success. An error is raised on failure.

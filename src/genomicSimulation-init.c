@@ -32,6 +32,7 @@ R_CallMethodDef calledMethods[] = {
 	{"SXP_split_randomly", (DL_FUNC) &SXP_split_randomly, 3},	
 	{"SXP_cross_combinations", (DL_FUNC) &SXP_cross_combinations, 12},
 	{"SXP_cross_randomly", (DL_FUNC) &SXP_cross_randomly, 14},
+	{"SXP_cross_randomly_btwn", (DL_FUNC) &SXP_cross_randomly_btwn, 16},
 	{"SXP_cross_Rcombinations", (DL_FUNC) &SXP_cross_Rcombinations, 13},
 	{"SXP_cross_unidirectional", (DL_FUNC) &SXP_cross_unidirectional, 13},
 	{"SXP_dcross_combinations", (DL_FUNC) &SXP_dcross_combinations, 12},
