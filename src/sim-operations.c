@@ -2025,16 +2025,15 @@ int get_group_size( SimData* d, int group_id) {
  * group-data-getter functions.
  * @returns a vector containing pointers to the genes of each member of the group.
  * The vector itself is on the heap and should be freed, but its contents are only
- * shallow copies that should not be freed.
+ * shallow copies that should not be freed. Returns a null pointer if the group is empty.
  */
 char** get_group_genes( SimData* d, int group_id, int group_size) {
 	AlleleMatrix* m = d->m;
-	char** genes;
-	if (group_size > 0) {
-		genes = get_malloc(sizeof(char*) * group_size);
-	} else {
-		genes = get_malloc(sizeof(char*) * get_group_size( d, group_id ));
+    if (group_size <= 0) {
+        group_size = get_group_size( d, group_id );
+        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
 	}
+    char** genes = get_malloc(sizeof(char*) * group_size);
 	int i, genes_i = 0;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
@@ -2069,16 +2068,15 @@ char** get_group_genes( SimData* d, int group_id, int group_size) {
  * group-data-getter functions.
  * @returns a vector containing pointers to the names of each member of the group.
  * The vector itself is on the heap and should be freed, but its contents are only
- * shallow copies that should not be freed.
+ * shallow copies that should not be freed. Returns a null pointer if the group is empty.
  */
 char** get_group_names( SimData* d, int group_id, int group_size) {
 	AlleleMatrix* m = d->m;
-	char** names;
-	if (group_size > 0) {
-		names = get_malloc(sizeof(char*) * group_size);
-	} else {
-		names = get_malloc(sizeof(char*) * get_group_size( d, group_id ));
-	}
+    if (group_size <= 0) {
+        group_size = get_group_size( d, group_id );
+        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+    }
+    char** names = get_malloc(sizeof(char*) * group_size);
 	int i, names_i = 0;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
@@ -2112,16 +2110,15 @@ char** get_group_names( SimData* d, int group_id, int group_size) {
  * put in -1. This enables fewer calls to get_group_size when using multiple
  * group-data-getter functions.
  * @returns a vector containing the ids of each member of the group.
- * The vector itself is on the heap and should be freed.
+ * The vector itself is on the heap and should be freed. Returns a null pointer if the group is empty.
  */
 unsigned int* get_group_ids( SimData* d, int group_id, int group_size) {
 	AlleleMatrix* m = d->m;
-	unsigned int* gids;
-	if (group_size > 0) {
-		gids = get_malloc(sizeof(unsigned int) * group_size);
-	} else {
-		gids = get_malloc(sizeof(unsigned int) * get_group_size( d, group_id ));
-	}
+    if (group_size <= 0) {
+        group_size = get_group_size( d, group_id );
+        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+    }
+    unsigned int* gids = get_malloc(sizeof(unsigned int) * group_size);
 	int i, ids_i = 0;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
@@ -2156,16 +2153,15 @@ unsigned int* get_group_ids( SimData* d, int group_id, int group_size) {
  * put in -1. This enables fewer calls to get_group_size when using multiple
  * group-data-getter functions.
  * @returns a vector containing the indexes of each member of the group.
- * The vector itself is on the heap and should be freed.
+ * The vector itself is on the heap and should be freed. Returns a null pointer if the group is empty.
  */
 int* get_group_indexes(SimData* d, int group_id, int group_size) {
 	AlleleMatrix* m = d->m;
-    int* gis;
-	if (group_size > 0) {
-        gis = get_malloc(sizeof(int) * group_size);
-	} else {
-        gis = get_malloc(sizeof(int) * get_group_size( d, group_id ));
-	}
+    if (group_size <= 0) {
+        group_size = get_group_size( d, group_id );
+        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+    }
+    int* gis = get_malloc(sizeof(int) * group_size);
 	int i, total_i = 0, ids_i = 0;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i, ++total_i) {
@@ -2199,15 +2195,14 @@ int* get_group_indexes(SimData* d, int group_id, int group_size) {
  * put in -1. This enables fewer calls to get_group_size when using multiple
  * group-data-getter functions.
  * @returns a vector containing the breeding values of each member of the group.
- * The vector itself is on the heap and should be freed.
+ * The vector itself is on the heap and should be freed. Returns a null pointer if the group is empty.
  */
 double* get_group_bvs( SimData* d, int group_id, int group_size) {
-	double* bvs;
-	if (group_size > 0) {
-		bvs = get_malloc(sizeof(double) * group_size);
-	} else {
-		bvs = get_malloc(sizeof(double) * get_group_size( d, group_id ));
-	}
+    if (group_size <= 0) {
+        group_size = get_group_size( d, group_id );
+        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+    }
+    double* bvs = get_malloc(sizeof(double) * group_size);
 
 	DecimalMatrix dm_bvs = calculate_group_bvs(d, (unsigned int) group_id);
 
@@ -2240,7 +2235,7 @@ double* get_group_bvs( SimData* d, int group_id, int group_size) {
  * Raises an error and returns NULL if this parameter is not either of those values.
  * @returns a vector containing the id of either the first or second parent of
  * each member of the group.
- * The vector itself is on the heap and should be freed.
+ * The vector itself is on the heap and should be freed. Returns a null pointer if the group is empty.
  */
 unsigned int* get_group_parent_ids( SimData* d, int group_id, int group_size, int parent) {
 	if (!(parent == 1 || parent == 2)) {
@@ -2250,12 +2245,11 @@ unsigned int* get_group_parent_ids( SimData* d, int group_id, int group_size, in
 	--parent;
 
 	AlleleMatrix* m = d->m;
-	unsigned int* pids;
-	if (group_size > 0) {
-		pids = get_malloc(sizeof(unsigned int) * group_size);
-	} else {
-		pids = get_malloc(sizeof(unsigned int) * get_group_size( d, group_id ));
-	}
+    if (group_size <= 0) {
+        group_size = get_group_size( d, group_id );
+        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+    }
+    unsigned int* pids = get_malloc(sizeof(unsigned int) * group_size);
 	int i, ids_i = 0;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
@@ -2293,7 +2287,7 @@ unsigned int* get_group_parent_ids( SimData* d, int group_id, int group_size, in
  * Raises an error and returns NULL if this parameter is not either of those values.
  * @returns  a vector containing pointers to the names either the first or second
  * parent of each member of the group. The vector itself is on the heap and should be
- * freed, but its contents are only shallow copies that should not be freed.
+ * freed, but its contents are only shallow copies that should not be freed. Returns a null pointer if the group is empty.
  */
 char** get_group_parent_names( SimData* d, int group_id, int group_size, int parent) {
 	if (!(parent == 1 || parent == 2)) {
@@ -2303,12 +2297,12 @@ char** get_group_parent_names( SimData* d, int group_id, int group_size, int par
 	--parent;
 
 	AlleleMatrix* m = d->m;
-	char** pnames;
-	if (group_size > 0) {
-		pnames = get_malloc(sizeof(char*) * group_size);
-	} else {
-		pnames = get_malloc(sizeof(char*) * get_group_size( d, group_id ));
-	}
+    if (group_size <= 0) {
+        group_size = get_group_size( d, group_id );
+        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+    }
+    char** pnames = get_malloc(sizeof(char*) * group_size);
+
 	int i, ids_i = 0;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
@@ -2360,7 +2354,7 @@ char** get_group_parent_names( SimData* d, int group_id, int group_size, int par
  * allocated on the heap, and so should both be freed. This is because, unlike
  * other data-getter functions, this data is not stored but must be generated
  * specifically to answer this function call. If it failed to write to and
- * read from the temporary file, then it returns NULL;
+ * read from the temporary file, then it returns NULL; Also returns a null pointer if the group is empty.
  */
 char** get_group_pedigrees( SimData* d, int group_id, int group_size) {
 	char* fname = "gS_gpptmp";
@@ -2375,9 +2369,10 @@ char** get_group_pedigrees( SimData* d, int group_id, int group_size) {
 	}
 
 	// Create the list that we will return
-	if (group_size <= 0) {
-		group_size = get_group_size( d, group_id );
-	}
+    if (group_size <= 0) {
+        group_size = get_group_size( d, group_id );
+        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+    }
 	char** gp_ped = get_malloc(sizeof(char*) * group_size);
 
 	// read one line at a time

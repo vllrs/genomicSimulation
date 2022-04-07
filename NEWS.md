@@ -3,6 +3,7 @@
 - adding new group splitter functions. Added tests for them.
 - `delete.group` can now be passed a vector of group ids to delete from memory. Previously it could only delete a single group at a time. 
 - Add function `cross.randomly.between` to perform crosses where one parent is picked randomly from one group and the other from another group. It also performs crosses between a selected individual and individuals randomly picked from a group.
+- Fix see.group.data so it stops rather than requesting a 0-length block of heap space when it is asked to investigate a nonexistent group.
 
 # genomicSimulation 0.2
 
