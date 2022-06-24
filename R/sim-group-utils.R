@@ -147,7 +147,11 @@ break.group.into.buckets <- function(group, buckets) {
 #' probabilities add up to 1, a warning will be raised but no extra group will 
 #' be created.
 #' That is, it is assumed that the sum of `probabilities` is less than 1, 
-#' with the remaining probability falling towards a last group.
+#' with the remaining probability falling towards a last group. The reason for this 
+#' is that floating-point numbers have their imperfect accuracies, so we want to 
+#' save the computer from having to guess if you meant a last probability with 
+#' 0.000001 probability or if you were trying to provide some decimals that added
+#' up nicely to 1. 
 #'
 #' If the bucket capacities add up to more than 1, 
 #' a warning will be raised, but the function will still run. Note, though, that

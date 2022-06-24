@@ -2,11 +2,11 @@
 
 /*-------------------------- Loaders -------------------------*/
 
-SEXP SXP_load_data(SEXP alleleFile, SEXP mapFile) {
+SEXP SXP_load_data(SEXP s_alleleFile, SEXP s_mapFile) {
 	SimData* d = create_empty_simdata();
 	//d->current_id = 0; // reset ID counts
-	load_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)));
-	load_genmap_to_simdata(d, CHAR(asChar(mapFile)));
+	load_transposed_genes_to_simdata(d, CHAR(asChar(s_alleleFile)));
+	load_genmap_to_simdata(d, CHAR(asChar(s_mapFile)));
 	
 	get_sorted_markers(d, d->n_markers);
 	get_chromosome_locations(d);
@@ -17,12 +17,12 @@ SEXP SXP_load_data(SEXP alleleFile, SEXP mapFile) {
 	return sdptr;
 }
 
-SEXP SXP_load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile) {
+SEXP SXP_load_data_weff(SEXP s_alleleFile, SEXP s_mapFile, SEXP s_effectFile) {
 	SimData* d = create_empty_simdata();
 	//d->current_id = 0; // reset ID counts
-	load_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile)));
-	load_genmap_to_simdata(d, CHAR(asChar(mapFile)));
-	load_effects_to_simdata(d, CHAR(asChar(effectFile)));
+	load_transposed_genes_to_simdata(d, CHAR(asChar(s_alleleFile)));
+	load_genmap_to_simdata(d, CHAR(asChar(s_mapFile)));
+	load_effects_to_simdata(d, CHAR(asChar(s_effectFile)));
 
 	get_sorted_markers(d, d->n_markers);
 	get_chromosome_locations(d);
@@ -33,118 +33,119 @@ SEXP SXP_load_data_weff(SEXP alleleFile, SEXP mapFile, SEXP effectFile) {
 	return sdptr;
 }
 
-SEXP SXP_load_more_genotypes(SEXP exd, SEXP alleleFile) {
+SEXP SXP_load_more_genotypes(SEXP exd, SEXP s_alleleFile) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	return ScalarInteger(load_more_transposed_genes_to_simdata(d, CHAR(asChar(alleleFile))));
-	//return ScalarInteger(load_more_transposed_genes_to_simdata(&GlobalSim, CHAR(asChar(alleleFile))));
+	return ScalarInteger(load_more_transposed_genes_to_simdata(d, CHAR(asChar(s_alleleFile))));
+	//return ScalarInteger(load_more_transposed_genes_to_simdata(&GlobalSim, CHAR(asChar(s_alleleFile))));
 }
 
-SEXP SXP_load_new_effects(SEXP exd, SEXP effectFile) {
+SEXP SXP_load_new_effects(SEXP exd, SEXP s_effectFile) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	load_effects_to_simdata(d, CHAR(asChar(effectFile)));
+	load_effects_to_simdata(d, CHAR(asChar(s_effectFile)));
 	return ScalarInteger(0);
 }
 
 
 /*-------------------------------- Crossers ---------------------------*/
-GenOptions create_genoptions(SEXP name, SEXP namePrefix, SEXP familySize,
-		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
-		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
+GenOptions create_genoptions(SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
+		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
+		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
 	GenOptions go = BASIC_OPT;
 	int b;
 	
-	b = asLogical(name);
+	b = asLogical(s_name);
 	if (b == NA_LOGICAL) { error("`name` parameter is of invalid type.\n"); }
 	go.will_name_offspring = b;
 	
-	go.offspring_name_prefix = CHAR(asChar(namePrefix));
+	go.offspring_name_prefix = CHAR(asChar(s_namePrefix));
 	
-	b = asInteger(familySize);
+	b = asInteger(s_familySize);
 	if (b == NA_INTEGER) { error("`offspring` parameter is of invalid type.\n"); }
 	go.family_size = b;
 	
-	b = asLogical(trackPedigree);
+	b = asLogical(s_trackPedigree);
 	if (b == NA_LOGICAL) { error("`track.pedigree` parameter is of invalid type.\n"); }
 	go.will_track_pedigree = b;
 	
-	b = asLogical(giveIds);
+	b = asLogical(s_giveIds);
 	if (b == NA_LOGICAL) { error("`give.ids` parameter is of invalid type.\n"); }
 	go.will_allocate_ids = b;
 	
-	go.filename_prefix = CHAR(asChar(filePrefix));
+	go.filename_prefix = CHAR(asChar(s_filePrefix));
 	
-	b = asLogical(savePedigree);
+	b = asLogical(s_savePedigree);
 	if (b == NA_LOGICAL) { error("`save.pedigree` parameter is of invalid type.\n"); }
 	go.will_save_pedigree_to_file = b;
-	b = asLogical(saveEffects);
+	b = asLogical(s_saveEffects);
 	if (b == NA_LOGICAL) { error("`save.gebv` parameter is of invalid type.\n"); }
 	go.will_save_bvs_to_file = b;
-	b = asLogical(saveGenes);
+	b = asLogical(s_saveGenes);
 	if (b == NA_LOGICAL) { error("`save.genotype` parameter is of invalid type.\n"); }
 	go.will_save_alleles_to_file = b;
 	
-	b = asLogical(retain);
+	b = asLogical(s_retain);
 	if (b == NA_LOGICAL) { error("`retain` parameter is of invalid type.\n"); }
 	go.will_save_to_simdata = b;
 	
 	return go;
 }
 
-SEXP SXP_cross_randomly(SEXP exd, SEXP glen, SEXP groups, SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
-		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
-		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
-	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
-									 giveIds, filePrefix, savePedigree, saveEffects,
-									 saveGenes, retain);
+SEXP SXP_cross_randomly(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_crosses, SEXP s_name, 
+		SEXP s_namePrefix, SEXP s_familySize,
+		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
+		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
+	GenOptions g = create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
+									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
+									 s_saveGenes, s_retain);
 
-	int len = asInteger(glen);
-	int *gps = INTEGER(groups); 
-	if (len == NA_INTEGER) { 
+	int glen = asInteger(s_glen);
+	int *groups = INTEGER(s_groups); 
+	if (glen == NA_INTEGER) { 
 		error("`groups` is invalid.\n");
 	}
-	for (int i = 0; i < len; ++i) {
-		if (gps[i] == NA_INTEGER || gps[i] < 0) { error("The contents of `groups` is invalid.\n"); }
+	for (int i = 0; i < glen; ++i) {
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid.\n"); }
 	}
 	
-	int n = asInteger(crosses);
+	int n = asInteger(s_crosses);
 	if (n < 0 || n == NA_INTEGER) { error("`n.crosses` parameter is invalid.\n"); }
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	if (len == 1) {
-		return ScalarInteger(cross_random_individuals(d, gps[0], n, g));
+	if (glen == 1) {
+		return ScalarInteger(cross_random_individuals(d, groups[0], n, g));
 		
 	} else {
 		// Get an R vector of the same length as the number of new size 1 groups created
-		SEXP out = PROTECT(allocVector(INTSXP, len));
+		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
-		for (int i = 0; i < len; ++i) {
-			outc[i] = cross_random_individuals(d, gps[i], n, g);
+		for (int i = 0; i < glen; ++i) {
+			outc[i] = cross_random_individuals(d, groups[i], n, g);
 		}
 		UNPROTECT(1);
 		return out;
 	}
 }
 
-SEXP SXP_cross_randomly_btwn(SEXP exd, SEXP group1, SEXP group2, SEXP setp1flag, SEXP setp2flag,
-		SEXP crosses, SEXP name, SEXP namePrefix, SEXP familySize,
-		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
-		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
-	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
-									 giveIds, filePrefix, savePedigree, saveEffects,
-									 saveGenes, retain);
+SEXP SXP_cross_randomly_btwn(SEXP exd, SEXP s_group1, SEXP s_group2, SEXP s_cap1, SEXP s_cap2,
+		SEXP s_crosses, SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
+		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
+		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
+	GenOptions g = create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
+									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
+									 s_saveGenes, s_retain);
 
-	int group1_c = INTEGER(group1)[0];
+	int group1_c = INTEGER(s_group1)[0];
 	if (group1_c == NA_INTEGER || group1_c < 0) { error("The parameter `group1` is invalid.\n"); }
-	int group2_c = INTEGER(group2)[0];
+	int group2_c = INTEGER(s_group2)[0];
 	if (group2_c == NA_INTEGER || group2_c < 0) { error("The parameter `group2` is invalid.\n"); }
 	
-	int setp1 = LOGICAL(setp1flag)[0];
+	int setp1 = LOGICAL(s_cap1)[0];
 	if (setp1 == NA_LOGICAL) { error("The parameter `set.parent1` should not be NA.\n"); }
-	int setp2 = INTEGER(setp2flag)[0];
+	int setp2 = INTEGER(s_cap2)[0];
 	if (setp2 == NA_LOGICAL) { error("The parameter `set.parent2` should not be NA.\n"); }
 	
-	int n = asInteger(crosses);
+	int n = asInteger(s_crosses);
 	if (n < 0 || n == NA_INTEGER) { error("`n.crosses` parameter is invalid.\n"); }
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
@@ -152,28 +153,28 @@ SEXP SXP_cross_randomly_btwn(SEXP exd, SEXP group1, SEXP group2, SEXP setp1flag,
 	return ScalarInteger(cross_randomly_between(d, group1_c, group2_c, n, setp1, setp2, g));
 }
 
-SEXP SXP_cross_Rcombinations(SEXP exd, SEXP firstparents, SEXP secondparents,
-		SEXP name, SEXP namePrefix, SEXP familySize,
-		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
-		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
+SEXP SXP_cross_Rcombinations(SEXP exd, SEXP s_firstparents, SEXP s_secondparents,
+		SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
+		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
+		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	if (length(firstparents) != length(secondparents)) {
+	if (length(s_firstparents) != length(s_secondparents)) {
 		error("Parent vectors must be the same length.\n");
 	}
 	
-	int ncrosses = length(firstparents);
+	int ncrosses = length(s_firstparents);
 	
 	int combinations[2][ncrosses];
 	char pname[100];
 	
-	if (TYPEOF(firstparents) == STRSXP) {	
+	if (TYPEOF(s_firstparents) == STRSXP) {	
 		for (int i = 0; i < ncrosses; ++i) {
-			strncpy(pname, CHAR(STRING_ELT(firstparents, i)), sizeof(char)*100);
+			strncpy(pname, CHAR(STRING_ELT(s_firstparents, i)), sizeof(char)*100);
 			combinations[0][i] = get_index_of_name(d->m, pname);
 		}
-	} else if (TYPEOF(firstparents) == INTSXP) {
-		int* indexes = INTEGER(firstparents);
+	} else if (TYPEOF(s_firstparents) == INTSXP) {
+		int* indexes = INTEGER(s_firstparents);
 		for (int i = 0; i < ncrosses; ++i) {
 			combinations[0][i] = indexes[i];
 		}
@@ -181,14 +182,14 @@ SEXP SXP_cross_Rcombinations(SEXP exd, SEXP firstparents, SEXP secondparents,
 		error("first.parents must be a vector of strings or integers.\n");
 	}
 	
-	if (TYPEOF(secondparents) == STRSXP) {
+	if (TYPEOF(s_secondparents) == STRSXP) {
 		for (int i = 0; i < ncrosses; ++i) {
-			strncpy(pname, CHAR(STRING_ELT(secondparents, i)), sizeof(char)*100);
+			strncpy(pname, CHAR(STRING_ELT(s_secondparents, i)), sizeof(char)*100);
 			combinations[1][i] = get_index_of_name(d->m, pname);
 		}
 		
-	} else if (TYPEOF(secondparents) == INTSXP) {
-		int* indexes = INTEGER(secondparents);
+	} else if (TYPEOF(s_secondparents) == INTSXP) {
+		int* indexes = INTEGER(s_secondparents);
 		for (int i = 0; i < ncrosses; ++i) {
 			combinations[1][i] = indexes[i];
 		}
@@ -196,81 +197,81 @@ SEXP SXP_cross_Rcombinations(SEXP exd, SEXP firstparents, SEXP secondparents,
 		error("second.parents must be a vector of strings or integers.\n");
 	}
 
-	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
-								 giveIds, filePrefix, savePedigree, saveEffects,
-								 saveGenes, retain);
+	GenOptions g = create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
+								 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
+								 s_saveGenes, s_retain);
 
 	return ScalarInteger(cross_these_combinations(d, ncrosses, combinations, g));
 	
 }
 
-SEXP SXP_cross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
-		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
-		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
-	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
-									 giveIds, filePrefix, savePedigree, saveEffects,
-									 saveGenes, retain);
+SEXP SXP_cross_combinations(SEXP exd, SEXP s_filename, SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
+		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
+		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
+	GenOptions g = create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
+									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
+									 s_saveGenes, s_retain);
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	const char* fname = CHAR(asChar(filename));
+	const char* filename = CHAR(asChar(s_filename));
 	
-	return ScalarInteger(make_crosses_from_file(d, fname, g));
+	return ScalarInteger(make_crosses_from_file(d, filename, g));
 }
 
-SEXP SXP_dcross_combinations(SEXP exd, SEXP filename, SEXP name, SEXP namePrefix, SEXP familySize,
-		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
-		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
-	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
-									 giveIds, filePrefix, savePedigree, saveEffects,
-									 saveGenes, retain);
+SEXP SXP_dcross_combinations(SEXP exd, SEXP s_filename, SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
+		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
+		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
+	GenOptions g = create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
+									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
+									 s_saveGenes, s_retain);
 									 
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	const char* fname = CHAR(asChar(filename));
+	const char* filename = CHAR(asChar(s_filename));
 	
-	return ScalarInteger(make_double_crosses_from_file(d, fname, g));
+	return ScalarInteger(make_double_crosses_from_file(d, filename, g));
 	
 }
 
-SEXP SXP_cross_unidirectional(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP namePrefix, SEXP familySize,
-		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
-		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
-	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
-									 giveIds, filePrefix, savePedigree, saveEffects,
-									 saveGenes, retain);
-	int len = asInteger(glen);
-	int *gps = INTEGER(groups); 
-	if (len == NA_INTEGER) { 
+SEXP SXP_cross_unidirectional(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
+		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
+		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
+	GenOptions g = create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
+									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
+									 s_saveGenes, s_retain);
+	int glen = asInteger(s_glen);
+	int *groups = INTEGER(s_groups); 
+	if (glen == NA_INTEGER) { 
 		error("`groups` vector is invalid.\n");
 	}
-	for (int i = 0; i < len; ++i) {
-		if (gps[i] == NA_INTEGER || gps[i] < 0) { error("The contents of `groups` is invalid.\n"); }
+	for (int i = 0; i < glen; ++i) {
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid.\n"); }
 	}
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	if (len == 1) {
-		return ScalarInteger(make_all_unidirectional_crosses(d, gps[0], g));
+	if (glen == 1) {
+		return ScalarInteger(make_all_unidirectional_crosses(d, groups[0], g));
 	} else {
 		// Get an R vector of the same length as the number of new size 1 groups created
-		SEXP out = PROTECT(allocVector(INTSXP, len));
+		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
-		for (int i = 0; i < len; ++i) {
-			outc[i] = make_all_unidirectional_crosses(d, gps[i], g);
+		for (int i = 0; i < glen; ++i) {
+			outc[i] = make_all_unidirectional_crosses(d, groups[i], g);
 		}
 		UNPROTECT(1);
 		return out;
 	}
 }
 
-/*SEXP cross_top(SEXP exd, SEXP group, SEXP percent, SEXP name, SEXP namePrefix, SEXP familySize,
-		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
-		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
-	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
-									 giveIds, filePrefix, savePedigree, saveEffects,
-									 saveGenes, retain);
-	int grp = asInteger(group);
+/*SEXP cross_top(SEXP exd, SEXP s_group, SEXP percent, SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
+		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
+		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
+	GenOptions g = create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
+									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
+									 s_saveGenes, s_retain);
+	int grp = asInteger(s_group);
 	if (grp < 0 || grp == NA_INTEGER) { error("`group` parameter is invalid.\n"); }
 	
 	double cpercent = asReal(percent);
@@ -282,65 +283,65 @@ SEXP SXP_cross_unidirectional(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP 
 	return ScalarInteger(make_crosses_from_top_m_percent(d, cpercent, grp, g)); 
 }*/
 
-SEXP SXP_selfing(SEXP exd, SEXP glen, SEXP groups, SEXP n, SEXP name, SEXP namePrefix, SEXP familySize,
-		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
-		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
-	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
-									 giveIds, filePrefix, savePedigree, saveEffects,
-									 saveGenes, retain);
-	int len = asInteger(glen);
-	int *gps = INTEGER(groups); 
-	if (len == NA_INTEGER) { 
+SEXP SXP_selfing(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_ngen, SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
+		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
+		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
+	GenOptions g = create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
+									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
+									 s_saveGenes, s_retain);
+	int glen = asInteger(s_glen);
+	int *groups = INTEGER(s_groups); 
+	if (glen == NA_INTEGER) { 
 		error("`groups` vector is invalid.\n");
 	}
-	for (int i = 0; i < len; ++i) {
-		if (gps[i] == NA_INTEGER || gps[i] < 0) { error("The contents of `groups` is invalid.\n"); }
+	for (int i = 0; i < glen; ++i) {
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid.\n"); }
 	}
 	
-	int cn = asInteger(n);
+	int cn = asInteger(s_ngen);
 	if (cn < 0 || cn == NA_INTEGER) { error("`n` parameter is invalid.\n"); }
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	if (len == 1) {
-		return ScalarInteger(self_n_times(d, cn, gps[0], g));
+	if (glen == 1) {
+		return ScalarInteger(self_n_times(d, cn, groups[0], g));
 	} else {
 		// Get an R vector of the same length as the number of new size 1 groups created
-		SEXP out = PROTECT(allocVector(INTSXP, len));
+		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
-		for (int i = 0; i < len; ++i) {
-			outc[i] = self_n_times(d, cn, gps[i], g);
+		for (int i = 0; i < glen; ++i) {
+			outc[i] = self_n_times(d, cn, groups[i], g);
 		}
 		UNPROTECT(1);
 		return out;
 	}
 }
 
-SEXP SXP_doubled(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP namePrefix, SEXP familySize,
-		SEXP trackPedigree, SEXP giveIds, SEXP filePrefix, SEXP savePedigree,
-		SEXP saveEffects, SEXP saveGenes, SEXP retain) {
-	GenOptions g = create_genoptions(name, namePrefix, familySize, trackPedigree,
-									 giveIds, filePrefix, savePedigree, saveEffects,
-									 saveGenes, retain);
-	int len = asInteger(glen);
-	int *gps = INTEGER(groups); 
-	if (len == NA_INTEGER) { 
+SEXP SXP_doubled(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
+		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
+		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
+	GenOptions g = create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
+									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
+									 s_saveGenes, s_retain);
+	int glen = asInteger(s_glen);
+	int *groups = INTEGER(s_groups); 
+	if (glen == NA_INTEGER) { 
 		error("`groups` vector is invalid.\n");
 	}
-	for (int i = 0; i < len; ++i) {
-		if (gps[i] == NA_INTEGER || gps[i] < 0) { error("The contents of `groups` is invalid.\n"); }
+	for (int i = 0; i < glen; ++i) {
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid.\n"); }
 	}
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	if (len == 1) {
-		return ScalarInteger(make_doubled_haploids(d, gps[0], g));
+	if (glen == 1) {
+		return ScalarInteger(make_doubled_haploids(d, groups[0], g));
 	} else {
 		// Get an R vector of the same length as the number of new size 1 groups created
-		SEXP out = PROTECT(allocVector(INTSXP, len));
+		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
-		for (int i = 0; i < len; ++i) {
-			outc[i] = make_doubled_haploids(d, gps[i], g);
+		for (int i = 0; i < glen; ++i) {
+			outc[i] = make_doubled_haploids(d, groups[i], g);
 		}
 		UNPROTECT(1);
 		return out;
@@ -349,22 +350,22 @@ SEXP SXP_doubled(SEXP exd, SEXP glen, SEXP groups, SEXP name, SEXP namePrefix, S
 
 
 /*-----------------------------------Groups----------------------------------*/
-SEXP SXP_combine_groups(SEXP exd, SEXP len, SEXP groups) {
+SEXP SXP_combine_groups(SEXP exd, SEXP s_len, SEXP s_groups) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int n = asInteger(len);
-	int *gps = INTEGER(groups); 
-	if (n == NA_INTEGER) { 
+	int len = asInteger(s_len);
+	int *groups = INTEGER(s_groups); 
+	if (len == NA_INTEGER) { 
 		error("`len` parameter is of invalid type or `groups` vector is invalid.\n");
 	}
 	
-	return ScalarInteger(combine_groups(d, n, gps));
+	return ScalarInteger(combine_groups(d, len, groups));
 }
 
-SEXP SXP_split_individuals(SEXP exd, SEXP group) {
+SEXP SXP_split_individuals(SEXP exd, SEXP s_group) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int group_id = asInteger(group);
+	int group_id = asInteger(s_group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
 		error("`group` parameter is of invalid type.\n");
 	}
@@ -387,10 +388,10 @@ SEXP SXP_split_individuals(SEXP exd, SEXP group) {
 	return out;
 }
 
-SEXP SXP_split_familywise(SEXP exd, SEXP group) {
+SEXP SXP_split_familywise(SEXP exd, SEXP s_group) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int group_id = asInteger(group);
+	int group_id = asInteger(s_group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
 		error("`group` parameter is of invalid type.\n");
 	}
@@ -422,15 +423,15 @@ SEXP SXP_split_familywise(SEXP exd, SEXP group) {
 	return out;
 }
 
-SEXP SXP_split_halfsibwise(SEXP exd, SEXP group, SEXP parent) {
+SEXP SXP_split_halfsibwise(SEXP exd, SEXP s_group, SEXP s_parent) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int group_id = asInteger(group);
+	int group_id = asInteger(s_group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
 		error("`group` parameter is of invalid type.\n");
 	}
 	
-	int parent_num = asInteger(parent);
+	int parent_num = asInteger(s_parent);
 	if (parent_num == NA_INTEGER || parent_num < 0) { 
 		error("`parent` parameter is of invalid type.\n");
 	}
@@ -462,21 +463,21 @@ SEXP SXP_split_halfsibwise(SEXP exd, SEXP group, SEXP parent) {
 	return out;
 }
 
-SEXP SXP_split_randomly(SEXP exd, SEXP group, SEXP n) {
+SEXP SXP_split_randomly(SEXP exd, SEXP s_group, SEXP s_n) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int group_id = asInteger(group);
+	int group_id = asInteger(s_group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
 		error("`group` parameter is of invalid type.\n");
 	}
 	
-	int n_groups = asInteger(n);
+	int n_groups = asInteger(s_n);
 	if (n_groups == NA_INTEGER || n_groups < 0) { 
 		error("`n` parameter is of invalid type.\n");
 	}
 	
 	if (n_groups == 1) {
-		return group;
+		return s_group;
 		
 	} else if (n_groups == 2) {
 		SEXP out = PROTECT(allocVector(INTSXP, 2));
@@ -498,21 +499,21 @@ SEXP SXP_split_randomly(SEXP exd, SEXP group, SEXP n) {
 	}
 }
 
-SEXP SXP_split_evenly(SEXP exd, SEXP group, SEXP n) {
+SEXP SXP_split_evenly(SEXP exd, SEXP s_group, SEXP s_n) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int group_id = asInteger(group);
+	int group_id = asInteger(s_group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
 		error("`group` parameter is of invalid type.\n");
 	}
 	
-	int n_groups = asInteger(n);
+	int n_groups = asInteger(s_n);
 	if (n_groups == NA_INTEGER || n_groups < 0) { 
 		error("`n` parameter is of invalid type.\n");
 	}
 	
 	if (n_groups == 1) {
-		return group;
+		return s_group;
 		
 	} else if (n_groups == 2) {
 		SEXP out = PROTECT(allocVector(INTSXP, 2));
@@ -534,20 +535,20 @@ SEXP SXP_split_evenly(SEXP exd, SEXP group, SEXP n) {
 	}
 }
 
-SEXP SXP_split_buckets(SEXP exd, SEXP group, SEXP buckets) {
+SEXP SXP_split_buckets(SEXP exd, SEXP s_group, SEXP s_buckets) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int group_id = asInteger(group);
+	int group_id = asInteger(s_group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
 		error("`group` parameter is of invalid type.\n");
 	}
 	
-	if (TYPEOF(buckets) != INTSXP) { // check param name
+	if (TYPEOF(s_buckets) != INTSXP) { // check param name
 		error("`buckets` parameter must be a vector of integers.\n");
 	}
 	
-	int n_groups = length(buckets)+1;
-	int* counts = INTEGER(buckets);
+	int n_groups = length(s_buckets)+1;
+	int* counts = INTEGER(s_buckets);
 	
 	SEXP out = PROTECT(allocVector(INTSXP, n_groups));
 	int* outc = INTEGER(out);
@@ -558,20 +559,20 @@ SEXP SXP_split_buckets(SEXP exd, SEXP group, SEXP buckets) {
 	return out;
 }
 
-SEXP SXP_split_probabilities(SEXP exd, SEXP group, SEXP probs) {
+SEXP SXP_split_probabilities(SEXP exd, SEXP s_group, SEXP s_probs) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int group_id = asInteger(group);
+	int group_id = asInteger(s_group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
 		error("`group` parameter is of invalid type.\n");
 	}
 	
-	if (TYPEOF(probs) != REALSXP) { // check param name
+	if (TYPEOF(s_probs) != REALSXP) { // check param name
 		error("`probabilies` parameter must be a vector of decimals.\n");
 	}
 	
-	int n_groups = length(probs)+1;
-	double* probabilities = REAL(probs);
+	int n_groups = length(s_probs)+1;
+	double* probabilities = REAL(s_probs);
 	
 	SEXP out = PROTECT(allocVector(INTSXP, n_groups));
 	int* outc = INTEGER(out);
@@ -584,11 +585,11 @@ SEXP SXP_split_probabilities(SEXP exd, SEXP group, SEXP probs) {
 
 
 
-SEXP SXP_split_out(SEXP exd, SEXP len, SEXP indexes) {
+SEXP SXP_split_out(SEXP exd, SEXP s_len, SEXP s_indexes) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int n = asInteger(len);
-	int *ns = INTEGER(indexes); 
+	int n = asInteger(s_len);
+	int *ns = INTEGER(s_indexes); 
 	if (n == NA_INTEGER) { 
 		error("`len` parameter is of invalid type or `indexes` vector is invalid.\n");
 	}
@@ -603,11 +604,11 @@ SEXP SXP_split_out(SEXP exd, SEXP len, SEXP indexes) {
 
 
 /*------------------------------------Fitness------------------------------*/
-SEXP SXP_group_eval(SEXP exd, SEXP group) {
+SEXP SXP_group_eval(SEXP exd, SEXP s_group) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
-	int group_id = asInteger(group);
+	int group_id = asInteger(s_group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
 		error("`group` parameter is of invalid type.\n");
 	}
@@ -634,31 +635,31 @@ SEXP SXP_group_eval(SEXP exd, SEXP group) {
 	return out;
 }
 
-SEXP SXP_simple_selection(SEXP exd, SEXP glen, SEXP groups, SEXP number, SEXP bestIsLow) {
+SEXP SXP_simple_selection(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_number, SEXP s_bestIsLow) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
-	int len = asInteger(glen);
-	int *gps = INTEGER(groups); 
+	int len = asInteger(s_glen);
+	int *groups = INTEGER(s_groups); 
 	if (len == NA_INTEGER) { 
 		error("`groups` vector is invalid.\n");
 	}
 	
-	int num_to_select = asInteger(number);
+	int num_to_select = asInteger(s_number);
 	if (num_to_select == NA_INTEGER || num_to_select < 0) { 
 		error("`number` parameter is of invalid type.\n");
 	}
 	
-	int want_low = asLogical(bestIsLow);
+	int want_low = asLogical(s_bestIsLow);
 	if (want_low == NA_LOGICAL) { error("`low.score.best` parameter is of invalid type.\n"); }
 	
 	if (len == 1) {
-		return ScalarInteger(split_by_bv(d, gps[0], num_to_select, want_low));
+		return ScalarInteger(split_by_bv(d, groups[0], num_to_select, want_low));
 	} else {
 		SEXP out = PROTECT(allocVector(INTSXP, len));
 		int* outc = INTEGER(out);
 		for (int i = 0; i < len; ++i) {
-			outc[i] = split_by_bv(d, gps[i], num_to_select, want_low);
+			outc[i] = split_by_bv(d, groups[i], num_to_select, want_low);
 		}
 		UNPROTECT(1);
 		return out;
@@ -666,29 +667,29 @@ SEXP SXP_simple_selection(SEXP exd, SEXP glen, SEXP groups, SEXP number, SEXP be
 	
 }
 
-SEXP SXP_simple_selection_bypercent(SEXP exd, SEXP glen, SEXP groups, SEXP percent, SEXP bestIsLow) {
+SEXP SXP_simple_selection_bypercent(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_percent, SEXP s_bestIsLow) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
-	int len = asInteger(glen);
-	int *gps = INTEGER(groups); 
+	int len = asInteger(s_glen);
+	int *groups = INTEGER(s_groups); 
 	if (len == NA_INTEGER) { 
 		error("`groups` vector is invalid.\n");
 	}
 	
-	double pc_to_select = asReal(percent);
+	double pc_to_select = asReal(s_percent);
 	if (ISNA(pc_to_select) || pc_to_select < 0) { 
 		error("`percentage` parameter is of invalid type.\n");
 	}
 	
-	int want_low = asLogical(bestIsLow);
+	int want_low = asLogical(s_bestIsLow);
 	if (want_low == NA_LOGICAL) { error("`low.score.best` parameter is of invalid type.\n"); }
 	
 	if (len == 1) {
-		int group_size = get_group_size(d, gps[0]);
+		int group_size = get_group_size(d, groups[0]);
 		int num_to_select = group_size * pc_to_select / 100; // integer division, so take the floor
 		
-		return ScalarInteger(split_by_bv(d, gps[0], num_to_select, want_low));
+		return ScalarInteger(split_by_bv(d, groups[0], num_to_select, want_low));
 	} else {
 		int num_to_select;
 		
@@ -696,8 +697,8 @@ SEXP SXP_simple_selection_bypercent(SEXP exd, SEXP glen, SEXP groups, SEXP perce
 		SEXP out = PROTECT(allocVector(INTSXP, len));
 		int* outc = INTEGER(out);
 		for (int i = 0; i < len; ++i) {
-			num_to_select = get_group_size(d, gps[i]) * pc_to_select / 100;
-			outc[i] = split_by_bv(d, gps[i], num_to_select, want_low);
+			num_to_select = get_group_size(d, groups[i]) * pc_to_select / 100;
+			outc[i] = split_by_bv(d, groups[i], num_to_select, want_low);
 		}
 		UNPROTECT(1);
 		return out;
@@ -742,16 +743,16 @@ SEXP SXP_get_worst_GEBV(SEXP exd) {
 	return out;
 }
 
-SEXP SXP_find_crossovers(SEXP exd, SEXP parentFile, SEXP outFile, SEXP windowSize, SEXP certainty) {
+SEXP SXP_find_crossovers(SEXP exd, SEXP s_parentFile, SEXP s_outFile, SEXP s_windowSize, SEXP s_certainty) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	const char* load_fname = CHAR(asChar(parentFile));
-	const char* save_fname = CHAR(asChar(outFile));
+	const char* load_fname = CHAR(asChar(s_parentFile));
+	const char* save_fname = CHAR(asChar(s_outFile));
 	
-	int win = asInteger(windowSize);
+	int win = asInteger(s_windowSize);
 	if (win < 0 || win == NA_INTEGER) { error("`window.size` parameter is invalid.\n"); }
 	
-	int cert = asLogical(certainty);
+	int cert = asLogical(s_certainty);
 	if (cert == NA_LOGICAL) { error("`certainty` parameter is invalid.\n"); }
 	
 	return ScalarInteger(calculate_recombinations_from_file(d, load_fname, save_fname, win, cert));
@@ -789,8 +790,8 @@ SEXP SXP_get_groups(SEXP exd) {
 	int** existing = get_existing_group_counts(d, &n_groups);
 	
 	SEXP out = PROTECT(allocVector(VECSXP, 2));
-	SEXP groups = PROTECT(allocVector(INTSXP, n_groups));
-	int* cgroups = INTEGER(groups);
+	SEXP s_groups = PROTECT(allocVector(INTSXP, n_groups));
+	int* cgroups = INTEGER(s_groups);
 	SEXP counts = PROTECT(allocVector(INTSXP, n_groups));
 	int* ccounts = INTEGER(counts);
 	
@@ -798,7 +799,7 @@ SEXP SXP_get_groups(SEXP exd) {
 		cgroups[i] = existing[0][i];
 		ccounts[i] = existing[1][i];
 	}
-	SET_VECTOR_ELT(out, 0, groups);
+	SET_VECTOR_ELT(out, 0, s_groups);
 	SET_VECTOR_ELT(out, 1, counts);
 	free(existing[0]);
 	free(existing[1]);
@@ -809,15 +810,15 @@ SEXP SXP_get_groups(SEXP exd) {
 	
 }
 
-SEXP SXP_get_group_data(SEXP exd, SEXP group, SEXP whatData) {
+SEXP SXP_get_group_data(SEXP exd, SEXP s_group, SEXP s_whatData) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int group_id = asInteger(group);
+	int group_id = asInteger(s_group);
 	if (group_id == NA_INTEGER || group_id < 0) { 
 		error("`group` parameter is of invalid type.\n");
 	}
 	
-	char c = CHAR(asChar(whatData))[0];
+	char c = CHAR(asChar(s_whatData))[0];
 	char c2;
 	int group_size = get_group_size(d, group_id);
 	if (group_size == 0) {
@@ -909,7 +910,7 @@ SEXP SXP_get_group_data(SEXP exd, SEXP group, SEXP whatData) {
 		UNPROTECT(1);
 		return out;
 		
-	} else if (c == 'P' && (c2 = CHAR(asChar(whatData))[1]) == 'E' && CHAR(asChar(whatData))[2] == 'D') {
+	} else if (c == 'P' && (c2 = CHAR(asChar(s_whatData))[1]) == 'E' && CHAR(asChar(s_whatData))[2] == 'D') {
 		char** data = get_group_pedigrees(d, group_id, group_size);
 		
 		SEXP out = PROTECT(allocVector(STRSXP, group_size));
@@ -948,11 +949,11 @@ SEXP SXP_get_group_data(SEXP exd, SEXP group, SEXP whatData) {
 
 /*--------------------------------Printing-----------------------------------*/
 
-SEXP SXP_save_simdata(SEXP exd, SEXP filename) {
+SEXP SXP_save_simdata(SEXP exd, SEXP s_filename) {
 	FILE* f;
-	const char* fname = CHAR(asChar(filename));
-	if ((f = fopen(fname, "w")) == NULL) {
-		error( "Failed to open file %s.\n", fname);
+	const char* filename = CHAR(asChar(s_filename));
+	if ((f = fopen(filename, "w")) == NULL) {
+		error( "Failed to open file %s.\n", filename);
 	}
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
@@ -963,30 +964,30 @@ SEXP SXP_save_simdata(SEXP exd, SEXP filename) {
 	return ScalarInteger(0);
 }
 
-SEXP SXP_save_genotypes(SEXP exd, SEXP filename, SEXP group, SEXP type) {
+SEXP SXP_save_genotypes(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_type) {
 	FILE* f;
-	const char* fname = CHAR(asChar(filename));
-	if ((f = fopen(fname, "w")) == NULL) {
-		error( "Failed to open file %s.\n", fname);
+	const char* filename = CHAR(asChar(s_filename));
+	if ((f = fopen(filename, "w")) == NULL) {
+		error( "Failed to open file %s.\n", filename);
 	}
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	const char t = CHAR(asChar(type))[0];	
+	const char t = CHAR(asChar(s_type))[0];	
 	if (t == 'R' || t == 'r') {
-		if (isNull(group)) {
+		if (isNull(s_group)) {
 			save_allele_matrix(f, d->m, d->markers);
-		} else if (asInteger(group) >= 0) {
-			save_group_alleles(f, d, asInteger(group));
+		} else if (asInteger(s_group) >= 0) {
+			save_group_alleles(f, d, asInteger(s_group));
 		} else {
 			fclose(f);
 			error("Supplied group number is invalid.");
 		}
 	} else if (t == 'T' || t == 't') {
-		if (isNull(group)) {
+		if (isNull(s_group)) {
 			save_transposed_allele_matrix(f, d->m, d->markers);
-		} else if (asInteger(group) >= 0) {
-			save_transposed_group_alleles(f, d, asInteger(group));
+		} else if (asInteger(s_group) >= 0) {
+			save_transposed_group_alleles(f, d, asInteger(s_group));
 		} else {
 			fclose(f);
 			error("Supplied group number is invalid.");
@@ -1000,20 +1001,20 @@ SEXP SXP_save_genotypes(SEXP exd, SEXP filename, SEXP group, SEXP type) {
 	return ScalarInteger(0);
 }
 
-SEXP SXP_save_counts(SEXP exd, SEXP filename, SEXP group, SEXP allele) {
+SEXP SXP_save_counts(SEXP exd, SEXP s_filename, SEXP s_group, SEXP allele) {
 	FILE* f;
-	const char* fname = CHAR(asChar(filename));
-	if ((f = fopen(fname, "w")) == NULL) {
-		error( "Failed to open file %s.\n", fname);
+	const char* filename = CHAR(asChar(s_filename));
+	if ((f = fopen(filename, "w")) == NULL) {
+		error( "Failed to open file %s.\n", filename);
 	}
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
 	const char t = CHAR(asChar(allele))[0];	
-	if (isNull(group)) {
+	if (isNull(s_group)) {
 		save_count_matrix(f, d, t);
-	} else if (asInteger(group) >= 0) {
-		save_count_matrix_of_group(f, d, t, asInteger(group));
+	} else if (asInteger(s_group) >= 0) {
+		save_count_matrix_of_group(f, d, t, asInteger(s_group));
 	} else {
 		fclose(f);
 		error("Supplied group number is invalid.");
@@ -1023,29 +1024,29 @@ SEXP SXP_save_counts(SEXP exd, SEXP filename, SEXP group, SEXP allele) {
 	return ScalarInteger(0);
 }
 
-SEXP SXP_save_pedigrees(SEXP exd, SEXP filename, SEXP group, SEXP type) {
+SEXP SXP_save_pedigrees(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_type) {
 	FILE* f;
-	const char* fname = CHAR(asChar(filename));
-	if ((f = fopen(fname, "w")) == NULL) {
-		error( "Failed to open file %s.\n", fname);
+	const char* filename = CHAR(asChar(s_filename));
+	if ((f = fopen(filename, "w")) == NULL) {
+		error( "Failed to open file %s.\n", filename);
 	}
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	const char t = CHAR(asChar(type))[0];	
+	const char t = CHAR(asChar(s_type))[0];	
 	if (t == 'R' || t == 'r') { // full/recursive
-		if (isNull(group)) {
+		if (isNull(s_group)) {
 			save_full_pedigree(f, d);
-		} else if (asInteger(group) >= 0) {
-			save_group_full_pedigree(f, d, asInteger(group));
+		} else if (asInteger(s_group) >= 0) {
+			save_group_full_pedigree(f, d, asInteger(s_group));
 		} else {
 			error("Supplied group number is invalid.");
 		}
 	} else if (t == 'P' || t == 'p') { // one-step/parents
-		if (isNull(group)) {
+		if (isNull(s_group)) {
 			save_one_step_pedigree(f, d);
-		} else if (asInteger(group) >= 0) {
-			save_group_one_step_pedigree(f, d, asInteger(group));
+		} else if (asInteger(s_group) >= 0) {
+			save_group_one_step_pedigree(f, d, asInteger(s_group));
 		} else {
 			error("Supplied group number is invalid.");
 		}
@@ -1058,20 +1059,20 @@ SEXP SXP_save_pedigrees(SEXP exd, SEXP filename, SEXP group, SEXP type) {
 	return ScalarInteger(0);	
 }
 
-SEXP SXP_save_GEBVs(SEXP exd, SEXP filename, SEXP group) {
+SEXP SXP_save_GEBVs(SEXP exd, SEXP s_filename, SEXP s_group) {
 	FILE* f;
-	const char* fname = CHAR(asChar(filename));
-	if ((f = fopen(fname, "w")) == NULL) {
-		error( "Failed to open file %s.\n", fname);
+	const char* filename = CHAR(asChar(s_filename));
+	if ((f = fopen(filename, "w")) == NULL) {
+		error( "Failed to open file %s.\n", filename);
 	}
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
-	if (isNull(group)) {
+	if (isNull(s_group)) {
 		save_bvs(f, d);
-	} else if (asInteger(group) >= 0) {
-		save_group_bvs(f, d, asInteger(group));
+	} else if (asInteger(s_group) >= 0) {
+		save_group_bvs(f, d, asInteger(s_group));
 	} else {
 		fclose(f);
 		error("Supplied group number is invalid.");
@@ -1081,17 +1082,17 @@ SEXP SXP_save_GEBVs(SEXP exd, SEXP filename, SEXP group) {
 	return ScalarInteger(0);
 }
 
-SEXP SXP_save_file_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP group) {
+SEXP SXP_save_file_block_effects(SEXP exd, SEXP s_filename, SEXP block_file, SEXP s_group) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
-	if (isNull(group)) {
+	if (isNull(s_group)) {
 		MarkerBlocks b = read_block_file(d, CHAR(asChar(block_file)));
-		calculate_local_bvs(d, b, CHAR(asChar(filename)));
+		calculate_local_bvs(d, b, CHAR(asChar(s_filename)));
 		delete_markerblocks(&b);
-	} else if (asInteger(group) > 0) {
+	} else if (asInteger(s_group) > 0) {
 		MarkerBlocks b = read_block_file(d, CHAR(asChar(block_file)));
-		calculate_group_local_bvs(d, b, CHAR(asChar(filename)), asInteger(group));
+		calculate_group_local_bvs(d, b, CHAR(asChar(s_filename)), asInteger(s_group));
 		delete_markerblocks(&b);
 	} else {
 		error("Supplied group number is invalid.\n");
@@ -1100,17 +1101,17 @@ SEXP SXP_save_file_block_effects(SEXP exd, SEXP filename, SEXP block_file, SEXP 
 	return ScalarInteger(0);	
 }
 
-SEXP SXP_save_chrsplit_block_effects(SEXP exd, SEXP filename, SEXP nslices, SEXP group) {
+SEXP SXP_save_chrsplit_block_effects(SEXP exd, SEXP s_filename, SEXP s_nslices, SEXP s_group) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
 	
-	if (isNull(group)) {
-		MarkerBlocks b = create_n_blocks_by_chr(d, asInteger(nslices));
-		calculate_local_bvs(d, b, CHAR(asChar(filename)));
+	if (isNull(s_group)) {
+		MarkerBlocks b = create_n_blocks_by_chr(d, asInteger(s_nslices));
+		calculate_local_bvs(d, b, CHAR(asChar(s_filename)));
 		delete_markerblocks(&b);
-	} else if (asInteger(group) > 0) {
-		MarkerBlocks b = create_n_blocks_by_chr(d, asInteger(nslices));
-		calculate_group_local_bvs(d, b, CHAR(asChar(filename)), asInteger(group));
+	} else if (asInteger(s_group) > 0) {
+		MarkerBlocks b = create_n_blocks_by_chr(d, asInteger(s_nslices));
+		calculate_group_local_bvs(d, b, CHAR(asChar(s_filename)), asInteger(s_group));
 		delete_markerblocks(&b);
 	} else {
 		error("Supplied group number is invalid.\n");
@@ -1135,19 +1136,19 @@ SEXP clear_simdata(SEXP exd) {
 	return ScalarInteger(0);
 }
 
-SEXP SXP_delete_group(SEXP exd, SEXP len, SEXP groups) {
+SEXP SXP_delete_group(SEXP exd, SEXP s_len, SEXP s_groups) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int n = asInteger(len);
-	int *gps = INTEGER(groups); 
+	int n = asInteger(s_len);
+	int *groups = INTEGER(s_groups); 
 	if (n == NA_INTEGER) { 
 		error("`len` parameter is of invalid type or `groups` vector is invalid.\n");
 	}
 	for (int i = 0; i < n; ++i) {
-		if (gps[i] == NA_INTEGER || gps[i] < 0) { 
-			error("Field %d in `group` parameter is of invalid type.\n", i);
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { 
+			error("Field %d in `s_group` parameter is of invalid type.\n", i);
 		}
-		delete_group(d, gps[i]);
+		delete_group(d, groups[i]);
 	}
 	
 	return ScalarInteger(0);
