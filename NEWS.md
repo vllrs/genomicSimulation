@@ -4,6 +4,8 @@
 - `delete.group` can now be passed a vector of group ids to delete from memory. Previously it could only delete a single group at a time. 
 - Add function `cross.randomly.between` to perform crosses where one parent is picked randomly from one group and the other from another group. It also performs crosses between a selected individual and individuals randomly picked from a group.
 - Fix see.group.data so it stops rather than requesting a 0-length block of heap space when it is asked to investigate a nonexistent group.
+- Added option to have a cap on the number of uses of each group member as a parent of a cross in cross.randomly and cross.randomly.between. 
+- Removed parameters set.parent1 and set.parent2 of cross.randomly.between. The same functionality can be achieved using make.group and combine.groups to create a temporary one-member group containing the set parent to pass to cross.randomly.between. 
 
 # genomicSimulation 0.2
 

@@ -7,6 +7,7 @@
 cross.randomly(
   group,
   n.crosses = 5,
+  cap = 0,
   offspring = 1,
   retain = TRUE,
   give.names = FALSE,
@@ -26,6 +27,10 @@ random crosses. If a vector, the parameters and breeding method
 
 \item{n.crosses}{The function will pick this many random pairs of parents
 to cross.}
+
+\item{cap}{If nonzero, this is the maximum number of times each member of 
+the group can be used as the parent of a cross.
+Set to 0 for no restriction on the number of offspring per parent.}
 
 \item{offspring}{The number of times to cross each randomly-chosen pair.}
 

@@ -11,7 +11,7 @@ SEXP SXP_load_new_effects(SEXP exd, SEXP s_effectFile);
 GenOptions create_genoptions(SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
 		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
 		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain);
-SEXP SXP_cross_randomly(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_crosses, SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
+SEXP SXP_cross_randomly(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_crosses, SEXP s_cap, SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
 		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
 		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain);
 SEXP SXP_cross_randomly_btwn(SEXP exd, SEXP s_group1, SEXP s_group2, SEXP s_cap1, SEXP s_cap2,
@@ -83,6 +83,6 @@ SEXP SXP_save_file_block_effects(SEXP exd, SEXP s_filename, SEXP block_file, SEX
 SEXP SXP_save_chrsplit_block_effects(SEXP exd, SEXP s_filename, SEXP s_nslices, SEXP s_group);
 
 /*--------------------------------Deletors------------------------------------*/
-SEXP clear_simdata(SEXP exd);
+SEXP SXP_clear_simdata(SEXP exd);
 void SXP_delete_simdata(SEXP sd);
 SEXP SXP_delete_group(SEXP exd, SEXP s_len, SEXP s_groups);

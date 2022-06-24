@@ -90,8 +90,8 @@ GenOptions create_genoptions(SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
 	return go;
 }
 
-SEXP SXP_cross_randomly(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_crosses, SEXP s_name, 
-		SEXP s_namePrefix, SEXP s_familySize,
+SEXP SXP_cross_randomly(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_crosses, SEXP s_cap, 
+		SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
 		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
 		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
 	GenOptions g = create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
@@ -108,19 +108,22 @@ SEXP SXP_cross_randomly(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_crosses, SE
 	}
 	
 	int n = asInteger(s_crosses);
-	if (n < 0 || n == NA_INTEGER) { error("`n.crosses` parameter is invalid.\n"); }
+	if (n == NA_INTEGER) { error("`n.crosses` parameter is invalid.\n"); }
+	
+	int cap = asInteger(s_cap);
+	if (cap == NA_INTEGER) { error("`cap` parameter is invalid.\n"); }
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
 	if (glen == 1) {
-		return ScalarInteger(cross_random_individuals(d, groups[0], n, g));
+		return ScalarInteger(cross_random_individuals(d, groups[0], n, cap, g));
 		
 	} else {
 		// Get an R vector of the same length as the number of new size 1 groups created
 		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
 		for (int i = 0; i < glen; ++i) {
-			outc[i] = cross_random_individuals(d, groups[i], n, g);
+			outc[i] = cross_random_individuals(d, groups[i], n, cap, g);
 		}
 		UNPROTECT(1);
 		return out;
@@ -140,17 +143,17 @@ SEXP SXP_cross_randomly_btwn(SEXP exd, SEXP s_group1, SEXP s_group2, SEXP s_cap1
 	int group2_c = INTEGER(s_group2)[0];
 	if (group2_c == NA_INTEGER || group2_c < 0) { error("The parameter `group2` is invalid.\n"); }
 	
-	int setp1 = LOGICAL(s_cap1)[0];
-	if (setp1 == NA_LOGICAL) { error("The parameter `set.parent1` should not be NA.\n"); }
-	int setp2 = INTEGER(s_cap2)[0];
-	if (setp2 == NA_LOGICAL) { error("The parameter `set.parent2` should not be NA.\n"); }
+	int cap1 = asInteger(s_cap1);
+	if (cap1 == NA_INTEGER) { error("The parameter `cap1` is invalid.\n"); }
+	int cap2 = asInteger(s_cap2);
+	if (cap2 == NA_INTEGER) { error("The parameter `cap2` is invalid.\n"); }
 	
 	int n = asInteger(s_crosses);
-	if (n < 0 || n == NA_INTEGER) { error("`n.crosses` parameter is invalid.\n"); }
+	if (n == NA_INTEGER) { error("`n.crosses` parameter is invalid.\n"); }
 	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	return ScalarInteger(cross_randomly_between(d, group1_c, group2_c, n, setp1, setp2, g));
+	return ScalarInteger(cross_randomly_between(d, group1_c, group2_c, n, cap1, cap2, g));
 }
 
 SEXP SXP_cross_Rcombinations(SEXP exd, SEXP s_firstparents, SEXP s_secondparents,
@@ -1130,7 +1133,7 @@ void SXP_delete_simdata(SEXP sd) {
 	return;
 }
 
-SEXP clear_simdata(SEXP exd) {
+SEXP SXP_clear_simdata(SEXP exd) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	delete_simdata(d);
 	return ScalarInteger(0);

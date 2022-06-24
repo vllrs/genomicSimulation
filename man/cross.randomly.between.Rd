@@ -7,8 +7,8 @@
 cross.randomly.between(
   group1,
   group2,
-  set.parent1 = FALSE,
-  set.parent2 = FALSE,
+  cap1 = 0,
+  cap2 = 0,
   n.crosses = 5,
   offspring = 1,
   retain = TRUE,
@@ -24,20 +24,18 @@ cross.randomly.between(
 }
 \arguments{
 \item{group1}{The group number from which to draw the first parent of the random 
-crosses (unless `set.parent1` is TRUE, in which case this is the index of the 
-set/guaranteed first parent)}
+crosses.}
 
 \item{group2}{The group number from which to draw the second parent of the random 
-crosses (unless `set.parent2` is TRUE, in which case this is the index of the 
-set/guaranteed second parent)}
+crosses.}
 
-\item{set.parent1}{If FALSE, the first parent of each random cross is drawn uniformly
-from the members of `group1`. If TRUE, `group1` is interpreted as the index of 
-the set/guaranteed first parent of every random cross.}
+\item{cap1}{If nonzero, this is the maximum number of times each member of 
+group1 can be used as the (first) parent of a cross.
+Set to 0 for no restriction on the number of offspring per parent.}
 
-\item{set.parent2}{If FALSE, the second parent of each random cross is drawn uniformly
-from the members of `group2`. If TRUE, `group2` is interpreted as the index of 
-the set/guaranteed second parent of every random cross.}
+\item{cap2}{If nonzero, this is the maximum number of times each member of 
+group2 can be used as the (second) parent of a cross.
+Set to 0 for no restriction on the number of offspring per parent.}
 
 \item{n.crosses}{The function will pick this many random pairs of parents
 to cross.}
@@ -109,6 +107,10 @@ can be set to TRUE, in which case `group1` will instead be interpreted as the
 index of an individual genotype, to which members of the other group will be crossed.
 (and similarly the second parent can be set using `set.parent2`. A reminder 
 that parent order affects nothing but pedigree printing, so pick whichever.)
+
+Parameters set.parent1 and set.parent2 are deprecated and removed!
+Use make.group and combine.groups to temporarily move an individual to their own group
+if you wish to cross randomly from a group to an individual.
 }
 \seealso{
 Other crossing functions: 

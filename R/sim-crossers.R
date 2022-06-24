@@ -14,6 +14,9 @@
 #' @param group The group number from which to draw the parents of these
 #' random crosses. If a vector, the parameters and breeding method 
 #' (eg. random crossing) will be applied to each group number in the vector.
+#' @param cap If nonzero, this is the maximum number of times each member of 
+#' the group can be used as the parent of a cross.
+#' Set to 0 for no restriction on the number of offspring per parent.
 #' @param n.crosses The function will pick this many random pairs of parents
 #' to cross.
 #' @param offspring The number of times to cross each randomly-chosen pair. 
@@ -58,11 +61,11 @@
 #'
 #' @family crossing functions
 #' @export
-cross.randomly <- function(group, n.crosses=5, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_cross_randomly, sim.data$p, length(group), group, n.crosses, give.names, name.prefix, 
+	return(.Call(SXP_cross_randomly, sim.data$p, length(group), group, n.crosses, cap, give.names, name.prefix, 
 	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -83,33 +86,35 @@ cross.randomly <- function(group, n.crosses=5, offspring=1, retain=TRUE, give.na
 #' index of an individual genotype, to which members of the other group will be crossed.
 #' (and similarly the second parent can be set using `set.parent2`. A reminder 
 #' that parent order affects nothing but pedigree printing, so pick whichever.)
+#' 
+#' Parameters set.parent1 and set.parent2 are deprecated and removed!
+#' Use make.group and combine.groups to temporarily move an individual to their own group
+#' if you wish to cross randomly from a group to an individual.
 #'
 #' @param group1 The group number from which to draw the first parent of the random 
-#' crosses (unless `set.parent1` is TRUE, in which case this is the index of the 
-#' set/guaranteed first parent)
+#' crosses.
 #' @param group2 The group number from which to draw the second parent of the random 
-#' crosses (unless `set.parent2` is TRUE, in which case this is the index of the 
-#' set/guaranteed second parent)
-#' @param set.parent1 If FALSE, the first parent of each random cross is drawn uniformly
-#' from the members of `group1`. If TRUE, `group1` is interpreted as the index of 
-#' the set/guaranteed first parent of every random cross.
-#' @param set.parent2 If FALSE, the second parent of each random cross is drawn uniformly
-#' from the members of `group2`. If TRUE, `group2` is interpreted as the index of 
-#' the set/guaranteed second parent of every random cross.
+#' crosses.
+#' @param cap1 If nonzero, this is the maximum number of times each member of 
+#' group1 can be used as the (first) parent of a cross.
+#' Set to 0 for no restriction on the number of offspring per parent.
+#' @param cap2 If nonzero, this is the maximum number of times each member of 
+#' group2 can be used as the (second) parent of a cross.
+#' Set to 0 for no restriction on the number of offspring per parent.
 #' @inheritParams cross.randomly
 #' @return The group number of the new crosses produced, or 0 if they could not be
 #' produced due to an invalid parent group number being provided.
 #'
 #' @family crossing functions
 #' @export
-cross.randomly.between <- function(group1, group2, set.parent1=FALSE, set.parent2=FALSE, 
+cross.randomly.between <- function(group1, group2, cap1=0, cap2=0, 
 		n.crosses=5, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
   
 	return(.Call(SXP_cross_randomly_btwn, sim.data$p, as.integer(group1), 
-	             as.integer(group2), set.parent1, set.parent2,
+	             as.integer(group2), cap1, cap2,
 				 n.crosses, give.names, name.prefix, offspring, track.pedigree, give.ids, 
 				 file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }

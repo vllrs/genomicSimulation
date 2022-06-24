@@ -14,7 +14,7 @@ test_that("cross.randomly works", {
   
   # and check cross.randomly.between works (simple check, C version has more)
   g3 <- cross.randomly.between(g, g2, n.crosses=3, offspring=2)
-  g4 <- cross.randomly.between(8L, g, set.parent1=TRUE, set.parent2=FALSE, n.crosses=30)
+  g4 <- cross.randomly.between(g2, g3, cap1=5, n.crosses=30)
 
   expect_identical(see.existing.groups(), data.frame("Group"=c(g,g2,g3,g4),"GroupSize"=c(6L,6L,6L,30L)))
   
