@@ -40,9 +40,10 @@ SEXP SXP_selfing(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_ngen, SEXP s_name,
 SEXP SXP_doubled(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_name, SEXP s_namePrefix, SEXP s_familySize,
 		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
 		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain);
-SEXP SXP_one_cross(SEXP exd, SEXP s_parent1_index, SEXP s_parent2_index, SEXP s_name, 
-		SEXP s_namePrefix, SEXP s_familySize, SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, 
-		SEXP s_savePedigree, SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain);
+SEXP SXP_clone(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_inherit_name, SEXP s_name, 
+        SEXP s_namePrefix, SEXP s_familySize,
+		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
+		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain);
 
 /*-----------------------------------Groups----------------------------------*/
 SEXP SXP_combine_groups(SEXP exd, SEXP s_len, SEXP s_groups);

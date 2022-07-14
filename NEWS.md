@@ -6,6 +6,7 @@
 - Fix see.group.data so it stops rather than requesting a 0-length block of heap space when it is asked to investigate a nonexistent group.
 - Added option to have a cap on the number of uses of each group member as a parent of a cross in cross.randomly and cross.randomly.between. 
 - Removed parameters set.parent1 and set.parent2 of cross.randomly.between. The same functionality can be achieved using make.group and combine.groups to create a temporary one-member group containing the set parent to pass to cross.randomly.between. 
+- Add function `make.clones` to clone or duplicate members of a group.
 
 # genomicSimulation 0.2
 

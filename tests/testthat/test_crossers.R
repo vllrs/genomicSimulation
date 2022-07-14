@@ -82,5 +82,20 @@ test_that("make.doubled.haploids works", {
   g2 <- make.doubled.haploids(g)
   expect_identical(see.existing.groups(), data.frame("Group"=c(g,g2),"GroupSize"=c(6L,6L)))
   
+  # Check homozygous
+  a <- see.group.data(g2,"Genotypes")
+  expect_identical(paste(strsplit(a,"")[[1]][c(T,F)]),paste(strsplit(a,"")[[1]][c(F,T)]))
+  
+  clear.simdata()
+})
+
+test_that("make.clones works", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  #Make sure it doesn't crash and creates right-size group
+  g2 <- make.clones(g)
+  expect_identical(see.existing.groups(), data.frame("Group"=c(g,g2),"GroupSize"=c(6L,6L)))
+  expect_identical(see.group.data(g2,"Genotypes"),see.group.data(g,"genotypes"))
+  
   clear.simdata()
 })

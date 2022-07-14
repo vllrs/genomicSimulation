@@ -293,7 +293,7 @@ int get_from_ordered_uint_list(unsigned int target, unsigned int* list, unsigned
 	}
 
 	if (first > last) {
-		warning( "Search failed: are you sure your list is sorted?\n");
+        return -1;
 	}
 	return index;
 }
@@ -810,7 +810,7 @@ int get_parents_of_id( AlleleMatrix* start, unsigned int id, unsigned int output
 			if (index < 0) {
 				// search failed
 				if (m->next == NULL) {
-					warning( "Could not find the ID %d: did you prematurely delete this genotype?\n", id);
+                    warning( "Unable to locate ID %d in simulation memory (genotype has likely been deleted): pedigree past this point cannot be determined.\n", id);
 					return 2;
 				} else {
 					m = m->next;
@@ -827,7 +827,7 @@ int get_parents_of_id( AlleleMatrix* start, unsigned int id, unsigned int output
 		}
 
 		if (m->next == NULL) {
-			warning( "Could not find the ID %d: did you prematurely delete this genotype?\n", id);
+            warning( "Unable to locate ID %d in simulation memory (genotype has likely been deleted): pedigree past this point cannot be determined.\n", id);
 			return 2;
 		} else {
 			m = m->next;
@@ -4259,6 +4259,24 @@ void generate_doubled_haploid(SimData* d, char* parent_genome, char* output) {
 	return;
 }
 
+
+/** Get an identical copy of a given genotype.
+ *
+ * @param d pointer to the SimData object that includes genetic map data
+ * needed to simulate meiosis and the value of n_markers
+ * @param parent_genome a 2x(n_markers) array of characters containing the
+ * alleles of the first parent
+ * @param output a 2x(n_marker) array of chars which will be overwritten
+ * with the offspring genome.
+*/
+void generate_clone(SimData* d, char* parent_genome, char* output) {
+    for (int j = 0; j < d->n_markers; ++j) {
+        output[2*j] = parent_genome[2*j];
+        output[2*j + 1] = parent_genome[2*j + 1];
+    }
+    return;
+}
+
 /** Performs random crosses among members of a group. If the group does not
  * have at least two members, the simulation exits. Selfing/crossing an individual
  * with itself is not permitted. The resulting genotypes are allocated to a new group.
@@ -5359,6 +5377,205 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 		delete_allele_matrix( outcome );
 		return 0;
 	}
+}
+
+/** Creates an identical copy of each member of a group.
+ * The resulting genotypes are allocated to a new group.
+ *
+ * Preferences in GenOptions are applied to this operation. The family_size parameter
+ * in GenOptions allows you to generate multiple cloned offspring from each member
+ * of the group.
+ *
+ * If pedigree tracking and ID allocation are active in GenOptions, clones are given
+ * individual IDs and are children of their single progenitor parent. If the inherit_names
+ * parameter is 1/truthy, it overrides whatever naming settings are present in GenOptions
+ * in favour of giving each clone the exact name of the individual it was cloned from.
+ *
+ * @param d pointer to the SimData object that contains the genetic map and
+ * genotypes of the parent group.
+ * @param group the genotypes on which to perform the operation.
+ * @param g options for the genotypes created. @see GenOptions
+ * @returns the group number of the group to which the produced offspring were allocated.
+*/
+int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
+    int group_size = get_group_size( d, group);
+    if (group_size < 1) {
+        warning("Group %d does not exist.\n", group);
+        return 0;
+    }
+
+    AlleleMatrix* outcome;
+    int n_to_go = group_size * g.family_size;
+    if (n_to_go < CONTIG_WIDTH) {
+        outcome = create_empty_allelematrix(d->n_markers, n_to_go);
+        n_to_go = 0;
+    } else {
+        outcome = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+        n_to_go -= CONTIG_WIDTH;
+    }
+    char** group_genes = get_group_genes( d, group, group_size);
+    int i, f, fullness = 0;
+
+    // set up pedigree/id allocation, if applicable
+    unsigned int cid = 0;
+    unsigned int* cross_current_id;
+    if (g.will_allocate_ids) {
+        cross_current_id = &(d->current_id);
+    } else {
+        cross_current_id = &cid;
+    }
+    unsigned int* group_ids = NULL;
+    int id;
+    if (g.will_track_pedigree) {
+        group_ids = get_group_ids( d, group, group_size);
+    }
+    AlleleMatrix* last = NULL;
+    int output_group = 0;
+    if (g.will_save_to_simdata) {
+        last = d->m; // for saving to simdata
+        while (last->next != NULL) {
+            last = last->next;
+        }
+        output_group = get_new_group_num( d);
+    }
+
+    // inherit_names overrides GenOptions naming
+    char** group_names;
+    if (inherit_names) {
+        g.will_name_offspring = FALSE;
+        group_names = get_group_names(d, group, group_size);
+    }
+
+    // open the output files, if applicable
+    char fname[NAME_LENGTH];
+    FILE* fp = NULL, * fe = NULL, * fg = NULL;
+    DecimalMatrix eff;
+    if (g.will_save_pedigree_to_file) {
+        strcpy(fname, g.filename_prefix);
+        strcat(fname, "-pedigree.txt");
+        fp = fopen(fname, "w");
+    }
+    if (g.will_save_bvs_to_file) {
+        strcpy(fname, g.filename_prefix);
+        strcat(fname, "-bv.txt");
+        fe = fopen(fname, "w");
+    }
+    if (g.will_save_alleles_to_file) {
+        strcpy(fname, g.filename_prefix);
+        strcat(fname, "-genotype.txt");
+        fg = fopen(fname, "w");
+    }
+
+    GetRNGstate();
+    for (i = 0; i < group_size; ++i) {
+        // do n rounds of selfing (j-indexed loops) g.family_size times per individual (f-indexed loops)
+        //find the parent genes, save a shallow copy to set
+        char* genes = group_genes[i];
+        if (g.will_track_pedigree) {
+            id = group_ids[i];
+        }
+        for (f = 0; f < g.family_size; ++f, ++fullness) {
+            R_CheckUserInterrupt();
+
+            // when cross buffer is full, save these outcomes to the file.
+            if (fullness >= CONTIG_WIDTH) {
+                outcome->n_genotypes = CONTIG_WIDTH;
+                // give the offspring their ids and names
+                if (g.will_name_offspring) {
+                    set_names(outcome, g.offspring_name_prefix, *cross_current_id, 0);
+                }
+                for (int j = 0; j < CONTIG_WIDTH; ++j) {
+                    ++ *cross_current_id;
+                    outcome->ids[j] = *cross_current_id;
+                }
+
+                // save the offspring to files if appropriate
+                if (g.will_save_pedigree_to_file) {
+                    save_AM_pedigree( fp, outcome, d);
+                }
+                if (g.will_save_bvs_to_file) {
+                    eff = calculate_bvs( outcome, &(d->e));
+                    save_manual_bvs( fe, &eff, outcome->ids, outcome->names);
+                    delete_dmatrix( &eff);
+                }
+                if (g.will_save_alleles_to_file) {
+                    save_allele_matrix( fg, outcome, d->markers);
+                }
+
+                if (g.will_save_to_simdata) {
+                    last->next = outcome;
+                    last = last->next;
+                    if (n_to_go < CONTIG_WIDTH) {
+                        outcome = create_empty_allelematrix(d->n_markers, n_to_go);
+                        n_to_go = 0;
+                    } else {
+                        outcome = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+                        n_to_go -= CONTIG_WIDTH;
+                    }
+                }
+                fullness = 0; //reset the count and start refilling the matrix
+            }
+
+            generate_clone( d, genes, outcome->alleles[fullness] );
+            outcome->groups[fullness] = output_group;
+            if (g.will_track_pedigree) {
+                outcome->pedigrees[0][fullness] = id;
+                outcome->pedigrees[1][fullness] = id;
+            }
+            if (inherit_names) {
+                // clear name if it's pre-existing
+                if (outcome->names[fullness] != NULL) {
+                    free(outcome->names[fullness]);
+                }
+                // save name
+                outcome->names[fullness] = get_malloc(sizeof(char) * (strlen(group_names[i]) + 1));
+                strcpy(outcome->names[fullness], group_names[i]);
+            }
+        }
+    }
+    PutRNGstate();
+
+    free(group_genes);
+	if (inherit_names) {
+		free(group_names);
+	}
+    // save the rest of the crosses to the file.
+    outcome->n_genotypes = fullness;
+    // give the offspring their ids and names
+    if (g.will_name_offspring) {
+        set_names(outcome, g.offspring_name_prefix, *cross_current_id, 0);
+    }
+    for (int j = 0; j < fullness; ++j) {
+        ++ *cross_current_id;
+        outcome->ids[j] = *cross_current_id;
+    }
+    if (g.will_track_pedigree) {
+        free(group_ids);
+    }
+
+    // save the offspring to files if appropriate
+    if (g.will_save_pedigree_to_file) {
+        save_AM_pedigree( fp, outcome, d);
+        fclose(fp);
+    }
+    if (g.will_save_bvs_to_file) {
+        eff = calculate_bvs( outcome, &(d->e));
+        save_manual_bvs( fe, &eff, outcome->ids, outcome->names);
+        delete_dmatrix( &eff);
+        fclose(fe);
+    }
+    if (g.will_save_alleles_to_file) {
+        save_allele_matrix( fg, outcome, d->markers);
+        fclose(fg);
+    }
+    if (g.will_save_to_simdata) {
+        last->next = outcome;
+        condense_allele_matrix( d );
+        return output_group;
+    } else {
+        delete_allele_matrix( outcome );
+        return 0;
+    }
 }
 
 /** Perform crosses between all pairs of parents

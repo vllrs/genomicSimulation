@@ -288,10 +288,46 @@ self.n.times <- function(group, n, offspring=1, retain=TRUE, give.names=FALSE, n
 #'
 #' @family crossing functions
 #' @export
-make.doubled.haploids <- function(group, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
-		save.gebv=FALSE, save.genotype=FALSE) {
+make.doubled.haploids <- function(group, offspring=1, retain=TRUE, 
+		give.names=FALSE, name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, 
+		file.prefix=NULL, save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_doubled, sim.data$p, length(group), group, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+}
+
+#' Creates a genetically identical copy of each member of a group
+#'
+#' \code{make.clones} returns the group number of the group
+#' that the new clone genotypes were loaded into.
+#'
+#' The function copies over the genotypes of the original group members exactly,
+#' and applies metadata according to the optional parameters chosen.
+#'
+#' If track.pedigree is true, each clone is labelled as having one parent, the individual
+#' of which it is a copy.
+#'
+#' The offspring parameter represents the number of clones produced from each 
+#' genotype in the original group.
+#'
+#' If inherit.names is true, each clone shares the name of its progenitor, regardless
+#' of the setting of give.names. If inherit.names is false, then clones are either named 
+#' or left nameless according to the usual give.names/name.prefix settings.
+#'
+#' @inheritParams cross.randomly
+#' @param offspring The number of clones to make from each group member.
+#' @param inherit.names Boolean, whether to give each clone the same name as the group
+#' member from which it was created. Overrides give.names.
+#' @return The group number of the new genotypes produced, or 0 if none could be
+#' produced due to an invalid parent group number being provided.
+#'
+#' @family crossing functions
+#' @export
+make.clones <- function(group, offspring=1, retain=TRUE, inherit.names=TRUE, 
+		give.names=FALSE, name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, 
+		file.prefix=NULL, save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
+	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+	return(.Call(SXP_clone, sim.data$p, length(group), group, inherit.names, give.names, 
+				 name.prefix, offspring, track.pedigree, give.ids, file.prefix, save.pedigree,
+				 save.gebv, save.genotype, retain))
 }

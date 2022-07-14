@@ -351,6 +351,41 @@ SEXP SXP_doubled(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_name, SEXP s_nameP
 	}
 }
 
+SEXP SXP_clone(SEXP exd, SEXP s_glen, SEXP s_groups, SEXP s_inherit_name, SEXP s_name, 
+		SEXP s_namePrefix, SEXP s_familySize,
+		SEXP s_trackPedigree, SEXP s_giveIds, SEXP s_filePrefix, SEXP s_savePedigree,
+		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
+	GenOptions g = create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
+									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
+									 s_saveGenes, s_retain);
+	int glen = asInteger(s_glen);
+	int *groups = INTEGER(s_groups); 
+	if (glen == NA_INTEGER) { 
+		error("`groups` vector is invalid.\n");
+	}
+	for (int i = 0; i < glen; ++i) {
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid.\n"); }
+	}
+	
+	int inherit_name = asLogical(s_inherit_name);
+	if (inherit_name == NA_LOGICAL) { error("`inherit.name` parameter is of invalid type: should be logical.\n"); }
+	
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	if (glen == 1) {
+		return ScalarInteger(make_clones(d, groups[0], inherit_name, g));
+	} else {
+		// Get an R vector of the same length as the number of new size 1 groups created
+		SEXP out = PROTECT(allocVector(INTSXP, glen));
+		int* outc = INTEGER(out);
+		for (int i = 0; i < glen; ++i) {
+			outc[i] = make_clones(d, groups[i], inherit_name, g);
+		}
+		UNPROTECT(1);
+		return out;
+	}
+}
+
 
 /*-----------------------------------Groups----------------------------------*/
 SEXP SXP_combine_groups(SEXP exd, SEXP s_len, SEXP s_groups) {

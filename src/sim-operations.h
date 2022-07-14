@@ -13,21 +13,6 @@
 #define FALSE 0
 
 
-/** \page Guides Guides to simulating particular situations
- *
- * To be added
- *
- */
-
- /** \page Methods Simulation Methodology
- *
- * For the moment, please refer to the R package vignette for
- * descriptions of simulation methodologies and assumptions.
- *
- * [genomicSimulation (R package)](https://kiravill.github.io/genomicSimulation/)
- *
- */
-
  /* This section contains settings for the simulation that users can modify if they have the need.
  * To apply the modified settings the simulation tool must be re-compiled.
  * To modify a setting, replace the number (eg 1000) with the new value without modifying the name
@@ -268,6 +253,7 @@ const GenOptions BASIC_OPT;
  *
  * @{
  */
+
 DecimalMatrix generate_zero_dmatrix(int r, int c);
 int add_matrixvector_product_to_dmatrix(DecimalMatrix* result, DecimalMatrix* a, double* b);
 int add_doublematrixvector_product_to_dmatrix(DecimalMatrix* result, DecimalMatrix* amat, double* avec, DecimalMatrix* bmat, double* bvec);
@@ -463,13 +449,15 @@ int calculate_recombinations_from_file(SimData* d, const char* input_file, const
 void generate_gamete(SimData* d, char* parent_genome, char* output);
 void generate_cross(SimData* d, char* parent1_genome, char* parent2_genome, char* output);
 void generate_doubled_haploid(SimData* d, char* parent_genome, char* output);
+void generate_clone(SimData* d, char* parent_genome, char* output);
     /**@}*/
 
-int cross_random_individuals(SimData* d, int from_group, int cap, int n_crosses, GenOptions g);
+int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap, GenOptions g);
 int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int cap1, int cap2, GenOptions g);
 int cross_these_combinations(SimData* d, int n_combinations, int combinations[2][n_combinations],  GenOptions g);
 int self_n_times(SimData* d, int n, int group, GenOptions g);
 int make_doubled_haploids(SimData* d, int group, GenOptions g);
+int make_clones(SimData* d, int group, int inherit_names, GenOptions g);
 
 int make_all_unidirectional_crosses(SimData* d, int from_group, GenOptions g);
 int make_n_crosses_from_top_m_percent(SimData* d, int n, int m, int group, GenOptions g);
