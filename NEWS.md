@@ -1,12 +1,24 @@
-# genomicSimulation dev
-- Fix segfault in select.by.gebv when trying to select more individuals than exist in the group (e.g. asking for the best 5 members of a group of 2). Now, it just moves all group members to the new selected group, and doesn't worry about the missing requested remainder.
-- adding new group splitter functions. Added tests for them.
+# genomicSimulation 0.2.1
+
+## Improvements 
+
 - `delete.group` can now be passed a vector of group ids to delete from memory. Previously it could only delete a single group at a time. 
-- Add function `cross.randomly.between` to perform crosses where one parent is picked randomly from one group and the other from another group. It also performs crosses between a selected individual and individuals randomly picked from a group.
+- Added new group splitting functions:
+	- `break.group.into.halfsib.families`
+	- `break.group.evenly`
+	- `break.group.into.buckets`
+	- `break.group.randomly`
+	- `break.group.with.probabilities`
+- Added function `cross.randomly.between` to perform crosses where one parent is picked randomly from one group and the other from another group.
+- Added option to have a cap on the number of uses of each group member as a parent of a cross in `cross.randomly` and `cross.randomly.between`. 
+- Added function `make.clones` to clone or duplicate members of a group.
+
+## Bug Fixes
+
+- Fix segfault in select.by.gebv when trying to select more individuals than exist in the group (e.g. asking for the best 5 members of a group of 2). Now, it just moves all group members to the new selected group, and doesn't worry about the missing requested remainder.
 - Fix see.group.data so it stops rather than requesting a 0-length block of heap space when it is asked to investigate a nonexistent group.
-- Added option to have a cap on the number of uses of each group member as a parent of a cross in cross.randomly and cross.randomly.between. 
-- Removed parameters set.parent1 and set.parent2 of cross.randomly.between. The same functionality can be achieved using make.group and combine.groups to create a temporary one-member group containing the set parent to pass to cross.randomly.between. 
-- Add function `make.clones` to clone or duplicate members of a group.
+- Other minor bug fixes in the underlying C library.
+
 
 # genomicSimulation 0.2
 

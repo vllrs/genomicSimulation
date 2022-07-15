@@ -1,5 +1,5 @@
 ---
-title: "genomicSimulation (v0.2.0.dev) Vignette"
+title: "genomicSimulation (v0.2.1) Vignette"
 author: "Kira Villiers"
 date: "`r Sys.Date()`"
 output:
@@ -34,12 +34,29 @@ Contact the package maintainers for any feature requests or improvement requests
 
 Guides on using the package can be found in sections 4 and 5 of this vignette.
 
+[A formal writeup of this tool's design and performance is available on bioRxiv.](https://www.biorxiv.org/content/10.1101/2021.12.12.472291v2)
+
+## Getting to know genomicSimulation
+
+genomicSimulation aims to give you a set of flexible building blocks with which you can design/script a breeding program. genomicSimulation exists as a set of scripting functions at R level (like `load.more.genotypes`, `cross.randomly`, and `see.optimal.haplotype`) and an invisible table containing the simulation's currently-existing genotypes. 
+
+Working with genomicSimulation is about being able to build your simulation structure as you wish. Broadly speaking, simulation functions are split into three categories: creating more genotypes, selecting between genotypes, and reorganising/recategorising genotypes. These categories of actions can be used in any order and interspersed in any way. In fact, the only fixed requirement of a valid genomicSimulation script is that the first command is `load.data()`, which initialises the invisible table and loads the genetic map, which is the one un-changeable detail of a simulation. 
+
+In genomicSimulation, every genotype is a member of a 'group', an abstract category represented by a number. Selection is simulated by pulling selected genotypes into a new group; most crossing actions are performed using one group's members. Groups can be combined, split randomly, or split along specific lines. Groups can be deleted to destroy the genotypes they contain. 
+
+Using these two factors (all genotypes being allocated to reconfigurable groups, and simulation actions being able to be undertaken in any order) genomicSimulation has the flexibility to simulate a huge range of breeding programs. You can imagine repeatedly simulating crosses from a 'breeding pool' group and discarding most offspring but for a selected subset which you merge into your breeding pool for the next generation, or simulating a nucleus breeding system with several funneled breeding pools running simultaneously, each replenished by the best offspring of their own pool and whatever trickles down from higher/more elite pools, or a concurrent population development/improvement program which splits off copies of certain genotypes to repeatedly self into homozygosity and test in the field.
+
+genomicSimulation's data is, unfortunately, stored in an invisible table. In this case, 'invisible' means there is a hidden variable `sim.data$p` of the 'external pointer' type in your R environment when a genomicSimulation simulation is in existence. This pointer is the address of an . Unfortunately, with genomicSimulation (and therefore its constituent tables) being built in C, there is no nice way for R to be able to see them.
+
+Instead, you will have to call genomicSimulation functions to look at your simulation data. As an R user, the functions `see.existing.groups()` and `see.group.data()`, which pull the data into R vectors, will become your friends. 
+
+
 # Speed
 On a consumer-model laptop laptop (Intel(R) Core(TM) i5-7200U CPU @ 2.50GHz, 8GB RAM) running RStudio version 1.2.5019, the process of loading 50 founder lines and 5112 SNPs took on average 0.64 seconds.
 
 A call to `cross.randomly` to generate 100,000 ($10^5$) offspring from those founders took on average 2 seconds to run. Since all crossing functions use the same underlying meiosis simulation and same methodology, this time should be fairly representative of the speed of any crossing function. 
 
-Output (writing to files) adds significant delays. The same command, with save-as-you-go output of GEBVs and pedigrees requested, took approximately 20 seconds to run. With save-as-you-go output of GEBVs, pedigrees, and genotypes (the latter being a significantly larger file size), the function call took approximately 120 seconds. 
+Output (writing to files) adds significant delays. The same command, with save-as-you-go output of GEBVs and pedigrees active, took approximately 20 seconds to run. With save-as-you-go output of GEBVs, pedigrees, and genotypes (genotypes in particular write a lot of characters to files), the function call took approximately 120 seconds. 
 
 Generating the 100,000 offspring, then saving GEBVs, pedigrees, and genotypes to files via separate `save.` functions, took approximately 130 seconds to complete. This is a few seconds longer than the save-as-you-go call that did the same work, possibly because of the time spent moving from R-level execution to C-level and back again.
 
@@ -47,63 +64,72 @@ The C-level functions make no attempt to parallelise execution.
 
 # Package-Specific Details
 ## Understanding `sim.data`
-The package has an internal state where it stores simulated genotypes and other details. The state is stored in a C-level struct called `SimData`. An external pointer to this struct is saved in a package-global R variable called `sim.data$p`. `sim.data$p` is hidden during regular use. 
+The package has an internal invisible table where it stores simulated genotypes and other details. The table is a 'struct' object, called `SimData`, in the simulation tool's underlying C library. An external pointer to `SimData` is saved in a package-global R variable called `sim.data$p`. `sim.data$p` is hidden during regular use, and attempting to access the C-level data via the external pointer is not advised. Plenty of R-level functions are offered to modify and view simulation state and stored data.
 
 To reset the simulation/clear it of all data, the function `clear.simdata()` is provided. Currently, functionality to have two concurrent simulation states does not exist.
 
 ### Markers
-Each `SimData` is given a list of SNPs and a map for positioning these in the genome on creation. These details cannot be changed after creation without clearing the `SimData`. 
+Each `SimData` is given a list of markers and a map for positioning these in the genome on creation (see Indexes: Input File Formats: Linkage maps). These are the only details that cannot be changed after creation without clearing the `SimData`: they serve as the foundation of the invisible table. 
 
-The `SimData` object saves names of markers as-is, as long as the name is under 30 characters long. Behaviour is undefined if any marker name is longer than 30 characters (To extend this limit, use the NAME_LENGTH setting (see Global Settings Index)).
+The `SimData` object saves names of markers as-is, as long as the name is under 30 characters long. Behaviour is undefined if any marker name is longer than 30 characters. (The currently-non-modifiable NAME_LENGTH setting (see Indexes: Global Settings Index) is associated with work on fixing this limitation).
 
-Becauses the `SimData` stores its SNPs in genome order, any outputs produced will have the SNP markers ordered according to the genetic map loaded at its creation. If an output method provides genotypes as strings of alleles, the string will also be ordered according ot this genetic map.
+Becauses the `SimData` stores its markers in genome order, any outputs produced will have the markers ordered according to the genetic map loaded at its creation. If an output method provides genotypes as strings of alleles, the string will also be ordered according ot this genetic map.
+
+Note that genomicSimulation does not care what potential values/alleles the marker can take. Any 8-bit non-space character will be accepted as an allele. This means SNP markers can be represented with the two alleles 0 and 1, or A and T, etc., according to your preference. On the other end of the spectrum, a marker could also represent an abstracted Mendelian gene with alleles A, a, t, +, and o. 
 
 ### Effects
-The simulation calculates breeding values for an arbitrary trait using an additive model and a set of effect values for a given allele at a given marker.
+The simulation calculates genetic breeding values for an arbitrary trait using an additive model.
 
-The simulation cannot run without having a genetic map for the SNPs it tracks. However, it can run with no effect values loaded, so there is no need to provide them if GEBVs are not being used.
+While the simulation cannot run without a genetic map, it will happily run without effect values. There is no need to provide effect values if genetic breeding values are not to be used. If they are to be used, the simulation can load an effect file containing the additive effect of having a given allele at a given marker (see Indexes: Input File Formats: Effect files). The genetic breeding values are then calculated by adding up the effects of each allele in the genotype for which there is an effect loaded (that is, markers and alleles not mentioned in the effect file contribute nothing to the score).
 
-Only one 'set' of effect values can be loaded at a time.
+Only one 'set' of effect values can be loaded at a time, but effect files can be swapped out at any time using `load.different.effects()`.
 
 ### Genotypes
-Each genotype/line may or may not be allocated a name. If loading names from a file, behaviour is undefined if any line name is longer than 30 characters (To extend this limit, use the NAME_LENGTH setting (see Global Settings Index)).
+Each genotype/line may or may not be given a name. Generating names for simulated genotypes can be turned on in the common crossing settings (see Indexes: Crossing Function Settings). 
+
+At least one genotype must be loaded in the initialisation command `load.data`. genomicSimulation has no genome-construction or mutation mechanisms: there is no other way to get your simulation population started! At any point in simulation more genotypes can be imported from files using the function `load.more.genotypes` (see Indexes: Input File Formats: Founder genotypes).
+
+When loading genotypes from a file, behaviour is undefined if any genotype has a name longer than 30 characters. (Once again, the currently-non-modifiable NAME_LENGTH setting (see Indexes: Global Settings Index) is implicated in attempts to remove this limitation.)
 
 ## Understanding Groups
-The SimData deals with genotypes in groups/categories. Automatically, the genotypes loaded from separate files are allocated to separate groups. Each crossing function also places the genotypes it produces in a new group.
+As far as genomicSimulation is concerned, every genotype always exists as a member of a group. Genotypes loaded from the same file are automatically allocated to the same group. Every crossing function also places the genotypes it produces in a new group. Each group is denoted by a number.
 
-A genotype can only belong to one group, so functions that overwrite allocations (eg `make.group`) effectively pull genotypes out of their old group and put them in a new one. This ensures that genotypes can only be deleted once.
+A genotype can only belong to one group, so functions that overwrite allocations (eg `make.group`) effectively pull genotypes out of their old group and put them into the new one. This ensures that genotypes can only be deleted once.
 
 Group numbers are natural numbers starting at 1. Group numbers are not guaranteed to be allocated sequentially, because some crossing functions may create and delete temporary groups to carry out their task, so the final group number could be 'out of order'.
 
-Every function except those that pull data into R (functions whose names begin with `see.`) return either one integer or a vector of integers. If the integer is 0, it means the function succeeded but it is not a function that acts on groups. Otherwise, the return value is the group number(s) of the group(s) that were created.
+Every function except those that pull data into R (functions whose names begin with `see.`) return either one integer or a vector of integers. If the integer is 0, it means the function succeeded but it is not a function that acts on groups. Otherwise, the return value is the group number(s) of the group(s) that were created. This means that in your R environment, the groups you are working with will be to all intents and purposes just integers. 
+
+Note that only genomicSimulation functions can actually make changes to the groups. Modifying the numbers returned by genomicSimulation in the R environment will have no effect, and furthermore genomicSimulation will not, for example, delete a number in the R environment if that group ceases to exist.
+
 
 ## Understanding Identifiers
 There are three categories of identifiers that may be observed during use of the simulation.
 
-1. Group numbers, which were discussed in the section above. They are non-negative integers that define a set of lines. Any number of lines can share a group number, and a line's group number may be changed over the course of the simulation.
-1. IDs. These are non-negative integers that are unique to a particular genotype for the lifetime of the `SimData`. IDs are used for tracking pedigree thanks to this uniqueness feature. However, genotypes are not guaranteed to have an ID: genotypes created during crossing with the setting `give.ids` set to FALSE will not be allocated IDs and will have 0 instead. 
-1. Indexes. These represent the position/column number in the internal matrix at which the genotype is stored. They are therefore unique to the genotype but not continuous over the lifetime of the `SimData`, because when genotypes/columns are deleted the column numbers of the matrix change. Because, unlike IDs, every genotype is guaranteed to have an index, functions like `make.group` and `cross` that act on particular genotypes generally take indexes as inputs. Since indexes can change, however, it is important to not place a `delete.group` call between getting index data and using indexes in one of these function calls.
+1. Group numbers, which were discussed in the section above. They are non-negative integers that define a set of genotypes/lines. Any number of lines can share a group number, and a line's group number may be changed over the course of the simulation.
+1. IDs. These are non-negative integers that are unique to a particular genotype for the lifetime of the simulation. IDs are used for tracking pedigree. However, genotypes are not guaranteed to have an ID: genotypes created during crossing with the setting `give.ids` set to FALSE will not be allocated IDs and will have 0 instead. 
+1. Indexes. These represent the position/column number in the invisible table at which the genotype is stored. They are therefore unique to the genotype but not continuous over the lifetime of the simulation, because when genotypes/columns are deleted, the column numbers of the remaining genotypes may change. Because, unlike IDs, every genotype is guaranteed to have an index, functions like `make.group` and `cross.combinations` that act on specific genotypes (rather than groups) generally take indexes as inputs. Since indexes can change, however, it is important to not place a `delete.group` call between getting index data and using indexes in one of these function calls.
 
 ## Understanding Output Methods
 There are three sets of functions to get output from the simulation. 
 
-- The first involves calling a function to save data to a file (`save.` family functions). 
-- The second involves saving the data from a cross as you go (`save.` settings in crossing function parameters). This enables more compact data saving, and also allows for simulating more crosses than can be stored in working memory, by also setting the parameter `retain=FALSE`. In save-as-you-go saving, the simulation generates and saves crosses in batches of 1000 (To change this value, use the CONTIG_WIDTH setting (see Global Settings Index)). save-as-you-go is however less flexible than `save.` family functions because only the default printing format is used and only the genotypes produced by that particular crossing call are saved.
-- The third is to use the `see.` family of functions to pull data into R. These are the only functions that break the rule of function return values being either the groups produced by that call or 0 if none are produced. These functions can be used in conjunction with `make.group` as a method of designing custom selection methods. This family of functions is still being expanded.
+- The first involves calling a function to save data to a file (`save.` family functions). These can be called on any group or on the entire simulation, cover a range of data types, each which has a few possible output formats (see Indexes: Output File Formats).
+- The second involves saving the data about a cross at the same time as producing it (`save.` settings in crossing function parameters). This enables more compact data saving, and also allows for simulating more crosses than can be stored in working memory, by also setting the parameter `retain=FALSE`. In save-as-you-go saving, the simulation generates and saves crosses in batches of 1000 (This value could be changed by modifying the CONTIG_WIDTH setting (see Indexes: Global Settings Index)). save-as-you-go is however less flexible than `save.` family functions because only the default printing format is used and only the genotypes produced by that particular crossing call are saved.
+- The third is to use the `see.` family of functions to pull data into R. These are the only functions that break the rule of function return values being either group numbers or 0 (see Understanding Groups). The custom selection method interface in R is designed to work with these functions (see Workflow: Writing Custom Selection Methods in R). 
 
-See the indexes (Section 6 of this vignette) for information on available functions and output formats. 
+See the indexes of this vignette for information on available functions and output formats. 
 
 # Workflow
-The assumed workflow for this package involves the following steps:
+A simple workflow for this package could be:
 
-1. Load progenitor lines and SNP data; save the group number of the progenitor lines. (If using breeding value functions, the effect values for calculating breeding value for a desired trait can be loaded here too). Suggested function: `load.data`
+1. Load progenitor lines and SNP data; save the group number of the progenitor lines. (The effect values for calculating breeding values for a desired trait can be loaded here too, if desired). Suggested function: `load.data`
 1. Perform crossing from the progenitor group. Keep a hold of the group number of these crosses. Example function: `cross.randomly`
 1. Perform selection on the F1 generation generated above. Example function: `select.by.gebv`
-1. Perform more crossing from the F1 generation (using the group number from the above step). Example function: `cross.from.top.pc`
-1. Repeat for further generations. Example function: `self.n.times`
+1. Perform more crossing from the F1 generation (using the group number from the above step).
+1. Repeat for further generations.
 1. Save the final genotypes (and/or effect values and/or pedigrees) to files. Example function: `save.genotypes`
 1. (Optional: Estimate the number of crossovers to reach these final genotypes. Suggested function: `plot.crossovers`)
- Load output files into R for further analysis.
+ Open output files for further analysis.
 
 The example below shows a how a typical workflow would save group numbers and call crossing functions.
 ```{R}
@@ -153,12 +179,37 @@ file.remove("b.txt")
 file.remove("af6-genotype.txt")
 ```
 
+## Tracking Sex of Genotypes
+
+The above example, while not very realistic, was clearly inspired by plant breeding methods: four generations of selfing to produce a homozygous inbred fit for bulking and commercial release is not a usual strategy in animal breeding. Perhaps a key aspect in which animal breeding programs differ from a self-pollinated plant breeding program is that you can't cross just any animal with any other animal. That is referring, in part, to the higher importance of avoiding inbreeding, but mostly to the fact that animals come in male and female varieties.
+
+genomicSimulation does not track sex of genotypes. The group system can however be used to that effect.
+
+```{R}
+# Starting to use genomicSimulation: load the small initial data set
+cows <- load.data("../tests/testthat/helper_genotypes.txt",
+                "../tests/testthat/helper_map.txt",
+                "../tests/testthat/helper_eff.txt")
+# Load the small initial data set again, pretending this represents a different set of genotypes
+bulls <- load.more.genotypes("../tests/testthat/helper_genotypes.txt") 
+
+# Create some offspring
+f1 <- cross.randomly.between(cows, bulls, n.crosses=5)
+
+# Simulate the sex of offspring
+temporary <- break.group.randomly(f1, into.n=2)
+calvesF <- temporary[1]; calvesM <- temporary[2]; rm(temporary);
+
+#... and so forth
+```
+
+
 ## Writing Custom Selection Methods in R
 The only inbuilt selection method in genomicSimulation is `select.by.gebv`. However, custom selection methods can be written in R thanks to the `make.group` function, which takes an arbitrary set of indices and moves them into a new group. Indices of genotypes can be accessed via `see.group.data` with data type parameter `X`, operated on, then passed back to `make.group` to perform selection.
 
 For an example, consider that a user wants to implement a custom selection method wherein they select the top 10 simulated crosses by phenotype. Because genomicSimulation offers no internal method for simulating phenotypes, the user must simulate them in R then use the custom selection method interface to perform their selection.
 
-Suppose the user chooses the following model for their simulated phenotype. The phenotypic values will be made equal to the breeding value plus a draw from a normally distributed distribution with variance equal to $V_e$ (environmental variance), where $V_e$ comes from the equation $H^2 = V_g/(V_g + V_e)$. For the user's purposes, $H^2$ is a known broad-sense heritability estimate and $V_g$ is the variation in breeding values in the set of crosses from which they are selecting. Therefore, the steps to simulate phenotypes are: 
+Suppose the user chooses the following model for their simulated phenotype. The phenotypic values will be made equal to the breeding value plus a draw for environmental variance from a normally distributed distribution with variance $V_e$, where $V_e$ comes from the equation $H^2 = V_g/(V_g + V_e)$. For the user's purposes, $H^2$ is a known broad-sense heritability estimate and $V_g$ is the variation in breeding values in the set of crosses from which they are selecting. Therefore, this approach uses the following steps to simulate phenotypes are: 
 1. calculate the magnitude of $V_e$ using the set of breeding values from the crosses on which selection is being performed
 2. draw from a normal distribution to get simulated phenotypes
 
@@ -202,32 +253,31 @@ f2.selected <- make.group(get.top.10.phenotypes(f2, 0.5))
 delete.group(c(f1.selected,f2,f2.selected))
 ```
 
+The [writeup on bioRxiv](https://www.biorxiv.org/content/10.1101/2021.12.12.472291v2) includes the simulation results of a sample breeding program similar to this concept. 
 
 # Details and Methodology
 
 ## Methodology: Calculating Breeding Values
-The terms 'breeding value' and 'GEBV' are used interchangeably in the package, because the simulation is ignorant of whether real or estimated breeding values were loaded.
+The terms 'breeding value', 'genetic breeding value' and 'GEBV' (Genetic Estimated Breeding Value) are used interchangeably in the package, because the simulation is ignorant of whether real or estimated breeding values were loaded.
 
 The package's internal GEBV calculator uses an additive model of trait effects. The additive effect values loaded from an input file (either via the `load.data` or the `load.different.effects` functions) are stored as a vector for each allele. In calculating breeding values for a genotype, the simulation counts how many copies of each particular allele the genotype has at each SNP, then multiples the vector of counts for a particular allele by the effects for that allele. The final result is the sum of these products across all alleles for which it has a stored effect vector.
 
-![Breeding value calculation process](bvcalculation.png){width=100%}
+![Diagram of the breeding value calculation process.](bvcalculation.png){width=100%}
 
 
 ## Methodology: Simulating Meiosis
 To create a cross, the simulation generates gametes independently for the two parents. No distinction is made between male and female parent. Simulation of meiosis is also independent between crosses - the second gamete produced by simulation of meiosis is discarded, not saved for later.
 
-For each chromosome number, the number of crossovers to occur in the simulated meiosis are drawn from a Poisson distribution with parameter = [length of the chromosome in Morgans], where length of the chromosome is the distance between the first and last SNP that are in that chromosome according to the linkage map loaded on setup. The positions of those crossovers along the chromosome are then drawn from a uniform distribution, which is why the use of a linkage map (so that distances correspond to likelihood of crossover) is recommended over use of a physical map. Finally, a random logical value (0 or 1) is drawn to choose which of the parent's chromosomes to start with (which of the two gametes produced to use). 
+For each chromosome number, the number of crossovers to occur in the simulated meiosis are drawn from a Poisson distribution with parameter = [length of the chromosome in Morgans], where length of the chromosome is the distance between the first and last SNP tracked by the linkage map that are on that chromosome. The positions of those crossovers along the chromosome are then drawn from a uniform distribution, which is why the use of a linkage map (so that distances correspond to likelihood of crossover) is recommended over use of a physical map. Finally, a random logical value (0 or 1) is drawn to choose which of the parent's chromosomes to start with (which of the two gametes produced to use). 
 
 Note that this means that allele order in parents matters, and the simulate genotypes that are produced are phased. <!--Encoded data loaders like `load_transposed_encoded_genes_to_simdata` randomise the order of alleles when the line is heterozygous at a SNP on loading.-->
 
 The R package uses the R random generators, so will follow the R seed.
 
-This procedure is displayed visually in the image below.
-
 <!--![Random draws for each chromosome](meiosisdists.png){width=100%}
 ![Using those random values to generate a gamete](meiosis.png){width=100%}-->
 
-![Meiosis simulation process.](meiosis.png){width=100%}
+![Diagram of meiosis simulation process.](meiosis.png){width=100%}
 
 
 ## Methodology: Counting Recombinations
@@ -245,51 +295,65 @@ The `window.size` parameter should be an odd positive integer. The window size i
 
 In developing this process it was considered that parent and child lines would be mostly homozygous. 
 
+This functionality is very much untested and incomplete.
+
 # Indexes
 ## Global Settings Index
 - NAME_LENGTH (default 30). This parameter is not yet modifiable in the R version
 - CONTIG_WIDTH (default 1000). This parameter is not yet modifiable in the R version
 
 ## Function Index
-Use the R documentation (eg. type `?load.data` in the RStudio console) to get descriptions of these functions.
+*Use the R documentation (eg. type `?load.data` in the RStudio console) to get descriptions of these functions.*
+
+*There are square brackets around outputs to represent that they are placeholder names and can be replaced by any variable name of your choice.*
+
+*The words in the brackets of each function convey the names of the parameters and their default values, if any. The function `load.data(allele.file, map.file, effect.file = NULL)` could be called as:*
+
+- *`load.data(allele.file=[filename1], map.file=[filename2], effect.file=NULL)`, or*
+- *`load.data(allele.file=[filename1], map.file=[filename2], effect.file=[filename3])`, or*
+- *`load.data([filename1], [filename2])` (note that this call excludes parameter names, so the order of the filenames matters, and no value is provided for the third parameter, so the default value NULL will be used).*
+
+*Many crossing functions are marked as having `[[settings]]` as a parameter. [[settings]] represents a shared set of optional parameters, described in * ***Section 6.3: Crossing Function Settings.***
+
 
 Loading data:
 
-- `group <- load.data(allele.file, map.file, effect.file = NULL)`
-- `group <- load.more.genotypes(allele.file)`
+- `[group] <- load.data(allele.file, map.file, effect.file = NULL)`
+- `[group] <- load.more.genotypes(allele.file)`
 - `load.different.effects(effect.file)`
 
 Simulating crossing:
 
-- `group <- cross.randomly(group,n.crosses,[settings])`
-- `group <- cross.randomly.between(group1,group2,set.parent1,set.parent2,n.crosses,[settings])`
-- `group <- cross.combinations(first.parents,second.parents,[settings])`
-- `group <- cross.combinations.file(cross.file,[settings])`
-- `group <- cross.dc.combinations.file(cross.file,[settings])`
-- `group <- cross.all.pairs(group,[settings])`
-- `group <- self.n.times(group,n,[settings])`
-- `group <- make.doubled.haploids(group,[settings])`
+- `[group] <- cross.randomly(group,n.crosses,[[settings]])`
+- `[group] <- cross.randomly.between(group1,group2,cap1,cap2,n.crosses,[[settings]])`
+- `[group] <- cross.combinations(first.parents,second.parents,[[settings]])`
+- `[group] <- cross.combinations.file(cross.file,[[settings]])`
+- `[group] <- cross.dc.combinations.file(cross.file,[[settings]])`
+- `[group] <- cross.all.pairs(group,[[settings]])`
+- `[group] <- self.n.times(group,n,[[settings]])`
+- `[group] <- make.clones(group,inherit.names,[[settings]])`
+- `[group] <- make.doubled.haploids(group,[[settings]])`
 
 Performing selection:
 
-- `selected.group <- select.by.gebv(from.group, low.score.best = FALSE, percentage OR number)`
+- `[selected.group] <- select.by.gebv(from.group, low.score.best = FALSE, percentage OR number)`
 - For more customised selection, use the process
   - `info <- data.frame("i" = see.group.data(from.group,"X"), "Data"=see.group.data(from.group,...))`
   - `selected.info <- `[some R manipulation on `info` that discards rows not selected under the custom selection]
-  - `selected.group <- make.group(selected.info$i)`
+  - `[selected.group] <- make.group(selected.info$i)`
 
 Modify groupings:
 
 - `delete.group(groups)`
-- `group <- combine.groups(groups)`
-- `group <- make.group(indexes)`
+- `[group] <- combine.groups(groups)`
+- `[group] <- make.group(indexes)`
 - `[vector of groups] <- break.group.into.individuals(group)`
 - `[vector of groups] <- break.group.into.families(group)`
 - `[vector of groups] <- break.group.into.halfsib.families(group)`
 - `[vector of groups] <- break.group.evenly(group, into.n = 2)`
-- `[vector of groups] <- break.group.into.buckets(group, [vector of buckets])`
+  - `[vector of groups] <- break.group.into.buckets(group, [vector of buckets])`
 - `[vector of groups] <- break.group.randomly(group, into.n = 2)`
-- `[vector of groups] <- break.group.with.probabilities(group, [vector of probabilities])`
+  - `[vector of groups] <- break.group.with.probabilities(group, [vector of probabilities])`
 
 Save data (saves results to files):
 

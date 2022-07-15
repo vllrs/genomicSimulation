@@ -40,7 +40,7 @@ Deleting a group (\code{\link{delete.group}}) may cause the indexes of group mem
 change (as the positions/indexes that they are stored in the internal matrix may be
 rearranged). Therefore, you must ensure that there is no call to \code{\link{delete.group}}
 between loading indexes with this function and passing them to a function that takes indexes
-as inputs (eg \code{\link{make.group}}, \code{\link{cross}}).
+as inputs (eg \code{\link{make.group}}).
 }
 
 \seealso{

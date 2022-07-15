@@ -8,4 +8,6 @@ vignettes/b.txt
 doc/gSvignette.R
 doc/gSvignette.Rmd
 tests/testthat/imaginary*
-Meta
+/Meta/
+/src-i386/
+/src-x64/

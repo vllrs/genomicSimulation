@@ -1,5 +1,6 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
+/* genomicSimulationC v0.2.1 - last edit 15 Jul 2022 */
 
 #include <string.h>
 #include <limits.h>
@@ -90,7 +91,6 @@ typedef struct {
      * are the indexes in the SimData of the markers that make up that block. */
 	int** markers_in_block;
 } MarkerBlocks;
-
 
 /** A row-major heap matrix that contains floating point numbers. `dmatrix` functions
  * are designed to act on this matrix.

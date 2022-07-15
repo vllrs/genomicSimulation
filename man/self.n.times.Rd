@@ -100,6 +100,7 @@ Other crossing functions:
 \code{\link{cross.dc.combinations.file}()},
 \code{\link{cross.randomly.between}()},
 \code{\link{cross.randomly}()},
+\code{\link{make.clones}()},
 \code{\link{make.doubled.haploids}()}
 }
 \concept{crossing functions}

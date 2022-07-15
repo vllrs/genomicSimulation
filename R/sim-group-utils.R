@@ -4,7 +4,7 @@
 #' them from the SimData object's storage. A message is printed explaining
 #' how many genotypes were deleted.
 #'
-#' @param group an vector containing the group numbers of the groups to be deleted
+#' @param groups an vector containing the group numbers of the groups to be deleted
 #' @return 0 on success. An error is raised on failure.
 #'
 #' @family grouping functions

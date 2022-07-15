@@ -7,7 +7,7 @@
 delete.group(groups)
 }
 \arguments{
-\item{group}{an vector containing the group numbers of the groups to be deleted}
+\item{groups}{an vector containing the group numbers of the groups to be deleted}
 }
 \value{
 0 on success. An error is raised on failure.
