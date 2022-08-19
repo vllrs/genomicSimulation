@@ -342,7 +342,7 @@ void shuffle_up_to(int* sequence, size_t total_n, size_t n_to_shuffle) {
         for (i = 0; i < maxi; ++i) {
 			// items before i are already shuffled
 			// In R version will use the randlim version rather than the upper digits of rand
-            //size_t j = i + round(unif_rand() * (total_n-i));
+            //size_t j = i + rand()/(RAND_MAX/(total_n-i)+1);
             size_t j = i + round(unif_rand() * (total_n - i - 1));
 
 			// add the next chosen value to the end of the shuffle
@@ -2086,12 +2086,16 @@ void get_n_new_group_nums( SimData* d, int n, int* result) {
 	int existingi = 0;
 	int gn = 0;
 
-	for (int i = 0; i < n; ++i) {
-		++gn;
-		while (existingi < n_groups) {
-			if (gn < existing_groups[i]) {
-				break;
-			}
+    // i: current index of `results` (the array of currently empty group numbers)
+    // gn: group number being checked against existing_groups. if not in there is added to
+    //     the list of results
+    // existingi: current index of existing_groups
+    for (int i = 0; i < n; ++i) {
+        ++gn;
+        while (existingi < n_groups) {
+            if (gn < existing_groups[existingi]) {
+                break;
+            }
 
 			++existingi;
 			++gn;
@@ -2446,7 +2450,11 @@ char** get_group_parent_names( SimData* d, int group_id, int group_size, int par
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
 			if (m->groups[i] == group_id) {
-				pnames[ids_i] = get_name_of_id(d->m, m->pedigrees[parent][i]);
+                if (m->pedigrees[parent][i] > 0) {
+                    pnames[ids_i] = get_name_of_id(d->m, m->pedigrees[parent][i]);
+                } else {
+                    pnames[ids_i] = NULL;
+                }
 				++ids_i;
 			}
 		}

@@ -1,3 +1,12 @@
+# Current dev version
+
+## Improvements
+
+
+## Bug Fixes
+- Removed a "negative ID" warning when trying to access the names of parents of genotypes that have no known parents
+- Fixed a bug many of the `break.` family functions which incorrectly identified some existing groups as empty.
+
 # genomicSimulation 0.2.1
 
 ## Improvements 
