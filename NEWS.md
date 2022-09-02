@@ -1,11 +1,10 @@
-# Current dev version
-
-## Improvements
-
+# genomicSimulation 0.2.2
 
 ## Bug Fixes
 - Removed a "negative ID" warning when trying to access the names of parents of genotypes that have no known parents
-- Fixed a bug many of the `break.` family functions which incorrectly identified some existing groups as empty.
+- Fixed a bug in many of the `break.` family functions which incorrectly identified some existing groups as empty.
+- Fixed a bug in the crossing functions that resulted in crashes when `give.ids = FALSE`
+- Fixed a bug in `make.clones` that resulted in crashes when trying to inherit the name (`inherit.names = TRUE`) of a parent with no name.
 
 # genomicSimulation 0.2.1
 

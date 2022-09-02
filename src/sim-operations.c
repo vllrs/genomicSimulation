@@ -4352,13 +4352,6 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
 	int parent2;
 
 	// set up pedigree/id allocation, if applicable
-	unsigned int cid = 0;
-	unsigned int* cross_current_id;
-	if (g.will_allocate_ids) {
-		cross_current_id = &(d->current_id);
-	} else {
-		cross_current_id = &cid;
-	}
 	unsigned int* group_ids = NULL;
 	if (g.will_track_pedigree) {
 		group_ids = get_group_ids( d, from_group, g_size);
@@ -4420,12 +4413,14 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
 				crosses->n_genotypes = CONTIG_WIDTH;
 				// give the offspring their ids and names
 				if (g.will_name_offspring) {
-					set_names(crosses, g.offspring_name_prefix, *cross_current_id, 0);
+                    set_names(crosses, g.offspring_name_prefix, d->current_id, 0);
 				}
-				for (int j = 0; j < CONTIG_WIDTH; ++j) {
-					++ *cross_current_id;
-					crosses->ids[j] = *cross_current_id;
-				}
+                if (g.will_allocate_ids) {
+                    for (int j = 0; j < CONTIG_WIDTH; ++j) {
+                        ++ d->current_id;
+                        crosses->ids[j] = d->current_id;
+                    }
+                } // else already zeroed by create_empty_allelematrix
 
 				// save the offspring to files if appropriate
 				if (g.will_save_pedigree_to_file) {
@@ -4472,12 +4467,14 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
     }
 	// give the offsprings their ids and names
 	if (g.will_name_offspring) {
-		set_names(crosses, g.offspring_name_prefix, *cross_current_id, 0);
+        set_names(crosses, g.offspring_name_prefix, d->current_id, 0);
 	}
-	for (int j = 0; j < fullness; ++j) {
-		++ *cross_current_id;
-		crosses->ids[j] = *cross_current_id;
-	}
+    if (g.will_allocate_ids) {
+        for (int j = 0; j < fullness; ++j) {
+            ++ d->current_id;
+            crosses->ids[j] = d->current_id;
+        }
+    } // else already zeroed by create_empty_allelematrix
 	if (g.will_track_pedigree) {
 		free(group_ids);
 	}
@@ -4610,14 +4607,6 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
     int fullness = 0;
 
     // set up pedigree/id allocation, if applicable
-    unsigned int cid = 0;
-    unsigned int* cross_current_id;
-    if (g.will_allocate_ids) {
-        cross_current_id = &(d->current_id);
-    } else {
-        cross_current_id = &cid;
-    }
-
     unsigned int* group1_ids = NULL; unsigned int* group2_ids = NULL;
     if (g.will_track_pedigree) {
         group1_ids = get_group_ids( d, group1, group1_size );
@@ -4685,12 +4674,14 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
                 crosses->n_genotypes = CONTIG_WIDTH;
                 // give the offspring their ids and names
                 if (g.will_name_offspring) {
-                    set_names(crosses, g.offspring_name_prefix, *cross_current_id, 0);
+                    set_names(crosses, g.offspring_name_prefix, d->current_id, 0);
                 }
-                for (int j = 0; j < CONTIG_WIDTH; ++j) {
-                    ++ *cross_current_id;
-                    crosses->ids[j] = *cross_current_id;
-                }
+                if (g.will_allocate_ids) {
+                    for (int j = 0; j < CONTIG_WIDTH; ++j) {
+                        ++ d->current_id;
+                        crosses->ids[j] = d->current_id;
+                    }
+                } // else already zeroed by create_empty_allelematrix
 
                 // save the offspring to files if appropriate
                 if (g.will_save_pedigree_to_file) {
@@ -4741,12 +4732,14 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
     }
     // give the offsprings their ids and names
     if (g.will_name_offspring) {
-        set_names(crosses, g.offspring_name_prefix, *cross_current_id, 0);
+        set_names(crosses, g.offspring_name_prefix, d->current_id, 0);
     }
-    for (int j = 0; j < fullness; ++j) {
-        ++ *cross_current_id;
-        crosses->ids[j] = *cross_current_id;
-    }
+    if (g.will_allocate_ids) {
+        for (int j = 0; j < fullness; ++j) {
+            ++ d->current_id;
+            crosses->ids[j] = d->current_id;
+        }
+    } // else already zeroed by create_empty_allelematrix
     if (g.will_track_pedigree) {
         free(group1_ids);
         free(group2_ids);
@@ -4813,13 +4806,6 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 	char* parent1genes, * parent2genes;
 
 	// set up pedigree/id allocation, if applicable
-	unsigned int cid = 0;
-	unsigned int* cross_current_id;
-	if (g.will_allocate_ids) {
-		cross_current_id = &(d->current_id);
-	} else {
-		cross_current_id = &cid;
-	}
 	AlleleMatrix* last = NULL;
 	int output_group = 0;
 	if (g.will_save_to_simdata) {
@@ -4869,12 +4855,14 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 				if (fullness >= CONTIG_WIDTH) {
 					// give the offsprings their ids and names
 					if (g.will_name_offspring) {
-						set_names(crosses, g.offspring_name_prefix, *cross_current_id, 0);
+                        set_names(crosses, g.offspring_name_prefix, d->current_id, 0);
 					}
-					for (int j = 0; j < CONTIG_WIDTH; ++j) {
-						++ *cross_current_id;
-						crosses->ids[j] = *cross_current_id;
-					}
+                    if (g.will_allocate_ids) {
+                        for (int j = 0; j < CONTIG_WIDTH; ++j) {
+                            ++ d->current_id;
+                            crosses->ids[j] = d->current_id;
+                        }
+                    } // else already zeroed by create_empty_allelematrix
 
 					// save the offsprings to files if appropriate
 					if (g.will_save_pedigree_to_file) {
@@ -4918,12 +4906,14 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 	// save the rest of the crosses to the file.
 	// give the offsprings their ids and names
 	if (g.will_name_offspring) {
-		set_names(crosses, g.offspring_name_prefix, *cross_current_id, 0);
+        set_names(crosses, g.offspring_name_prefix, d->current_id, 0);
 	}
-	for (int j = 0; j < fullness; ++j) {
-		++ *cross_current_id;
-		crosses->ids[j] = *cross_current_id;
-	}
+    if (g.will_allocate_ids) {
+        for (int j = 0; j < fullness; ++j) {
+            ++ d->current_id;
+            crosses->ids[j] = d->current_id;
+        }
+    } // else already zeroed by create_empty_allelematrix
 
 	// save the offsprings to files if appropriate
 	if (g.will_save_pedigree_to_file) {
@@ -4993,13 +4983,6 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	int i, j, f, fullness = 0;
 
 	// set up pedigree/id allocation, if applicable
-	unsigned int cid = 0;
-	unsigned int* cross_current_id;
-	if (g.will_allocate_ids) {
-		cross_current_id = &(d->current_id);
-	} else {
-		cross_current_id = &cid;
-	}
 	unsigned int* group_ids = NULL;
 	if (g.will_track_pedigree) {
 		group_ids = get_group_ids( d, group, group_size);
@@ -5049,12 +5032,14 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 					outcome->n_genotypes = CONTIG_WIDTH;
 					// give the offspring their ids and names
 					if (g.will_name_offspring) {
-						set_names(outcome, g.offspring_name_prefix, *cross_current_id, 0);
+                        set_names(outcome, g.offspring_name_prefix, d->current_id, 0);
 					}
-					for (int j = 0; j < CONTIG_WIDTH; ++j) {
-						++ *cross_current_id;
-						outcome->ids[j] = *cross_current_id;
-					}
+                    if (g.will_allocate_ids) {
+                        for (int j = 0; j < CONTIG_WIDTH; ++j) {
+                            ++ d->current_id;
+                            outcome->ids[j] = d->current_id;
+                        }
+                    } // else already zeroed by create_empty_allelematrix
 
 					// save the offspring to files if appropriate
 					if (g.will_save_pedigree_to_file) {
@@ -5108,12 +5093,14 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 					outcome->n_genotypes = CONTIG_WIDTH;
 					// give the offspring their ids and names
 					if (g.will_name_offspring) {
-						set_names(outcome, g.offspring_name_prefix, *cross_current_id, 0);
+                        set_names(outcome, g.offspring_name_prefix, d->current_id, 0);
 					}
-					for (int j = 0; j < CONTIG_WIDTH; ++j) {
-						++ *cross_current_id;
-						outcome->ids[j] = *cross_current_id;
-					}
+                    if (g.will_allocate_ids) {
+                        for (int j = 0; j < CONTIG_WIDTH; ++j) {
+                            ++ d->current_id;
+                            outcome->ids[j] = d->current_id;
+                        }
+                    } // else already zeroed by create_empty_allelematrix
 
 					// save the offspring to files if appropriate
 					if (g.will_save_pedigree_to_file) {
@@ -5178,12 +5165,14 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	outcome->n_genotypes = fullness;
 	// give the offspring their ids and names
 	if (g.will_name_offspring) {
-		set_names(outcome, g.offspring_name_prefix, *cross_current_id, 0);
+        set_names(outcome, g.offspring_name_prefix, d->current_id, 0);
 	}
-	for (int j = 0; j < fullness; ++j) {
-		++ *cross_current_id;
-		outcome->ids[j] = *cross_current_id;
-	}
+    if (g.will_allocate_ids) {
+        for (int j = 0; j < fullness; ++j) {
+            ++ d->current_id;
+            outcome->ids[j] = d->current_id;
+        }
+    } // else already zeroed by create_empty_allelematrix
 	if (g.will_track_pedigree) {
 		free(group_ids);
 	}
@@ -5247,13 +5236,6 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 	int i, f, fullness = 0;
 
 	// set up pedigree/id allocation, if applicable
-	unsigned int cid = 0;
-	unsigned int* cross_current_id;
-	if (g.will_allocate_ids) {
-		cross_current_id = &(d->current_id);
-	} else {
-		cross_current_id = &cid;
-	}
 	unsigned int* group_ids = NULL;
     int id;
 	if (g.will_track_pedigree) {
@@ -5305,12 +5287,14 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 				outcome->n_genotypes = CONTIG_WIDTH;
 				// give the offspring their ids and names
 				if (g.will_name_offspring) {
-					set_names(outcome, g.offspring_name_prefix, *cross_current_id, 0);
+                    set_names(outcome, g.offspring_name_prefix, d->current_id, 0);
 				}
-				for (int j = 0; j < CONTIG_WIDTH; ++j) {
-					++ *cross_current_id;
-					outcome->ids[j] = *cross_current_id;
-				}
+                if (g.will_allocate_ids) {
+                    for (int j = 0; j < CONTIG_WIDTH; ++j) {
+                        ++ d->current_id;
+                        outcome->ids[j] = d->current_id;
+                    }
+                } // else already zeroed by create_empty_allelematrix
 
 				// save the offspring to files if appropriate
 				if (g.will_save_pedigree_to_file) {
@@ -5354,12 +5338,15 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 	outcome->n_genotypes = fullness;
 	// give the offspring their ids and names
 	if (g.will_name_offspring) {
-		set_names(outcome, g.offspring_name_prefix, *cross_current_id, 0);
+        set_names(outcome, g.offspring_name_prefix, d->current_id, 0);
 	}
-	for (int j = 0; j < fullness; ++j) {
-		++ *cross_current_id;
-		outcome->ids[j] = *cross_current_id;
-	}
+    if (g.will_allocate_ids) {
+        for (int j = 0; j < fullness; ++j) {
+            ++ d->current_id;
+            outcome->ids[j] = d->current_id;
+        }
+    } // else already zeroed by create_empty_allelematrix
+
 	if (g.will_track_pedigree) {
 		free(group_ids);
 	}
@@ -5427,13 +5414,6 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
     int i, f, fullness = 0;
 
     // set up pedigree/id allocation, if applicable
-    unsigned int cid = 0;
-    unsigned int* cross_current_id;
-    if (g.will_allocate_ids) {
-        cross_current_id = &(d->current_id);
-    } else {
-        cross_current_id = &cid;
-    }
     unsigned int* group_ids = NULL;
     int id;
     if (g.will_track_pedigree) {
@@ -5492,12 +5472,14 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
                 outcome->n_genotypes = CONTIG_WIDTH;
                 // give the offspring their ids and names
                 if (g.will_name_offspring) {
-                    set_names(outcome, g.offspring_name_prefix, *cross_current_id, 0);
+                    set_names(outcome, g.offspring_name_prefix, d->current_id, 0);
                 }
-                for (int j = 0; j < CONTIG_WIDTH; ++j) {
-                    ++ *cross_current_id;
-                    outcome->ids[j] = *cross_current_id;
-                }
+                if (g.will_allocate_ids) {
+                    for (int j = 0; j < CONTIG_WIDTH; ++j) {
+                        ++ d->current_id;
+                        outcome->ids[j] = d->current_id;
+                    }
+                } // else already zeroed by create_empty_allelematrix
 
                 // save the offspring to files if appropriate
                 if (g.will_save_pedigree_to_file) {
@@ -5538,8 +5520,10 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
                     free(outcome->names[fullness]);
                 }
                 // save name
-                outcome->names[fullness] = get_malloc(sizeof(char) * (strlen(group_names[i]) + 1));
-                strcpy(outcome->names[fullness], group_names[i]);
+                if (group_names[i] != NULL) {
+                    outcome->names[fullness] = get_malloc(sizeof(char) * (strlen(group_names[i]) + 1));
+                    strcpy(outcome->names[fullness], group_names[i]);
+                }
             }
         }
     }
@@ -5553,12 +5537,14 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
     outcome->n_genotypes = fullness;
     // give the offspring their ids and names
     if (g.will_name_offspring) {
-        set_names(outcome, g.offspring_name_prefix, *cross_current_id, 0);
+        set_names(outcome, g.offspring_name_prefix, d->current_id, 0);
     }
-    for (int j = 0; j < fullness; ++j) {
-        ++ *cross_current_id;
-        outcome->ids[j] = *cross_current_id;
-    }
+    if (g.will_allocate_ids) {
+        for (int j = 0; j < fullness; ++j) {
+            ++ d->current_id;
+            outcome->ids[j] = d->current_id;
+        }
+    } // else already zeroed by create_empty_allelematrix
     if (g.will_track_pedigree) {
         free(group_ids);
     }
