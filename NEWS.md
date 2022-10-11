@@ -1,3 +1,11 @@
+# Since last release 
+
+## Improvements
+
+- Added new functions to calculate the optimal haplotype and breeding value possible using only the alleles present in a particular group. 
+	- `see.optimal.possible.GEBV`
+	- `see.optimal.possible.haplotype`
+
 # genomicSimulation 0.2.2
 
 ## Bug Fixes

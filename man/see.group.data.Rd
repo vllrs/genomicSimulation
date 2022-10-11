@@ -61,7 +61,9 @@ Other grouping functions:
 Other data access functions: 
 \code{\link{see.minimum.GEBV}()},
 \code{\link{see.optimal.GEBV}()},
-\code{\link{see.optimal.haplotype}()}
+\code{\link{see.optimal.haplotype}()},
+\code{\link{see.optimal.possible.GEBV}()},
+\code{\link{see.optimal.possible.haplotype}()}
 }
 \concept{data access functions}
 \concept{grouping functions}

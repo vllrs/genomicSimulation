@@ -6,6 +6,8 @@
 R_CallMethodDef calledMethods[] = {
 	{"SXP_combine_groups", (DL_FUNC) &SXP_combine_groups, 3},
 	{"SXP_delete_group", (DL_FUNC) &SXP_delete_group, 3},
+	{"SXP_get_best_available_haplotype", (DL_FUNC) &SXP_get_best_available_haplotype, 3},
+	{"SXP_get_best_available_GEBV", (DL_FUNC) &SXP_get_best_available_GEBV, 3},
 	{"SXP_get_best_haplotype", (DL_FUNC) &SXP_get_best_haplotype, 1},
 	{"SXP_get_best_GEBV", (DL_FUNC) &SXP_get_best_GEBV, 1},
 	{"SXP_get_worst_GEBV", (DL_FUNC) &SXP_get_worst_GEBV, 1},

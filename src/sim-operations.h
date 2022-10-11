@@ -1,6 +1,6 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
-/* genomicSimulationC v0.2.1 - last edit 15 Jul 2022 */
+/* genomicSimulationC v0.2.2 - last edit 15 Jul 2022 */
 
 #include <string.h>
 #include <limits.h>
@@ -486,7 +486,9 @@ void calculate_group_local_bvs(SimData* d, MarkerBlocks b, const char* output_fi
 void calculate_local_bvs(SimData* d, MarkerBlocks b, const char* output_file);
 
 char* calculate_optimal_alleles(SimData* d);
+char* calculate_optimal_available_alleles(SimData* d, unsigned int group);
 double calculate_optimum_bv(SimData* d);
+double calculate_optimal_available_bv(SimData* d, unsigned int group);
 double calculate_minimum_bv(SimData* d);
 /**@}*/
 

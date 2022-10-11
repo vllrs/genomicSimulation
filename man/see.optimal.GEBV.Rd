@@ -2,7 +2,7 @@
 % Please edit documentation in R/sim-data-access.R
 \name{see.optimal.GEBV}
 \alias{see.optimal.GEBV}
-\title{Get the ultimate/highest-possible GEBV given the current loaded values.}
+\title{Get the ultimate/highest-possible GEBV given the current loaded effect values.}
 \usage{
 see.optimal.GEBV()
 }
@@ -18,6 +18,8 @@ raised if no effect values have been loaded.
 Other data access functions: 
 \code{\link{see.group.data}()},
 \code{\link{see.minimum.GEBV}()},
-\code{\link{see.optimal.haplotype}()}
+\code{\link{see.optimal.haplotype}()},
+\code{\link{see.optimal.possible.GEBV}()},
+\code{\link{see.optimal.possible.haplotype}()}
 }
 \concept{data access functions}

@@ -58,8 +58,30 @@ see.optimal.haplotype <- function() {
 	return(.Call(SXP_get_best_haplotype, sim.data$p))
 }
 
+#' Get a string containing the ultimate/highest-scoring set of alleles available
+#' in the current group.
+#' 
+#' That is, consider the pool of alleles that exist in the group for each locus,
+#' and take the highest-scoring allele at each locus.
+#'
+#' An error is raised if no effect values have been loaded.
+#'
+#' @param group an integer: the group number of the group to have a look at. 
+#' Can be a vector of groups, in which case the calculation will be run independently
+#' for each group.
+#' @return A string containing the allele out of all alleles in the group
+#' that has the highest effect value at that locus. The string will be ordered in
+#' genome order (lowest chromosome and lowest position to highest) according
+#' to the map that was included on initialisation.
+#'
+#' @family data access functions
+#' @export
+see.optimal.possible.haplotype <- function(group) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_get_best_available_haplotype, sim.data$p, length(group), group))  
+}
 
-#' Get the ultimate/highest-possible GEBV given the current loaded values.
+#' Get the ultimate/highest-possible GEBV given the current loaded effect values.
 #'
 #' \code{see.optimal.GEBV} allows you to extract the optimal GEBV
 #' according to the current loaded effect values. An error is 
@@ -72,6 +94,27 @@ see.optimal.haplotype <- function() {
 see.optimal.GEBV <- function() {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_get_best_GEBV, sim.data$p))
+}
+
+#' Get the ultimate/highest-possible GEBV given the pool of alleles available in
+#' the current group.
+#' 
+#' Effectively, given the additive model of trait effects, this is 2 times the 
+#' breeding value score of \code{see.optimal.possible.haplotype}. 
+#'
+#' An error is raised if no effect values have been loaded.
+#'
+#' @param group an integer: the group number of the group to have a look at.
+#' Can be a vector of groups, in which case the calculation will be run independently
+#' for each group.
+#' @return The highest possible GEBV that can be created from alleles available
+#' in the group.
+#'
+#' @family data access functions
+#' @export
+see.optimal.possible.GEBV <- function(group) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_get_best_available_GEBV, sim.data$p,length(group), group))    
 }
 
 #' Get the lowest-possible GEBV given the current loaded effect values.

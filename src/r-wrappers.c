@@ -759,6 +759,38 @@ SEXP SXP_get_best_haplotype(SEXP exd) {
 	return out;
 }
 
+SEXP SXP_get_best_available_haplotype(SEXP exd, SEXP s_glen, SEXP s_groups) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
+	
+	int len = asInteger(s_glen);
+	int *groups = INTEGER(s_groups); 
+	if (len == NA_INTEGER) { 
+		error("`groups` vector is invalid.\n");
+	}
+	
+	if (len == 1) {
+		char* best_genotype = calculate_optimal_available_alleles(d, groups[0]);
+		
+		SEXP out = PROTECT(allocVector(STRSXP, 1));
+		SET_STRING_ELT(out, 0, mkChar(best_genotype));
+		free(best_genotype);
+		UNPROTECT(1);
+		return out;
+		
+	} else {
+		// Get an R vector of the same length as the number of new size 1 groups created
+		SEXP out = PROTECT(allocVector(STRSXP, len));
+		for (int i = 0; i < len; ++i) {
+			char* best_genotype = calculate_optimal_available_alleles(d, groups[i]);
+			SET_STRING_ELT(out, i, mkChar(best_genotype));
+			free(best_genotype);
+		}
+		UNPROTECT(1);
+		return out;
+	}	
+}
+
 SEXP SXP_get_best_GEBV(SEXP exd) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
@@ -768,6 +800,37 @@ SEXP SXP_get_best_GEBV(SEXP exd) {
 	REAL(out)[0] = best_GEBV;
 	UNPROTECT(1);
 	return out;
+}
+
+SEXP SXP_get_best_available_GEBV(SEXP exd, SEXP s_glen, SEXP s_groups) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	if (d->e.effects.matrix == NULL) { error("Need to load effect values before running this function.\n"); } 
+	
+	int len = asInteger(s_glen);
+	int *groups = INTEGER(s_groups); 
+	if (len == NA_INTEGER) { 
+		error("`groups` vector is invalid.\n");
+	}
+	
+	if (len == 1) {
+		double availableBV = calculate_optimal_available_bv(d, groups[0]);
+		
+		SEXP out = PROTECT(allocVector(REALSXP, 1));
+		REAL(out)[0] = availableBV;
+		UNPROTECT(1);
+		return out;
+		
+	} else {
+		
+		// Get an R vector of the same length as the number of new size 1 groups created
+		SEXP out = PROTECT(allocVector(REALSXP, len));
+		double* outc = REAL(out);
+		for (int i = 0; i < len; ++i) {
+			outc[i] = calculate_optimal_available_bv(d, groups[i]);
+		}
+		UNPROTECT(1);
+		return out;
+	}
 }
 
 SEXP SXP_get_worst_GEBV(SEXP exd) {

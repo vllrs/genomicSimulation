@@ -18,6 +18,8 @@ raised if no effect values have been loaded.
 Other data access functions: 
 \code{\link{see.group.data}()},
 \code{\link{see.optimal.GEBV}()},
-\code{\link{see.optimal.haplotype}()}
+\code{\link{see.optimal.haplotype}()},
+\code{\link{see.optimal.possible.GEBV}()},
+\code{\link{see.optimal.possible.haplotype}()}
 }
 \concept{data access functions}

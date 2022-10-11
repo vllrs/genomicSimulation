@@ -1,5 +1,5 @@
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.1 - last edit 15 Jul 2022 */
+/* genomicSimulationC v0.2.2 - last edit 2 Sep 2022 */
 
 /** Options parameter to run SimData functions in their bare-bones form.*/
 const GenOptions BASIC_OPT = {
@@ -6569,6 +6569,81 @@ char* calculate_optimal_alleles(SimData* d) {
 	return optimal;
 }
 
+
+/** Calculates the highest-breeding-value haplotype that can be created from the
+ *  alleles present in a given group.
+ *
+ * The return value should be freed when usage is finished!
+ *
+ * The SimData must be initialised with marker effects for this function to succeed.
+ *
+ * @param d pointer to the SimData containing markers and marker effects.
+ * @param group group number from which
+ * @returns a heap array filled with a null-terminated string containing the highest
+ * scoring allele at each marker.
+ */
+char* calculate_optimal_available_alleles(SimData* d, unsigned int group) {
+    if (d->e.effects.matrix == NULL || d->e.effects.rows < 1 || d->e.effect_names == NULL) {
+        warning( "No effect values are loaded\n");
+        return NULL;
+    }
+    // assumes no alleles in the matrix are spaces.
+
+    int gsize = get_group_size(d, group);
+    char** ggenes = get_group_genes(d, group, gsize);
+
+    char* optimal = get_malloc(sizeof(char)* (d->n_markers + 1));
+    char best_allele;
+    double best_score;
+
+    // for each locus
+    for (int j = 0; j < d->n_markers; ++j) {
+		best_allele = '\0'; //clear best allele
+        for (int i = 0; i < gsize; ++i) {
+
+            // If the allele is different to the previous best (guaranteed if best_allele is not initialised)
+            if (ggenes[i][2*j] != best_allele) {
+                // Find it and see if it scores better.
+                for (int a = 0; a < d->e.effects.rows; ++a) {
+
+                    if (d->e.effect_names[a] == ggenes[i][2*j] &&
+                            (best_allele == '\0' || d->e.effects.matrix[a][j] > best_score)) { // if it scores better than current best
+
+                        best_allele = ggenes[i][2*j];
+                        best_score = d->e.effects.matrix[a][j];
+
+                        break;
+                    }
+
+                }
+            }
+
+            // Repeat for second allele of the group member at that locus
+            if (ggenes[i][2*j + 1] != best_allele) {
+                // Find it and see if it scores better.
+                for (int a = 0; a < d->e.effects.rows; ++a) {
+
+                    if (d->e.effect_names[a] == ggenes[i][2*j + 1] &&
+                            (best_allele == '\0' || d->e.effects.matrix[a][j] > best_score)) { // if it scores better than current best
+
+                        best_allele = ggenes[i][2*j + 1];
+                        best_score = d->e.effects.matrix[a][j];
+
+                        break;
+                    }
+
+                }
+            }
+        }
+        optimal[j] = best_allele;
+    }
+
+    free(ggenes);
+    optimal[d->n_markers] = '\0';
+    return optimal;
+}
+
+
 /** Takes a look at the currently-loaded effect values and returns the highest possible
  * breeding value any (diploid) genotype could have using those effect values.
  *
@@ -6595,6 +6670,75 @@ double calculate_optimum_bv(SimData* d) {
 	}
 
 	return best_gebv;
+}
+
+/** Calculates the breeding value of the highest breeding-value genotype that can be
+ *  created from the alleles present in a given group.
+ *
+ *  The highest value genotype is completely homozygous with the same alleles as
+ *  the haplotype from calculate_optimal_available_alleles(), because of the additive
+ *  model of trait effects.
+ *
+ * The SimData must be initialised with marker effects for this function to succeed.
+ *
+ * @param d pointer to the SimData containing markers and marker effects.
+ * @param group group number from which
+ * @returns the fitness metric/breeding value of the best genotype
+ */
+double calculate_optimal_available_bv(SimData* d, unsigned int group) {
+    // assumes no alleles in the matrix are spaces.
+
+    int gsize = get_group_size(d, group);
+    char** ggenes = get_group_genes(d, group, gsize);
+
+    double total_score = 0;
+    char best_allele;
+    double best_score;
+
+    // for each locus
+    for (int j = 0; j < d->n_markers; ++j) {
+		best_allele = '\0'; //clear best allele
+        for (int i = 0; i < gsize; ++i) {
+
+            // If the allele is different to the previous best (guaranteed if best_allele is not initialised)
+            if (ggenes[i][2*j] != best_allele) {
+                // Find it and see if it scores better.
+                for (int a = 0; a < d->e.effects.rows; ++a) {
+
+                    if (d->e.effect_names[a] == ggenes[i][2*j] &&
+                            (best_allele == '\0' || d->e.effects.matrix[a][j] > best_score)) { // if it scores better than current best
+
+                        best_allele = ggenes[i][2*j];
+                        best_score = d->e.effects.matrix[a][j];
+
+                        break;
+                    }
+
+                }
+            }
+
+            // Repeat for second allele of the group member at that locus
+            if (ggenes[i][2*j + 1] != best_allele) {
+                // Find it and see if it scores better.
+                for (int a = 0; a < d->e.effects.rows; ++a) {
+
+                    if (d->e.effect_names[a] == ggenes[i][2*j + 1] &&
+                            (best_allele == '\0' || d->e.effects.matrix[a][j] > best_score)) { // if it scores better than current best
+
+                        best_allele = ggenes[i][2*j + 1];
+                        best_score = d->e.effects.matrix[a][j];
+
+                        break;
+                    }
+
+                }
+            }
+        }
+        total_score += (2*best_score);
+    }
+
+    free(ggenes);
+    return total_score;
 }
 
 /** Takes a look at the currently-loaded effect values and returns the lowest possible
