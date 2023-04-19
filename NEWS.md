@@ -5,6 +5,19 @@
 - Added new functions to calculate the optimal haplotype and breeding value possible using only the alleles present in a particular group. 
 	- `see.optimal.possible.GEBV`
 	- `see.optimal.possible.haplotype`
+- Increased name reading buffer from 30 to 45 as a temporary fix to allow longer marker names to be loaded.
+- Added custom labels. Once a label is created, every genotype in the simulation has some (integer) value for that label. Users can create, set, and update the values of as many labels as desired. These can be used to track age or other custom subcategorisations.
+	- `make.label`
+	- `delete.label`
+	- `change.label.to.values`
+	- `change.label.to.this`
+	- `change.label.by.amount`
+	- `change.label.default`
+	- Custom labels offer an easy way to have subcategories in a group. Those subcategories can be split from the group for individual examination with the following convenient functions, then merged back in:
+		- `make.group.from.label`
+		- `make.group.from.label.range`
+- Added a name setter function, for users who want control over the names of their simulated genotypes.
+	- `change.names.to.values`
 
 # genomicSimulation 0.2.2
 

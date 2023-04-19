@@ -30,7 +30,7 @@ up nicely to 1.
 }
 \details{
 If the bucket capacities add up to more than 1, 
-a warning will be raised, but the function will still run. Note, though, that
+a warning will be raised, but  the function will still run. Note, though, that
 genotypes are allocated to buckets using cumulative probabilities, so groups 
 with cumulative probabilities of more than 1 will get no members.
 }
@@ -42,9 +42,14 @@ Other grouping functions:
 \code{\link{break.group.into.halfsib.families}()},
 \code{\link{break.group.into.individuals}()},
 \code{\link{break.group.randomly}()},
+\code{\link{change.label.default}()},
 \code{\link{combine.groups}()},
 \code{\link{delete.group}()},
+\code{\link{delete.label}()},
+\code{\link{make.group.from.label.range}()},
+\code{\link{make.group.from.label}()},
 \code{\link{make.group}()},
+\code{\link{make.label}()},
 \code{\link{see.existing.groups}()},
 \code{\link{see.group.data}()},
 \code{\link{select.by.gebv}()}

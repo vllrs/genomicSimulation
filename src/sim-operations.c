@@ -1,5 +1,5 @@
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.2 - last edit 2 Sep 2022 */
+/* genomicSimulationC v0.2.2.1 - last edit 11 Nov 2022 */
 
 /** Options parameter to run SimData functions in their bare-bones form.*/
 const GenOptions BASIC_OPT = {
@@ -50,16 +50,20 @@ void* get_malloc(size_t size) {
  * allocation for `n_genotypes` worth of `.alleles`.
  *
  * @param n_markers number of rows/markers to create
+ * @param n_labels number of custom labels to create
+ * @param labelDefaults an array of the default value to pre-fill for each custom label.
+ * Can be null if n_labels == 0.
  * @param n_genotypes number of individuals to create. This includes filling the first
  * n_genotypes entries of .alleles with heap char* of length n_markers, so that the
  * alleles for these can be added without further memory allocation.
  * @returns pointer to the empty created AlleleMatrix
  */
-AlleleMatrix* create_empty_allelematrix(int n_markers, int n_genotypes) {
+AlleleMatrix* create_empty_allelematrix(int n_markers, int n_labels, int labelDefaults[n_labels], int n_genotypes) {
 	AlleleMatrix* m = get_malloc(sizeof(AlleleMatrix));
 
 	m->n_genotypes = n_genotypes;
 	m->n_markers = n_markers;
+    m->n_labels = n_labels;
 	//m->alleles = get_malloc(sizeof(char*) * CONTIG_WIDTH);
 	for (int i = 0; i < n_genotypes; ++i) {
 		m->alleles[i] = get_malloc(sizeof(char) * (n_markers<<1));
@@ -67,6 +71,21 @@ AlleleMatrix* create_empty_allelematrix(int n_markers, int n_genotypes) {
 		//m->ids[i] = 0;
 	}
 	memset(m->alleles + n_genotypes, 0, sizeof(char*) * (CONTIG_WIDTH - n_genotypes)); // setting the pointers to NULL
+
+    if (n_labels > 0) {
+        m->labels = get_malloc(sizeof(int*) * n_labels);
+        for (int i = 0; i < n_labels; ++i) {
+            m->labels[i] = get_malloc(sizeof(int) * CONTIG_WIDTH);
+            for (int j = 0; j < CONTIG_WIDTH; ++j) {
+                m->labels[i][j] = labelDefaults[i];
+            }
+        }
+    } else if (n_labels == 0) {
+        m->labels = NULL;
+    } else {
+        warning( "Invalid negative number of labels provided to create_empty_allelematrix");
+        m->labels = NULL;
+    }
 
 	memset(m->ids, 0, sizeof(unsigned int) * CONTIG_WIDTH);
 	memset(m->pedigrees[0], 0, sizeof(unsigned int) * CONTIG_WIDTH);
@@ -88,6 +107,9 @@ SimData* create_empty_simdata() {
 	SimData* d = get_malloc(sizeof(SimData));
 	d->n_markers = 0;
 	d->markers = NULL;
+    d->n_labels = 0;
+    d->label_ids = NULL;
+    d->label_defaults = NULL;
 	d->map.n_chr = 0;
 	d->map.chr_ends = NULL;
 	d->map.chr_lengths = NULL;
@@ -110,6 +132,7 @@ SimData* create_empty_simdata() {
  *  @param d pointer to the SimData to be cleared.
  */
 void clear_simdata(SimData* d) {
+    // Free marker names
     if (d->markers != NULL) {
         for (int i = 0; i < d->n_markers; i++) {
             if (d->markers[i] != NULL) {
@@ -118,12 +141,27 @@ void clear_simdata(SimData* d) {
         }
         free(d->markers);
     }
+    // Free label defaults
+    if (d->n_labels > 0) {
+        if (d->label_ids != NULL) {
+            free(d->label_ids);
+        }
+        if (d->label_defaults != NULL) {
+            free(d->label_defaults);
+        }
+    }
+
+    // Free other details
     delete_genmap(&(d->map));
     delete_effect_matrix(&(d->e));
     delete_allele_matrix(d->m);
 
+    // Clear all values
     d->n_markers = 0;
     d->markers = NULL;
+    d->n_labels = 0;
+    d->label_ids = NULL;
+    d->label_defaults = NULL;
     d->map.n_chr = 0;
     d->map.chr_ends = NULL;
     d->map.chr_lengths = NULL;
@@ -135,7 +173,6 @@ void clear_simdata(SimData* d) {
     d->e.effect_names = NULL;
     d->current_id = 0;
 }
-
 
 /*------------------------Supporter Functions--------------------------------*/
 
@@ -395,6 +432,397 @@ void set_names(AlleleMatrix* a, char* prefix, int suffix, int from_index) {
 	}
 }
 
+/** Initialises a new custom label.
+ *
+ * Creates a new custom label on every genotype currently and in future belonging
+ * to the SimData. The value of the label is set as `setTo` for every genotype.
+ *
+ * @param d pointer to the `SimData` whose child `AlleleMatrix`s will be given the new label.
+ * @param setTo the value to which every genotype's label is initialised.
+ * @returns the label index of the new label
+*/
+int create_new_label(SimData* d, int setTo) {
+    // Add new label default
+    if (d->n_labels == 0) {
+        d->label_ids = get_malloc(sizeof(int) * 1);
+        d->label_ids[0] = 1;
+
+        d->label_defaults = get_malloc(sizeof(int) * 1);
+        d->label_defaults[0] = setTo;
+
+    } else if (d->n_labels > 0) {
+
+        int* new_label_ids;
+        if (d->label_ids != NULL) {
+            new_label_ids = get_malloc(sizeof(int) * (d->n_labels + 1));
+            for (int i = 0; i < d->n_labels; ++i) {
+                new_label_ids[i] = d->label_ids[i];
+            }
+            free(d->label_ids);
+
+        } else { // d->label_ids == NULL
+            // If the other labels do not have identifiers, they're corrupted and
+            // deserve to be destroyed.
+            new_label_ids = get_malloc(sizeof(int) * 1);
+            d->n_labels = 0;
+
+        }
+        new_label_ids[d->n_labels] = get_new_label_id(d);
+        d->label_ids = new_label_ids;
+
+        int* new_label_defaults = get_malloc(sizeof(int) * (d->n_labels + 1));
+        if (d->label_defaults != NULL) {
+            for (int i = 0; i < d->n_labels; ++i) {
+                new_label_defaults[i] = d->label_defaults[i];
+            }
+            free(d->label_defaults);
+        } else if (d->n_labels > 0) {
+            memset(new_label_defaults, 0, sizeof(int) * d->n_labels);
+        }
+        new_label_defaults[d->n_labels] = setTo;
+        d->label_defaults = new_label_defaults;
+
+    } else {
+        warning( "Labels malformed; SimData may be corrupted.\n");
+        return -1;
+    }
+    d->n_labels += 1;
+
+    // Set all values of that label to the default
+    AlleleMatrix* m = d->m;
+    int warned = FALSE;
+    do {
+        // Do we need to destroy the extant label table? happens if label_ids were missing and we discarded them
+        if (m->n_labels != d->n_labels - 1 && m->labels != NULL) {
+            for (int i = 0; i < m->n_labels; ++i) {
+                free(m->labels[i]);
+            }
+            free(m->labels);
+            m->labels = NULL;
+        }
+
+        m->n_labels = d->n_labels;
+
+        // Consider the case when we need to expand the label list
+        if (m->n_labels > 1 && m->labels != NULL) {
+            int newLabel = m->n_labels - 1;
+
+            // Create label list
+            int** oldLabelList = m->labels;
+            m->labels = get_malloc(sizeof(int*) * m->n_labels);
+            for (int i = 0; i < m->n_labels - 1; ++i) {
+                m->labels[i] = oldLabelList[i];
+            }
+            m->labels[newLabel] = get_malloc(sizeof(int) * CONTIG_WIDTH);
+            free(oldLabelList);
+
+            // Set labels
+            if (setTo == 0) {
+                memset(m->labels[newLabel], 0, sizeof(int) * CONTIG_WIDTH);
+            } else {
+                for (int i = 0; i < CONTIG_WIDTH; ++i) {
+                    m->labels[newLabel][i] = setTo;
+                }
+            }
+
+        // Consider the case we need to initialise the label list
+        } else if (m->n_labels == 1 && m->labels == NULL) {
+            // Create the label list
+            m->labels = get_malloc(sizeof(int*) * 1);
+            m->labels[0] = get_malloc(sizeof(int) * CONTIG_WIDTH);
+
+            // Set labels
+            if (setTo == 0) {
+                memset(m->labels[0], 0, sizeof(int) * CONTIG_WIDTH);
+            } else {
+                for (int i = 0; i < CONTIG_WIDTH; ++i) {
+                    m->labels[0][i] = setTo;
+                }
+            }
+
+        } else if (!warned) {
+            warning( "Unable to create new label for all genotypes; SimData may be corrupted.\n");
+            warned = TRUE;
+        }
+
+    } while ((m = m->next) != NULL);
+    return d->label_ids[d->n_labels - 1];
+}
+
+/** Set the default value of a custom label
+ *
+ * Sets the default (birth) value of the custom label that has index `whichLabel` to the
+ * value `newDefault`.
+ *
+ * @param d pointer to the `SimData` containing the genotypes and labels to be relabelle
+ * @param whichLabel the label id of the relevant label.
+ * @param newDefault the value to which the appropriate label's default will be set.
+*/
+void set_label_default(SimData* d, int whichLabel, int newDefault) {
+    int labelIndex;
+    if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+        warning( "Nonexistent label %d\n", whichLabel);
+        return;
+    }
+    d->label_defaults[labelIndex] = newDefault;
+}
+
+/** Set the values of a custom label
+ *
+ * Sets the values of the custom label that has index `whichLabel` to the
+ * value `setTo`. Depending on the value of `whichGroup`, the function
+ * will modify the label of every single genotype in the simulation, or
+ * just modify the label of every member of a given group.
+ *
+ * @param d pointer to the `SimData` containing the genotypes and labels to be relabelled
+ * @param whichGroup 0 to modify the relevant labels of all extant genotypes,
+ * or a positive integer to modify the relevant labels of all members of group `whichGroup`.
+ * @param whichLabel the label id of the relevant label.
+ * @param setTo the value to which the appropriate labels will be set.
+*/
+void set_labels_to_const(SimData* d, int whichGroup, int whichLabel, int setTo) {
+    int labelIndex;
+    if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+        warning( "Nonexistent label %d\n", whichLabel);
+        return;
+    }
+    if (whichGroup < 0) {
+        warning( "Invalid negative group id.\n");
+        return;
+    }
+    // Risks: if m->labels or m->labels[i] don't exist for labels where they should,
+    // will get some out of bounds accesses.
+
+    AlleleMatrix* m = d->m;
+    if (whichGroup > 0) { // set the labels of group members
+        do {
+
+            for (int i = 0; i < m->n_genotypes; ++i) {
+                if (m->groups[i] == whichGroup) {
+                    m->labels[labelIndex][i] = setTo;
+                }
+            }
+
+        } while ((m = m->next) != NULL);
+
+    } else { // whichGroup == 0 so set the labels of all genotypes
+        do {
+
+            if (setTo == 0) {
+                memset(m->labels[labelIndex], 0, sizeof(int) * m->n_genotypes);
+            } else {
+                for (int i = 0; i < m->n_genotypes; ++i) {
+                    m->labels[labelIndex][i] = setTo;
+                }
+            }
+
+        } while ((m = m->next) != NULL);
+    }
+}
+
+/** Increment the values of a custom label
+ *
+ * Increments the values of the custom label that has index `whichLabel` by the
+ * value `byValue`. Depending on the value of `whichGroup`, the function
+ * will modify the label of every single genotype in the simulation, or
+ * just modify the label of every member of a given group.
+ *
+ * @param d pointer to the `SimData` containing the genotypes and labels to be relabelled
+ * @param whichGroup 0 to modify the relevant labels of all extant genotypes,
+ * or a positive integer to modify the relevant labels of all members of group `whichGroup.
+ * @param whichLabel the label id of the relevant label.
+ * @param byValue the value by which the appropriate labels will be incremented. For example,
+ * a value of 1 would increase all relevant labels by 1, a value of -2 would subtract 2 from
+ * each relevant label.
+*/
+void increment_labels(SimData* d, int whichGroup, int whichLabel, int byValue) {
+    int labelIndex;
+    if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+        warning( "Nonexistent label %d\n", whichLabel);
+        return;
+    }
+    if (whichGroup < 0) {
+        warning( "Invalid negative group id.\n");
+        return;
+    }
+    // Risks: if m->labels or m->labels[i] don't exist for labels where they should,
+    // will get some out of bounds accesses.
+
+    AlleleMatrix* m = d->m;
+    if (whichGroup > 0) { // set the labels of group members
+        do {
+
+            for (int i = 0; i < m->n_genotypes; ++i) {
+                if (m->groups[i] == whichGroup) {
+                    m->labels[labelIndex][i] += byValue;
+                }
+            }
+
+        } while ((m = m->next) != NULL);
+
+    } else { // whichGroup == 0 so set the labels of all genotypes
+        do {
+
+            for (int i = 0; i < m->n_genotypes; ++i) {
+                m->labels[labelIndex][i] += byValue;
+            }
+
+        } while ((m = m->next) != NULL);
+    }
+
+}
+
+/** Copy a vector of integers into a custom label
+ *
+ * Sets values of the custom label that has index `whichLabel` to the
+ * contents of the array `values`. The genotypes with the `n_values` contiguous
+ * simulation indexes starting with `startIndex` in group `whichGroup` are the ones given
+ * those labels. If `whichGroup` is 0, then it sets the labels of the genotypes with
+ * global indexes starting at `startIndex`.
+ *
+ * If `n_values` is longer than the number of genotypes in the right group
+ * after `startIndex`, then the extra values are ignored.
+ *
+ * @param d pointer to the `SimData` containing the genotypes and labels to be relabelled
+ * @param whichGroup 0 to set the label of the genotypes with global indexes between
+ * `startIndex` and `startIndex + n_values`, or a positive integer to set the label
+ * of the `startIndex`th to `startIndex + n_values`th members of group `whichGroup`.
+ * @param startIndex the first index of the group to set to a value
+ * @param whichLabel the label id of the relevant label.
+ * @param n_values length of `values`
+ * @param values vector of integers to paste into the chosen custom label of the chosen genotypes.
+*/
+void set_labels_to_values(SimData* d, int whichGroup, int startIndex, int whichLabel, int n_values, int values[n_values]) {
+    int labelIndex;
+    if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+        warning( "Nonexistent label %d\n", whichLabel);
+        return;
+    }
+    if (whichGroup < 0) {
+        warning( "Invalid negative group id.\n");
+        return;
+    }
+
+    AlleleMatrix* m = d->m;
+    int currentIndex = 0;
+    if (whichGroup > 0) { // set the labels of group members
+        // First scan through to find firstIndex
+        do {
+
+            for (int i = 0; i < m->n_genotypes; ++i) {
+                if (m->groups[i] == whichGroup) {
+                    // Update label if it is between startIndex and startIndex + n_values
+                    if (currentIndex >= startIndex) {
+                        m->labels[labelIndex][i] = values[currentIndex - startIndex];
+                    }
+                    currentIndex++;
+                    if (currentIndex - startIndex >= n_values) {
+                        return;
+                    }
+                }
+            }
+
+        } while ((m = m->next) != NULL);
+
+    } else { // whichGroup == 0 so set the labels of all genotypes
+        do {
+
+            for (int i = 0; i < m->n_genotypes; ++i) {
+                // Update label if it is between startIndex and startIndex + n_values
+                if (currentIndex >= startIndex) {
+                    m->labels[labelIndex][i] = values[currentIndex - startIndex];
+                }
+                currentIndex++;
+                if (currentIndex - startIndex >= n_values) {
+                    return;
+                }
+            }
+
+        } while ((m = m->next) != NULL);
+    }
+}
+
+/** Copy a vector of strings into the genotype name field
+ *
+ * Sets genotype names to the contents of the array `values`. The genotypes with
+ * the `n_values` contiguous simulation indexes starting with `startIndex` in
+ * group `whichGroup` are the ones given those names. If `whichGroup` is 0,
+ * then it sets the names of the genotypes with
+ * global indexes starting at `startIndex`.
+ *
+ * If `n_values` is longer than the number of genotypes in the right group
+ * after `startIndex`, then the extra values are ignored.
+ *
+ * @param d pointer to the `SimData` containing the genotypes to be renamed
+ * @param whichGroup 0 to set the names of the genotypes with global indexes between
+ * `startIndex` and `startIndex + n_values`, or a positive integer to set the names
+ * of the `startIndex`th to `startIndex + n_values`th members of group `whichGroup`.
+ * @param startIndex the first index of the group to set to a value
+ * @param n_values length of `values`
+ * @param values vector of integers to paste into the name field of the chosen genotypes.
+*/
+void set_names_to_values(SimData* d, int whichGroup, int startIndex, int n_values, char* values[n_values]) {
+    // this will be much improved once we can hash our names.
+    if (whichGroup < 0) {
+        warning( "Invalid negative group id.\n");
+        return;
+    }
+
+    AlleleMatrix* m = d->m;
+    int currentIndex = 0;
+    if (whichGroup > 0) { // set the names of group members
+        // First scan through to find firstIndex
+        do {
+
+            for (int i = 0; i < m->n_genotypes; ++i) {
+                if (m->groups[i] == whichGroup) {
+                    // Update name if index is between startIndex and startIndex + n_values
+                    if (currentIndex >= startIndex) {
+                        // clear name if it's pre-existing
+                        if (m->names[i] != NULL) {
+                            free(m->names[i]);
+                        }
+
+                        // save new name
+                        const int whichName = currentIndex - startIndex;
+                        m->names[i] = get_malloc(sizeof(char) * (strlen(values[whichName]) + 1));
+                        strcpy(m->names[i], values[whichName]);
+                    }
+                    currentIndex++;
+                    if (currentIndex > n_values) {
+                        return;
+                    }
+                }
+            }
+
+        } while ((m = m->next) != NULL);
+
+    } else { // whichGroup == 0 so set the names of all genotypes
+        do {
+
+            for (int i = 0; i < m->n_genotypes; ++i) {
+                // Update name if it is between startIndex and startIndex + n_values
+                if (currentIndex >= startIndex) {
+                    // clear name if it's pre-existing
+                    if (m->names[i] != NULL) {
+                        free(m->names[i]);
+                    }
+
+                    // save new name
+                    const int whichName = currentIndex - startIndex;
+                    m->names[i] = get_malloc(sizeof(char) * (strlen(values[whichName]) + 1));
+                    strcpy(m->names[i], values[whichName]);
+                }
+                currentIndex++;
+                if (currentIndex > n_values) {
+                    return;
+                }
+            }
+
+        } while ((m = m->next) != NULL);
+    }
+}
+
 /** Count and return the number of digits in `i`.
  *
  * @param i the integer whose digits are to be counted.
@@ -603,6 +1031,13 @@ void condense_allele_matrix( SimData* d) {
 				filler_m->names[filler] = NULL;
 				checker_m->ids[checker] = filler_m->ids[filler];
 				filler_m->ids[filler] = -1;
+                // Assumes n_labels will be consistent across all AlleleMatrix in the linked list
+                // and all labels arrays will be of full CONTIG_WIDTH.
+                // If the AlleleMatrix linked list is valid, this is true.
+                for (int i = 0; i < d->n_labels; ++i) {
+                    checker_m->labels[i][checker] = filler_m->labels[i][filler];
+                    filler_m->labels[i][filler] = d->label_defaults[i];
+                }
 				checker_m->pedigrees[0][checker] = filler_m->pedigrees[0][filler];
 				checker_m->pedigrees[1][checker] = filler_m->pedigrees[1][filler];
 				filler_m->pedigrees[0][filler] = 0;
@@ -1183,6 +1618,136 @@ int split_from_group( SimData* d, int n, int indexes_to_split[n]) {
 		m->groups[indexes_to_split[i] - total_i] = new_group;
 	}
 	return new_group;
+}
+
+/** Allocates the genotypes with a particular value of a label to a new group.
+ *
+ * Searches through every genotype (or every member of the group, if a specific group is
+ * given) to find all genotypes with value `valueToSplit` in the `whichLabel`th label,
+ * and puts those genotypes into a new group.
+ *
+ * Returns 0 for invalid parameters, or if no genotypes were found that fit the
+ * criteria to be moved to the new group.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group If `group` > 0, then only genotypes with group number `group`
+ * AND `whichLabel` value `valueToSplit` will be moved to the new group. Otherwise,
+ * all genotypes with `whichLabel` value `valueToSplit` will be moved to the next group.
+ * @param whichLabel the label id of the relevant label.
+ * @param valueToSplit the value of the label that defines the genotypes that will be
+ * moved to the new group.
+ * @returns the group number of the new group to which the genotypes with that value
+ * for that label were allocated, or 0 if no genotypes that fit the criteria were found.
+ */
+int split_by_label_value( SimData* d, int group, int whichLabel, int valueToSplit) {
+    int labelIndex;
+    if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+        warning( "Nonexistent label %d\n", whichLabel);
+        return 0;
+    }
+    if (group < 0) {
+        warning( "Invalid negative group id.\n");
+        return 0;
+    }
+    int newGroup = get_new_group_num(d);
+    int anyFound = FALSE; //
+
+    AlleleMatrix* m = d->m;
+    if (group > 0) {
+        do {
+            for (int i = 0; i < m->n_genotypes; ++i) {
+                if (m->groups[i] == group && m->labels[labelIndex][i] == valueToSplit) {
+                    anyFound = TRUE;
+                    m->groups[i] = newGroup;
+                }
+            }
+        } while ((m = m->next) != NULL);
+    } else {
+        do {
+            for (int i = 0; i < m->n_genotypes; ++i) {
+                if (m->labels[labelIndex][i] == valueToSplit) {
+                    anyFound = TRUE;
+                    m->groups[i] = newGroup;
+                }
+            }
+        } while ((m = m->next) != NULL);
+    }
+
+    if (anyFound) {
+        return newGroup;
+    } else {
+        return 0; // no values with that label
+    }
+
+}
+
+/** Allocates the genotypes with values of a label in a particular range to a new group.
+ *
+ * Searches through every genotype (or every member of the group, if a specific group is
+ * given) to find all genotypes with value in the `whichLabel`th label between `valueLowBound`
+ * and `valueHighBound` inclusive, and puts those genotypes into a new group.
+ *
+ * Returns 0 for invalid parameters, or if no genotypes were found that fit the
+ * criteria to be moved to the new group.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param group If `group` > 0, then only genotypes with group number `group`
+ * AND `whichLabel` value `valueToSplit` will be moved to the new group. Otherwise,
+ * all genotypes with `whichLabel` value `valueToSplit` will be moved to the next group.
+ * @param whichLabel the label id of the relevant label.
+ * @param valueLowBound the minimum value of the label for the genotypes that will be
+ * moved to the new group.
+ * @param valueHighBound the maximum value of the label for the genotypes that will be
+ * moved to the new group.
+ * @returns the group number of the new group to which the genotypes with that value
+ * for that label were allocated, or 0 if no genotypes that fit the criteria were found.
+ */
+int split_by_label_range( SimData* d, int group, int whichLabel, int valueLowBound, int valueHighBound) {
+    int labelIndex;
+    if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+        warning( "Nonexistent label %d\n", whichLabel);
+        return 0;
+    }
+    if (group < 0) {
+        warning( "Invalid negative group id.\n");
+        return 0;
+    }
+    if (valueLowBound > valueHighBound) {
+        warning( "Empty range %d to %d: no group created\n", valueLowBound, valueHighBound);
+        return 0;
+    }
+
+    int newGroup = get_new_group_num(d);
+    int anyFound = FALSE; //
+
+    AlleleMatrix* m = d->m;
+    if (group > 0) {
+        do {
+            for (int i = 0; i < m->n_genotypes; ++i) {
+                if (m->groups[i] == group && m->labels[labelIndex][i] >= valueLowBound
+                        && m->labels[labelIndex][i] <= valueHighBound) {
+                    anyFound = TRUE;
+                    m->groups[i] = newGroup;
+                }
+            }
+        } while ((m = m->next) != NULL);
+    } else {
+        do {
+            for (int i = 0; i < m->n_genotypes; ++i) {
+                if (m->labels[labelIndex][i] >= valueLowBound
+                        && m->labels[labelIndex][i] <= valueHighBound) {
+                    anyFound = TRUE;
+                    m->groups[i] = newGroup;
+                }
+            }
+        } while ((m = m->next) != NULL);
+    }
+
+    if (anyFound) {
+        return newGroup;
+    } else {
+        return 0; // no values with that label
+    }
 }
 
 /** Give every individual in the group a new group number that does not
@@ -1852,8 +2417,11 @@ void split_by_probabilities_into_n(SimData* d, int group_id, int n, double* prob
 		cumulative_probs[j] = sum;
 		if (cumulative_probs[j] >= 1) {
             warning( "Provided probabilities add up to 1 or more: some buckets will not be filled\n");
-			//don't bother to calculate more
-			break;
+            for (; j < n - 1; ++j) {
+                cumulative_probs[j] = 1;
+            }
+          //don't bother to calculate more
+          break;
 		}
 	}
 
@@ -2052,7 +2620,8 @@ int** get_existing_group_counts( SimData* d, int* n_groups) {
  * than calling this function repeatedly.
  *
  * @param d the SimData struct on which to perform the operation
- * @return the next sequential currently-unused group number.
+ * @return the next sequential currently-unused group number,
+ * an integer greater than 0.
  */
 int get_new_group_num( SimData* d) {
 	int n_groups = 0;
@@ -2070,6 +2639,63 @@ int get_new_group_num( SimData* d) {
 	}
 	free(existing_groups);
 	return gn;
+}
+
+/** Function to identify the label lookup index of a label identifier.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param label a label id
+ * @return the index in d->label_ids, d->label_defaults, and the
+ * ->labels table in AlleleMatrix where the data for this label
+ * is stored, or -1 if the label with that id could not be found.
+ */
+int get_index_of_label( SimData* d, int label ) {
+    if (d->n_labels <= 0) { return -1; } // immediate fail
+    if (d->n_labels == 1) { return (d->label_ids[0] == label) ? 0 : -1 ; }
+
+    // If there's at least two labels then we binary search.
+    int first = 0;
+    int last = d->n_labels;
+    int mid;
+
+    while (first <= last) {
+        mid = (first + last) / 2;
+
+        if (d->label_ids[mid] == label) {
+            return mid;
+        } else if (d->label_ids[mid] < label) {
+            first = mid + 1;
+        } else {
+            last = mid - 1;
+        }
+
+    }
+
+    return -1;
+}
+
+/** Function to identify the next sequential integer that is not
+ *  already allocated to a label in the simulation.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @return the next sequential currently-unused label id, an integer
+ * greater than 0.
+ */
+int get_new_label_id( SimData* d ) {
+    // label_ids must be in sequential order
+    int newId = 1;
+    int i = 0;
+
+    while (i < d->n_labels) {
+        if (newId < d->label_ids[i]) {
+            break;
+        }
+
+        ++i;
+        ++newId;
+    }
+
+    return newId;
 }
 
 /** Function to identify the next n sequential integers that do not
@@ -2757,6 +3383,84 @@ void delete_group(SimData* d, int group_id) {
 	}
 }
 
+/** Clears memory of this label from the simulation and all its genotypes.
+ *
+ * @param d the SimData struct on which to perform the operation
+ * @param whichLabel the label id of the label to be destroyed
+ */
+void delete_label(SimData* d, int whichLabel) {
+    int labelIndex;
+    if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+        warning( "Nonexistent label %d\n", whichLabel);
+        return;
+    }
+
+    if (d->n_labels > 1) {
+        // Reduce the list of labels in the SimData
+        int* new_label_ids = get_malloc(sizeof(int) * (d->n_labels - 1));
+        int i = 0;
+        for (; i < labelIndex; ++i) {
+            new_label_ids[i] = d->label_ids[i];
+        }
+        for (i = labelIndex + 1; i < d->n_labels; ++i) {
+            new_label_ids[i-1] = d->label_ids[i];
+        }
+        free(d->label_ids);
+        d->label_ids = new_label_ids;
+
+        int* new_label_defaults = get_malloc(sizeof(int) * (d->n_labels - 1));
+        i = 0;
+        for (; i < labelIndex; ++i) {
+            new_label_defaults[i] = d->label_defaults[i];
+        }
+        for (i = labelIndex + 1; i < d->n_labels; ++i) {
+            new_label_defaults[i-1] = d->label_defaults[i];
+        }
+        free(d->label_defaults);
+        d->label_defaults = new_label_defaults;
+        d->n_labels --;
+
+
+        // Remove the label from the AlleleMatrix linked list
+        AlleleMatrix* m = d->m;
+        do {
+            free(m->labels[labelIndex]);
+
+            int** new_label_lookups = get_malloc(sizeof(int*) * (m->n_labels - 1));
+            int i = 0;
+            for (; i < labelIndex; ++i) {
+                new_label_lookups[i] = m->labels[i];
+            }
+            for (i = labelIndex + 1; i < m->n_labels; ++i) {
+                new_label_lookups[i-1] = m->labels[i];
+            }
+
+            free(m->labels);
+            m->labels = new_label_lookups;
+            m->n_labels --;
+
+        } while ((m = m->next) != NULL);
+
+
+    } else { // d->n_labels == 1 and labelIndex == 0
+        // Delete 'em all
+        d->n_labels = 0;
+        free(d->label_ids);
+        d->label_ids = NULL;
+        free(d->label_defaults);
+        d->label_defaults = NULL;
+
+        AlleleMatrix* m = d->m;
+        do {
+
+            free(m->labels[0]);
+            free(m->labels);
+            m->labels = NULL;
+
+        } while ((m = m->next) != NULL);
+    }
+}
+
 /** Deletes a GeneticMap object and frees its memory. m will now refer
  * to an empty matrix, with every pointer set to null and dimensions set to 0.
  *
@@ -2809,6 +3513,14 @@ void delete_allele_matrix(AlleleMatrix* m) {
             }
         }
 
+        // free labels
+        for (int i = 0; i < m->n_labels; ++i) {
+            if (m->labels[i] != NULL) {
+                free(m->labels[i]);
+            }
+        }
+        free(m->labels);
+
 		next = m->next;
 		free(m);
 	} while ((m = next) != NULL);
@@ -2853,6 +3565,16 @@ void delete_simdata(SimData* m) {
 
 	// free tables of alleles across generations
 	delete_allele_matrix(m->m);
+
+    // Free label defaults
+    if (m->n_labels > 0) {
+        if (m->label_ids != NULL) {
+            free(m->label_ids);
+        }
+        if (m->label_defaults != NULL) {
+            free(m->label_defaults);
+        }
+    }
 
 	//m->current_id = 0;
 	free(m);
@@ -2937,19 +3659,19 @@ int load_transposed_genes_to_simdata(SimData* d, const char* filename) {
 	AlleleMatrix* current_am;
 	int n_to_go = t.num_columns - 1;
 	if (n_to_go < CONTIG_WIDTH) {
-		current_am = create_empty_allelematrix(t.num_rows - 1, n_to_go);
+        current_am = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, n_to_go);
 		d->m = current_am;
 		n_to_go = 0;
 	} else {
-		current_am = create_empty_allelematrix(t.num_rows - 1, CONTIG_WIDTH);
+        current_am = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 		d->m = current_am;
 		n_to_go -= CONTIG_WIDTH;
 		while (n_to_go) {
 			if (n_to_go < CONTIG_WIDTH) {
-				current_am->next = create_empty_allelematrix(t.num_rows - 1, n_to_go);
+                current_am->next = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, n_to_go);
 				n_to_go = 0;
 			} else {
-				current_am->next = create_empty_allelematrix(t.num_rows - 1, CONTIG_WIDTH);
+                current_am->next = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 				current_am = current_am->next;
 				n_to_go -= CONTIG_WIDTH;
 			}
@@ -3093,19 +3815,19 @@ int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename) {
 	AlleleMatrix* current_am;
 	int n_to_go = t.num_columns - 1;
 	if (n_to_go < CONTIG_WIDTH) {
-		current_am = create_empty_allelematrix(t.num_rows - 1, n_to_go);
+        current_am = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, n_to_go);
 		d->m = current_am;
 		n_to_go = 0;
 	} else {
-		current_am = create_empty_allelematrix(t.num_rows - 1, CONTIG_WIDTH);
+        current_am = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 		d->m = current_am;
 		n_to_go -= CONTIG_WIDTH;
 		while (n_to_go) {
 			if (n_to_go < CONTIG_WIDTH) {
-				current_am->next = create_empty_allelematrix(t.num_rows - 1, n_to_go);
+                current_am->next = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, n_to_go);
 				n_to_go = 0;
 			} else {
-				current_am->next = create_empty_allelematrix(t.num_rows - 1, CONTIG_WIDTH);
+                current_am->next = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 				current_am = current_am->next;
 				n_to_go -= CONTIG_WIDTH;
 			}
@@ -3270,19 +3992,19 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename) {
 	AlleleMatrix* current_am;
 	int n_to_go = t.num_columns - 1;
 	if (n_to_go < CONTIG_WIDTH) {
-		current_am = create_empty_allelematrix(d->n_markers, n_to_go);
+        current_am = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 		last_am->next = current_am;
 		n_to_go = 0;
 	} else {
-		current_am = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+        current_am = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 		last_am->next = current_am;
 		n_to_go -= CONTIG_WIDTH;
 		while (n_to_go) {
 			if (n_to_go <= CONTIG_WIDTH) {
-				current_am->next = create_empty_allelematrix(d->n_markers, n_to_go);
+                current_am->next = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 				n_to_go = 0;
 			} else {
-				current_am->next = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+                current_am->next = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 				current_am = current_am->next;
 				n_to_go -= CONTIG_WIDTH;
 			}
@@ -3612,7 +4334,7 @@ void get_chromosome_locations(SimData *d) {
 		}
 	}
 
-	//srand(time(NULL)); //seed the random generator so we're ready to start crossing.
+    ////srand(time(NULL)); //seed the random generator so we're ready to start crossing.
 }
 
 /** Populates a SimData combination with effect values. The SimData must already
@@ -3658,7 +4380,7 @@ void load_effects_to_simdata(SimData* d, const char* filename) {
 	char alleles_loaded[MAX_SYMBOLS + 1];
 	memset(alleles_loaded, '\0', MAX_SYMBOLS + 1);
 	double* effects_loaded[MAX_SYMBOLS];
-	memset(effects_loaded, 0, MAX_SYMBOLS);
+    memset(effects_loaded, 0, MAX_SYMBOLS);
 
 	if (d->e.effects.matrix != NULL) {
 		delete_dmatrix(&(d->e.effects));
@@ -3688,8 +4410,9 @@ void load_effects_to_simdata(SimData* d, const char* filename) {
 
 			// now the marker is in our list and the allele value is valid
 			// so save the effect value in effects_loaded.
-			if (effects_loaded[symbol_index] == NULL) {
-				effects_loaded[symbol_index] = calloc(d->n_markers, sizeof(double) * d->n_markers);
+            if (effects_loaded[symbol_index] == 0) { // 0 = NULL
+                effects_loaded[symbol_index] = get_malloc(sizeof(double) * d->n_markers);
+                //memset((effects_loaded + symbol_index), 0, sizeof(double) * d->n_markers);
 			}
 			effects_loaded[symbol_index][location] = effect;
 			n_loaded += 1;
@@ -4341,10 +5064,10 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
 	int n_combinations = n_crosses * g.family_size;
 	int n_to_go = n_combinations;
 	if (n_to_go < CONTIG_WIDTH) {
-		crosses = create_empty_allelematrix(d->n_markers, n_to_go);
+        crosses = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 		n_to_go = 0;
 	} else {
-		crosses = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+        crosses = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 		n_to_go -= CONTIG_WIDTH;
 	}
 	int fullness = 0;
@@ -4411,7 +5134,7 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
 			// when cross buffer is full, save these outcomes to the file.
 			if (fullness >= CONTIG_WIDTH) {
 				crosses->n_genotypes = CONTIG_WIDTH;
-				// give the offspring their ids and names
+                // give the offspring their ids and names
 				if (g.will_name_offspring) {
                     set_names(crosses, g.offspring_name_prefix, d->current_id, 0);
 				}
@@ -4439,10 +5162,10 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
 					last->next = crosses;
 					last = last->next;
 					if (n_to_go < CONTIG_WIDTH) {
-						crosses = create_empty_allelematrix(d->n_markers, n_to_go);
+                        crosses = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 						n_to_go = 0;
 					} else {
-						crosses = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+                        crosses = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 						n_to_go -= CONTIG_WIDTH;
 					}
 				}
@@ -4465,7 +5188,7 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
     if (cap > 0) {
         free(uses_count);
     }
-	// give the offsprings their ids and names
+    // give the offsprings their ids and names
 	if (g.will_name_offspring) {
         set_names(crosses, g.offspring_name_prefix, d->current_id, 0);
 	}
@@ -4475,6 +5198,7 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
             crosses->ids[j] = d->current_id;
         }
     } // else already zeroed by create_empty_allelematrix
+
 	if (g.will_track_pedigree) {
 		free(group_ids);
 	}
@@ -4598,10 +5322,10 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
     int n_combinations = n_crosses * g.family_size;
     int n_to_go = n_combinations;
     if (n_to_go < CONTIG_WIDTH) {
-        crosses = create_empty_allelematrix(d->n_markers, n_to_go);
+        crosses = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
         n_to_go = 0;
     } else {
-        crosses = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+        crosses = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
         n_to_go -= CONTIG_WIDTH;
     }
     int fullness = 0;
@@ -4700,10 +5424,10 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
                     last->next = crosses;
                     last = last->next;
                     if (n_to_go < CONTIG_WIDTH) {
-                        crosses = create_empty_allelematrix(d->n_markers, n_to_go);
+                        crosses = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
                         n_to_go = 0;
                     } else {
-                        crosses = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+                        crosses = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
                         n_to_go -= CONTIG_WIDTH;
                     }
                 }
@@ -4740,6 +5464,7 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
             crosses->ids[j] = d->current_id;
         }
     } // else already zeroed by create_empty_allelematrix
+
     if (g.will_track_pedigree) {
         free(group1_ids);
         free(group2_ids);
@@ -4771,7 +5496,7 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
     }
 }
 
-/** Performs the crosses of pairs of parents whose ids are provided in an array. The
+/** Performs the crosses of pairs of parents whose indexes are provided in an array. The
  * resulting genotypes are allocated to a new group.
  *
  * Preferences in GenOptions are applied to this cross. The family_size parameter
@@ -4780,8 +5505,8 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
  *
  * @param d pointer to the SimData object that includes genetic map data and
  * allele data needed to simulate crossing.
- * @param combinations a 2D array of IDs, with the first dimension being parent 1 or 2,
- * and the second being the IDs of those parents for each combination to cross.
+ * @param combinations a 2D array of indexes, with the first dimension being parent 1 or 2,
+ * and the second being the indexes of those parents for each combination to cross.
  * @param n_combinations the number of pairs of ids to cross/the length of `combinations`
  * @param g options for the genotypes created. @see GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
@@ -4796,10 +5521,10 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 	AlleleMatrix* crosses;
 	int n_to_go = n_combinations * g.family_size;
 	if (n_to_go < CONTIG_WIDTH) {
-		crosses = create_empty_allelematrix(d->n_markers, n_to_go);
+        crosses = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 		n_to_go = 0;
 	} else {
-		crosses = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+        crosses = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 		n_to_go -= CONTIG_WIDTH;
 	}
 	int fullness = 0, parent1id, parent2id;
@@ -4853,7 +5578,7 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 
 				// when cross buffer is full, save these outcomes to the file.
 				if (fullness >= CONTIG_WIDTH) {
-					// give the offsprings their ids and names
+                    // give the offsprings their ids and names
 					if (g.will_name_offspring) {
                         set_names(crosses, g.offspring_name_prefix, d->current_id, 0);
 					}
@@ -4882,10 +5607,10 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 						last = last->next;
 						// get the new crosses matrix, of the right size.
 						if (n_to_go < CONTIG_WIDTH) {
-							crosses = create_empty_allelematrix(d->n_markers, n_to_go);
+                            crosses = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 							n_to_go = 0;
 						} else {
-							crosses = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+                            crosses = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 							n_to_go -= CONTIG_WIDTH;
 						}
 					}
@@ -4904,7 +5629,7 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 	PutRNGstate();
 
 	// save the rest of the crosses to the file.
-	// give the offsprings their ids and names
+    // give the offsprings their ids and names
 	if (g.will_name_offspring) {
         set_names(crosses, g.offspring_name_prefix, d->current_id, 0);
 	}
@@ -4973,10 +5698,10 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	AlleleMatrix* outcome;
 	int n_to_go = group_size * g.family_size;
 	if (n_to_go < CONTIG_WIDTH) {
-		outcome = create_empty_allelematrix(d->n_markers, n_to_go);
+        outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 		n_to_go = 0;
 	} else {
-		outcome = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+        outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 		n_to_go -= CONTIG_WIDTH;
 	}
 	char** group_genes = get_group_genes( d, group, group_size);
@@ -5030,7 +5755,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 				// when cross buffer is full, save these outcomes to the file.
 				if (fullness >= CONTIG_WIDTH) {
 					outcome->n_genotypes = CONTIG_WIDTH;
-					// give the offspring their ids and names
+                    // give the offspring their ids and names
 					if (g.will_name_offspring) {
                         set_names(outcome, g.offspring_name_prefix, d->current_id, 0);
 					}
@@ -5058,10 +5783,10 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 						last->next = outcome;
 						last = last->next;
 						if (n_to_go < CONTIG_WIDTH) {
-							outcome = create_empty_allelematrix(d->n_markers, n_to_go);
+                            outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 							n_to_go = 0;
 						} else {
-							outcome = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+                            outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 							n_to_go -= CONTIG_WIDTH;
 						}
 					}
@@ -5091,7 +5816,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 				// when cross buffer is full, save these outcomes to the file.
 				if (fullness >= CONTIG_WIDTH) {
 					outcome->n_genotypes = CONTIG_WIDTH;
-					// give the offspring their ids and names
+                    // give the offspring their ids and names
 					if (g.will_name_offspring) {
                         set_names(outcome, g.offspring_name_prefix, d->current_id, 0);
 					}
@@ -5119,10 +5844,10 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 						last->next = outcome;
 						last = last->next;
 						if (n_to_go < CONTIG_WIDTH) {
-							outcome = create_empty_allelematrix(d->n_markers, n_to_go);
+                            outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 							n_to_go = 0;
 						} else {
-							outcome = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+                            outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 							n_to_go -= CONTIG_WIDTH;
 						}
 					}
@@ -5163,7 +5888,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	free(group_genes);
 	// save the rest of the crosses to the file.
 	outcome->n_genotypes = fullness;
-	// give the offspring their ids and names
+    // give the offspring their ids and names
 	if (g.will_name_offspring) {
         set_names(outcome, g.offspring_name_prefix, d->current_id, 0);
 	}
@@ -5173,6 +5898,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
             outcome->ids[j] = d->current_id;
         }
     } // else already zeroed by create_empty_allelematrix
+
 	if (g.will_track_pedigree) {
 		free(group_ids);
 	}
@@ -5226,10 +5952,10 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 	AlleleMatrix* outcome;
 	int n_to_go = group_size * g.family_size;
 	if (n_to_go < CONTIG_WIDTH) {
-		outcome = create_empty_allelematrix(d->n_markers, n_to_go);
+        outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 		n_to_go = 0;
 	} else {
-		outcome = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+        outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 		n_to_go -= CONTIG_WIDTH;
 	}
 	char** group_genes = get_group_genes( d, group, group_size);
@@ -5285,7 +6011,7 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 			// when cross buffer is full, save these outcomes to the file.
 			if (fullness >= CONTIG_WIDTH) {
 				outcome->n_genotypes = CONTIG_WIDTH;
-				// give the offspring their ids and names
+                // give the offspring their ids and names
 				if (g.will_name_offspring) {
                     set_names(outcome, g.offspring_name_prefix, d->current_id, 0);
 				}
@@ -5313,10 +6039,10 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 					last->next = outcome;
 					last = last->next;
 					if (n_to_go < CONTIG_WIDTH) {
-						outcome = create_empty_allelematrix(d->n_markers, n_to_go);
+                        outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 						n_to_go = 0;
 					} else {
-						outcome = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+                        outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 						n_to_go -= CONTIG_WIDTH;
 					}
 				}
@@ -5336,7 +6062,7 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 	free(group_genes);
 	// save the rest of the crosses to the file.
 	outcome->n_genotypes = fullness;
-	// give the offspring their ids and names
+    // give the offspring their ids and names
 	if (g.will_name_offspring) {
         set_names(outcome, g.offspring_name_prefix, d->current_id, 0);
 	}
@@ -5388,6 +6114,8 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
  * parameter is 1/truthy, it overrides whatever naming settings are present in GenOptions
  * in favour of giving each clone the exact name of the individual it was cloned from.
  *
+ * Clones currently keep the default value for every label.
+ *
  * @param d pointer to the SimData object that contains the genetic map and
  * genotypes of the parent group.
  * @param group the genotypes on which to perform the operation.
@@ -5404,18 +6132,17 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
     AlleleMatrix* outcome;
     int n_to_go = group_size * g.family_size;
     if (n_to_go < CONTIG_WIDTH) {
-        outcome = create_empty_allelematrix(d->n_markers, n_to_go);
+        outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
         n_to_go = 0;
     } else {
-        outcome = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+        outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
         n_to_go -= CONTIG_WIDTH;
     }
     char** group_genes = get_group_genes( d, group, group_size);
-    int i, f, fullness = 0;
 
     // set up pedigree/id allocation, if applicable
     unsigned int* group_ids = NULL;
-    int id;
+    int parent_id = 0;
     if (g.will_track_pedigree) {
         group_ids = get_group_ids( d, group, group_size);
     }
@@ -5457,12 +6184,14 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
     }
 
     GetRNGstate();
+    int i, f;
+    int fullness = 0;
     for (i = 0; i < group_size; ++i) {
         // do n rounds of selfing (j-indexed loops) g.family_size times per individual (f-indexed loops)
         //find the parent genes, save a shallow copy to set
         char* genes = group_genes[i];
         if (g.will_track_pedigree) {
-            id = group_ids[i];
+            parent_id = group_ids[i];
         }
         for (f = 0; f < g.family_size; ++f, ++fullness) {
             R_CheckUserInterrupt();
@@ -5498,10 +6227,10 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
                     last->next = outcome;
                     last = last->next;
                     if (n_to_go < CONTIG_WIDTH) {
-                        outcome = create_empty_allelematrix(d->n_markers, n_to_go);
+                        outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
                         n_to_go = 0;
                     } else {
-                        outcome = create_empty_allelematrix(d->n_markers, CONTIG_WIDTH);
+                        outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
                         n_to_go -= CONTIG_WIDTH;
                     }
                 }
@@ -5511,8 +6240,8 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
             generate_clone( d, genes, outcome->alleles[fullness] );
             outcome->groups[fullness] = output_group;
             if (g.will_track_pedigree) {
-                outcome->pedigrees[0][fullness] = id;
-                outcome->pedigrees[1][fullness] = id;
+                outcome->pedigrees[0][fullness] = parent_id;
+                outcome->pedigrees[1][fullness] = parent_id;
             }
             if (inherit_names) {
                 // clear name if it's pre-existing
@@ -5525,6 +6254,10 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
                     strcpy(outcome->names[fullness], group_names[i]);
                 }
             }
+            // Inherit the labels
+            /*for (int lbl = 0; lbl < outcome->n_labels; ++lbl) {
+                outcome->labels[lbl][fullness] = ; // @@
+            }*/
         }
     }
     PutRNGstate();
@@ -5545,6 +6278,7 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
             outcome->ids[j] = d->current_id;
         }
     } // else already zeroed by create_empty_allelematrix
+
     if (g.will_track_pedigree) {
         free(group_ids);
     }
@@ -5615,6 +6349,7 @@ int make_all_unidirectional_crosses(SimData* d, int from_group, GenOptions g) {
 		}
 	}
 
+    free(group_indexes);
 	return cross_these_combinations(d, n_crosses, combinations, g);
 
 }
@@ -6598,7 +7333,7 @@ char* calculate_optimal_available_alleles(SimData* d, unsigned int group) {
 
     // for each locus
     for (int j = 0; j < d->n_markers; ++j) {
-		best_allele = '\0'; //clear best allele
+        best_allele = '\0';
         for (int i = 0; i < gsize; ++i) {
 
             // If the allele is different to the previous best (guaranteed if best_allele is not initialised)
@@ -6697,7 +7432,7 @@ double calculate_optimal_available_bv(SimData* d, unsigned int group) {
 
     // for each locus
     for (int j = 0; j < d->n_markers; ++j) {
-		best_allele = '\0'; //clear best allele
+        best_allele = '\0';
         for (int i = 0; i < gsize; ++i) {
 
             // If the allele is different to the previous best (guaranteed if best_allele is not initialised)

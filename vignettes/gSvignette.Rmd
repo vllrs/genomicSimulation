@@ -1,5 +1,5 @@
 ---
-title: "genomicSimulation (v0.2.1) Vignette"
+title: "genomicSimulation (v0.2.2.4) Vignette"
 author: "Kira Villiers"
 date: "`r Sys.Date()`"
 output:
@@ -89,7 +89,7 @@ Each genotype/line may or may not be given a name. Generating names for simulate
 
 At least one genotype must be loaded in the initialisation command `load.data`. genomicSimulation has no genome-construction or mutation mechanisms: there is no other way to get your simulation population started! At any point in simulation more genotypes can be imported from files using the function `load.more.genotypes` (see Indexes: Input File Formats: Founder genotypes).
 
-When loading genotypes from a file, behaviour is undefined if any genotype has a name longer than 30 characters. (Once again, the currently-non-modifiable NAME_LENGTH setting (see Indexes: Global Settings Index) is implicated in attempts to remove this limitation.)
+When loading genotypes from a file, behaviour is undefined if any genotype has a name longer than 45 characters. (Once again, the currently-non-modifiable NAME_LENGTH setting (see Indexes: Global Settings Index) is implicated in attempts to remove this limitation.)
 
 ## Understanding Groups
 As far as genomicSimulation is concerned, every genotype always exists as a member of a group. Genotypes loaded from the same file are automatically allocated to the same group. Every crossing function also places the genotypes it produces in a new group. Each group is denoted by a number.
@@ -98,16 +98,28 @@ A genotype can only belong to one group, so functions that overwrite allocations
 
 Group numbers are natural numbers starting at 1. Group numbers are not guaranteed to be allocated sequentially, because some crossing functions may create and delete temporary groups to carry out their task, so the final group number could be 'out of order'.
 
-Every function except those that pull data into R (functions whose names begin with `see.`) return either one integer or a vector of integers. If the integer is 0, it means the function succeeded but it is not a function that acts on groups. Otherwise, the return value is the group number(s) of the group(s) that were created. This means that in your R environment, the groups you are working with will be to all intents and purposes just integers. 
+Every function except those that pull data into R (functions whose names begin with `see.`) and the special case of `make.label` (see following section: it returns one integer but that integer does not represent a group number) return either one integer or a vector of integers. If the integer is 0, it means the function succeeded but it is not a function that acts on groups. Otherwise, the return value is the group number(s) of the group(s) that were created. This means that in your R environment, the groups you are working with will be to all intents and purposes just integers. 
 
 Note that only genomicSimulation functions can actually make changes to the groups. Modifying the numbers returned by genomicSimulation in the R environment will have no effect, and furthermore genomicSimulation will not, for example, delete a number in the R environment if that group ceases to exist.
 
+## Understanding Custom Labels
+
+Sometimes you might have reason to want to track extra details about your genotypes (a common example is the age of the simulated individual), or you might want a categorisation system that persists even when groups are broken apart, dissolved, and/or reformed in efforts to perform particular selection or mating procedure.
+
+A custom label is an attribute or field that is stable until changed by the user. genomicSimulation gives its users the power to create as many labels as desired, to set default values for each label, and to change the value of the label on each simulated individual.
+
+Every genotype in the simulation will hold some value in every label that exists. Specifically, the values of the labels must be integers (whole numbers). Interpretation of the labels (e.g. age in months; year of birth; phenotype), is up to the user to keep track of: genomicSimulation only knows the ID of each label, and the values of that label for every simulated individual.
+
+Like group numbers, label IDs are integers greater than 0. The function `make.label` returns the label ID of the label it just created. This is an exception to the usual rule that functions return the group number of the group that was created, or 0 if they did not create a new group. Label manipulation functions like `change.label.by.amount` do follow the pattern and return 0, since they do not create a new group. 
+
+Also like groups, use `delete.label` to delete a custom labe (all simulated individuals will still exist, but they will no longer have any value under the custom label that no longer exists). Merely removing the label ID from the R environment does nothing to remove the label from simulation memory.
 
 ## Understanding Identifiers
-There are three categories of identifiers that may be observed during use of the simulation.
+There are four categories of identifiers that may be observed during use of the simulation.
 
-1. Group numbers, which were discussed in the section above. They are non-negative integers that define a set of genotypes/lines. Any number of lines can share a group number, and a line's group number may be changed over the course of the simulation.
-1. IDs. These are non-negative integers that are unique to a particular genotype for the lifetime of the simulation. IDs are used for tracking pedigree. However, genotypes are not guaranteed to have an ID: genotypes created during crossing with the setting `give.ids` set to FALSE will not be allocated IDs and will have 0 instead. 
+1. Group numbers, which were discussed in the preceding section on groups. They are integers greater than 0 that define a set of genotypes/lines. Any number of lines can share a group number, and a line's group number may be changed over the course of the simulation.
+1. Label identifiers, which were discussed in the preceding section on labels. Like group numbers, they are integers greater than 0. They define a particular custom label. A label keeps its same identifier for its lifetime.  
+1. IDs. These are integers greater than 0 that are unique to a particular genotype for the lifetime of the simulation. IDs are used for tracking pedigree. However, genotypes are not guaranteed to have an ID: genotypes created during crossing with the setting `give.ids` set to FALSE will not be allocated IDs and will have 0 instead. 
 1. Indexes. These represent the position/column number in the invisible table at which the genotype is stored. They are therefore unique to the genotype but not continuous over the lifetime of the simulation, because when genotypes/columns are deleted, the column numbers of the remaining genotypes may change. Because, unlike IDs, every genotype is guaranteed to have an index, functions like `make.group` and `cross.combinations` that act on specific genotypes (rather than groups) generally take indexes as inputs. Since indexes can change, however, it is important to not place a `delete.group` call between getting index data and using indexes in one of these function calls.
 
 ## Understanding Output Methods
@@ -202,6 +214,38 @@ calvesF <- temporary[1]; calvesM <- temporary[2]; rm(temporary);
 
 #... and so forth
 ```
+
+Alternatively, a custom label could be used to track sex:
+
+```{R}
+# Starting to use genomicSimulation: load the small initial data set
+cows <- load.data("../tests/testthat/helper_genotypes.txt",
+                "../tests/testthat/helper_map.txt",
+                "../tests/testthat/helper_eff.txt")
+# Load the small initial data set again, pretending this represents a different set of genotypes
+bulls <- load.more.genotypes("../tests/testthat/helper_genotypes.txt") 
+
+# Define our interpretation of the custom label
+FEMALE <- 1L
+MALE <- 2L
+# Create the label
+sexLabel <- make.label(default=FEMALE)
+change.label.to.this(sexLabel, MALE, group=bulls)
+
+# Create some offspring
+f1 <- cross.randomly.between(cows, bulls, n.crosses=5)
+
+# Simulate the sex of offspring
+change.label.to.values(sexLabel, values=c(sample(c(FEMALE,MALE), size=5, replace=TRUE)), group=f1)
+
+# Then split up your calves as needed
+calvesF <- make.group.from.label(sexLabel, FEMALE, group=f1)
+calvesM <- f1 #the calves left in F1 must be all the males
+
+#... and so on
+```
+
+More sample scripts for simulating common scenarios using genomicSimulation can be found idevn [this Templates page](https://vllrs.github.io/genomicSimulationC/html/templates.html).
 
 
 ## Writing Custom Selection Methods in R
@@ -299,7 +343,7 @@ This functionality is very much untested and incomplete.
 
 # Indexes
 ## Global Settings Index
-- NAME_LENGTH (default 30). This parameter is not yet modifiable in the R version
+- NAME_LENGTH (default 45). This parameter is not yet modifiable in the R version
 - CONTIG_WIDTH (default 1000). This parameter is not yet modifiable in the R version
 
 ## Function Index
@@ -334,6 +378,14 @@ Simulating crossing:
 - `[group] <- make.clones(group,inherit.names,[[settings]])`
 - `[group] <- make.doubled.haploids(group,[[settings]])`
 
+Manipulating custom labels:
+- `[label] <- make.label(default)`
+- `delete.label(labels)`
+- `change.label.default(label, default)`
+- `change.label.to.values(label, values, in group/no group, startIndex)`
+- `change.label.to.this(label, value, in group(s)/no group)`
+- `change.label.by.amount(label, amount, in group(s)/no group)`
+
 Performing selection:
 
 - `[selected.group] <- select.by.gebv(from.group, low.score.best = FALSE, percentage OR number)`
@@ -347,6 +399,8 @@ Modify groupings:
 - `delete.group(groups)`
 - `[group] <- combine.groups(groups)`
 - `[group] <- make.group(indexes)`
+- `[group] <- make.group.from.label(label, value, in group(s)/no group)`
+- `[group] <- make.group.from.label.range(label, rangeLowEnd, rangeHighEnd, in group(s)/no group)`
 - `[vector of groups] <- break.group.into.individuals(group)`
 - `[vector of groups] <- break.group.into.families(group)`
 - `[vector of groups] <- break.group.into.halfsib.families(group)`

@@ -17,6 +17,9 @@ delete.group(groups)
 them from the SimData object's storage. A message is printed explaining
 how many genotypes were deleted.
 }
+\details{
+Multiple group input supported.
+}
 \seealso{
 Other grouping functions: 
 \code{\link{break.group.evenly}()},
@@ -26,8 +29,13 @@ Other grouping functions:
 \code{\link{break.group.into.individuals}()},
 \code{\link{break.group.randomly}()},
 \code{\link{break.group.with.probabilities}()},
+\code{\link{change.label.default}()},
 \code{\link{combine.groups}()},
+\code{\link{delete.label}()},
+\code{\link{make.group.from.label.range}()},
+\code{\link{make.group.from.label}()},
 \code{\link{make.group}()},
+\code{\link{make.label}()},
 \code{\link{see.existing.groups}()},
 \code{\link{see.group.data}()},
 \code{\link{select.by.gebv}()}

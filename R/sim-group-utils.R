@@ -3,6 +3,8 @@
 #' \code{delete.group} finds the genotypes of the given group and removes
 #' them from the SimData object's storage. A message is printed explaining
 #' how many genotypes were deleted.
+#' 
+#' Multiple group input supported.
 #'
 #' @param groups an vector containing the group numbers of the groups to be deleted
 #' @return 0 on success. An error is raised on failure.
@@ -11,7 +13,7 @@
 #' @export
 delete.group <- function(groups) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_delete_group, sim.data$p, length(groups), groups))
+	return(.Call(SXP_delete_group, sim.data$p, groups))
 }
 
 #' Assign multiple groups' worth of genotypes to a single group
@@ -28,7 +30,7 @@ delete.group <- function(groups) {
 #' @export
 combine.groups <- function(groups) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_combine_groups, sim.data$p, length(groups), groups))
+	return(.Call(SXP_combine_groups, sim.data$p, groups))
 }
 
 #' Assign each genotype inside a group to a separate new group
@@ -154,7 +156,7 @@ break.group.into.buckets <- function(group, buckets) {
 #' up nicely to 1. 
 #'
 #' If the bucket capacities add up to more than 1, 
-#' a warning will be raised, but the function will still run. Note, though, that
+#' a warning will be raised, but  the function will still run. Note, though, that
 #' genotypes are allocated to buckets using cumulative probabilities, so groups 
 #' with cumulative probabilities of more than 1 will get no members.
 #'
@@ -170,7 +172,7 @@ break.group.with.probabilities <- function(group, probabilities) {
   return(.Call(SXP_split_probabilities, sim.data$p, group, probabilities))  
 }
 
-#' Assign certain genotypes to a new group
+#' Assign certain genotypes to a new group by index
 #'
 #' \code{make.group} allocates the genotypes with indexes in the vector
 #' indexes to a single new group.
@@ -183,8 +185,63 @@ break.group.with.probabilities <- function(group, probabilities) {
 #' @export
 make.group <- function(indexes) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_split_out, sim.data$p, length(indexes), indexes))
+	return(.Call(SXP_split_out, sim.data$p, indexes))
 }
+
+#' Assign genotypes with a certain label value to a new group
+#'
+#' \code{make.group.from.label} allocates the genotypes with a particular value
+#' for a given custom label to a new group.
+#' 
+#' Multiple group inputs supported. All selected genotypes, no matter their 
+#' group of origin, will be moved into the same output group.
+#'
+#' @param label the label number of the label to look at.
+#' @param value all genotypes selected by the `group` parameter that have 
+#' this integer as their label value of the appropriate label will be moved to
+#' the new group.
+#' @param group NA or 0 to search through all genotypes in simulation memory,
+#' or a group number or vector of group numbers to search only
+#' members of those groups.
+#' @return the group number of the new group
+#'
+#' @family label functions
+#' @family grouping functions
+#' @export
+make.group.from.label <- function(label, value, group=NA) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_split_by_label_value, sim.data$p, label, value, group))
+}
+
+
+#' Assign genotypes with label values in a certain range to a new group
+#'
+#' \code{make.group.from.label.range} allocates the genotypes with label values
+#' for a given custom label in a certain range from `rangeLowEnd` to `rangeHighEnd`
+#' inclusive to a new group.
+#' 
+#' Multiple group inputs supported. All selected genotypes, no matter their 
+#' group of origin, will be moved into the same output group.
+#'
+#' @param label the label number of the label to look at.
+#' @param rangeLowEnd minimum integer value of label `label` that is to be put
+#' in the new group.
+#' @param rangeHighEnd maximum integer value of label `label` that is to be put
+#' in the new group.
+#' @param group NA or 0 to search through all genotypes in simulation memory,
+#' or a group number or vector of group numbers to search only
+#' members of those groups.
+#' @return the group number of the new group
+#'
+#' @family label functions
+#' @family grouping functions
+#' @export
+make.group.from.label.range <- function(label, rangeLowEnd, rangeHighEnd, group=NA) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_split_by_label_range, sim.data$p, label, rangeLowEnd, rangeHighEnd,
+               group))
+}
+
 
 #' Get a list of the groups currently existing in the SimData
 #'
@@ -236,12 +293,12 @@ select.by.gebv <- function(from.group, low.score.best=FALSE, percentage=NULL, nu
 	if (sum(is.null(percentage), is.null(number)) == 1) {
 		if (is.null(percentage)) {
 			# we are selecting a certain number
-			return(.Call(SXP_simple_selection, sim.data$p, length(from.group), from.group, 
+			return(.Call(SXP_simple_selection, sim.data$p, from.group, 
 						number, low.score.best))
 		} else {
 			# we are selecting the top percentage
-			return(.Call(SXP_simple_selection_bypercent, sim.data$p, length(from.group), 
-						from.group, percentage, low.score.best))
+			return(.Call(SXP_simple_selection_bypercent, sim.data$p, from.group, 
+			             percentage, low.score.best))
 		}
 	}
 	stop("Exactly one of parameters `percentage` and `number` must be set.")

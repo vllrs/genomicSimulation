@@ -19,6 +19,27 @@ test_that("make.group moves the correct genotypes to a new group", {
   
 })
 
+test_that("labels can be used to split groups", {
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  indivs <- break.group.into.individuals(g)
+  
+  expect_identical(make.label(1L), 1L)
+  
+  expect_identical(change.label.by.amount(1L, -2, indivs[1]), 0L)
+  expect_identical(change.label.to.this(1L, 5L, indivs[3]), 0L)
+  expect_identical(change.label.to.values(1L, c(2L,3L), startIndex=5), 0L)
+  
+  
+  #Label should be:
+  # -1; 1; 5; 1; 2; 3
+  g1 <- make.group.from.label(1L, -1)
+  g2 <- make.group.from.label.range(1L, 3, 10)
+  
+  expect_identical(see.group.data(g1, "Names"), c("G01"))
+  expect_identical(see.group.data(g2, "Names"), c("G03", "G06"))
+})
+
 test_that("combine.groups successfully merges 2+ groups", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   g2 <- cross.randomly(g, n.crosses=5, offspring=1)

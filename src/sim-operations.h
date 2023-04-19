@@ -1,6 +1,6 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
-/* genomicSimulationC v0.2.2 - last edit 15 Jul 2022 */
+/* genomicSimulationC v0.2.2.1 - last edit 11 Nov 2022 */
 
 #include <string.h>
 #include <limits.h>
@@ -35,7 +35,7 @@
  * Increase this if there is a risk some names may be longer than
  * this value.
  */
-#define NAME_LENGTH 30
+#define NAME_LENGTH 45
 
 
 /** @defgroup structs Data Structures
@@ -203,6 +203,12 @@ struct AlleleMatrix {
                     * parents of this genotype (if tracked), or 0 if we don't know/care.*/
 	unsigned int groups[CONTIG_WIDTH]; /**< Group allocation of each genotype. */
 
+    int n_labels; /**< Number of custom labels currently available to this AlleleMatrix. This has
+                    * redundancy with SimData and other members of its linked list
+                    * but it's good to know how big your own `labels` array is.*/
+    int** labels; /**< Pointer to list of labels. Size of first dimension is n_labels,
+                           * of second dimension is arrays of labels of length CONTIG_WIDTH*/
+
 	AlleleMatrix* next; /**< Pointer to the next AlleleMatrix in the linked list,
                          * or NULL if this entry is the last. */
 };
@@ -225,6 +231,12 @@ typedef struct {
 	int n_markers;  /**< The number of markers/length of `markers`. */
 	char** markers; /**< Array of strings containing the names of markers. */
 
+    int n_labels; /**< The number of custom labels in the simulation.*/
+    int* label_ids; /**< The identifier number of each label in the simulation, in order
+                     * of their lookup index. */
+    int* label_defaults; /**< Array containing the default (birth) value of each
+                          * custom label. */
+
 	GeneticMap map; /**< A GeneticMap. If this is set, then `markers`
                      * will be ordered and all markers have a known position.*/
 	AlleleMatrix* m; /**< Pointer to an AlleleMatrix, which stores data and
@@ -240,8 +252,7 @@ typedef struct {
                               * given out.*/
 } SimData;
 
-//const SimData EMPTY_SIMDATA;
-const GenOptions BASIC_OPT;
+extern const GenOptions BASIC_OPT;
 /** @} */
 
 /** @defgroup maths Mathematical functions
@@ -253,7 +264,6 @@ const GenOptions BASIC_OPT;
  *
  * @{
  */
-
 DecimalMatrix generate_zero_dmatrix(int r, int c);
 int add_matrixvector_product_to_dmatrix(DecimalMatrix* result, DecimalMatrix* a, double* b);
 int add_doublematrixvector_product_to_dmatrix(DecimalMatrix* result, DecimalMatrix* amat, double* avec, DecimalMatrix* bmat, double* bvec);
@@ -268,13 +278,22 @@ int get_from_ordered_uint_list(unsigned int target, unsigned int* list, unsigned
 int get_from_unordered_str_list(char* target, char** list, int list_len);
 void shuffle_up_to(int* sequence, size_t total_n, size_t n_to_shuffle);
 
+int create_new_label(SimData* d, int setTo);
+void set_label_default(SimData* d, int whichLabel, int newDefault);
+void set_labels_to_const(SimData* d, int whichGroup, int whichLabel, int setTo);
+void increment_labels(SimData* d, int whichGroup, int whichLabel, int byValue);
+void set_labels_to_values(SimData* d, int whichGroup, int startIndex, int whichLabel, int n_values, int values[n_values]);
+void set_names_to_values(SimData* d, int whichGroup, int startIndex, int n_values, char* values[n_values]);
+
 void get_sorted_markers(SimData* d, int actual_n_markers);
 void get_chromosome_locations(SimData *d);
 
 void set_names(AlleleMatrix* a, char* prefix, int suffix, int from_index);
 void set_ids(SimData* d, int from_index, int to_index);
 int get_integer_digits(int i);
-int get_new_group_num( SimData* d);
+int get_index_of_label( SimData* d, int label );
+int get_new_label_id( SimData* d );
+int get_new_group_num( SimData* d );
 void get_n_new_group_nums( SimData* d, int n, int* result);
 void set_group_list( SimData* d, int by_n, int new_group);
 void condense_allele_matrix( SimData* d);
@@ -329,6 +348,8 @@ void split_into_individuals( SimData* d, int group_id, int* results);
 void split_into_families(SimData* d, int group_id, int* results);
 void split_into_halfsib_families( SimData* d, int group_id, int parent, int* results);
 int split_from_group( SimData* d, int n, int indexes_to_split[n]);
+int split_by_label_value( SimData* d, int group, int whichLabel, int valueToSplit);
+int split_by_label_range( SimData* d, int group, int whichLabel, int valueLowBound, int valueHighBound);
 
 int split_evenly_into_two(SimData* d, int group_id);
 void split_evenly_into_n(SimData* d, int group_id, int n, int* results);
@@ -346,6 +367,7 @@ void split_by_probabilities_into_n(SimData* d, int group_id, int n, double* prob
  * @{
  */
 void delete_group(SimData* d, int group_id);
+void delete_label(SimData* d, int whichLabel);
 void delete_genmap(GeneticMap* m);
 void delete_allele_matrix(AlleleMatrix* m);
 void delete_effect_matrix(EffectMatrix* m);
@@ -360,7 +382,7 @@ void delete_dmatrix(DecimalMatrix* m);
  *
  * @{
  */
-AlleleMatrix* create_empty_allelematrix(int n_markers, int n_genotypes);
+AlleleMatrix* create_empty_allelematrix(int n_markers, int n_labels, int labelDefaults[n_labels], int n_genotypes);
 SimData* create_empty_simdata();
 void clear_simdata(SimData* d);
 

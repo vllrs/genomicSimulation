@@ -65,7 +65,7 @@ cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_cross_randomly, sim.data$p, length(group), group, n.crosses, cap, give.names, name.prefix, 
+	return(.Call(SXP_cross_randomly, sim.data$p, group, n.crosses, cap, give.names, name.prefix, 
 	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -233,7 +233,7 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_cross_unidirectional, sim.data$p, length(group), group, give.names, name.prefix,
+	return(.Call(SXP_cross_unidirectional, sim.data$p, group, give.names, name.prefix,
 	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -264,7 +264,7 @@ self.n.times <- function(group, n, offspring=1, retain=TRUE, give.names=FALSE, n
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_selfing, sim.data$p, length(group), group, n, give.names, name.prefix, offspring, 
+	return(.Call(SXP_selfing, sim.data$p, group, n, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }			
 			
@@ -292,7 +292,7 @@ make.doubled.haploids <- function(group, offspring=1, retain=TRUE,
 		give.names=FALSE, name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, 
 		file.prefix=NULL, save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_doubled, sim.data$p, length(group), group, give.names, name.prefix, offspring, 
+	return(.Call(SXP_doubled, sim.data$p, group, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -327,7 +327,7 @@ make.clones <- function(group, offspring=1, retain=TRUE, inherit.names=TRUE,
 		give.names=FALSE, name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, 
 		file.prefix=NULL, save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_clone, sim.data$p, length(group), group, inherit.names, give.names, 
+	return(.Call(SXP_clone, sim.data$p, group, inherit.names, give.names, 
 				 name.prefix, offspring, track.pedigree, give.ids, file.prefix, save.pedigree,
 				 save.gebv, save.genotype, retain))
 }

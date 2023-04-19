@@ -78,7 +78,7 @@ see.optimal.haplotype <- function() {
 #' @export
 see.optimal.possible.haplotype <- function(group) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_get_best_available_haplotype, sim.data$p, length(group), group))  
+  return(.Call(SXP_get_best_available_haplotype, sim.data$p, group))  
 }
 
 #' Get the ultimate/highest-possible GEBV given the current loaded effect values.
@@ -114,7 +114,7 @@ see.optimal.GEBV <- function() {
 #' @export
 see.optimal.possible.GEBV <- function(group) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_get_best_available_GEBV, sim.data$p,length(group), group))    
+  return(.Call(SXP_get_best_available_GEBV, sim.data$p, group))    
 }
 
 #' Get the lowest-possible GEBV given the current loaded effect values.
