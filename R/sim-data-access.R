@@ -19,7 +19,10 @@
 #' If the first character is 'N', the 'N'ames of group members will be extracted. 
 #' If the first character is 'D', the I'D's of group members will be extracted. 
 #' If the first character is 'X', the Inde'X'es of group members will be extracted. 
-#' If the first character is 'G', the 'G'enotypes of the group members will be extracted. 
+#' If the first character is 'G', the 'G'enotypes of the group members will be extracted.
+#' If the first character is 'C', the allele 'c'ounts of the group members for each marker
+#' will be extracted (that is, 0 for no copies of `count.allele` at that marker,
+#'1 for 1 copy, 2 for 2 copies, etc). A (group members)x(markers) matrix.
 #' If the first character is 'B', the 'b'reeding values/GEBVs of group members will be returned.
 #' If it starts with "P1", the first parent of each group member is returned. As usual in 
 #' genomicSimulation, if the parent has a name, its name will be what is returned, otherwise,
@@ -37,6 +40,38 @@ see.group.data <- function(group, data.type) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_get_group_data, sim.data$p, group, toupper(data.type)))
 }
+
+#' Get genotypes or allele counts of a group as a matrix.
+#'
+#' \code{see.group.gene.data} allows you to extract (markers)x(group members)
+#' matrices of the genetics at each marker of some of the genotypes in simulation
+#' For the moment only implemented in R, not C
+#' 
+#' @param group an integer: the group number of the group to have a look at
+#' @param count.allele a character that will be used to identify the type of data
+#' to be extracted.
+#' If it is NA, then return the pair of alleles as a string eg "AT"
+#' If it is a character, then return the count of that allele eg. 'A' -> 0 if 
+#' no copies of A at that marker, 1 if heterozygous for A, 2 if "AA" at that marker.
+#' 
+#' @family grouping functions
+#' @family data access functions
+#' @export
+see.group.gene.data <- function(group, count.allele=NA_character_) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  
+  # if (is.na(count.allele)) {
+  #   g <- see.group.data(group, "G")
+  #   return(sapply(g, function(x) {
+  #     xspl <- strsplit(x, "")[[1]]
+  #     paste0(xspl[c(TRUE,FALSE)],xspl[c(FALSE,TRUE)])
+  #   }, USE.NAMES=FALSE))
+  #   
+  # } else {
+  #   return(.Call(SXP_get_group_gene_data, sim.data$p, group, count.allele))
+  # }
+  return(.Call(SXP_get_group_gene_data, sim.data$p, group, count.allele))
+} 
 
 
 #' Get a string containing the ultimate/highest-scoring set of alleles.

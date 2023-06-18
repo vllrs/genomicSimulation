@@ -82,8 +82,9 @@ SEXP SXP_get_worst_GEBV(SEXP exd);
 SEXP SXP_find_crossovers(SEXP exd, SEXP s_parentFile, SEXP s_outFile, SEXP s_windowSize, SEXP s_certainty);
 SEXP SXP_send_map(SEXP exd);
 
-SEXP SXP_get_groups(SEXP exd);
+SEXP SXP_get_groups(SEXP exd, SEXP s_maxGroups);
 SEXP SXP_get_group_data(SEXP exd, SEXP s_group, SEXP s_whatData);
+SEXP SXP_get_group_gene_data(SEXP exd, SEXP s_group, SEXP s_countAllele);
 
 SEXP SXP_change_name_values(SEXP exd, SEXP s_values, SEXP s_group, SEXP s_start);
 

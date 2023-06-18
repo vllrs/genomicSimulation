@@ -93,7 +93,7 @@ test_that("save.allele.counts works with group", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
   save.allele.counts("imaginary4", group=g, allele="T")
-  f_out <- readLines("imaginary4")
+  expect_warning(f_out <- readLines("imaginary4")) #warning for incomplete final line
   expect_identical(length(f_out), 4L)
   
   expect_identical(f_out[1], "1\tG01\tG02\tG03\tG04\tG05\tG06")

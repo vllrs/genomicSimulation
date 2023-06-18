@@ -65,8 +65,9 @@ cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_cross_randomly, sim.data$p, group, n.crosses, cap, give.names, name.prefix, 
-	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+	return(.Call(SXP_cross_randomly, sim.data$p, group, n.crosses, cap, give.names, 
+	             name.prefix, offspring, track.pedigree, give.ids, file.prefix, 
+	             save.pedigree, save.gebv, save.genotype, retain))
 }
 
 

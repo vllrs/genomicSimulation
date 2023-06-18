@@ -248,6 +248,7 @@ make.group.from.label.range <- function(label, rangeLowEnd, rangeHighEnd, group=
 #' \code{see.existing.groups} scans the saved data for groups that currently
 #' have members and returns their group numbers and number of members.
 #'
+#' @param maxGroups maximum number of groups to return. 
 #' @return A dataframe containing two columns, the first, named "Group", 
 #' being the group numbers of every group in the SimData that currently 
 #' has members, the second, named "GroupSize", being 
@@ -255,9 +256,9 @@ make.group.from.label.range <- function(label, rangeLowEnd, rangeHighEnd, group=
 #'
 #' @family grouping functions
 #' @export
-see.existing.groups <- function() {
+see.existing.groups <- function(maxGroups=10000L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	d <- data.frame(.Call(SXP_get_groups, sim.data$p))
+	d <- data.frame(.Call(SXP_get_groups, sim.data$p, maxGroups))
 	colnames(d) <- c("Group", "GroupSize")
 	return(d)
 }

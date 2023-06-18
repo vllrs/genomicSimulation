@@ -245,7 +245,7 @@ calvesM <- f1 #the calves left in F1 must be all the males
 #... and so on
 ```
 
-More sample scripts for simulating common scenarios using genomicSimulation can be found idevn [this Templates page](https://vllrs.github.io/genomicSimulationC/html/templates.html).
+More sample scripts for simulating common scenarios using genomicSimulation can be found in [this Templates page](https://vllrs.github.io/genomicSimulationC/html/templates.html).
 
 
 ## Writing Custom Selection Methods in R

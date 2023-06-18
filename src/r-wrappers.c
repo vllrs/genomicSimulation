@@ -201,7 +201,7 @@ SEXP SXP_cross_Rcombinations(SEXP exd, SEXP s_firstparents, SEXP s_secondparents
 								 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
 								 s_saveGenes, s_retain);
 
-	return ScalarInteger(cross_these_combinations(d, ncrosses, combinations, g));
+	return ScalarInteger(cross_these_combinations(d, ncrosses, combinations[0], combinations[1], g));
 	
 }
 
@@ -859,7 +859,8 @@ SEXP SXP_group_eval(SEXP exd, SEXP s_group) {
 	}
 	
 	int group_size = get_group_size(d, group_id);
-	unsigned int* inds = get_group_indexes(d, group_id, group_size);
+	int* inds = get_malloc(sizeof(int) * group_size);
+	get_group_indexes(d, group_id, group_size, inds);
 	DecimalMatrix gebvs = calculate_group_bvs(d, group_id);
 	
 	SEXP out = PROTECT(allocVector(VECSXP, 2));
@@ -1091,11 +1092,17 @@ SEXP SXP_send_map(SEXP exd) {
 }
 
 // get the active groups currently for a summary
-SEXP SXP_get_groups(SEXP exd) {
+SEXP SXP_get_groups(SEXP exd, SEXP s_maxGroups) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int n_groups = 0;
-	int** existing = get_existing_group_counts(d, &n_groups);
+	int n_groups = asInteger(s_maxGroups);
+	if (n_groups == NA_INTEGER || n_groups < 0) { 
+	  error("`maxGroups` parameter is of invalid type.\n");
+	}
+
+	int* out_groups = get_malloc(sizeof(int*) * n_groups);
+	int* out_counts = get_malloc(sizeof(int*) * n_groups);
+	n_groups = get_existing_group_counts(d, n_groups, out_groups, out_counts);
 	
 	SEXP out = PROTECT(allocVector(VECSXP, 2));
 	SEXP s_groups = PROTECT(allocVector(INTSXP, n_groups));
@@ -1104,14 +1111,13 @@ SEXP SXP_get_groups(SEXP exd) {
 	int* ccounts = INTEGER(counts);
 	
 	for (int i = 0; i < n_groups; ++i) {
-		cgroups[i] = existing[0][i];
-		ccounts[i] = existing[1][i];
+		cgroups[i] = out_groups[i];
+		ccounts[i] = out_counts[i];
 	}
 	SET_VECTOR_ELT(out, 0, s_groups);
 	SET_VECTOR_ELT(out, 1, counts);
-	free(existing[0]);
-	free(existing[1]);
-	free(existing);
+	free(out_groups);
+	free(out_counts);
 	
 	UNPROTECT(3);
 	return out;
@@ -1134,7 +1140,8 @@ SEXP SXP_get_group_data(SEXP exd, SEXP s_group, SEXP s_whatData) {
 	}
 	
 	if (c == 'D') {
-		unsigned int *data = get_group_ids(d, group_id, group_size);
+		unsigned int *data = get_malloc(sizeof(unsigned int) * group_size);
+	  get_group_ids(d, group_id, group_size, data);
 		
 		// save to an R vector
 		SEXP out = PROTECT(allocVector(INTSXP, group_size));
@@ -1147,7 +1154,8 @@ SEXP SXP_get_group_data(SEXP exd, SEXP s_group, SEXP s_whatData) {
 		return out;
 		
 	} else if (c == 'X') {
-		unsigned int *data = get_group_indexes(d, group_id, group_size);
+		int *data = get_malloc(sizeof(int) * group_size);
+	  get_group_indexes(d, group_id, group_size, data);
 		
 		// save to an R vector
 		SEXP out = PROTECT(allocVector(INTSXP, group_size));
@@ -1164,7 +1172,8 @@ SEXP SXP_get_group_data(SEXP exd, SEXP s_group, SEXP s_whatData) {
 			error("Need to load effect values before running this function\n");
 		}
 		
-		double* data = get_group_bvs(d, group_id, group_size);
+		double* data = get_malloc(sizeof(double) * group_size);
+		get_group_bvs(d, group_id, group_size, data);
 		
 		SEXP out = PROTECT(allocVector(REALSXP, group_size));
 		double* outc = REAL(out);
@@ -1176,8 +1185,10 @@ SEXP SXP_get_group_data(SEXP exd, SEXP s_group, SEXP s_whatData) {
 		return out;
 		
 	} else if (c == 'N') {
-		char** data = get_group_names(d, group_id, group_size);
-		unsigned int* backupdata = get_group_ids(d, group_id, group_size);
+		char** data = get_malloc(sizeof(char*) * group_size);
+	  get_group_names(d, group_id, group_size, data);
+		unsigned int* backupdata = get_malloc(sizeof(unsigned int *) * group_size);
+		get_group_ids(d, group_id, group_size, backupdata);
 		char buffer[get_integer_digits(backupdata[group_size - 1]) + 1]; 
 	
 		SEXP out = PROTECT(allocVector(STRSXP, group_size));
@@ -1195,7 +1206,8 @@ SEXP SXP_get_group_data(SEXP exd, SEXP s_group, SEXP s_whatData) {
 		return out;
 		
 	} else if (c == 'G') {
-		char** rawdata = get_group_genes(d, group_id, group_size);
+		char** rawdata = get_malloc(sizeof(char*) * group_size);
+	  get_group_genes(d, group_id, group_size, rawdata);
 		char** data;
 			
 		// copy over to another array, adding string terminators
@@ -1208,6 +1220,7 @@ SEXP SXP_get_group_data(SEXP exd, SEXP s_group, SEXP s_whatData) {
 			}
 			data[i][glen] = '\0';
 		}
+		free(rawdata);
 		
 		SEXP out = PROTECT(allocVector(STRSXP, group_size));
 		for (int i = 0; i < group_size; ++i) {
@@ -1219,7 +1232,8 @@ SEXP SXP_get_group_data(SEXP exd, SEXP s_group, SEXP s_whatData) {
 		return out;
 		
 	} else if (c == 'P' && (c2 = CHAR(asChar(s_whatData))[1]) == 'E' && CHAR(asChar(s_whatData))[2] == 'D') {
-		char** data = get_group_pedigrees(d, group_id, group_size);
+		char** data = get_malloc(sizeof(char*) * group_size);
+	  get_group_pedigrees(d, group_id, group_size, data);
 		
 		SEXP out = PROTECT(allocVector(STRSXP, group_size));
 		for (int i = 0; i < group_size; ++i) {
@@ -1232,8 +1246,10 @@ SEXP SXP_get_group_data(SEXP exd, SEXP s_group, SEXP s_whatData) {
 		
 	} else if (c == 'P' && (c2 == '1' || c2 == '2')) {
 		int parent = c2 == '1' ? 1 : 2;
-		char** data = get_group_parent_names(d, group_id, group_size, parent);
-		unsigned int* backupdata = get_group_parent_ids(d, group_id, group_size, parent);
+		char** data = get_malloc(sizeof(char*) * group_size);
+		get_group_parent_names(d, group_id, group_size, parent, data);
+		unsigned int* backupdata = get_malloc(sizeof(unsigned int*) * group_size);
+		get_group_parent_ids(d, group_id, group_size, parent, backupdata);
 		char buffer[get_integer_digits(backupdata[group_size - 1]) + 1]; 
 		
 		SEXP out = PROTECT(allocVector(STRSXP, group_size));
@@ -1252,6 +1268,59 @@ SEXP SXP_get_group_data(SEXP exd, SEXP s_group, SEXP s_whatData) {
 	
 	} else {
 		error("`data.type` parameter is not a valid option.");
+	}
+}
+
+
+SEXP SXP_get_group_gene_data(SEXP exd, SEXP s_group, SEXP s_countAllele) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	int group_id = asInteger(s_group);
+	if (group_id == NA_INTEGER || group_id < 0) { 
+		error("`group` parameter is of invalid type.\n");
+	}
+	
+	int group_size = get_group_size(d, group_id);
+	if (group_size == 0) {
+		error("The group is empty\n");
+	}
+	
+	if (asChar(s_countAllele) == NA_STRING) {
+		// Give the pairs of alleles 
+		
+		char** rawdata = get_malloc(sizeof(char*) * group_size);
+		get_group_genes(d, group_id, group_size, rawdata);
+		SEXP out = PROTECT(allocMatrix(STRSXP, d->n_markers, group_size));
+		for (int i = 0; i < group_size; ++i) {
+			for (int j = 0; j < d->n_markers; ++j) {
+				char alleles[] = {rawdata[i][2*j], rawdata[i][2*j + 1], '\0'};
+				SET_STRING_ELT(out, j + d->n_markers*i, mkChar(alleles));
+			}
+		}
+		free(rawdata);
+		UNPROTECT(1);
+		return out;
+		
+	} else {
+		// Give the counts of allele c
+		char c = CHAR(asChar(s_countAllele))[0];
+		
+		char** rawdata = get_malloc(sizeof(char*) * group_size);
+		get_group_genes(d, group_id, group_size, rawdata);
+		SEXP out = PROTECT(allocMatrix(INTSXP, d->n_markers, group_size));
+		int* cout = INTEGER(out);
+		for (int i = 0; i < group_size; ++i) {
+			for (int j = 0; j < d->n_markers; ++j) {
+				int count = 0; 
+				if (rawdata[i][2*j] == c)     { ++count; }
+				if (rawdata[i][2*j + 1] == c) { ++count; }
+				cout[j + d->n_markers*i] = count;
+			}
+		}
+		free(rawdata);
+		UNPROTECT(1);
+		return out;
+		
 	}
 }
 
@@ -1281,7 +1350,7 @@ SEXP SXP_change_name_values(SEXP exd, SEXP s_values, SEXP s_group, SEXP s_start)
 		error("`startIndex` is invalid (wrong type or negative).\n"); 
 	}
 	
-	set_names_to_values(d, group, startIndex, len, names);
+	set_names_to_values(d, group, startIndex, len, (const char**) names);
 	
 	for (int i = 0; i < len; ++i) {
 		R_Free(names[i]);
@@ -1319,7 +1388,7 @@ SEXP SXP_save_genotypes(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_type) {
 	const char t = CHAR(asChar(s_type))[0];	
 	if (t == 'R' || t == 'r') {
 		if (isNull(s_group)) {
-			save_allele_matrix(f, d->m, d->markers);
+			save_allele_matrix(f, d->m, (const char**) d->markers);
 		} else if (asInteger(s_group) >= 0) {
 			save_group_alleles(f, d, asInteger(s_group));
 		} else {
@@ -1328,7 +1397,7 @@ SEXP SXP_save_genotypes(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_type) {
 		}
 	} else if (t == 'T' || t == 't') {
 		if (isNull(s_group)) {
-			save_transposed_allele_matrix(f, d->m, d->markers);
+			save_transposed_allele_matrix(f, d->m, (const char**) d->markers);
 		} else if (asInteger(s_group) >= 0) {
 			save_transposed_group_alleles(f, d, asInteger(s_group));
 		} else {

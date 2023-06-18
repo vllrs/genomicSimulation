@@ -1,3 +1,5 @@
+#ifndef SIM_OPERATIONS
+#define SIM_OPERATIONS
 #include "sim-operations.h"
 /* genomicSimulationC v0.2.2.1 - last edit 11 Nov 2022 */
 
@@ -14,18 +16,10 @@ const GenOptions BASIC_OPT = {
 	.will_save_alleles_to_file = FALSE,
 	.will_save_to_simdata = TRUE
 };
-
-/* Creator for an empty SimData object */
-/*const SimData EMPTY_SIMDATA = {
-	.n_markers = 0,
-	.markers = NULL,
-	.map = {.n_chr = 0, .chr_ends = NULL, .positions = NULL},
-	.m = NULL,
-	.e = {.effects = {.matrix = NULL, .rows = 0, .cols = 0}, .effect_names = NULL},
-	.current_id = 0
-};*/
-
-int RAND_HALFPOINT = (RAND_MAX/2);
+const GenoLocation INVALID_GENO_LOCATION = {
+   .localAM = NULL,
+   .localPos = UNINITIALISED
+};
 
 /** Replace calls to malloc direct with this function, which errors and exits
  * with status 2 if memory allocation fails.
@@ -34,7 +28,7 @@ int RAND_HALFPOINT = (RAND_MAX/2);
  * regular malloc call.
  * @returns pointer to the allocated space.
  */
-void* get_malloc(size_t size) {
+void* get_malloc(const size_t size) {
     if (size == 0) {
         warning( "0 memory allocation requested. The maintainer isn't sure why that would happen.\n");
         return NULL;
@@ -58,7 +52,7 @@ void* get_malloc(size_t size) {
  * alleles for these can be added without further memory allocation.
  * @returns pointer to the empty created AlleleMatrix
  */
-AlleleMatrix* create_empty_allelematrix(int n_markers, int n_labels, int labelDefaults[n_labels], int n_genotypes) {
+AlleleMatrix* create_empty_allelematrix(const int n_markers, const int n_labels, const int labelDefaults[n_labels], const int n_genotypes) {
 	AlleleMatrix* m = get_malloc(sizeof(AlleleMatrix));
 
 	m->n_genotypes = n_genotypes;
@@ -119,6 +113,7 @@ SimData* create_empty_simdata() {
 	d->e.effects.cols = 0;
 	d->e.effects.matrix = NULL;
 	d->e.effect_names = NULL;
+    ;
 	d->current_id = 0;
 	return d;
 }
@@ -174,6 +169,10 @@ void clear_simdata(SimData* d) {
     d->current_id = 0;
 }
 
+
+/*-------------------------Random generators---------------------------------*/
+/*end random generators*/
+
 /*------------------------Supporter Functions--------------------------------*/
 
 /** Allocate lifetime-unique ids to each genotype in the range of whole
@@ -184,7 +183,7 @@ void clear_simdata(SimData* d) {
  * @param from_index the starting 0-based index of the range to allocate ids
  * @param to_index the last 0-based index in the range to allocate ids
  */
-void set_ids(SimData* d, int from_index, int to_index) {
+void set_ids(SimData* d, const int from_index, const int to_index) {
 	if (to_index < from_index) {
 		warning( "Bad range for setting ids\n");
 		return;
@@ -246,7 +245,7 @@ void set_ids(SimData* d, int from_index, int to_index) {
  * @returns TableSize struct with .num_columns and .num_rows filled. These
  * counts include header rows/columns and exclude blank rows.
  */
-struct TableSize get_file_dimensions(const char* filename, char sep) {
+struct TableSize get_file_dimensions(const char* filename, const char sep) {
 	struct TableSize details;
 	details.num_columns = 0;
 	details.num_rows = 0;
@@ -307,9 +306,12 @@ struct TableSize get_file_dimensions(const char* filename, char sep) {
  * is `target`. Returns -1 if no match was found.
  * @see get_from_unordered_str_list()
  *
- * The list is assumed to be sorted in ascending order.
+ * The list is assumed to be sorted in ascending order. Only integers
+ * >0 are considered valid; entries of 0 are considered empty and can
+ * be located at any point in the list.
  *
- * It uses the bisection method to search the list.
+ * It uses a binary search method, but has to widen its search
+ * both directions if the desired midpoint has value 0.
  *
  * @param target the integer to be located
  * @param list the array of integers to search
@@ -317,22 +319,59 @@ struct TableSize get_file_dimensions(const char* filename, char sep) {
  * @returns Index in `list` where we find the same integer as
  * `target`, or -1 if no match is found.
  */
-int get_from_ordered_uint_list(unsigned int target, unsigned int* list, unsigned int list_len) {
-	int first = 0, last = list_len - 1;
-	int index = (first + last) / 2;
-	while (list[index] != target && first <= last) {
-		if (list[index] < target) {
-			first = index + 1;
-		} else {
-			last = index - 1;
-		}
-		index = (first + last) / 2;
-	}
+int get_from_ordered_uint_list(const unsigned int target, const unsigned int listLen, const unsigned int list[listLen]) {
+    unsigned int first = 0, last = listLen - 1;
+    int index = (first + last) / 2;
+    while (list[index] != target && first <= last) {
+        if (list[index] == 0) {
+            int lookahead = 1;
+            while(1) {
+                if (index+lookahead <= last && list[index+lookahead] != 0) {
+                    if (list[index+lookahead] == target) {
+                        return index+lookahead;
+                    } else if (list[index+lookahead] < target) {
+                        first = index+lookahead + 1;
+                        break;
+                    } else {
+                        last = index - 1;
+                        break;
+                    }
+                } else if (index-lookahead <= last && list[index-lookahead] != 0) {
+                    if (list[index-lookahead] == target) {
+                        return index-lookahead;
+                    } else if (list[index-lookahead] < target) {
+                        first = index + 1;
+                        break;
+                    } else {
+                        last = index-lookahead - 1;
+                        break;
+                    }
+                }
+                ++lookahead;
+                if (index+lookahead <= last || index-lookahead >= first) {
+                    // failed to find any nonzeros between first and last
+                    return -1;
+                }
+            }
 
-	if (first > last) {
+        } else { // No need to dodge 0. Normal binary search.
+            if (list[index] == target) {
+                return index;
+            } else if (list[index] < target) {
+                first = index + 1;
+            } else {
+                last = index - 1;
+            }
+
+        }
+        // index has been updated, no matter the branch.
+        index = (first + last) / 2;
+    }
+
+    if (first > last) {
         return -1;
-	}
-	return index;
+    }
+    return index;
 }
 
 /** Returns the first located index in an array of strings where the string
@@ -347,8 +386,8 @@ int get_from_ordered_uint_list(unsigned int target, unsigned int* list, unsigned
  * @returns Index in `list` where we find the same string as
  * `target`, or -1 if no match is found.
  */
-int get_from_unordered_str_list(char* target, char** list, int list_len) {
-	for (int i = 0; i < list_len; ++i) {
+int get_from_unordered_str_list(const char* target, const int listLen, const char* list[listLen]) {
+    for (int i = 0; i < listLen; ++i) {
 		if (strcmp(list[i], target) == 0) {
 			return i;
 		}
@@ -361,12 +400,13 @@ int get_from_unordered_str_list(char* target, char** list, int list_len) {
  *
  * Modified from https://benpfaff.org/writings/clc/shuffle.html
  *
+ * @param d SimData, only used for pointer to random number generator
  * @param sequence the array
  * @param total_n length of the array
  * @param n_to_shuffle After calling this function, the first n_to_shuffle
  * integers in the array will be randomly ordered by a Fischer-Yates shuffle
  */
-void shuffle_up_to(int* sequence, size_t total_n, size_t n_to_shuffle) {
+void shuffle_up_to( int* sequence, const size_t total_n, const size_t n_to_shuffle) {
     // Commented out because we assume calling functions know what they're doing.
     /*if (n_to_shuffle < 1 || total_n < n_to_shuffle) {
         warning("Invalid array shuffling parameters. Something's wrong, contact package maintainers.\n");
@@ -378,8 +418,6 @@ void shuffle_up_to(int* sequence, size_t total_n, size_t n_to_shuffle) {
 		size_t i;
         for (i = 0; i < maxi; ++i) {
 			// items before i are already shuffled
-			// In R version will use the randlim version rather than the upper digits of rand
-            //size_t j = i + rand()/(RAND_MAX/(total_n-i)+1);
             size_t j = i + round(unif_rand() * (total_n - i - 1));
 
 			// add the next chosen value to the end of the shuffle
@@ -405,7 +443,7 @@ void shuffle_up_to(int* sequence, size_t total_n, size_t n_to_shuffle) {
  * @param from_index the new names are added to this index and all those following it in this
  * AlleleMatrix.
 */
-void set_names(AlleleMatrix* a, char* prefix, int suffix, int from_index) {
+void set_names(AlleleMatrix* a, const char* prefix, const int suffix, const int from_index) {
 	char sname[NAME_LENGTH];
 	char format[NAME_LENGTH];
 	if (prefix == NULL) {
@@ -416,7 +454,8 @@ void set_names(AlleleMatrix* a, char* prefix, int suffix, int from_index) {
 	sprintf(sname, "%%0%dd", get_integer_digits(a->n_genotypes - from_index));  // Creates: %0[n]d
 	sprintf(format, "%s%s", prefix, sname);
 
-	++suffix;
+    int livingsuffix = suffix;
+    ++livingsuffix;
 	for (int i = from_index; i < a->n_genotypes; ++i) {
 		// clear name if it's pre-existing
 		if (a->names[i] != NULL) {
@@ -424,11 +463,11 @@ void set_names(AlleleMatrix* a, char* prefix, int suffix, int from_index) {
 		}
 
 		// save new name
-		sprintf(sname, format, suffix);
+        sprintf(sname, format, livingsuffix);
 		a->names[i] = get_malloc(sizeof(char) * (strlen(sname) + 1));
 		strcpy(a->names[i], sname);
 
-		++suffix;
+        ++livingsuffix;
 	}
 }
 
@@ -441,7 +480,7 @@ void set_names(AlleleMatrix* a, char* prefix, int suffix, int from_index) {
  * @param setTo the value to which every genotype's label is initialised.
  * @returns the label index of the new label
 */
-int create_new_label(SimData* d, int setTo) {
+int create_new_label(SimData* d, const int setTo) {
     // Add new label default
     if (d->n_labels == 0) {
         d->label_ids = get_malloc(sizeof(int) * 1);
@@ -484,7 +523,7 @@ int create_new_label(SimData* d, int setTo) {
 
     } else {
         warning( "Labels malformed; SimData may be corrupted.\n");
-        return -1;
+        return UNINITIALISED;
     }
     d->n_labels += 1;
 
@@ -558,7 +597,7 @@ int create_new_label(SimData* d, int setTo) {
  * @param whichLabel the label id of the relevant label.
  * @param newDefault the value to which the appropriate label's default will be set.
 */
-void set_label_default(SimData* d, int whichLabel, int newDefault) {
+void set_label_default(SimData* d, const int whichLabel, const int newDefault) {
     int labelIndex;
     if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel);
@@ -580,7 +619,7 @@ void set_label_default(SimData* d, int whichLabel, int newDefault) {
  * @param whichLabel the label id of the relevant label.
  * @param setTo the value to which the appropriate labels will be set.
 */
-void set_labels_to_const(SimData* d, int whichGroup, int whichLabel, int setTo) {
+void set_labels_to_const(SimData* d, const int whichGroup, const int whichLabel, const int setTo) {
     int labelIndex;
     if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel);
@@ -635,7 +674,7 @@ void set_labels_to_const(SimData* d, int whichGroup, int whichLabel, int setTo) 
  * a value of 1 would increase all relevant labels by 1, a value of -2 would subtract 2 from
  * each relevant label.
 */
-void increment_labels(SimData* d, int whichGroup, int whichLabel, int byValue) {
+void increment_labels(SimData* d, const int whichGroup, const int whichLabel, const int byValue) {
     int labelIndex;
     if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel);
@@ -692,7 +731,8 @@ void increment_labels(SimData* d, int whichGroup, int whichLabel, int byValue) {
  * @param n_values length of `values`
  * @param values vector of integers to paste into the chosen custom label of the chosen genotypes.
 */
-void set_labels_to_values(SimData* d, int whichGroup, int startIndex, int whichLabel, int n_values, int values[n_values]) {
+void set_labels_to_values(SimData* d, const int whichGroup, const int startIndex, const int whichLabel,
+                          const int n_values, const int values[n_values]) {
     int labelIndex;
     if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel);
@@ -761,7 +801,7 @@ void set_labels_to_values(SimData* d, int whichGroup, int startIndex, int whichL
  * @param n_values length of `values`
  * @param values vector of integers to paste into the name field of the chosen genotypes.
 */
-void set_names_to_values(SimData* d, int whichGroup, int startIndex, int n_values, char* values[n_values]) {
+void set_names_to_values(SimData* d, const int whichGroup, const int startIndex, const int n_values, const char* values[n_values]) {
     // this will be much improved once we can hash our names.
     if (whichGroup < 0) {
         warning( "Invalid negative group id.\n");
@@ -810,8 +850,9 @@ void set_names_to_values(SimData* d, int whichGroup, int startIndex, int n_value
 
                     // save new name
                     const int whichName = currentIndex - startIndex;
-                    m->names[i] = get_malloc(sizeof(char) * (strlen(values[whichName]) + 1));
-                    strcpy(m->names[i], values[whichName]);
+                    const int nameLen = strlen(values[whichName]);
+                    m->names[i] = get_malloc(sizeof(char) * (nameLen + 1));
+                    strncpy(m->names[i], values[whichName], nameLen);
                 }
                 currentIndex++;
                 if (currentIndex > n_values) {
@@ -828,10 +869,10 @@ void set_names_to_values(SimData* d, int whichGroup, int startIndex, int n_value
  * @param i the integer whose digits are to be counted.
  * @returns the number of digits to print `i`
  */
-int get_integer_digits(int i) {
-	int digits = 0;
-	while (i != 0) {
-		i = i / 10;
+int get_integer_digits(const int i) {
+    int digits = 0, ii = i;
+    while (ii != 0) {
+        ii = ii / 10;
 		digits ++;
 	}
 	return digits;
@@ -1030,7 +1071,7 @@ void condense_allele_matrix( SimData* d) {
 				checker_m->names[checker] = filler_m->names[filler];
 				filler_m->names[filler] = NULL;
 				checker_m->ids[checker] = filler_m->ids[filler];
-				filler_m->ids[filler] = -1;
+                filler_m->ids[filler] = UNINITIALISED;
                 // Assumes n_labels will be consistent across all AlleleMatrix in the linked list
                 // and all labels arrays will be of full CONTIG_WIDTH.
                 // If the AlleleMatrix linked list is valid, this is true.
@@ -1087,6 +1128,718 @@ void condense_allele_matrix( SimData* d) {
 
 /*----------------------------------Locators---------------------------------*/
 
+
+/** Create a bidirectional iterator
+ *
+ *  A bidirectional iterator can be used to loop through members of a particular group
+ *  or all genotypes in the simulation, forwards or backwards.
+ *  The iterator is not initialised to any location at this point. The first call to
+ *  a next* function will initialise it, or you can manually initialise using
+ *  set_bidirectional_iter_to_start or set_bidirectional_iter_to_end. next_forwards will
+ *  initialise it to the first in the group, or call next_backwards to initialise it to the
+ *  last in the group.
+ *
+ *  @warning An initialised iterator is only valid if no genotypes have been added
+ *  to the group and no genotypes in the simulation as a whole have been removed
+ *  since its creation. Discard the old iterator and create a new one when the state
+ *  of the simulation changes.
+ *
+ *  @param d pointer to the SimData containing the genotypes to iterate through
+ *  @param group the group number of the group to iterate through, or 0 to iterate
+ *  through all genotypes.
+ * @returns uninitialised BidirectionalIterator for the provided group.
+ */
+BidirectionalIterator create_bidirectional_iter(SimData* d, const unsigned int group) {
+    return (BidirectionalIterator) {
+        .d = d,
+        .group = group,
+        .globalPos = UNINITIALISED,
+
+        .cachedAM = d->m,
+        .cachedAMIndex = 0,
+
+        .atStart = FALSE,
+        .atEnd = FALSE
+    };
+}
+
+/** Create a Random Access Iterator
+ *
+ *  A random access iterator and the function next_get_nth() can be used to
+ *  get any genotype in the simulation by index or any genotype in a group
+ *  by within-group index.
+ *
+ *  The random access iterator gives you access to the (i)th group member in
+ *  O(n) time (n being the number of genotypes in the simulation), but contains
+ *  a persistent cache that allows subsequent O(1) access to group members.
+ *
+ *  The random access iterator created by this function is initialised. If the
+ *  `groupSize` attribute of the returned iterator is set to 0, no members of
+ *  that group could be found in the simulation, so the iterator will never
+ *  return a valid position.
+ *
+ *  @warning An initialised iterator is only valid if no genotypes have been added
+ *  to the group and no genotypes in the simulation as a whole have been removed
+ *  since its creation. Discard the old iterator and create a new one when the state
+ *  of the simulation changes.
+ *
+ *  @param d pointer to the SimData containing the genotypes to iterate through
+ *  @param group the group number of the group to iterate through, or 0 to iterate
+ *  through all genotypes.
+ * @returns initialised Random Access iterator for the provided group.
+*/
+RandomAccessIterator create_randomaccess_iter(SimData* d, const unsigned int group) {
+    unsigned long first = 0;
+    AlleleMatrix* firstAM = d->m;
+    char anyExist = TRUE;
+
+    // Want to know:
+    // - is this group empty? (randomAccess should know if group size is 0)
+    // - what is the first genotype index in this group?
+
+    if (group == 0) { // scanning all genotypes
+        while (firstAM->n_genotypes == 0) {
+            if (firstAM->next == NULL) {
+                // SimData is empty. Nowhere to go.
+                anyExist = FALSE;
+
+            } else { // Keep moving forwards through the list. Not polite enough to clean up the blank AM.
+
+                firstAM = firstAM->next;
+            }
+        }
+
+    } else { // scanning a specific group
+
+        char exitNow = FALSE;
+        while (exitNow == FALSE) {
+
+            // Set first, firstAM, firstAMIndex if appropriate
+            for (int i = 0; i < firstAM->n_genotypes; ++i) {
+                if (firstAM->groups[i] == group) {
+                    first = i;
+                    exitNow = TRUE;
+                    break;
+                }
+            }
+
+            // Move along and set anyExist if appropriate
+            if (exitNow == FALSE) {
+                firstAM = firstAM->next;
+                if (firstAM == NULL) {
+                    anyExist = FALSE;
+                    exitNow = TRUE;
+                }
+            }
+        }
+
+    }
+
+    GenoLocation* cache = NULL;
+    unsigned int cacheSize = 0;
+    if (anyExist) {
+        cacheSize = 50;
+        cache = get_malloc((sizeof(GenoLocation)*cacheSize));
+        cache[0] = (GenoLocation) {
+                .localAM= firstAM,
+                .localPos = first,
+        };
+        for (int i = 1; i < cacheSize; ++i) {
+            cache[i] = INVALID_GENO_LOCATION;
+        }
+
+    }
+
+    return (RandomAccessIterator) {
+        .d = d,
+        .group = group,
+
+        .largestCached = anyExist ? 0 : UNINITIALISED,
+        .groupSize = anyExist ? UNINITIALISED : 0,
+        .cacheSize = cacheSize,
+        .cache = cache
+    };
+}
+
+/** Get an AlleleMatrix by index in the linked list
+ *
+ *  listStart is considered the 0th AlleleMatrix (0-based indexing)
+ *
+ *  @param listStart the 0th AlleleMatrix in the linked list
+ *  @param n the index of the desired AlleleMatrix in the linked list
+ *  @returns pointer to the nth AlleleMatrix, if it exists in the list, or
+ *  NULL if the list is shorter than n
+ */
+AlleleMatrix* get_nth_AlleleMatrix(AlleleMatrix* listStart, const unsigned int n) {
+    unsigned int currentIndex = 0;
+    AlleleMatrix* am = listStart;
+    while (currentIndex < n) {
+        if (am->next == NULL) {
+            return NULL;
+        } else {
+            am = am->next;
+            currentIndex++;
+        }
+    }
+    return am;
+}
+
+/** Check nothing in the BidirectionalIterator is obviously invalid
+ *
+ * Update the current value of the cachedAM and cachedAMIndex to match the
+ * current global position, if they do not already match.
+ *
+ * Assumes the BidirectionalIterator is initialised. @see create_bidirectional_iter
+ * and set_bidirectional_iter_to_start or set_bidirectional_iterator_to_end.
+ *
+ *  @warning An initialised iterator is only valid if no genotypes have been added
+ *  to the group and no genotypes in the simulation as a whole have been removed
+ *  since its creation. Discard the old iterator and create a new one when the state
+ *  of the simulation changes.
+ *
+ * @param it Bidirectional iterator to check. Contains a reference to the
+ * relevant SimData.
+ * @returns FALSE if the current global position is invalid for the SimData
+ * (has the wrong group number or is larger than the number of genotypes
+ * in the SimData), and TRUE otherwise.
+ */
+int validate_bidirectional_cache(BidirectionalIterator* it) {
+    int currentAMIndex = it->globalPos / CONTIG_WIDTH;
+    if (currentAMIndex != it->cachedAMIndex) { // Seek to find the AM that should be cached
+        if (currentAMIndex > it->cachedAMIndex) {
+            it->cachedAM = it->d->m;
+            it->cachedAMIndex = 0;
+        }
+
+        do {
+            if (it->cachedAM->next == NULL) {
+                // We were unable to even find the current location. Something's wrong.
+                it->atEnd = TRUE;
+                return FALSE;
+            }
+            it->cachedAM = it->cachedAM->next;
+            it->cachedAMIndex++;
+
+        } while (it->cachedAMIndex < currentAMIndex);
+    }
+
+    if (it->group != 0 &&
+            it->cachedAM->groups[it->globalPos - CONTIG_WIDTH * currentAMIndex] != it->group) {
+        // Something is wrong with the iterator
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/** Initialise a Bidirectional iterator to the start of its sequence.
+ *
+ *  Can be used to reset a BidirectionalIterator so that it is pointing
+ *  at the very first member of the group it is looping through.
+ *
+ * @param it BidirectioanlIterator to initialise
+ * @return location of the first member of the sequence.
+ */
+GenoLocation set_bidirectional_iter_to_start(BidirectionalIterator* it) {
+    unsigned long first = 0;
+    AlleleMatrix* firstAM = it->d->m;
+    unsigned int firstAMIndex = 0;
+    char anyExist = TRUE;
+
+    // Want to know:
+    // - is this group empty? (iterator should know if it is at the end as well as at the start)
+    // - what is the first genotype index in this group?
+
+    if (it->group == 0) {
+        while (firstAM->n_genotypes == 0) {
+            if (firstAM->next == NULL) {
+                anyExist = FALSE; // SimData is empty.
+
+            } else { // (Not polite enough to clean up the blank AM.)
+                firstAM = firstAM->next;
+                firstAMIndex++;
+                // first += 0;
+            }
+        }
+
+        // After this runs we have set firstAM, first, firstAMIndex, anyExist appropriately
+
+    } else { // scanning a specific group
+
+        char exitNow = FALSE;
+        while (exitNow == FALSE) {
+
+            // Set first, firstAM, firstAMIndex if appropriate
+            for (int i = 0; i < firstAM->n_genotypes; ++i) {
+                if (firstAM->groups[i] == it->group) {
+                    first = first + i;
+                    exitNow = TRUE;
+                }
+            }
+
+            // Move along and set anyExist if appropriate
+            if (exitNow == FALSE) {
+                first += firstAM->n_genotypes;
+                firstAM = firstAM->next;
+                firstAMIndex++;
+                if (firstAM == NULL) {
+                    first = -2; // None exist. -2 != UNINITIALISED
+                    anyExist = FALSE;
+                    exitNow = TRUE;
+                }
+            }
+        }
+    }
+
+    it->globalPos = first;
+    it->atStart = TRUE;
+    it->atEnd = !anyExist;
+    it->cachedAM = firstAM;
+    it->cachedAMIndex = firstAMIndex;
+
+    return (GenoLocation) {
+        .localAM = firstAM,
+        .localPos = first - firstAMIndex * CONTIG_WIDTH
+    };
+}
+
+/** Initialise a Bidirectional iterator to the end of its sequence.
+ *
+ *  Can be used to reset a BidirectionalIterator so that it is pointing
+ *  at the very last member of the group it is looping through.
+ *
+ * @param it BidirectioanlIterator to initialise
+ * @return location of the last member of the sequence.
+ */
+GenoLocation set_bidirectional_iter_to_end(BidirectionalIterator* it) {
+    unsigned long last = 0;
+    AlleleMatrix* lastAM = it->d->m;
+    unsigned int lastAMIndex = 0;
+    char anyExist = TRUE;
+
+    // Want to know:
+    // - is this group empty? (iterator should know if it is at the end as well as at the start)
+    // - what is the first genotype index in this group?
+
+    if (it->group == 0) {
+        while (lastAM->n_genotypes != 0 && lastAM->next != NULL) {
+            last += lastAM->n_genotypes;
+            lastAM = lastAM->next;
+            lastAMIndex++;
+        }
+        if (last <= 0) {
+            anyExist = FALSE;
+        }
+        --last;
+
+    } else { // scanning a specific group
+
+        // Find last AM
+        while (lastAM->n_genotypes != 0 && lastAM->next != NULL) {
+            lastAM = lastAM->next;
+            lastAMIndex++;
+        }
+
+        char exitNow = FALSE;
+        while (exitNow == FALSE) {
+
+            // Set first, firstAM, firstAMIndex if appropriate
+            for (int i = lastAM->n_genotypes - 1; i >= 0; --i) {
+                if (lastAM->groups[i] == it->group) {
+                    last = i + lastAMIndex * CONTIG_WIDTH;
+                    exitNow = TRUE;
+                    break;
+                }
+            }
+
+            // Move along and set anyExist if appropriate
+            if (exitNow == FALSE) {
+                --lastAMIndex;
+                lastAM = get_nth_AlleleMatrix(it->d->m, lastAMIndex);
+                if (lastAM == NULL) {
+                    last = -2; // There are none. -2 != UNINITIALISED
+                    anyExist = FALSE;
+                    exitNow = TRUE;
+                }
+            }
+        }
+    }
+
+    it->globalPos = last;
+    it->atStart = !anyExist;
+    it->atEnd = TRUE;
+    it->cachedAM = lastAM;
+    it->cachedAMIndex = lastAMIndex;
+
+    return (GenoLocation) {
+        .localAM = lastAM,
+        .localPos = last - lastAMIndex * CONTIG_WIDTH
+    };
+}
+
+
+/** Get the next location from a bidirectional iterator
+ *
+ * Moves the pointer of a BidirectionalIterator forwards by
+ * one step, and returns the new location it points to. If
+ * the BidirectionalIterator is not initialised, then initialises
+ * it to the very first element.
+ *
+ * Returns INVALID_GENO_LOCATION
+ * if the BidirectionalIterator is corrupted or if it is at the
+ * end of the sequence. Test the return value of this function
+ * with @see isValidLocation().
+ *
+ * @param it the BidirectionalIterator to iterate forwards
+ * @returns the location of the next genotype in the sequence,
+ * or INVALID_GENO_LOCATION if the iterator is corrupted or
+ * the iterator's pointer is already at the last element.
+ */
+GenoLocation next_forwards(BidirectionalIterator* it) {
+    if (it->globalPos == UNINITIALISED) {
+        return set_bidirectional_iter_to_start(it);
+    }
+
+    if (it->atEnd || validate_bidirectional_cache(it) == FALSE) {
+        return INVALID_GENO_LOCATION;
+    }
+
+    if (it->group == 0) {
+
+        // Search for the next value.
+        if (it->globalPos + 1 - CONTIG_WIDTH * it->cachedAMIndex < it->cachedAM->n_genotypes) {
+            // The next value is in the same AlleleMatrix
+            it->globalPos++;
+            it->atStart = FALSE;
+            return (GenoLocation) {
+                .localAM = it->cachedAM,
+                .localPos = it->globalPos - CONTIG_WIDTH * it->cachedAMIndex
+            };
+
+        } else {
+            // The next value is in the next AlleleMatrix
+            if (it->cachedAM->next == NULL || it->cachedAM->n_genotypes == 0) {
+                // There is no further AlleleMatrix; we are at the end of the iterator.
+                it->atEnd = TRUE;
+                return INVALID_GENO_LOCATION;
+            } else {
+                it->cachedAM = it->cachedAM->next;
+                it->cachedAMIndex++;
+                it->globalPos++;
+                it->atStart = FALSE;
+                return (GenoLocation) {
+                    .localAM = it->cachedAM,
+                    .localPos = 0
+                };
+            }
+        }
+
+    } else { // We are iterating through a specific group
+
+        // Search for the next value
+        int localPos = it->globalPos + 1 - CONTIG_WIDTH * it->cachedAMIndex;
+        while(1) {
+            for (; localPos < it->cachedAM->n_genotypes; ++localPos) {
+                if (it->cachedAM->groups[localPos] == it->group) {
+                    it->globalPos = CONTIG_WIDTH * it->cachedAMIndex + localPos;
+                    it->atStart = FALSE;
+                    return (GenoLocation) {
+                        .localAM = it->cachedAM,
+                        .localPos = localPos
+                    };
+                }
+            }
+
+            if (it->cachedAM->next == NULL || it->cachedAM->next->n_genotypes == 0) {
+                // There is no further AlleleMatrix; we are at the end of the iterator.
+                it->atEnd = TRUE;
+                return INVALID_GENO_LOCATION;
+            } else {
+                it->cachedAM = it->cachedAM->next;
+                it->cachedAMIndex++;
+                localPos = 0;
+            }
+        }
+
+    }
+}
+
+
+/** Get the previous location from a bidirectional iterator
+ *
+ * Moves the pointer of a BidirectionalIterator backwards by
+ * one step, and returns the new location it points to. If
+ * the BidirectionalIterator is not initialised, then initialises
+ * it to the very last element.
+ *
+ * Slightly slower than next_forwards, because the AlleleMatrix linked list
+ * is not bidirectional. To find the preceding AlleleMatrix, it needs to
+ * count forwards from the beginning of the list to find the n-1th AlleleMatrix.
+ *
+ * Returns INVALID_GENO_LOCATION
+ * if the BidirectionalIterator is corrupted or if it is at the
+ * beginning of the sequence. Test the return value of this function
+ * with @see isValidLocation().
+ *
+ * @param it the BidirectionalIterator to iterate backwards
+ * @returns the location of the previous genotype in the sequence,
+ * or INVALID_GENO_LOCATION if the iterator is corrupted or
+ * the iterator's pointer is already at the first element.
+ */
+GenoLocation next_backwards(BidirectionalIterator* it) {
+    if (it->globalPos == UNINITIALISED) {
+        return set_bidirectional_iter_to_end(it);
+    }
+
+    if (it->atStart || validate_bidirectional_cache(it) == FALSE) {
+        return INVALID_GENO_LOCATION;
+    }
+
+    if (it->group == 0) {
+
+        // Search for the previous value.
+        if (it->globalPos - CONTIG_WIDTH * it->cachedAMIndex > 0) {
+            // The previous value is in the same AlleleMatrix
+            it->globalPos--;
+            it->atEnd = FALSE;
+            return (GenoLocation) {
+                .localAM = it->cachedAM,
+                .localPos = it->globalPos - CONTIG_WIDTH * it->cachedAMIndex
+            };
+
+        } else {
+            // The previous value is in the previous AlleleMatrix
+            if (it->cachedAMIndex == 0) {
+                it->atStart = TRUE;
+                return INVALID_GENO_LOCATION;
+            } else {
+                it->cachedAMIndex--;
+                it->cachedAM = get_nth_AlleleMatrix(it->d->m, it->cachedAMIndex);
+                if (it->cachedAM == NULL || it->cachedAM->n_genotypes <= 0) {
+                    // Something went wrong.
+                    // I'd assumed get_nth cannot fail, because iterator is validated,
+                    // n+1th cachedAM exists, and we have checked that n+1 > 0.
+                    it->atStart = TRUE;
+                    return INVALID_GENO_LOCATION;
+                }
+
+                it->globalPos--;
+                it->atEnd = FALSE;
+                return (GenoLocation) {
+                    .localAM = it->cachedAM,
+                    .localPos = it->cachedAM->n_genotypes - 1
+                };
+            }
+        }
+
+    } else { // We are iterating through a specific group
+
+        // Search for the next value
+        int localPos = it->globalPos - 1 - CONTIG_WIDTH * it->cachedAMIndex;
+        while(1) {
+            for (; localPos >= 0; --localPos) {
+                if (it->cachedAM->groups[localPos] == it->group) {
+                    it->globalPos = CONTIG_WIDTH * it->cachedAMIndex + localPos;
+                    it->atEnd = FALSE;
+                    return (GenoLocation) {
+                        .localAM = it->cachedAM,
+                        .localPos = localPos
+                    };
+                }
+            }
+
+            if (it->cachedAMIndex == 0) {
+                it->atStart = TRUE;
+                return INVALID_GENO_LOCATION;
+            } else {
+                it->cachedAMIndex--;
+                it->cachedAM = get_nth_AlleleMatrix(it->d->m, it->cachedAMIndex);
+                if (it->cachedAM == NULL || it->cachedAM->n_genotypes <= 0) {
+                    // Something went wrong.
+                    // I'd assumed get_nth cannot fail, because iterator is validated,
+                    // n+1th cachedAM exists, and we have checked that n+1 > 0.
+                    it->atStart = TRUE;
+                    return INVALID_GENO_LOCATION;
+                }
+                localPos = it->cachedAM->n_genotypes;
+            }
+        }
+    }
+}
+
+
+/** Get a location by index using a RandomAccessIterator
+ *
+ * Gives the location of the provided global index (if `it->group == 0`)
+ * or the location of the provided group index (if `it->group` is not 0),
+ * by first searching the RandomAccessIterator's cache for it and if
+ * not, searching the SimData for it and adding it and its predecessors
+ * to the cache.
+ *
+ * Returns INVALID_GENO_LOCATION
+ * if the iterator is corrupted or the index is invalid. Check the
+ * return value with @see isValidLocation().
+ *
+ * @param it the RandomAccessIterator to read and update the cache of.
+ * @returns the location of the nth genotype/nth group member, or
+ * INVALID_GENO_LOCATION if the index is invalid.
+ */
+GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned long int n) {
+    // Step 0: First check n is in our group index range as far as we know it
+    // (If it->groupSize is negative then we don't know the range)
+    if (it->groupSize > 0 && it->groupSize <= n) {
+        return INVALID_GENO_LOCATION;
+    }
+
+    // Step 1: Check if we have it in the cache.
+    if (n < it->cacheSize) {
+        // 'n' is less than or equal to our current furthest cached group member.
+
+        if (isValidLocation(it->cache[n])) {
+            return it->cache[n];
+        }
+
+        // Otherwise we do not have it cached, but we will enter it into the cache in the next section
+
+    } else {
+        // We need to expand the cache to fit it.
+        unsigned int newCacheSize = it->cacheSize;
+        if (it->cacheSize == 0) {
+            newCacheSize = 50;
+        }
+        while (newCacheSize < n+1) {
+            newCacheSize = newCacheSize << 1;
+        }
+        GenoLocation* newCache = get_malloc(sizeof(GenoLocation)*newCacheSize);
+        int i = 0;
+        for (; i < it->cacheSize; ++i) {
+            newCache[i] = it->cache[i];
+        }
+        for (; i < newCacheSize; ++i) {
+            newCache[i] = INVALID_GENO_LOCATION;
+        }
+        it->cacheSize = newCacheSize;
+        it->cache = newCache;
+    }
+
+    // Validity checks for a random access iterator: largestCached must exist,
+    // is indeed cached and belongs to the same group
+    if (it->largestCached < 0 || (!isValidLocation(it->cache[it->largestCached]) &&
+            (it->group == 0 || it->group != get_group(it->cache[it->largestCached])))) {
+        return INVALID_GENO_LOCATION;
+    }
+
+    // Step 2: Actually finding the nth group member.
+    if (it->group == 0) {
+        // Assuming all non-end AlleleMatrix are filled to CONTIG_WIDTH
+        GenoLocation expectedLocation = {
+            .localAM = get_nth_AlleleMatrix(it->d->m, n / CONTIG_WIDTH),
+            .localPos = n % CONTIG_WIDTH
+        };
+        // Check n was not too large
+        if (expectedLocation.localAM == NULL ||
+                expectedLocation.localAM->n_genotypes <= expectedLocation.localPos) {
+            return INVALID_GENO_LOCATION;
+        }
+        return expectedLocation;
+
+    } else { // searching for a particular group
+
+        AlleleMatrix* currentAM;
+        int groupN;
+        int localPos;
+        if (it->largestCached < n) {
+            // Search forwards from largestCached
+            currentAM = it->cache[it->largestCached].localAM;
+            groupN = it->largestCached;
+            localPos = it->cache[it->largestCached].localPos + 1;
+            while (1) {
+                for (; localPos < currentAM->n_genotypes; ++localPos) {
+                    // If we found a group member, cache it and count upwards towards n
+                    if (currentAM->groups[localPos] == it->group) {
+                        it->largestCached = ++groupN;
+                        it->cache[groupN] = (GenoLocation) {
+                            .localAM = currentAM,
+                            .localPos = localPos
+                        };
+                        if (groupN == n) {
+                            return it->cache[n];
+                        }
+                    }
+                }
+
+                if (currentAM->next == NULL || currentAM->next->n_genotypes == 0) {
+                    // We are at the end of the iterator and have not found n
+                    it->groupSize = groupN + 1;
+                    return INVALID_GENO_LOCATION;
+                } else {
+                    currentAM = currentAM->next;
+                    localPos = 0;
+                }
+
+           }
+
+        } else {
+            // With current method of filling cache, this branch will never be taken
+
+            // Search backwards from largestCached for one AlleleMatrix, to take advantage of that pointer
+            if (it->cache[it->largestCached].localAM != it->d->m) {
+                currentAM = it->cache[it->largestCached].localAM;
+                groupN = it->largestCached;
+                localPos = it->cache[it->largestCached].localPos;
+                for (; localPos >= 0; --localPos) {
+                    // If we found a group member, cache it and count down towards n
+                    if (currentAM->groups[localPos] == it->group) {
+                        --groupN;
+                        it->cache[groupN] = (GenoLocation) {
+                            .localAM = currentAM,
+                            .localPos = localPos
+                        };
+                        if (groupN == n) {
+                            return it->cache[n];
+                        }
+                    }
+                }
+            }
+
+            // Then search forwards from start
+            currentAM = it->d->m;
+            localPos = 0;
+            groupN = -1; // overwrite everything
+            while (currentAM != it->cache[it->largestCached].localAM) {
+                for (; localPos < currentAM->n_genotypes; ++localPos) {
+                    // If we found a group member, cache it and count upwards towards n
+                    if (currentAM->groups[localPos] == it->group) {
+                        ++groupN;
+                        it->cache[groupN] = (GenoLocation) {
+                            .localAM = currentAM,
+                            .localPos = localPos
+                        };
+                        if (groupN == n) {
+                            return it->cache[n];
+                        }
+                    }
+                }
+
+                if (currentAM->next == NULL || currentAM->next->n_genotypes == 0) {
+                    // We are at the end of the iterator and have not found n. Also we didn't reach
+                    // 'largestCached' yet. Something is wrong with the iterator
+                    it->groupSize = groupN + 1;
+                    return INVALID_GENO_LOCATION;
+                } else {
+                    currentAM = currentAM->next;
+                    localPos = 0;
+                }
+            }
+
+            // We were somehow unable to find the nth group member. Something is probably wrong
+            // with the iterator
+            return INVALID_GENO_LOCATION;
+
+        }
+    }
+}
+
 /** Returns the name of the genotype with a given id.
  *
  * The function uses a bisection search on the AlleleMatrix where it should be
@@ -1107,7 +1860,7 @@ void condense_allele_matrix( SimData* d) {
  * from this function). Returns NULL if the ID does not exist. Note the return value
  * might also be NULL if the genotype of this ID has no name.
  */
-char* get_name_of_id( AlleleMatrix* start, unsigned int id) {
+char* get_name_of_id( const AlleleMatrix* start, const unsigned int id) {
 	if (id <= 0) {
 		warning( "Invalid negative ID %d\n", id);
 		return NULL;
@@ -1115,35 +1868,30 @@ char* get_name_of_id( AlleleMatrix* start, unsigned int id) {
 	if (start == NULL) {
 		error( "Invalid nonexistent allelematrix\n");
 	}
-	AlleleMatrix* m = start;
+    const AlleleMatrix* m = start;
 
 	while (1) {
-		// try to find our id. Does this AM have the right range for it?
-		if (m->n_genotypes != 0 && id >= m->ids[0] && id <= m->ids[m->n_genotypes - 1]) {
-			// perform binary search to find the exact index.
-			int index = get_from_ordered_uint_list(id, m->ids, m->n_genotypes);
+        // try to find our id. Does this AM potentially have the right range for it?
+        // If we're not sure, because either of the endpoints does not have its ID tracked,
+        // check anyway
+        if (m->n_genotypes != 0 && (id >= m->ids[0] || m->ids[0] == 0) &&
+                (id <= m->ids[m->n_genotypes - 1] || m->ids[m->n_genotypes - 1] == 0)) {
+            // perform binary search to find the exact index. => can't, because of the possibility of genotypes with unset IDs
+            // Linear search it is.
+            for (int i = 0; i < m->n_genotypes; ++i) {
+                if (m->ids[i] == id) {
+                    return m->names[i];
+                }
+            }
+        }
 
-			if (index < 0) {
-				// search failed
-				if (m->next == NULL) {
-					warning( "Could not find the ID %d: did you prematurely delete this genotype?\n", id);
-					return NULL;
-				} else {
-					m = m->next;
-				}
-			}
-
-			return m->names[index];
-
-		}
-
-		if (m->next == NULL) {
-			warning( "Could not find the ID %d: did you prematurely delete this genotype?\n", id);
-			return NULL;
-		} else {
-			m = m->next;
-		}
-	}
+        if (m->next == NULL) {
+            warning( "Could not find the ID %d: did you prematurely delete this genotype?\n", id);
+            return NULL;
+        } else {
+            m = m->next;
+        }
+    }
 }
 
 /** Returns the alleles at each marker of the genotype with a given id.
@@ -1167,7 +1915,7 @@ char* get_name_of_id( AlleleMatrix* start, unsigned int id) {
  * the markers in the SimData to which the AlleleMatrix belongs. Returns NULL if the
  * ID does not exist.
  */
-char* get_genes_of_id ( AlleleMatrix* start, unsigned int id) {
+char* get_genes_of_id ( const AlleleMatrix* start, const unsigned int id) {
 	if (id <= 0) {
 		warning( "Invalid negative ID %d\n", id);
 		return NULL;
@@ -1175,13 +1923,13 @@ char* get_genes_of_id ( AlleleMatrix* start, unsigned int id) {
 	if (start == NULL) {
 		error( "Invalid nonexistent allelematrix\n");
 	}
-	AlleleMatrix* m = start;
+    const AlleleMatrix* m = start;
 
 	while (1) {
 		// try to find our id. Does this AM have the right range for it?
 		if (m->n_genotypes != 0 && id >= m->ids[0] && id <= m->ids[m->n_genotypes - 1]) {
 			// perform binary search to find the exact index.
-			int index = get_from_ordered_uint_list(id, m->ids, m->n_genotypes);
+            int index = get_from_ordered_uint_list(id, m->n_genotypes, m->ids);
 
 			if (index < 0) {
 				// search failed
@@ -1230,19 +1978,19 @@ char* get_genes_of_id ( AlleleMatrix* start, unsigned int id) {
  * not exist. The ids of both parents if at least one parent is
  * known/nonzero are saved to the array `output`.
  */
-int get_parents_of_id( AlleleMatrix* start, unsigned int id, unsigned int output[2]) {
+int get_parents_of_id( const AlleleMatrix* start, const unsigned int id, unsigned int output[2]) {
 	if (id <= 0) {
 		return 1;
 	}
 	if (start == NULL) {
 		error( "Invalid nonexistent allelematrix\n");
 	}
-	AlleleMatrix* m = start;
+    const AlleleMatrix* m = start;
 	while (1) {
 		// try to find our id. Does this AM have the right range for it?
 		if (m->n_genotypes != 0 && id >= m->ids[0] && id <= m->ids[m->n_genotypes - 1]) {
 			// perform binary search to find the exact index.
-			int index = get_from_ordered_uint_list(id, m->ids, m->n_genotypes);
+            int index = get_from_ordered_uint_list(id, m->n_genotypes, m->ids);
 
 			if (index < 0) {
 				// search failed
@@ -1286,7 +2034,7 @@ int get_parents_of_id( AlleleMatrix* start, unsigned int id, unsigned int output
  * be accessed by the calling function. The ids of each name are saved to corresponding
  * indexes in the array this pointer points to.
  */
-void get_ids_of_names( AlleleMatrix* start, int n_names, char* names[n_names], unsigned int* output) {
+void get_ids_of_names( const AlleleMatrix* start, const int n_names, const char* names[n_names], unsigned int* output) {
     if (start == NULL || (start->n_genotypes <= 0 && start->next == NULL)) {
         warning("Invalid start parameter: AlleleMatrix* `start` must exist\n");
         return;
@@ -1298,12 +2046,12 @@ void get_ids_of_names( AlleleMatrix* start, int n_names, char* names[n_names], u
 
     int found;
 	//int ids = malloc(sizeof(int) * n_names);
-	AlleleMatrix* m;
+    const AlleleMatrix* m;
 	int i, j;
 
 	for (i = 0; i < n_names; ++i) {
 		found = FALSE;
-		output[i] = -1;
+        output[i] = UNINITIALISED;
 		m = start;
 		while (1) {
 			// try to identify the name in this AM
@@ -1338,12 +2086,12 @@ void get_ids_of_names( AlleleMatrix* start, int n_names, char* names[n_names], u
  * @returns the id of the first sequentially located genotype whose parents match the
  * two parent ids provided
  */
-unsigned int get_id_of_child( AlleleMatrix* start, unsigned int parent1id, unsigned int parent2id) {
+unsigned int get_id_of_child( const AlleleMatrix* start, const unsigned int parent1id, const unsigned int parent2id) {
     if (start == NULL || (start->n_genotypes <= 0 && start->next == NULL)) {
         warning("Invalid start parameter: AlleleMatrix* `start` must exist\n");
         return 0;
     }
-    AlleleMatrix* m = start;
+    const AlleleMatrix* m = start;
 	int j;
 
 	while (1) {
@@ -1375,12 +2123,12 @@ unsigned int get_id_of_child( AlleleMatrix* start, unsigned int parent1id, unsig
  * @returns the index (0-based, starting at the start of `start`) of the first sequentially
  * located genotype whose parents match the two parent ids provided
  */
-int get_index_of_child( AlleleMatrix* start, unsigned int parent1id, unsigned int parent2id) {
+int get_index_of_child( const AlleleMatrix* start, const unsigned int parent1id, const unsigned int parent2id) {
     if (start == NULL || (start->n_genotypes <= 0 && start->next == NULL)) {
         warning("Invalid start parameter: AlleleMatrix* `start` must exist\n");
-        return -1;
+        return UNINITIALISED;
     }
-	AlleleMatrix* m = start;
+    const AlleleMatrix* m = start;
 	int j, total_j = 0;
 
 	while (1) {
@@ -1410,12 +2158,12 @@ int get_index_of_child( AlleleMatrix* start, unsigned int parent1id, unsigned in
  * @returns the index (0-based, starting at the start of `start`) of the first sequentially
  * located genotype whose name is the same as the provided name.
  */
-int get_index_of_name( AlleleMatrix* start, char* name) {
+int get_index_of_name( const AlleleMatrix* start, const char* name) {
     if (start == NULL || (start->n_genotypes <= 0 && start->next == NULL)) {
         warning("Invalid start parameter: AlleleMatrix* `start` must exist\n");
-        return -1;
+        return UNINITIALISED;
     }
-	AlleleMatrix* m = start;
+    const AlleleMatrix* m = start;
 	int j, total_j = 0;
 
 	while (1) {
@@ -1443,12 +2191,12 @@ int get_index_of_name( AlleleMatrix* start, char* name) {
  * of the last entry in the linked list.
  * @returns the lifetime-unique id of the genotype found at that index.
  */
-unsigned int get_id_of_index( AlleleMatrix* start, int index) {
+unsigned int get_id_of_index( const AlleleMatrix* start, const int index) {
     if (start == NULL) {
         warning("Invalid start parameter: AlleleMatrix* `start` must exist\n");
         return 0;
     }
-	AlleleMatrix* m = start;
+    const AlleleMatrix* m = start;
 	int total_j = 0;
 
 	while (1) {
@@ -1480,7 +2228,7 @@ unsigned int get_id_of_index( AlleleMatrix* start, int index) {
  * from this function). It points to a sequence of characters, ordered according to
  * the markers in the SimData to which the AlleleMatrix belongs.
  */
-char* get_genes_of_index( AlleleMatrix* start, int index) {
+char* get_genes_of_index( const AlleleMatrix* start, const int index) {
 	if (index < 0) {
 		warning( "Invalid negative index %d\n", index);
 		return NULL;
@@ -1488,7 +2236,7 @@ char* get_genes_of_index( AlleleMatrix* start, int index) {
 	if (start == NULL) {
 		error( "Invalid nonexistent allelematrix\n");
 	}
-	AlleleMatrix* m = start;
+    const AlleleMatrix* m = start;
 	int total_j = 0;
 
 	while (1) {
@@ -1521,7 +2269,7 @@ char* get_genes_of_index( AlleleMatrix* start, int index) {
  * are to be combined.
  * @returns the group number of the new combined group.
  */
-int combine_groups( SimData* d, int list_len, int group_ids[list_len]) {
+int combine_groups( SimData* d, const int list_len, const int group_ids[list_len]) {
 	int outGroup = group_ids[0];
 	if (list_len < 2) {
 		return outGroup;
@@ -1581,7 +2329,7 @@ int combine_groups( SimData* d, int list_len, int group_ids[list_len]) {
  * @returns the group number of the new group to which the provided indexes
  * have been allocated.
  */
-int split_from_group( SimData* d, int n, int indexes_to_split[n]) {
+int split_from_group( SimData* d, const int n, const int indexes_to_split[n]) {
     if (n < 1) {
         warning("Invalid n value: length of allocation list must be positive.\n");
         return 0;
@@ -1589,13 +2337,15 @@ int split_from_group( SimData* d, int n, int indexes_to_split[n]) {
     int new_group = get_new_group_num(d);
 
 	// Order the indexes
-	qsort(indexes_to_split, n, sizeof(int), _ascending_int_comparer);
+    int xsToSplitSorted[n];
+    memcpy(xsToSplitSorted, indexes_to_split, sizeof(int)*n);
+    qsort(xsToSplitSorted, n, sizeof(int), _ascending_int_comparer);
 
 	AlleleMatrix* m = d->m;
 	int total_i = 0;
     int i = 0;
     // check for negative indexes
-    while (i < n && indexes_to_split[i] < 0) {
+    while (i < n && xsToSplitSorted[i] < 0) {
         ++i;
     }
     if (i >= n) {
@@ -1606,7 +2356,7 @@ int split_from_group( SimData* d, int n, int indexes_to_split[n]) {
     }
 
     for (; i < n; ++i) {
-		while (indexes_to_split[i] >= total_i + m->n_genotypes) {
+        while (xsToSplitSorted[i] >= total_i + m->n_genotypes) {
 			if (m->next == NULL) {
 				warning( "Only found %d out of %d indexes\n", i, n);
 				return new_group;
@@ -1615,7 +2365,7 @@ int split_from_group( SimData* d, int n, int indexes_to_split[n]) {
 			m = m->next;
 		}
 
-		m->groups[indexes_to_split[i] - total_i] = new_group;
+        m->groups[xsToSplitSorted[i] - total_i] = new_group;
 	}
 	return new_group;
 }
@@ -1639,7 +2389,7 @@ int split_from_group( SimData* d, int n, int indexes_to_split[n]) {
  * @returns the group number of the new group to which the genotypes with that value
  * for that label were allocated, or 0 if no genotypes that fit the criteria were found.
  */
-int split_by_label_value( SimData* d, int group, int whichLabel, int valueToSplit) {
+int split_by_label_value( SimData* d, const int group, const int whichLabel, const int valueToSplit) {
     int labelIndex;
     if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel);
@@ -1702,7 +2452,7 @@ int split_by_label_value( SimData* d, int group, int whichLabel, int valueToSpli
  * @returns the group number of the new group to which the genotypes with that value
  * for that label were allocated, or 0 if no genotypes that fit the criteria were found.
  */
-int split_by_label_range( SimData* d, int group, int whichLabel, int valueLowBound, int valueHighBound) {
+int split_by_label_range( SimData* d, const int group, const int whichLabel, const int valueLowBound, const int valueHighBound) {
     int labelIndex;
     if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel);
@@ -1762,14 +2512,24 @@ int split_by_label_range( SimData* d, int group, int whichLabel, int valueLowBou
  * identifiers of all groups created. The array's length should be the number
  * of members of group_id.
  */
-void split_into_individuals( SimData* d, int group_id, int* results) {
+void split_into_individuals( SimData* d, const int group_id, int* results) {
     if (group_id <= 0) {
         return; // no need to do anything, we know no members of the group exist
     }
 
 	// get pre-existing numbers
-	int n_groups = 0;
-	int* existing_groups = get_existing_groups( d, &n_groups);
+    int n_groups;
+    int eg_length = 5;
+    int* existing_groups = get_malloc(sizeof(int)*eg_length);
+    n_groups = get_existing_groups(d, eg_length, existing_groups);
+    while (n_groups == eg_length) {
+        free(existing_groups);
+        eg_length = eg_length << 1;
+        existing_groups = get_malloc(sizeof(int)*eg_length);
+        n_groups = get_existing_groups(d, eg_length, existing_groups);
+    }
+    // n_groups is now less than eg_length, so we have found all the groups.
+
 	// have another variable for the next id we can't allocate so we can still free the original.
 	int level = 0;
 
@@ -1828,14 +2588,22 @@ void split_into_individuals( SimData* d, int group_id, int* results) {
  * groups will be created, the array's length should be the number
  * of members of group_id.
  */
-void split_into_families(SimData* d, int group_id, int* results) {
+void split_into_families(SimData* d, const int group_id, int* results) {
     if (group_id <= 0) {
         return; // no need to do anything, we know no members of the group exist
     }
 
 	// get pre-existing numbers
-	int n_groups = 0;
-	int* existing_groups = get_existing_groups( d, &n_groups);
+    int n_groups;
+    int eg_length = 5;
+    int* existing_groups = get_malloc(sizeof(int)*eg_length);
+    n_groups = get_existing_groups(d, eg_length, existing_groups);
+    while (n_groups == eg_length) {
+        free(existing_groups);
+        eg_length = eg_length << 1;
+        existing_groups = get_malloc(sizeof(int)*eg_length);
+        n_groups = get_existing_groups(d, eg_length, existing_groups);
+    }
 	// have another variable for the next id we can't allocate so we can still free the original.
 	int level = 0;
 
@@ -1843,13 +2611,14 @@ void split_into_families(SimData* d, int group_id, int* results) {
 	// but this could be greater than our maximum allocation, so we
 	// will have to go through in batches
 	int families_found = 0;
-	unsigned int family_groups[CONTIG_WIDTH];
-	unsigned int family_identities[2][CONTIG_WIDTH];
+    int family_bookmarks_len = 50;
+    unsigned int* family_groups = get_malloc(sizeof(unsigned int)*family_bookmarks_len);
+    unsigned int* family_identities[2] = {get_malloc(sizeof(unsigned int)*family_bookmarks_len),
+                                          get_malloc(sizeof(unsigned int)*family_bookmarks_len)};
 
 
 	// looping through all entries
 	AlleleMatrix* m = d->m;
-	AlleleMatrix* bookmarkm = NULL;
 	int n_found = 0; // number of groups created, for saving results
 	int next_id = 0;
 	while (1) {
@@ -1868,53 +2637,56 @@ void split_into_families(SimData* d, int group_id, int* results) {
 				// if the group number has not been updated in the above loop
 				// (so we don't know this family yet)
 				if (m->groups[i] == group_id) {
-					if (families_found < CONTIG_WIDTH) {
-						// find the next unused group;
-						++next_id;
-						while (level < n_groups) {
-							if (next_id < existing_groups[level]) {
-								break;
-							}
+                    if (families_found >= family_bookmarks_len) {
+                        int old_size = family_bookmarks_len;
+                        unsigned int* old_groups = family_groups;
+                        unsigned int* old_ident0 = family_identities[0];
+                        unsigned int* old_ident1 = family_identities[1];
 
-							++level;
-							++next_id;
-						}
+                        family_bookmarks_len = family_bookmarks_len << 1;
+                        family_groups = get_malloc(sizeof(unsigned int)*family_bookmarks_len);
+                        memcpy(family_groups,old_groups,sizeof(unsigned int)*old_size);
+                        free(old_groups);
+                        family_identities[0] = get_malloc(sizeof(unsigned int)*family_bookmarks_len);
+                        memcpy(family_identities[0],old_ident0,sizeof(unsigned int)*old_size);
+                        free(old_ident0);
+                        family_identities[1] = get_malloc(sizeof(unsigned int)*family_bookmarks_len);
+                        memcpy(family_identities[1],old_ident1,sizeof(unsigned int)*old_size);
+                        free(old_ident1);
+                    }
 
-						// save this entry as a member of that new group
-						m->groups[i] = next_id;
-						family_groups[families_found] = next_id;
-						family_identities[0][families_found] = m->pedigrees[0][i];
-						family_identities[1][families_found] = m->pedigrees[1][i];
-						++families_found;
+                    // find the next unused group;
+                    ++next_id;
+                    while (level < n_groups) {
+                        if (next_id < existing_groups[level]) {
+                            break;
+                        }
 
-						if (results != NULL) {
-							results[n_found] = next_id;
-							++n_found;
-						}
+                        ++level;
+                        ++next_id;
+                    }
 
-					} else if (bookmarkm == NULL) {
-						// if we are here, then there are more families than we
-						// can track at a time. Save the place and come back for the
-						// extra families later.
-						bookmarkm = m;
-					} // else we have a bookmark already and so will be coming back here
+                    // save this entry as a member of that new group
+                    m->groups[i] = next_id;
+                    family_groups[families_found] = next_id;
+                    family_identities[0][families_found] = m->pedigrees[0][i];
+                    family_identities[1][families_found] = m->pedigrees[1][i];
+                    ++families_found;
+
+                    if (results != NULL) {
+                        results[n_found] = next_id;
+                        ++n_found;
+                    }
 				}
 			}
 		}
 
 		if (m->next == NULL) {
 			free(existing_groups);
-			if (bookmarkm == NULL) {
-				// we have processed all members of the original group
-				return;
-			} else {
-				// we need to go back and process remaining members of the group
-				m = bookmarkm;
-				families_found = 0;
-				existing_groups = get_existing_groups( d, &n_groups);
-				level = 0;
-				next_id = 0;
-			}
+            free(family_groups);
+            free(family_identities[0]);
+            free(family_identities[1]);
+            return;
 		} else {
 			m = m->next;
 		}
@@ -1944,26 +2716,34 @@ void split_into_families(SimData* d, int group_id, int* results) {
  * groups will be created, the array's length should be the number
  * of members of group_id.
  */
-void split_into_halfsib_families( SimData* d, int group_id, int parent, int* results) {
+void split_into_halfsib_families( SimData* d, const int group_id, const int parent, int* results) {
 	if (!(parent == 1 || parent == 2)) {
 		warning( "Value error: `parent` must be 1 or 2.");
 		return;
 	}
-	--parent;
+    int parentIndex = parent - 1;
 
 	// get pre-existing numbers
-	int n_groups = 0;
-	int* existing_groups = get_existing_groups( d, &n_groups);
+    int n_groups;
+    int eg_length = 5;
+    int* existing_groups = get_malloc(sizeof(int)*eg_length);
+    n_groups = get_existing_groups(d, eg_length, existing_groups);
+    while (n_groups == eg_length) {
+        free(existing_groups);
+        eg_length = eg_length << 1;
+        existing_groups = get_malloc(sizeof(int)*eg_length);
+        n_groups = get_existing_groups(d, eg_length, existing_groups);
+    }
 	// have another variable for the next id we can't allocate so we can still free the original.
 	int level = 0;
 
 	int families_found = 0;
-	unsigned int family_groups[CONTIG_WIDTH];
-	unsigned int family_identities[CONTIG_WIDTH];
+    int family_bookmarks_len = 50;
+    unsigned int* family_groups = get_malloc(sizeof(unsigned int)*family_bookmarks_len);
+    unsigned int* family_identities = get_malloc(sizeof(unsigned int)*family_bookmarks_len);
 
 	// looping through all entries
 	AlleleMatrix* m = d->m;
-	AlleleMatrix* bookmarkm = NULL;
 	int n_found = 0; // number of families, for saving to results
 	int next_id = 0;
 	while (1) {
@@ -1972,7 +2752,7 @@ void split_into_halfsib_families( SimData* d, int group_id, int parent, int* res
 			if (m->groups[i] == group_id) {
 				// First, see if it is a member of a family we already know.
 				for (int j = 0; j < families_found; ++j) {
-					if (m->pedigrees[parent][i] == family_identities[j]) {
+                    if (m->pedigrees[parentIndex][i] == family_identities[j]) {
 						m->groups[i] = family_groups[j];
 						break;
 					}
@@ -1981,52 +2761,50 @@ void split_into_halfsib_families( SimData* d, int group_id, int parent, int* res
 				// if the group number has not been updated in the above loop
 				// (so we don't know this family yet)
 				if (m->groups[i] == group_id) {
-					if (families_found < CONTIG_WIDTH) {
-						// find the next unused group;
-						++next_id;
-						while (level < n_groups) {
-							if (next_id < existing_groups[level]) {
-								break;
-							}
+                    if (families_found >= family_bookmarks_len) {
+                        int old_size = family_bookmarks_len;
+                        unsigned int* old_groups = family_groups;
+                        unsigned int* old_ident = family_identities;
 
-							++level;
-							++next_id;
-						}
+                        family_bookmarks_len = family_bookmarks_len << 1;
+                        family_groups = get_malloc(sizeof(unsigned int)*family_bookmarks_len);
+                        memcpy(family_groups,old_groups,sizeof(unsigned int)*old_size);
+                        free(old_groups);
+                        family_identities = get_malloc(sizeof(unsigned int)*family_bookmarks_len);
+                        memcpy(family_identities,old_ident,sizeof(unsigned int)*old_size);
+                        free(old_ident);
+                    }
 
-						// save this entry as a member of that new group
-						m->groups[i] = next_id;
-						family_groups[families_found] = next_id;
-						family_identities[families_found] = m->pedigrees[parent][i];
-						++families_found;
+                    // find the next unused group;
+                    ++next_id;
+                    while (level < n_groups) {
+                        if (next_id < existing_groups[level]) {
+                            break;
+                        }
 
-						if (results != NULL) {
-							results[n_found] = next_id;
-							++n_found;
-						}
+                        ++level;
+                        ++next_id;
+                    }
 
-					} else if (bookmarkm == NULL) {
-						// if we are here, then there are more families than we
-						// can track at a time. Save the place and come back for the
-						// extra families later.
-						bookmarkm = m;
-					} // else we have a bookmark already and so will be coming back here
+                    // save this entry as a member of that new group
+                    m->groups[i] = next_id;
+                    family_groups[families_found] = next_id;
+                    family_identities[families_found] = m->pedigrees[parentIndex][i];
+                    ++families_found;
+
+                    if (results != NULL) {
+                        results[n_found] = next_id;
+                        ++n_found;
+                    }
 				}
 			}
 		}
 
 		if (m->next == NULL) {
 			free(existing_groups);
-			if (bookmarkm == NULL) {
-				// we have processed all members of the original group
-				return;
-			} else {
-				// we need to go back and process remaining members of the group
-				m = bookmarkm;
-				families_found = 0;
-				existing_groups = get_existing_groups( d, &n_groups);
-				level = 0;
-				next_id = 0;
-			}
+            free(family_groups);
+            free(family_identities);
+            return;
 		} else {
 			m = m->next;
 		}
@@ -2053,7 +2831,7 @@ void split_into_halfsib_families( SimData* d, int group_id, int parent, int* res
  * @returns the group number of the new group to which half the members
  * of the old group have been allocated.
  */
-int split_evenly_into_two(SimData* d, int group_id) {
+int split_evenly_into_two(SimData* d, const int group_id) {
 	// get the shuffle to be our even allocations
 	int size = get_group_size(d, group_id);
     if (size < 2) {
@@ -2070,7 +2848,7 @@ int split_evenly_into_two(SimData* d, int group_id) {
 	for (int i = 0; i < size; ++i) {
 		allocations[i] = i;
 	}
-	shuffle_up_to(allocations, size, even_half);
+    shuffle_up_to( allocations, size, even_half);
 
 	int new_group = get_new_group_num(d);
 	AlleleMatrix* m = d->m;
@@ -2118,7 +2896,7 @@ int split_evenly_into_two(SimData* d, int group_id) {
  * should be saved. It is assumed that the array is long enough to store
  * n identifiers.
  */
-void split_evenly_into_n(SimData* d, int group_id, int n, int* results) {
+void split_evenly_into_n(SimData* d, const int group_id, const int n, int* results) {
     if (n <= 1) {
         warning( "Invalid n value: number of fractions into which to split group must be positive.\n");
 		return;
@@ -2183,7 +2961,7 @@ void split_evenly_into_n(SimData* d, int group_id, int n, int* results) {
  * should be saved. It is assumed that the array is long enough to store
  * n identifiers.
  */
-void split_by_specific_counts_into_n(SimData* d, int group_id, int n, int* counts, int* results) {
+void split_by_specific_counts_into_n(SimData* d, const int group_id, const int n, const int* counts, int* results) {
     if (n <= 1) {
         warning( "Invalid n value: number of fractions into which to split group must be positive.\n");
         return;
@@ -2215,7 +2993,7 @@ void split_by_specific_counts_into_n(SimData* d, int group_id, int n, int* count
 	for (int i = 0; i < size; ++i) {
 		allocations[i] = i;
 	}
-    shuffle_up_to(allocations, size, cumulative_counts[n-2]);
+    shuffle_up_to( allocations, size, cumulative_counts[n-2]);
 
 	int new_group[n-1];
 	get_n_new_group_nums(d,n-1, new_group);
@@ -2279,14 +3057,14 @@ void split_by_specific_counts_into_n(SimData* d, int group_id, int n, int* count
  * @returns the group number of the new group to which some members
  * of the old group may have been randomly allocated.
  */
-int split_randomly_into_two(SimData* d, int group_id) {
+int split_randomly_into_two(SimData* d, const int group_id) {
 	int new_group = get_new_group_num(d);
 
 	AlleleMatrix* m = d->m;
 	int i;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
-			if (m->groups[i] == group_id && (unif_rand() > 0.5)) {
+            if (m->groups[i] == group_id && (unif_rand() > 0.5)) {
 				m->groups[i] = new_group;
 			}
 		}
@@ -2320,7 +3098,7 @@ int split_randomly_into_two(SimData* d, int group_id) {
  * should be saved. It is assumed that the array is long enough to store
  * n identifiers.
  */
-void split_randomly_into_n(SimData* d, int group_id, int n, int* results) {
+void split_randomly_into_n(SimData* d, const int group_id, const int n, int* results) {
     if (n <= 1) {
         warning( "Invalid n value: number of fractions in which to split group must be positive.\n");
         return;
@@ -2350,7 +3128,7 @@ void split_randomly_into_n(SimData* d, int group_id, int n, int* results) {
 	int i, randgroup;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
-			randgroup = round(unif_rand() * (n-1));
+            randgroup = round(unif_rand() * (n-1));
 			if (m->groups[i] == group_id && randgroup) {
 				m->groups[i] = new_groups[randgroup - 1];
 			}
@@ -2393,7 +3171,7 @@ void split_randomly_into_n(SimData* d, int group_id, int n, int* results) {
  * should be saved. It is assumed that the array is long enough to store
  * n identifiers.
  */
-void split_by_probabilities_into_n(SimData* d, int group_id, int n, double* probs, int* results) {
+void split_by_probabilities_into_n(SimData* d, const int group_id, const int n, const double* probs, int* results) {
     if (n <= 1) {
         warning( "Invalid n value: number of fractions in which to split group must be positive.\n");
         return;
@@ -2460,151 +3238,138 @@ void split_by_probabilities_into_n(SimData* d, int group_id, int n, double* prob
 	}
 }
 
-/** Identify every group number that currently has members.
+/** Identify group numbers that currently have members.
  *
  * @param d the SimData struct on which to perform the operation
- * @param n_groups a pointer to a location that can be accessed by the
- * calling function. The number of groups/length of the returned array
- * will be saved here.
- * @returns a heap array of length [value saved at n_groups after this
- * function has run] containing the group numbers that appear in the
- * group memberships in `d`, sorted in ascending order.
+ * @param n_groups Maximum number of groups to identify. Set this
+ * to the length of `output`, or set it as -1 (UNINITIALISED) to risk
+ * your memory safety entirely.
+ * @param output The function will fill this vector with the group numbers
+ * of the groups discovered in `d`, sorted in ascending order. These will
+ * not necessarily be the groups with the lowest group numbers, if the
+ * `n_groups` cap was lower than the total number of groups; rather,
+ * they will be the first `n_groups` group numbers encountered when
+ * scanning genotypes in the simulation from lowest simulation index to highest.
+ * @returns The number of entries of `output` that have been filled. Equal to `n_groups`
+ * if `n_groups` was set and at least `n_groups` groups existed; equal to the true number
+ * of groups if `n_groups` was UNINITIALISED or if the actual number of groups
+ * was smaller than `n_groups`.
  */
-int* get_existing_groups( SimData* d, int* n_groups) {
-	int eg_size = 50;
-	int* existing_groups = malloc(sizeof(int)* eg_size);
-	*n_groups = 0;
+int get_existing_groups( const SimData* d, const int n_groups, int* output) {
+    int eg_size = 0;
 
-	AlleleMatrix* m = d->m;
+    const AlleleMatrix* m = d->m;
 	int i, j;
 	int new; // is the group number at this index a new one or not
-	while (1) {
+    // cap the number of groups to find at n_groups if n_groups initialised
+    while (n_groups < 0 || eg_size < n_groups) {
 		for (i = 0; i < m->n_genotypes; ++i) {
 			new = 1;
-			for (j = 0; j < *n_groups; ++j) {
-				if (m->groups[i] == existing_groups[j]) {
+            for (j = 0; j < eg_size; ++j) {
+                if (m->groups[i] == output[j]) {
 					new = 0;
 					break;
 				}
 			}
 
 			if (new) {
-				++ (*n_groups);
-				existing_groups[*n_groups - 1] = m->groups[i];
+                ++eg_size;
+                output[eg_size - 1] = m->groups[i];
 			}
 		}
 
 		if (m->next == NULL) {
-			qsort(existing_groups, *n_groups, sizeof(int), _ascending_int_comparer);
-			return existing_groups;
+            qsort(output, eg_size, sizeof(int), _ascending_int_comparer);
+            return eg_size;
 		} else {
 			m = m->next;
 		}
 
-		if (*n_groups >= eg_size - 1) {
-			eg_size *= 1.5;
-			int* temp = realloc(existing_groups, eg_size * sizeof(int));
-			if (temp == NULL) {
-				free(existing_groups);
-				error( "Can't get all those groups.\n");
-			} else {
-				existing_groups = temp;
-			}
-		}
 	}
+    qsort(output, eg_size, sizeof(int), _ascending_int_comparer);
+    return eg_size;
 }
 
-/** Identify every group number that currently has members and
- * the number of genotypes currently allocated to that group.
+/** Identify group numbers that currently has members and
+ * the number of genotypes currently allocated to those groups.
  *
  * @param d the SimData struct on which to perform the operation
- * @param n_groups a pointer to a location that can be accessed by the
- * calling function. The number of groups/length of the returned array
- * will be saved here.
- * @returns a heap array of length [2][value saved at n_groups after this
- * function has run]. The array at the first index contains the group numbers,
- * and the array at the second index contains the number of members of that group,
- * ordered correspondingly. The arrays are sorted in ascending order by group number.
- * All three components of the returned value (2-long first-index array containing
- * the pointers to the toehr 2, and the two data-containing arrays) are allocated
- * from the heap so should be freed by the calling function when it finishes with
- * them.
+ * @param n_groups Maximum number of groups to identify. Set this
+ * to the length of `output`, or set it as -1 (UNINITIALISED) to risk
+ * your memory safety entirely.
+ * @param output_groups The function will fill this vector with the group numbers
+ * of the groups discovered in `d`, sorted in ascending order. These will
+ * not necessarily be the groups with the lowest group numbers, if the
+ * `n_groups` cap was lower than the total number of groups; rather,
+ * they will be the first `n_groups` group numbers encountered when
+ * scanning genotypes in the simulation from lowest simulation index to highest.
+ * @param output_sizes The number of genotypes in the corresponding group number in
+ * `output_groups`.
+ * @returns The number of entries of the output vectors that have been filled.
+ * Equal to `n_groups`
+ * if `n_groups` was set and at least `n_groups` groups existed; equal to the true number
+ * of groups if `n_groups` was UNINITIALISED or if the actual number of groups
+ * was smaller than `n_groups`.
  */
-int** get_existing_group_counts( SimData* d, int* n_groups) {
-	int eg_size = 50;
-	int** returnval = get_malloc(sizeof(int*) * 2);
-	int* existing_groups = get_malloc(sizeof(int)* eg_size); // group ids
-	int* existing_group_counts = get_malloc(sizeof(int) * eg_size); // number in that group
-	*n_groups = 0;
+int get_existing_group_counts( const SimData* d, const int n_groups, int* output_groups, int* output_sizes) {
+    int eg_size = 0;
 
-	AlleleMatrix* m = d->m;
+    const AlleleMatrix* m = d->m;
 	int i, j;
 	int new; // is the group number at this index a new one or not
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
 			new = 1;
-			for (j = 0; j < *n_groups; ++j) {
-				if (m->groups[i] == existing_groups[j]) {
-					existing_group_counts[j] += 1;
+            for (j = 0; j < eg_size; ++j) {
+                if (m->groups[i] == output_groups[j]) {
+                    output_sizes[j] += 1;
 					new = 0;
 					break;
 				}
 			}
 
-			if (new) {
-				++ (*n_groups);
-				existing_groups[*n_groups - 1] = m->groups[i];
-				existing_group_counts[*n_groups - 1] = 1;
+            if (new && (n_groups < 0 || eg_size < n_groups)) {
+                ++ eg_size;
+                output_groups[eg_size - 1] = m->groups[i];
+                output_sizes[eg_size - 1] = 1;
 
 			}
 		}
 
 		if (m->next == NULL) {
-			if (*n_groups > 0) {
-				int* sorting[*n_groups];
-				for (int i = 0; i < *n_groups; i++) {
-					sorting[i] = &(existing_groups[i]);
+            if (eg_size > 0) {
+                // Sorting two together is a pain.
+
+                int* sorting[eg_size];
+                for (int i = 0; i < eg_size; i++) {
+                    sorting[i] = &(output_groups[i]);
 				}
 
-				qsort(sorting, *n_groups, sizeof(int*), _ascending_int_dcomparer);
+                qsort(sorting, eg_size, sizeof(int*), _ascending_int_dcomparer);
 				int location_in_old;
-				int* location_origin = existing_groups;
-				int* sorted_groups = get_malloc(sizeof(int) * (*n_groups));
-				int* sorted_counts = get_malloc(sizeof(int) * (*n_groups));
-				for (int i = 0; i < *n_groups; ++i) {
-					location_in_old = sorting[i] - location_origin;
-					sorted_groups[i] = existing_groups[location_in_old];
-					sorted_counts[i] = existing_group_counts[location_in_old];
+                int* location_origin_g = output_groups;
+                int sorted[eg_size];
+                for (int i = 0; i < eg_size; ++i) {
+                    location_in_old = sorting[i] - location_origin_g;
+                    sorted[i] = output_groups[location_in_old];
+                }
+                for (int i = 0; i < eg_size; ++i) {
+                    output_groups[i] = sorted[i];
+                }
+                for (int i = 0; i < eg_size; ++i) {
+                    location_in_old = sorting[i] - location_origin_g;
+                    sorted[i] = output_sizes[location_in_old];
 				}
+                for (int i = 0; i < eg_size; ++i) {
+                    output_sizes[i] = sorted[i];
+                }
 
-				free(existing_groups);
-				free(existing_group_counts);
-				returnval[0] = sorted_groups;
-				returnval[1] = sorted_counts;
-				return returnval;
+                return eg_size;
 			} else {
-				return NULL;
+                return 0;
 			}
 		} else {
 			m = m->next;
-		}
-
-		if (*n_groups >= eg_size - 1) {
-			eg_size *= 1.5;
-			int* temp = realloc(existing_groups, eg_size * sizeof(int));
-			if (temp == NULL) {
-				free(existing_groups);
-				error( "Can't get all those groups.\n");
-			} else {
-				existing_groups = temp;
-			}
-			temp = realloc(existing_group_counts, eg_size * sizeof(int));
-			if (temp == NULL) {
-				free(existing_group_counts);
-				error( "Can't get all those groups.\n");
-			} else {
-				existing_group_counts = temp;
-			}
 		}
 	}
 }
@@ -2623,9 +3388,19 @@ int** get_existing_group_counts( SimData* d, int* n_groups) {
  * @return the next sequential currently-unused group number,
  * an integer greater than 0.
  */
-int get_new_group_num( SimData* d) {
-	int n_groups = 0;
-	int* existing_groups = get_existing_groups( d, &n_groups);
+int get_new_group_num( const SimData* d) {
+    // Make sure we get all existing groups
+    int n_groups;
+    int eg_length = 10;
+    int* existing_groups = get_malloc(sizeof(int)*eg_length);
+    n_groups = get_existing_groups(d, eg_length, existing_groups);
+    while (n_groups == eg_length) {
+        free(existing_groups);
+        eg_length = eg_length << 1;
+        existing_groups = get_malloc(sizeof(int)*eg_length);
+        n_groups = get_existing_groups(d, eg_length, existing_groups);
+    }
+
 	int i = 0;
 	int gn = 1;
 
@@ -2647,11 +3422,12 @@ int get_new_group_num( SimData* d) {
  * @param label a label id
  * @return the index in d->label_ids, d->label_defaults, and the
  * ->labels table in AlleleMatrix where the data for this label
- * is stored, or -1 if the label with that id could not be found.
+ * is stored, or -1 (UNINITIALISED)
+ * if the label with that id could not be found.
  */
-int get_index_of_label( SimData* d, int label ) {
-    if (d->n_labels <= 0) { return -1; } // immediate fail
-    if (d->n_labels == 1) { return (d->label_ids[0] == label) ? 0 : -1 ; }
+int get_index_of_label( const SimData* d, const int label ) {
+    if (d->n_labels <= 0) { return UNINITIALISED; } // immediate fail
+    if (d->n_labels == 1) { return (d->label_ids[0] == label) ? 0 : UNINITIALISED ; }
 
     // If there's at least two labels then we binary search.
     int first = 0;
@@ -2671,7 +3447,7 @@ int get_index_of_label( SimData* d, int label ) {
 
     }
 
-    return -1;
+    return UNINITIALISED;
 }
 
 /** Function to identify the next sequential integer that is not
@@ -2681,7 +3457,7 @@ int get_index_of_label( SimData* d, int label ) {
  * @return the next sequential currently-unused label id, an integer
  * greater than 0.
  */
-int get_new_label_id( SimData* d ) {
+int get_new_label_id( const SimData* d ) {
     // label_ids must be in sequential order
     int newId = 1;
     int i = 0;
@@ -2706,9 +3482,19 @@ int get_new_label_id( SimData* d ) {
  * @param result pointer to an array of length at least n where
  * the new group numbers generated can be saved.
  */
-void get_n_new_group_nums( SimData* d, int n, int* result) {
-	int n_groups = 0;
-	int* existing_groups = get_existing_groups( d, &n_groups);
+void get_n_new_group_nums( const SimData* d, const int n, int* result) {
+    // Make sure we get all existing groups
+    int n_groups;
+    int eg_length = 10;
+    int* existing_groups = get_malloc(sizeof(int)*eg_length);
+    n_groups = get_existing_groups(d, eg_length, existing_groups);
+    while (n_groups == eg_length) {
+        free(existing_groups);
+        eg_length = eg_length << 1;
+        existing_groups = get_malloc(sizeof(int)*eg_length);
+        n_groups = get_existing_groups(d, eg_length, existing_groups);
+    }
+
 	int existingi = 0;
 	int gn = 0;
 
@@ -2753,12 +3539,12 @@ void get_n_new_group_nums( SimData* d, int n, int* result) {
  * be counted.
  * @returns the number of genotypes currently belonging to this group.
  */
-int get_group_size( SimData* d, int group_id) {
+int get_group_size( const SimData* d, const int group_id) {
     if (group_id < 1) {
         warning("Invalid group_id: valid group_ids are positive numbers.\n");
         return 0;
     }
-	AlleleMatrix* m = d->m;
+    const AlleleMatrix* m = d->m;
 	int size = 0;
 	int i;
 	while (1) {
@@ -2790,30 +3576,32 @@ int get_group_size( SimData* d, int group_id) {
  * @param d the SimData struct on which to perform the operation
  * @param group_id the group number of the group we want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1. This enables fewer calls to get_group_size when using multiple
+ * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
  * group-data-getter functions.
- * @returns a vector containing pointers to the genes of each member of the group.
- * The vector itself is on the heap and should be freed, but its contents are only
- * shallow copies that should not be freed. Returns a null pointer if the group is empty.
+ * @param output a char** vector with length at least large enough to fit the whole group.
+ * The function will fill this vector with pointers to the allele strings of each member
+ * of the group. The vector's contents are only
+ * shallow copies that should not be freed.
+ * @returns The number of entries of `output` that have been filled. Equal to `group_size`
+ * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-char** get_group_genes( SimData* d, int group_id, int group_size) {
-	AlleleMatrix* m = d->m;
-    if (group_size <= 0) {
+int get_group_genes( const SimData* d, const int group_id, int group_size, char** output) {
+    const AlleleMatrix* m = d->m;
+    if (group_size <= 0) { // group_size == UNINITIALISED
         group_size = get_group_size( d, group_id );
-        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+        if (group_size == 0) { return 0; }
 	}
-    char** genes = get_malloc(sizeof(char*) * group_size);
 	int i, genes_i = 0;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
 			if (m->groups[i] == group_id) {
-				genes[genes_i] = m->alleles[i];
+                output[genes_i] = m->alleles[i];
 				++genes_i;
 			}
 		}
 
 		if (m->next == NULL) {
-			return genes;
+            return group_size;
 		} else {
 			m = m->next;
 		}
@@ -2833,30 +3621,32 @@ char** get_group_genes( SimData* d, int group_id, int group_size) {
  * @param d the SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1. This enables fewer calls to get_group_size when using multiple
+ * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
  * group-data-getter functions.
- * @returns a vector containing pointers to the names of each member of the group.
- * The vector itself is on the heap and should be freed, but its contents are only
- * shallow copies that should not be freed. Returns a null pointer if the group is empty.
+ * @param output a char** vector with length at least large enough to fit the whole group.
+ * The function will fill this vector with pointers to the names of each member
+ * of the group. The vector's contents are only
+ * shallow copies that should not be freed.
+ * @returns The number of entries of `output` that have been filled. Equal to `group_size`
+ * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-char** get_group_names( SimData* d, int group_id, int group_size) {
-	AlleleMatrix* m = d->m;
-    if (group_size <= 0) {
+int get_group_names( const SimData* d, const int group_id, int group_size, char** output) {
+    const AlleleMatrix* m = d->m;
+    if (group_size <= 0) { // group_size == UNINITIALISED
         group_size = get_group_size( d, group_id );
-        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+        if (group_size == 0) { return 0; }
     }
-    char** names = get_malloc(sizeof(char*) * group_size);
 	int i, names_i = 0;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
 			if (m->groups[i] == group_id) {
-				names[names_i] = m->names[i];
+                output[names_i] = m->names[i];
 				++names_i;
 			}
 		}
 
 		if (m->next == NULL) {
-			return names;
+            return group_size;
 		} else {
 			m = m->next;
 		}
@@ -2876,29 +3666,30 @@ char** get_group_names( SimData* d, int group_id, int group_size) {
  * @param d the SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1. This enables fewer calls to get_group_size when using multiple
+ * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
  * group-data-getter functions.
- * @returns a vector containing the ids of each member of the group.
- * The vector itself is on the heap and should be freed. Returns a null pointer if the group is empty.
+ * @param output a vector with length at least large enough to fit the whole group.
+ * The function will fill this vector with the ids of each member of the group.
+ * @returns The number of entries of `output` that have been filled. Equal to `group_size`
+ * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-unsigned int* get_group_ids( SimData* d, int group_id, int group_size) {
-	AlleleMatrix* m = d->m;
-    if (group_size <= 0) {
+int get_group_ids( const SimData* d, const int group_id, int group_size, unsigned int *output) {
+    const AlleleMatrix* m = d->m;
+    if (group_size <= 0) { // group_size == UNINITIALISED
         group_size = get_group_size( d, group_id );
-        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+        if (group_size == 0) { return 0; }
     }
-    unsigned int* gids = get_malloc(sizeof(unsigned int) * group_size);
 	int i, ids_i = 0;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
 			if (m->groups[i] == group_id) {
-				gids[ids_i] = m->ids[i];
+                output[ids_i] = m->ids[i];
 				++ids_i;
 			}
 		}
 
 		if (m->next == NULL) {
-			return gids;
+            return group_size;
 		} else {
 			m = m->next;
 		}
@@ -2919,29 +3710,30 @@ unsigned int* get_group_ids( SimData* d, int group_id, int group_size) {
  * @param d the SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1. This enables fewer calls to get_group_size when using multiple
+ * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
  * group-data-getter functions.
- * @returns a vector containing the indexes of each member of the group.
- * The vector itself is on the heap and should be freed. Returns a null pointer if the group is empty.
+ * @param output a vector with length at least large enough to fit the whole group.
+ * The function will fill this vector with the indexes of each member of the group.
+ * @returns The number of entries of `output` that have been filled. Equal to `group_size`
+ * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-int* get_group_indexes(SimData* d, int group_id, int group_size) {
-	AlleleMatrix* m = d->m;
-    if (group_size <= 0) {
+int get_group_indexes(const SimData* d, const int group_id, int group_size, int* output) {
+    const AlleleMatrix* m = d->m;
+    if (group_size <= 0) { // group_size == UNINITIALISED
         group_size = get_group_size( d, group_id );
-        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+        if (group_size == 0) { return 0; }
     }
-    int* gis = get_malloc(sizeof(int) * group_size);
 	int i, total_i = 0, ids_i = 0;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i, ++total_i) {
 			if (m->groups[i] == group_id) {
-				gis[ids_i] = total_i;
+                output[ids_i] = total_i;
 				++ids_i;
 			}
 		}
 
 		if (m->next == NULL) {
-			return gis;
+            return group_size;
 		} else {
 			m = m->next;
 		}
@@ -2961,27 +3753,28 @@ int* get_group_indexes(SimData* d, int group_id, int group_size) {
  * @param d the SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1. This enables fewer calls to get_group_size when using multiple
+ * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
  * group-data-getter functions.
- * @returns a vector containing the breeding values of each member of the group.
- * The vector itself is on the heap and should be freed. Returns a null pointer if the group is empty.
+ * @param output a vector with length at least large enough to fit the whole group.
+ * The function will fill this vector with the breeding values of each member of the group.
+ * @returns The number of entries of `output` that have been filled. Equal to `group_size`
+ * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-double* get_group_bvs( SimData* d, int group_id, int group_size) {
-    if (group_size <= 0) {
+int get_group_bvs( const SimData* d, const int group_id, int group_size, double* output) {
+    if (group_size <= 0) { // group_size == UNINITIALISED
         group_size = get_group_size( d, group_id );
-        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+        if (group_size == 0) { return 0; }
     }
-    double* bvs = get_malloc(sizeof(double) * group_size);
 
 	DecimalMatrix dm_bvs = calculate_group_bvs(d, (unsigned int) group_id);
 
 	for (int i = 0; i < dm_bvs.cols; ++i) {
-		bvs[i] = dm_bvs.matrix[0][i];
+        output[i] = dm_bvs.matrix[0][i];
 	}
 
 	delete_dmatrix(&dm_bvs);
 
-	return bvs;
+    return group_size;
 }
 
 /** Gets the ids of either the first or second parent of each member
@@ -2995,41 +3788,43 @@ double* get_group_bvs( SimData* d, int group_id, int group_size) {
  * @see get_group_parent_names()
  * @see get_group_pedigrees()
  *
+ *
  * @param d the SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1. This enables fewer calls to get_group_size when using multiple
+ * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
  * group-data-getter functions.
- * @param parent 1 to get the first parent of each group member, 2 to get the second.
+ * @param whichParent 1 to get the first parent of each group member, 2 to get the second.
  * Raises an error and returns NULL if this parameter is not either of those values.
- * @returns a vector containing the id of either the first or second parent of
- * each member of the group.
- * The vector itself is on the heap and should be freed. Returns a null pointer if the group is empty.
+ * @param output a vector with length at least large enough to fit the whole group.
+ * The function will fill this vector with the ids the chosen parent of each member of the group.
+ * @returns UNINITIALISED if `parent`'s value is incorrect; otherwise the number of entries of `output`
+ * that have been filled. This is to `group_size`
+ * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-unsigned int* get_group_parent_ids( SimData* d, int group_id, int group_size, int parent) {
-	if (!(parent == 1 || parent == 2)) {
+int get_group_parent_ids( const SimData* d, const int group_id, int group_size, const int whichParent, unsigned int* output) {
+    if (!(whichParent == 1 || whichParent == 2)) {
 		warning( "Value error: `parent` must be 1 or 2.");
-		return NULL;
+        return UNINITIALISED;
 	}
-	--parent;
+    int parent = whichParent - 1;
 
-	AlleleMatrix* m = d->m;
-    if (group_size <= 0) {
+    const AlleleMatrix* m = d->m;
+    if (group_size <= 0) { // group_size == UNINITIALISED
         group_size = get_group_size( d, group_id );
-        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+        if (group_size == 0) { return 0; }
     }
-    unsigned int* pids = get_malloc(sizeof(unsigned int) * group_size);
 	int i, ids_i = 0;
 	while (1) {
 		for (i = 0; i < m->n_genotypes; ++i) {
 			if (m->groups[i] == group_id) {
-				pids[ids_i] = m->pedigrees[parent][i];
+                output[ids_i] = m->pedigrees[parent][i];
 				++ids_i;
 			}
 		}
 
 		if (m->next == NULL) {
-			return pids;
+            return group_size;
 		} else {
 			m = m->next;
 		}
@@ -3050,47 +3845,50 @@ unsigned int* get_group_parent_ids( SimData* d, int group_id, int group_size, in
  * @param d the SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1. This enables fewer calls to get_group_size when using multiple
+ * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
  * group-data-getter functions.
- * @param parent 1 to get the first parent of each group member, 2 to get the second.
+ * @param whichParent 1 to get the first parent of each group member, 2 to get the second.
  * Raises an error and returns NULL if this parameter is not either of those values.
- * @returns  a vector containing pointers to the names either the first or second
- * parent of each member of the group. The vector itself is on the heap and should be
- * freed, but its contents are only shallow copies that should not be freed. Returns a null pointer if the group is empty.
+ * @param output a char** vector with length at least large enough to fit the whole group.
+ * The function will fill this vector with pointers to the names of the chosen parent
+ * of each member of the group. The vector's contents are only
+ * shallow copies that should not be freed.
+ * @returns UNINITIALISED if `parent`'s value is incorrect; otherwise the number of entries of `output`
+ * that have been filled. This is to `group_size`
+ * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-char** get_group_parent_names( SimData* d, int group_id, int group_size, int parent) {
-	if (!(parent == 1 || parent == 2)) {
-		warning( "Value error: `parent` must be 1 or 2.");
-		return NULL;
-	}
-	--parent;
-
-	AlleleMatrix* m = d->m;
-    if (group_size <= 0) {
-        group_size = get_group_size( d, group_id );
-        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+int get_group_parent_names( const SimData* d, const int group_id, int group_size, const int whichParent, char** output) {
+    if (!(whichParent == 1 || whichParent == 2)) {
+        warning( "Value error: `parent` must be 1 or 2.");
+        return UNINITIALISED;
     }
-    char** pnames = get_malloc(sizeof(char*) * group_size);
+    int parent = whichParent - 1;
 
-	int i, ids_i = 0;
-	while (1) {
-		for (i = 0; i < m->n_genotypes; ++i) {
-			if (m->groups[i] == group_id) {
+    const AlleleMatrix* m = d->m;
+    if (group_size <= 0) { // group_size == UNINITIALISED
+        group_size = get_group_size( d, group_id );
+        if (group_size == 0) { return 0; }
+    }
+
+    int i, ids_i = 0;
+    while (1) {
+        for (i = 0; i < m->n_genotypes; ++i) {
+            if (m->groups[i] == group_id) {
                 if (m->pedigrees[parent][i] > 0) {
-                    pnames[ids_i] = get_name_of_id(d->m, m->pedigrees[parent][i]);
+                    output[ids_i] = get_name_of_id(d->m, m->pedigrees[parent][i]);
                 } else {
-                    pnames[ids_i] = NULL;
+                    output[ids_i] = NULL;
                 }
-				++ids_i;
-			}
-		}
+                ++ids_i;
+            }
+        }
 
-		if (m->next == NULL) {
-			return pnames;
-		} else {
-			m = m->next;
-		}
-	}
+        if (m->next == NULL) {
+            return group_size;
+        } else {
+            m = m->next;
+        }
+    }
 }
 
 /** Gets the full pedigree string (as per save_group_full_pedigree() )
@@ -3120,16 +3918,21 @@ char** get_group_parent_names( SimData* d, int group_id, int group_size, int par
  * @param d the SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1. This enables fewer calls to get_group_size when using multiple
+ * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
  * group-data-getter functions.
- * @returns  a vector containing pointers to the full pedigree string of each
- * member of the group. Both the vector and its contents are dynamically
- * allocated on the heap, and so should both be freed. This is because, unlike
- * other data-getter functions, this data is not stored but must be generated
- * specifically to answer this function call. If it failed to write to and
- * read from the temporary file, then it returns NULL; Also returns a null pointer if the group is empty.
+ * @param output a char** vector with length at least large enough to fit the whole group.
+ * The function will fill this vector with pointers to strings containing the full pedigree
+ * of each member of the group. The pedigree strings are dynamically
+ * allocated on the heap, and so should be freed once finished using them. This is because,
+ * unlike other data-getter functions, full pedigree data is not stored in the simulation
+ * but must be generated specifically to answer this function call.
+ * @returns UNINITIALISED if there are no genotypes in the group or if reading/writing
+ * to the temporary file failed; 0 otherwise.
+ * @returns UNINITIALISED if reading/writing to the temporary file failed;
+ * otherwise the number of entries of `output` that have been filled. This is to `group_size`
+ * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-char** get_group_pedigrees( SimData* d, int group_id, int group_size) {
+int get_group_pedigrees( const SimData* d, const int group_id, int group_size, char** output) {
 	char* fname = "gS_gpptmp";
 	FILE* fp = fopen(fname, "w");
 	save_group_full_pedigree(fp, d, group_id);
@@ -3138,15 +3941,14 @@ char** get_group_pedigrees( SimData* d, int group_id, int group_size) {
 	FILE* fp2;
 	if ((fp2 = fopen(fname, "r")) == NULL) {
 		warning( "Failed to use temporary file.\n");
-		return NULL;
+        return UNINITIALISED;
 	}
 
 	// Create the list that we will return
-    if (group_size <= 0) {
+    if (group_size <= 0) { // group_size == UNINITIALISED
         group_size = get_group_size( d, group_id );
-        if (group_size == 0) { warning("Group does not exist\n"); return 0; }
+        if (group_size == 0) { return 0; }
     }
-	char** gp_ped = get_malloc(sizeof(char*) * group_size);
 
 	// read one line at a time
 	//size_t n;
@@ -3168,29 +3970,30 @@ char** get_group_pedigrees( SimData* d, int group_id, int group_size) {
 		// a not-very-size-efficient, fgets-based line getter
 		size = 50;
 		index = 0;
-		gp_ped[i] = get_malloc(sizeof(char) * size);
+        output[i] = get_malloc(sizeof(char) * size);
 		while ((nextc = fgetc(fp)) != '\n' && nextc != EOF) {
-			gp_ped[i][index] = nextc;
+            output[i][index] = nextc;
 			++index;
 
 			if (index >= size) {
 				size *= 2;
-				char* temp = realloc(gp_ped[i], size);
+                char* temp = realloc(output[i], size);
 				if (temp == NULL) {
-					free(gp_ped[i]);
+                    free(output[i]);
 					warning( "Memory allocation of size %u failed.\n", size);
+                    output[i] = NULL;
 				} else {
-					gp_ped[i] = temp;
+                    output[i] = temp;
 				}
 			}
 		}
-		gp_ped[i][index] = '\0';
+        output[i][index] = '\0';
 	}
 
 	fclose(fp2);
 	remove(fname);
 
-	return gp_ped;
+    return group_size;
 }
 
 
@@ -3204,7 +4007,7 @@ char** get_group_pedigrees( SimData* d, int group_id, int group_size) {
  * @returns a DecimalMatrix with r rows, c cols, and a matrix of
  * the correct size, with all values zeroed.
  */
-DecimalMatrix generate_zero_dmatrix(int r, int c) {
+DecimalMatrix generate_zero_dmatrix(const int r, const int c) {
 	DecimalMatrix zeros;
 	zeros.rows = r;
 	zeros.cols = c;
@@ -3234,7 +4037,7 @@ DecimalMatrix generate_zero_dmatrix(int r, int c) {
  * Multiplied to a.
  * @returns 0 on success, nonzero on failure.
  */
-int add_matrixvector_product_to_dmatrix(DecimalMatrix* result, DecimalMatrix* a, double* b) {
+int add_matrixvector_product_to_dmatrix(DecimalMatrix* result, const DecimalMatrix* a, const double* b) {
     /*if (a->cols != b->rows) {
 		error( "Dimensions invalid for matrix multiplication.");
 	}*/
@@ -3284,7 +4087,8 @@ int add_matrixvector_product_to_dmatrix(DecimalMatrix* result, DecimalMatrix* a,
  * `bmat` has columns. Multiplied to `bmat`.
  * @returns 0 on success, nonzero on failure.
  */
-int add_doublematrixvector_product_to_dmatrix(DecimalMatrix* result, DecimalMatrix* amat, double* avec, DecimalMatrix* bmat, double* bvec) {
+int add_doublematrixvector_product_to_dmatrix(DecimalMatrix* result, const DecimalMatrix* amat, const double* avec,
+                                              const DecimalMatrix* bmat, const double* bvec) {
 
 	if (result->cols != amat->rows) { //these dimensions make it so result is one heap array, using only first row.
         warning( "Dimensions invalid for adding to result: %d does not fit in %d\n", amat->rows, result->cols);
@@ -3338,8 +4142,10 @@ void delete_dmatrix(DecimalMatrix* m) {
 
 /*--------------------------------Deleting-----------------------------------*/
 
-/** Clears memory of all genotypes and associated information belonging
- * to a particular group.
+/** Deletes all genotypes belonging to a particular group.
+ *
+ *  This includes all of their details. Persistent ids (used to track
+ *  pedigree) will not be re-used.
  *
  * Uses a call to condense_allele_matrix() to ensure that the SimData
  * remains valid after deletion.
@@ -3347,7 +4153,7 @@ void delete_dmatrix(DecimalMatrix* m) {
  * @param d the SimData struct on which to perform the operation
  * @param group_id the group number of the subset of data to be cleared
  */
-void delete_group(SimData* d, int group_id) {
+void delete_group(SimData* d, const int group_id) {
 	AlleleMatrix* m = d->m;
 	int i, deleted, total_deleted = 0;
 	while (1) {
@@ -3388,7 +4194,7 @@ void delete_group(SimData* d, int group_id) {
  * @param d the SimData struct on which to perform the operation
  * @param whichLabel the label id of the label to be destroyed
  */
-void delete_label(SimData* d, int whichLabel) {
+void delete_label(SimData* d, const int whichLabel) {
     int labelIndex;
     if (whichLabel < 1 || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel);
@@ -3461,7 +4267,9 @@ void delete_label(SimData* d, int whichLabel) {
     }
 }
 
-/** Deletes a GeneticMap object and frees its memory. m will now refer
+/** Deletes a GeneticMap object and frees its memory.
+ *
+ *  m will now refer
  * to an empty matrix, with every pointer set to null and dimensions set to 0.
  *
  * @param m pointer to the matrix whose data is to be cleared and memory freed.
@@ -3482,13 +4290,11 @@ void delete_genmap(GeneticMap* m) {
 	m->positions = NULL;
 }
 
-/** Deletes the full AlleleMatrix object and frees its memory. m will now refer
- * to an empty matrix, with pointers set to null and dimensions set to 0.
+/** Delete the AlleleMatrix linked list from m onwards and frees its memory.
  *
- * freeing its memory includes freeing the AlleleMatrix, which was allocated on the heap
- * by @see create_empty_allelematrix()
- *
- * all subsequent matrixes in the linked list are also deleted.
+ * Freeing its memory includes freeing the AlleleMatrix, which was allocated on the heap
+ * by @see create_empty_allelematrix(). All matrices further along in the linked list chain
+ * (eg pointed to by m->next or a chain of ->next pointers) will be similarly deleted.
  *
  * @param m pointer to the matrix whose data is to be cleared and memory freed.
  */
@@ -3526,7 +4332,9 @@ void delete_allele_matrix(AlleleMatrix* m) {
 	} while ((m = next) != NULL);
 }
 
-/** Deletes an EffectMatrix object and frees its memory. m will now refer
+/** Deletes an EffectMatrix object and frees its memory.
+ *
+ * m will now refer
  * to an empty matrix, with every pointer set to null and dimensions set to 0.
  *
  * @param m pointer to the matrix whose data is to be cleared and memory freed.
@@ -3580,7 +4388,9 @@ void delete_simdata(SimData* m) {
 	free(m);
 }
 
-/** Deletes a MarkerBlocks object and frees its associated memory. b will now refer
+/** Delete a MarkerBlocks struct.
+ *
+ * Deletes a MarkerBlocks object and frees its associated memory. b will now refer
  * to an empty struct, with every pointer set to null and number of markers set to 0.
  *
  * @param b pointer to the struct whose data is to be cleared and memory freed.
@@ -3596,6 +4406,49 @@ void delete_markerblocks(MarkerBlocks* b) {
 	b->num_blocks = 0;
 
 	return;
+}
+
+
+/** Deletes a BidirectionalIterator object.
+ *
+ *  A BidirectionalIterator has no heap memory to free, so calling
+ *  this function is mostly unnecessary. The function will set all
+ *  values in the struct to uninitialised/null values, and will set
+ *  the iterator to think it is both at the start and end of its
+ *  sequence, so that any next_* functions will not attempt to
+ *  search for group member locations.
+ *
+ * @param it pointer to the struct whose data is to be cleared.
+ */
+void delete_bidirectional_iter(BidirectionalIterator* it) {
+    it->d = NULL;
+    it->group = UNINITIALISED;
+    it->globalPos = UNINITIALISED;
+    it->cachedAM = NULL;
+    it->cachedAMIndex = UNINITIALISED;
+    it->atEnd = TRUE;
+    it->atStart = TRUE;
+}
+
+/** Deletes a RandomAccessIterator object and frees its memory.
+ *
+ *  All values in the struct will be set to uninitialised/null values,
+ *  except for groupSize, which will be set to 0 to so that any
+ *  next_* functions called on the iterator will not attempt to
+ *  search for group member locations.
+ *
+ * @param it pointer to the struct whose data is to be cleared and memory freed.
+ */
+void delete_randomaccess_iter(RandomAccessIterator* it) {
+    it->d = NULL;
+    it->group = UNINITIALISED;
+    if (it->cacheSize > 0) {
+        free(it->cache);
+    }
+    it->cache = NULL;
+    it->cacheSize = 0;
+    it->largestCached = UNINITIALISED;
+    it->groupSize = 0;
 }
 
 /*-------------------------------SimData loaders-----------------------------*/
@@ -3719,8 +4572,9 @@ int load_transposed_genes_to_simdata(SimData* d, const char* filename) {
 
 		// get the row name, store in markers
 		fscanf(fp, "%s", word);
-		d->markers[j] = get_malloc(sizeof(char) * strlen(word) + 1);
-		strncpy(d->markers[j], word, strlen(word) + 1);
+        int wordlen = strlen(word) + 1;
+        d->markers[j] = get_malloc(sizeof(char) * wordlen);
+        strncpy(d->markers[j], word, wordlen);
 
 		current_am = d->m;
 		//d->m->alleles[j] = get_malloc(sizeof(char) * d->m[0].n_genotypes * 2);
@@ -3872,8 +4726,9 @@ int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename) {
 
 		// get the row name, store in markers
 		fscanf(fp, "%s", word);
-		d->markers[j] = get_malloc(sizeof(char) * strlen(word) + 1);
-		strncpy(d->markers[j], word, strlen(word) + 1);
+        int wordlen = strlen(word) + 1;
+        d->markers[j] = get_malloc(sizeof(char) * wordlen);
+        strncpy(d->markers[j], word, wordlen);
 
 		current_am = d->m;
 		//d->m->alleles[j] = get_malloc(sizeof(char) * d->m[0].n_genotypes * 2);
@@ -3892,7 +4747,7 @@ int load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename) {
 				current_am->alleles[i_am][(j<<1) + 1] = c;
 			} else {
 				// choose a random order for the two alleles.
-				r = (unif_rand() > 0.5);
+                r = (unif_rand() > 0.5);
 				// identify the two alleles
 				switch (c) {
 					case 'R':
@@ -4043,7 +4898,7 @@ int load_more_transposed_genes_to_simdata(SimData* d, const char* filename) {
 
 		// get the row name, store in markers
 		fscanf(fp, "%s", word);
-		markeri = get_from_unordered_str_list(word, d->markers, d->n_markers);
+        markeri = get_from_unordered_str_list(word, d->n_markers, (const char**) d->markers);
 
 		current_am = last_am->next;
 
@@ -4130,7 +4985,7 @@ void load_genmap_to_simdata(SimData* d, const char* filename) {
 		R_CheckUserInterrupt();
 		sscanf(buffer, "%s %d %f\n", marker_name, &chr, &pos);
 
-		if ((location = get_from_unordered_str_list( marker_name, d->markers, d->n_markers)) >= 0) {
+        if ((location = get_from_unordered_str_list( marker_name, d->n_markers, (const char**) d->markers)) >= 0) {
 			// the marker is in our list, so save its position
 			d->map.positions[location].chromosome = chr;
 			d->map.positions[location].position = pos;
@@ -4172,7 +5027,8 @@ void load_genmap_to_simdata(SimData* d, const char* filename) {
  * matrix sorted. The SimData pointed to by d will be modified by this function.
  * @param actual_n_markers If previously calculated, include the number of
  * markers in `d->markers` that have a position loaded into `d->map.positions`.
- * If this has not been calculated yet, make the value -1 and this function will
+ * If this has not been calculated yet, make the value -1 (UNINITIALISED) and
+ * this function will
  * calculate it. The value is calculated as the number of positions in
  * `d->map.positions` that have a chromosome number of 0.
 */
@@ -4183,7 +5039,7 @@ void get_sorted_markers(SimData* d, int actual_n_markers) {
 	}
 
 	// if this was not pre-calculated do it now.
-	if (actual_n_markers < 0) {
+    if (actual_n_markers < 0) { // actual_n_markers == UNINITIALISED
 		actual_n_markers = d->n_markers;
 		for (int i = 0; i < d->n_markers; i++) {
 			if (d->map.positions[i].chromosome == 0) {
@@ -4396,7 +5252,7 @@ void load_effects_to_simdata(SimData* d, const char* filename) {
 		//fgets(buffer, bufferlen, fp);
 		sscanf(buffer, "%s %c %lf\n", marker_name, &allele, &effect);
 
-		if ((location = get_from_unordered_str_list(  marker_name, d->markers, d->n_markers)) >= 0) {
+        if ((location = get_from_unordered_str_list(  marker_name, d->n_markers, (const char**) d->markers)) >= 0) {
 			// if the marker exists (at index `location`) find the allele index
 			int symbol_index;
 			char* symbol_location = strchr(alleles_loaded, allele);
@@ -4748,7 +5604,7 @@ int calculate_recombinations_from_file(SimData* d, const char* input_file, const
  * character, starting at 0, so that calling generate_gamete(..., offspring_genome) &
  * generate_gamete(..., offspring_genome + 1) can be used to generate both halves of its genome.
 */
-void generate_gamete(SimData* d, char* parent_genome, char* output) {
+void generate_gamete(SimData* d, const char* parent_genome, char* output) {
 	// assumes rand is already seeded
 	if (parent_genome == NULL) {
 		warning( "Could not generate this gamete\n");
@@ -4762,7 +5618,7 @@ void generate_gamete(SimData* d, char* parent_genome, char* output) {
 	// treat each chromosome separately.
 	for (int chr = 1; chr <= d->map.n_chr; ++chr) {
 		// use Poisson distribution to choose the number of crossovers in this chromosome
-		num_crossovers = Rf_rpois(d->map.chr_lengths[chr - 1] / 100);
+        num_crossovers = Rf_rpois(d->map.chr_lengths[chr - 1] / 100);
 
 		// in the rare case where it could be >100, get enough space
 		// to be able to store the crossover positions we're about to create
@@ -4787,7 +5643,7 @@ void generate_gamete(SimData* d, char* parent_genome, char* output) {
 		}
 
 		// pick a parent genome half at random
-		which = (unif_rand() > 0.5); // if this is 0, we start with the left.
+        which = (unif_rand() > 0.5); // if this is 0, we start with the left.
 
 		// TASK 4: Figure out the gamete that those numbers produce.
 		up_to_crossover = 0; // which crossovers we've dealt with
@@ -4826,7 +5682,7 @@ void generate_gamete(SimData* d, char* parent_genome, char* output) {
  * @param output a 2x(n_marker) array of chars which will be overwritten
  * with the offspring genome.
 */
-void generate_cross(SimData* d, char* parent1_genome, char* parent2_genome, char* output) {
+void generate_cross(SimData* d, const char* parent1_genome, const char* parent2_genome, char* output) {
 	// assumes rand is already seeded
 	if (parent1_genome == NULL || parent2_genome == NULL) {
 		warning( "Could not generate this cross\n");
@@ -4840,8 +5696,8 @@ void generate_cross(SimData* d, char* parent1_genome, char* parent2_genome, char
 	// treat each chromosome separately.
 	for (int chr = 1; chr <= d->map.n_chr; ++chr) {
 		// use Poisson distribution to choose the number of crossovers in this chromosome
-		num_crossovers[0] = Rf_rpois(d->map.chr_lengths[chr - 1] / 100);
-		num_crossovers[1] = Rf_rpois(d->map.chr_lengths[chr - 1] / 100);
+        num_crossovers[0] = Rf_rpois(d->map.chr_lengths[chr - 1] / 100);
+        num_crossovers[1] = Rf_rpois(d->map.chr_lengths[chr - 1] / 100);
 
 		// in the rare case where it could be >100, get enough space
 		// to be able to store the crossover positions we're about to create
@@ -4880,7 +5736,7 @@ void generate_cross(SimData* d, char* parent1_genome, char* parent2_genome, char
 		}
 
 		// pick a parent genome half at random
-		which[0] = (unif_rand() > 0.5); which[1] = (unif_rand() > 0.5); // if this is 0, we start with the left.
+        which[0] = (unif_rand() > 0.5); which[1] = (unif_rand() > 0.5);
 
 		// TASK 4: Figure out the gamete that those numbers produce.
 		up_to_crossover[0] = 0; up_to_crossover[1] = 0; // which crossovers we've dealt with
@@ -4928,7 +5784,7 @@ void generate_cross(SimData* d, char* parent1_genome, char* parent2_genome, char
  * @param output a 2x(n_marker) array of chars which will be overwritten
  * with the offspring genome.
 */
-void generate_doubled_haploid(SimData* d, char* parent_genome, char* output) {
+void generate_doubled_haploid(SimData* d, const char* parent_genome, char* output) {
 	// assumes rand is already seeded
 	if (parent_genome == NULL) {
 		warning( "Could not make this doubled haploid\n");
@@ -4942,7 +5798,7 @@ void generate_doubled_haploid(SimData* d, char* parent_genome, char* output) {
 	// treat each chromosome separately.
 	for (int chr = 1; chr <= d->map.n_chr; ++chr) {
 		// use Poisson distribution to choose the number of crossovers in this chromosome
-		num_crossovers = Rf_rpois(d->map.chr_lengths[chr - 1] / 100);
+        num_crossovers = Rf_rpois(d->map.chr_lengths[chr - 1] / 100);
 
 		// in the rare case where it could be >100, get enough space
 		// to be able to store the crossover positions we're about to create
@@ -4967,7 +5823,7 @@ void generate_doubled_haploid(SimData* d, char* parent_genome, char* output) {
 		}
 
 		// pick a parent genome half at random
-		which = (unif_rand() > 0.5); // if this is 0, we start with the left.
+        which = (unif_rand() > 0.5); // if this is 0, we start with the left.
 
 		// TASK 4: Figure out the gamete that those numbers produce.
 		up_to_crossover = 0; // which crossovers we've dealt with
@@ -5002,7 +5858,7 @@ void generate_doubled_haploid(SimData* d, char* parent_genome, char* output) {
  * @param output a 2x(n_marker) array of chars which will be overwritten
  * with the offspring genome.
 */
-void generate_clone(SimData* d, char* parent_genome, char* output) {
+void generate_clone(SimData* d, const char* parent_genome, char* output) {
     for (int j = 0; j < d->n_markers; ++j) {
         output[2*j] = parent_genome[2*j];
         output[2*j + 1] = parent_genome[2*j + 1];
@@ -5030,7 +5886,7 @@ void generate_clone(SimData* d, char* parent_genome, char* output) {
  * @param g options for the genotypes created. @see GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
 */
-int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap, GenOptions g) {
+int cross_random_individuals(SimData* d, const int from_group, const int n_crosses, const int cap, const GenOptions g) {
 	int g_size = get_group_size( d, from_group);
 	if (g_size < 2) {
 		if (g_size == 1) {
@@ -5040,7 +5896,8 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
 		}
 		return 0;
 	}
-	char** group_genes = get_group_genes( d, from_group, g_size);
+    char* group_genes[g_size];
+    get_group_genes( d, from_group, g_size, group_genes);
 
     if (n_crosses < 1) {
         warning("Invalid n_crosses value provided: n_crosses must be greater than 0.\n");
@@ -5053,7 +5910,7 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
     if (cap > 0 && cap*g_size < n_crosses*2) {
         warning("Invalid cap value provided: cap of %d uses on %d parents too small to make %d crosses.\n", cap, g_size, n_crosses);
     }
-    int* uses_count; // cap = 0 means unlimited uses. Otherwise we need to track number of times each is used.
+    int* uses_count = NULL; // cap = 0 means unlimited uses. Otherwise we need to track number of times each is used.
     if (cap > 0) {
         uses_count = get_malloc(sizeof(int)*g_size);
         memset(uses_count,0,sizeof(int)*g_size);
@@ -5075,9 +5932,9 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
 	int parent2;
 
 	// set up pedigree/id allocation, if applicable
-	unsigned int* group_ids = NULL;
+    unsigned int group_ids[g_size];
 	if (g.will_track_pedigree) {
-		group_ids = get_group_ids( d, from_group, g_size);
+        get_group_ids( d, from_group, g_size, group_ids);
 	}
 	AlleleMatrix* last = NULL;
 	int output_group = 0;
@@ -5113,7 +5970,7 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
 	// loop through each combination
 	for (int i = 0; i < n_crosses; ++i) {
         // get parents, randomly. Must not be identical or already been used too many times.
-        if (cap > 0) { // n uses of each parent is capped at a number cap
+        if (cap > 0 && uses_count != NULL) { // n uses of each parent is capped at a number cap. Checks should be equivalent but for safety...
             do {
                 parent1 = round(unif_rand() * (g_size - 1));
             } while (uses_count[parent1] >= cap);
@@ -5151,11 +6008,11 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
 				}
 				if (g.will_save_bvs_to_file) {
 					eff = calculate_bvs( crosses, &(d->e));
-					save_manual_bvs( fe, &eff, crosses->ids, crosses->names);
+                    save_manual_bvs( fe, &eff, crosses->ids, (const char**) crosses->names);
 					delete_dmatrix( &eff);
 				}
 				if (g.will_save_alleles_to_file) {
-					save_allele_matrix( fg, crosses, d->markers);
+                    save_allele_matrix( fg, crosses, (const char**) d->markers);
 				}
 
 				if (g.will_save_to_simdata) {
@@ -5184,8 +6041,7 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
 	PutRNGstate();
 
 	// save the rest of the crosses to the file.
-	free(group_genes);
-    if (cap > 0) {
+    if (uses_count != NULL) {
         free(uses_count);
     }
     // give the offsprings their ids and names
@@ -5199,10 +6055,6 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
         }
     } // else already zeroed by create_empty_allelematrix
 
-	if (g.will_track_pedigree) {
-		free(group_ids);
-	}
-
 	// save the offsprings to files if appropriate
 	if (g.will_save_pedigree_to_file) {
 		save_AM_pedigree( fp, crosses, d);
@@ -5210,12 +6062,12 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
 	}
 	if (g.will_save_bvs_to_file) {
 		eff = calculate_bvs( crosses, &(d->e));
-		save_manual_bvs( fe, &eff, crosses->ids, crosses->names);
+        save_manual_bvs( fe, &eff, crosses->ids, (const char**) crosses->names);
 		delete_dmatrix( &eff);
 		fclose(fe);
 	}
 	if (g.will_save_alleles_to_file) {
-		save_allele_matrix( fg, crosses, d->markers);
+        save_allele_matrix( fg, crosses, (const char**) d->markers);
 		fclose(fg);
 	}
 	if (g.will_save_to_simdata) {
@@ -5263,9 +6115,8 @@ int cross_random_individuals(SimData* d, int from_group, int n_crosses, int cap,
  * @param g options for the genotypes created. @see GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
 */
-int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int cap1, int cap2, GenOptions g) {
+int cross_randomly_between(SimData*d, const int group1, const int group2, const int n_crosses, const int cap1, const int cap2, const GenOptions g) {
     char* parent1_genes; char* parent2_genes;
-    char** group1_genes; char** group2_genes;
     int group1_size; int group2_size;
     int parent1; int parent2;
 
@@ -5274,14 +6125,16 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
         warning("Group %d does not exist.\n", group1);
         return 0;
     }
-    group1_genes = get_group_genes( d, group1, group1_size );
+    char* group1_genes[group1_size];
+    get_group_genes( d, group1, group1_size, group1_genes );
 
     group2_size = get_group_size( d, group2 );
     if (group2_size < 1) {
         warning("Group %d does not exist.\n", group2);
         return 0;
     }
-    group2_genes = get_group_genes( d, group2, group2_size );
+    char* group2_genes[group2_size];
+    get_group_genes( d, group2, group2_size, group2_genes );
 
     if (n_crosses < 1) {
         warning("Invalid n_crosses value provided: n_crosses must be greater than 0.\n");
@@ -5306,12 +6159,12 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
         return 0;
     }
 
-    int* uses_g1; // cap = 0 means unlimited uses. Otherwise we need to track number of times each is used.
+    int* uses_g1 = NULL; // cap = 0 means unlimited uses. Otherwise we need to track number of times each is used.
     if (cap1 > 0) {
         uses_g1 = get_malloc(sizeof(int)*group1_size);
         memset(uses_g1,0,sizeof(int)*group1_size);
     }
-    int* uses_g2; // cap = 0 means unlimited uses. Otherwise we need to track number of times each is used.
+    int* uses_g2 = NULL; // cap = 0 means unlimited uses. Otherwise we need to track number of times each is used.
     if (cap2 > 0) {
         uses_g2 = get_malloc(sizeof(int)*group2_size);
         memset(uses_g2,0,sizeof(int)*group2_size);
@@ -5331,10 +6184,10 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
     int fullness = 0;
 
     // set up pedigree/id allocation, if applicable
-    unsigned int* group1_ids = NULL; unsigned int* group2_ids = NULL;
+    unsigned int group1_ids[group1_size]; unsigned int group2_ids[group2_size];
     if (g.will_track_pedigree) {
-        group1_ids = get_group_ids( d, group1, group1_size );
-        group2_ids = get_group_ids( d, group2, group2_size );
+        get_group_ids( d, group1, group1_size, group1_ids );
+        get_group_ids( d, group2, group2_size, group2_ids );
     }
     AlleleMatrix* last = NULL;
     int output_group = 0;
@@ -5370,7 +6223,7 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
     // loop through each combination
     for (int i = 0; i < n_crosses; ++i) {
         // get parents, randomly.
-        if (cap1 > 0) { // usage of parents is capped
+        if (cap1 > 0 && uses_g1 != NULL) { // usage of parents is capped. checks should be equivalent but for safety...
             do {
                 parent1 = round(unif_rand() * (group1_size - 1));
             } while (uses_g1[parent1] >= cap1);
@@ -5380,7 +6233,7 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
         }
         parent1_genes = group1_genes[parent1];
 
-        if (cap2 > 0) { // usage of parents is capped
+        if (cap2 > 0 && uses_g2 != NULL) { // usage of parents is capped. checks should be equivalent but for safety...
             do {
                 parent2 = round(unif_rand() * (group2_size - 1));
             } while (uses_g2[parent2] >= cap2);
@@ -5413,11 +6266,11 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
                 }
                 if (g.will_save_bvs_to_file) {
                     eff = calculate_bvs( crosses, &(d->e));
-                    save_manual_bvs( fe, &eff, crosses->ids, crosses->names);
+                    save_manual_bvs( fe, &eff, crosses->ids, (const char**) crosses->names);
                     delete_dmatrix( &eff);
                 }
                 if (g.will_save_alleles_to_file) {
-                    save_allele_matrix( fg, crosses, d->markers);
+                    save_allele_matrix( fg, crosses, (const char**) d->markers);
                 }
 
                 if (g.will_save_to_simdata) {
@@ -5446,12 +6299,10 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
     PutRNGstate();
 
     // save the rest of the crosses to the file.
-    free(group1_genes);
-    free(group2_genes);
-    if (cap1 > 0) {
+    if (uses_g1 != NULL) {
         free(uses_g1);
     }
-    if (cap2 > 0) {
+    if (uses_g1 != NULL) {
         free(uses_g2);
     }
     // give the offsprings their ids and names
@@ -5465,11 +6316,6 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
         }
     } // else already zeroed by create_empty_allelematrix
 
-    if (g.will_track_pedigree) {
-        free(group1_ids);
-        free(group2_ids);
-    }
-
     // save the offsprings to files if appropriate
     if (g.will_save_pedigree_to_file) {
         save_AM_pedigree( fp, crosses, d);
@@ -5477,12 +6323,12 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
     }
     if (g.will_save_bvs_to_file) {
         eff = calculate_bvs( crosses, &(d->e));
-        save_manual_bvs( fe, &eff, crosses->ids, crosses->names);
+        save_manual_bvs( fe, &eff, crosses->ids, (const char**) crosses->names);
         delete_dmatrix( &eff);
         fclose(fe);
     }
     if (g.will_save_alleles_to_file) {
-        save_allele_matrix( fg, crosses, d->markers);
+        save_allele_matrix( fg, crosses, (const char**) d->markers);
         fclose(fg);
     }
     if (g.will_save_to_simdata) {
@@ -5511,7 +6357,7 @@ int cross_randomly_between(SimData*d, int group1, int group2, int n_crosses, int
  * @param g options for the genotypes created. @see GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
  */
-int cross_these_combinations(SimData* d, int n_combinations, int combinations[2][n_combinations],  GenOptions g) {
+int cross_these_combinations(SimData* d, const int n_combinations, const int* firstParents, const int* secondParents, const GenOptions g) {
 	if (n_combinations < 1) {
         warning("Invalid n_combinations value provided: n_combinations must be greater than 0.\n");
 		return 0;
@@ -5565,12 +6411,12 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 	// loop through each combination
 	for (int i = 0; i < n_combinations; ++i) {
 		// find the parents & do the cross. First ensure parents are valid
-		if (combinations[0][i] >= 0 && combinations[1][i] >= 0) {
-			parent1genes = get_genes_of_index(d->m, combinations[0][i]);
-			parent2genes = get_genes_of_index(d->m, combinations[1][i]);
+        if (firstParents[i] >= 0 && secondParents[i] >= 0) {
+            parent1genes = get_genes_of_index(d->m, firstParents[i]);
+            parent2genes = get_genes_of_index(d->m, secondParents[i]);
 			if (g.will_track_pedigree) {
-				parent1id = get_id_of_index(d->m, combinations[0][i]);
-				parent2id = get_id_of_index(d->m, combinations[1][i]);
+                parent1id = get_id_of_index(d->m, firstParents[i]);
+                parent2id = get_id_of_index(d->m, secondParents[i]);
 			}
 
 			for (int f = 0; f < g.family_size; ++f, ++fullness) {
@@ -5595,11 +6441,11 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 					}
 					if (g.will_save_bvs_to_file) {
 						eff = calculate_bvs( crosses, &(d->e));
-						save_manual_bvs( fe, &eff, crosses->ids, crosses->names);
+                        save_manual_bvs( fe, &eff, crosses->ids, (const char**) crosses->names);
 						delete_dmatrix( &eff);
 					}
 					if (g.will_save_alleles_to_file) {
-						save_allele_matrix( fg, crosses, d->markers);
+                        save_allele_matrix( fg, crosses, (const char**) d->markers);
 					}
 
 					if (g.will_save_to_simdata) {
@@ -5647,12 +6493,12 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
 	}
 	if (g.will_save_bvs_to_file) {
 		eff = calculate_bvs( crosses, &(d->e));
-		save_manual_bvs( fe, &eff, crosses->ids, crosses->names);
+        save_manual_bvs( fe, &eff, crosses->ids, (const char**) crosses->names);
 		delete_dmatrix( &eff);
 		fclose(fe);
 	}
 	if (g.will_save_alleles_to_file) {
-		save_allele_matrix( fg, crosses, d->markers);
+        save_allele_matrix( fg, crosses, (const char**) d->markers);
 		fclose(fg);
 	}
 	if (g.will_save_to_simdata) {
@@ -5684,7 +6530,7 @@ int cross_these_combinations(SimData* d, int n_combinations, int combinations[2]
  * @param g options for the genotypes created. @see GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
 */
-int self_n_times(SimData* d, int n, int group, GenOptions g) {
+int self_n_times(SimData* d, const int n, const int group, const GenOptions g) {
 	int group_size = get_group_size( d, group);
 	if (group_size < 1) {
 		warning("Group %d does not exist.\n", group);
@@ -5704,13 +6550,14 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
         outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 		n_to_go -= CONTIG_WIDTH;
 	}
-	char** group_genes = get_group_genes( d, group, group_size);
+    char* group_genes[group_size];
+    get_group_genes( d, group, group_size, group_genes );
 	int i, j, f, fullness = 0;
 
 	// set up pedigree/id allocation, if applicable
-	unsigned int* group_ids = NULL;
+    unsigned int group_ids[group_size];
 	if (g.will_track_pedigree) {
-		group_ids = get_group_ids( d, group, group_size);
+        get_group_ids( d, group, group_size, group_ids );
 	}
 	AlleleMatrix* last = NULL;
 	int output_group = 0;
@@ -5772,11 +6619,11 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 					}
 					if (g.will_save_bvs_to_file) {
 						eff = calculate_bvs( outcome, &(d->e));
-						save_manual_bvs( fe, &eff, outcome->ids, outcome->names);
+                        save_manual_bvs( fe, &eff, outcome->ids, (const char**) outcome->names);
 						delete_dmatrix( &eff);
 					}
 					if (g.will_save_alleles_to_file) {
-						save_allele_matrix( fg, outcome, d->markers);
+                        save_allele_matrix( fg, outcome, (const char**) d->markers);
 					}
 
 					if (g.will_save_to_simdata) {
@@ -5833,11 +6680,11 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 					}
 					if (g.will_save_bvs_to_file) {
 						eff = calculate_bvs( outcome, &(d->e));
-						save_manual_bvs( fe, &eff, outcome->ids, outcome->names);
+                        save_manual_bvs( fe, &eff, outcome->ids, (const char**) outcome->names);
 						delete_dmatrix( &eff);
 					}
 					if (g.will_save_alleles_to_file) {
-						save_allele_matrix( fg, outcome, d->markers);
+                        save_allele_matrix( fg, outcome, (const char**) d->markers);
 					}
 
 					if (g.will_save_to_simdata) {
@@ -5885,7 +6732,6 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	}
 	PutRNGstate();
 
-	free(group_genes);
 	// save the rest of the crosses to the file.
 	outcome->n_genotypes = fullness;
     // give the offspring their ids and names
@@ -5899,10 +6745,6 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
         }
     } // else already zeroed by create_empty_allelematrix
 
-	if (g.will_track_pedigree) {
-		free(group_ids);
-	}
-
 	// save the offspring to files if appropriate
 	if (g.will_save_pedigree_to_file) {
 		save_AM_pedigree( fp, outcome, d);
@@ -5910,12 +6752,12 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
 	}
 	if (g.will_save_bvs_to_file) {
 		eff = calculate_bvs( outcome, &(d->e));
-		save_manual_bvs( fe, &eff, outcome->ids, outcome->names);
+        save_manual_bvs( fe, &eff, outcome->ids, (const char**) outcome->names);
 		delete_dmatrix( &eff);
 		fclose(fe);
 	}
 	if (g.will_save_alleles_to_file) {
-		save_allele_matrix( fg, outcome, d->markers);
+        save_allele_matrix( fg, outcome, (const char**) d->markers);
 		fclose(fg);
 	}
 	if (g.will_save_to_simdata) {
@@ -5942,7 +6784,7 @@ int self_n_times(SimData* d, int n, int group, GenOptions g) {
  * @param g options for the genotypes created. @see GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
 */
-int make_doubled_haploids(SimData* d, int group, GenOptions g) {
+int make_doubled_haploids(SimData* d, const int group, const GenOptions g) {
 	int group_size = get_group_size( d, group);
 	if (group_size < 1) {
 		warning("Group %d does not exist.\n", group);
@@ -5958,14 +6800,15 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
         outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 		n_to_go -= CONTIG_WIDTH;
 	}
-	char** group_genes = get_group_genes( d, group, group_size);
+    char* group_genes[group_size];
+    get_group_genes( d, group, group_size, group_genes );
 	int i, f, fullness = 0;
 
 	// set up pedigree/id allocation, if applicable
-	unsigned int* group_ids = NULL;
+    unsigned int group_ids[group_size];
     int id;
 	if (g.will_track_pedigree) {
-		group_ids = get_group_ids( d, group, group_size);
+        get_group_ids( d, group, group_size, group_ids );
 	}
 	AlleleMatrix* last = NULL;
 	int output_group = 0;
@@ -6028,11 +6871,11 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 				}
 				if (g.will_save_bvs_to_file) {
 					eff = calculate_bvs( outcome, &(d->e));
-					save_manual_bvs( fe, &eff, outcome->ids, outcome->names);
+                    save_manual_bvs( fe, &eff, outcome->ids, (const char**) outcome->names);
 					delete_dmatrix( &eff);
 				}
 				if (g.will_save_alleles_to_file) {
-					save_allele_matrix( fg, outcome, d->markers);
+                    save_allele_matrix( fg, outcome, (const char**) d->markers);
 				}
 
 				if (g.will_save_to_simdata) {
@@ -6059,7 +6902,6 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 	}
 	PutRNGstate();
 
-	free(group_genes);
 	// save the rest of the crosses to the file.
 	outcome->n_genotypes = fullness;
     // give the offspring their ids and names
@@ -6073,10 +6915,6 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
         }
     } // else already zeroed by create_empty_allelematrix
 
-	if (g.will_track_pedigree) {
-		free(group_ids);
-	}
-
 	// save the offspring to files if appropriate
 	if (g.will_save_pedigree_to_file) {
 		save_AM_pedigree( fp, outcome, d);
@@ -6084,12 +6922,12 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
 	}
 	if (g.will_save_bvs_to_file) {
 		eff = calculate_bvs( outcome, &(d->e));
-		save_manual_bvs( fe, &eff, outcome->ids, outcome->names);
+        save_manual_bvs( fe, &eff, outcome->ids, (const char**) outcome->names);
 		delete_dmatrix( &eff);
 		fclose(fe);
 	}
 	if (g.will_save_alleles_to_file) {
-		save_allele_matrix( fg, outcome, d->markers);
+        save_allele_matrix( fg, outcome, (const char**) d->markers);
 		fclose(fg);
 	}
 	if (g.will_save_to_simdata) {
@@ -6122,7 +6960,7 @@ int make_doubled_haploids(SimData* d, int group, GenOptions g) {
  * @param g options for the genotypes created. @see GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
 */
-int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
+int make_clones(SimData* d, const int group, const int inherit_names, GenOptions g) {
     int group_size = get_group_size( d, group);
     if (group_size < 1) {
         warning("Group %d does not exist.\n", group);
@@ -6138,13 +6976,14 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
         outcome = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
         n_to_go -= CONTIG_WIDTH;
     }
-    char** group_genes = get_group_genes( d, group, group_size);
+    char* group_genes[group_size];
+    get_group_genes( d, group, group_size, group_genes );
 
     // set up pedigree/id allocation, if applicable
-    unsigned int* group_ids = NULL;
+    unsigned int group_ids[group_size];
     int parent_id = 0;
     if (g.will_track_pedigree) {
-        group_ids = get_group_ids( d, group, group_size);
+        get_group_ids( d, group, group_size, group_ids );
     }
     AlleleMatrix* last = NULL;
     int output_group = 0;
@@ -6157,10 +6996,10 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
     }
 
     // inherit_names overrides GenOptions naming
-    char** group_names;
+    char* group_names[group_size];
     if (inherit_names) {
         g.will_name_offspring = FALSE;
-        group_names = get_group_names(d, group, group_size);
+        get_group_names(d, group, group_size, group_names );
     }
 
     // open the output files, if applicable
@@ -6216,11 +7055,11 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
                 }
                 if (g.will_save_bvs_to_file) {
                     eff = calculate_bvs( outcome, &(d->e));
-                    save_manual_bvs( fe, &eff, outcome->ids, outcome->names);
+                    save_manual_bvs( fe, &eff, outcome->ids, (const char**) outcome->names);
                     delete_dmatrix( &eff);
                 }
                 if (g.will_save_alleles_to_file) {
-                    save_allele_matrix( fg, outcome, d->markers);
+                    save_allele_matrix( fg, outcome, (const char**) d->markers);
                 }
 
                 if (g.will_save_to_simdata) {
@@ -6262,10 +7101,6 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
     }
     PutRNGstate();
 
-    free(group_genes);
-	if (inherit_names) {
-		free(group_names);
-	}
     // save the rest of the crosses to the file.
     outcome->n_genotypes = fullness;
     // give the offspring their ids and names
@@ -6279,10 +7114,6 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
         }
     } // else already zeroed by create_empty_allelematrix
 
-    if (g.will_track_pedigree) {
-        free(group_ids);
-    }
-
     // save the offspring to files if appropriate
     if (g.will_save_pedigree_to_file) {
         save_AM_pedigree( fp, outcome, d);
@@ -6290,12 +7121,12 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
     }
     if (g.will_save_bvs_to_file) {
         eff = calculate_bvs( outcome, &(d->e));
-        save_manual_bvs( fe, &eff, outcome->ids, outcome->names);
+        save_manual_bvs( fe, &eff, outcome->ids, (const char**) outcome->names);
         delete_dmatrix( &eff);
         fclose(fe);
     }
     if (g.will_save_alleles_to_file) {
-        save_allele_matrix( fg, outcome, d->markers);
+        save_allele_matrix( fg, outcome, (const char**) d->markers);
         fclose(fg);
     }
     if (g.will_save_to_simdata) {
@@ -6320,7 +7151,7 @@ int make_clones(SimData* d, int group, int inherit_names, GenOptions g) {
  * @param g options for the AlleleMatrix created. @see GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
  */
-int make_all_unidirectional_crosses(SimData* d, int from_group, GenOptions g) {
+int make_all_unidirectional_crosses(SimData* d, const int from_group, const GenOptions g) {
 	int group_size = get_group_size( d, from_group );
 	if (group_size < 2) {
 		if (group_size == 1) {
@@ -6330,8 +7161,8 @@ int make_all_unidirectional_crosses(SimData* d, int from_group, GenOptions g) {
 		}
 		return 0;
 	}
-	//unsigned int* group_ids = get_group_ids( d, from_group, group_size);
-    int* group_indexes = get_group_indexes( d, from_group, group_size);
+    int group_indexes[group_size];
+    get_group_indexes( d, from_group, group_size, group_indexes );
 
 	// number of crosses = number of entries in upper triangle of matrix
 	//    = half of (n entries in matrix - length of diagonal)
@@ -6349,8 +7180,7 @@ int make_all_unidirectional_crosses(SimData* d, int from_group, GenOptions g) {
 		}
 	}
 
-    free(group_indexes);
-	return cross_these_combinations(d, n_crosses, combinations, g);
+    return cross_these_combinations(d, n_crosses, combinations[0], combinations[1], g);
 
 }
 
@@ -6367,7 +7197,7 @@ int make_all_unidirectional_crosses(SimData* d, int from_group, GenOptions g) {
  * @param g options for the AlleleMatrix created. @see GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
  */
-int make_n_crosses_from_top_m_percent(SimData* d, int n, int m, int group, GenOptions g) {
+int make_n_crosses_from_top_m_percent(SimData* d, const int n, const int m, const int group, const GenOptions g) {
     if (n < 1) {
         warning("Invalid n value provided: Number of crosses must be greater than 0.\n");
         return 0;
@@ -6384,7 +7214,7 @@ int make_n_crosses_from_top_m_percent(SimData* d, int n, int m, int group, GenOp
         return 0;
     }
 
-	int n_top_group = group_size * m / 100; //@integer division?
+    int n_top_group = group_size * m / 100;
 	Rprintf("There are %d lines in the top %d%%\n", n_top_group, m);
 
 	int topgroup = split_by_bv(d, group, n_top_group, FALSE);
@@ -6419,7 +7249,7 @@ int make_n_crosses_from_top_m_percent(SimData* d, int n, int m, int group, GenOp
  * @param g options for the AlleleMatrix created. @see GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
  */
-int make_crosses_from_file(SimData* d, const char* input_file, GenOptions g) {
+int make_crosses_from_file(SimData* d, const char* input_file, const GenOptions g) {
 	struct TableSize t = get_file_dimensions(input_file, '\t');
 	if (t.num_rows < 1) {
 		warning( "No crosses exist in that file\n");
@@ -6443,7 +7273,7 @@ int make_crosses_from_file(SimData* d, const char* input_file, GenOptions g) {
 	}
 
 	fclose(fp);
-	return cross_these_combinations(d, t.num_rows, combinations, g);
+    return cross_these_combinations(d, t.num_rows, combinations[0], combinations[1], g);
 }
 
 /** Perform crosses between previously-generated offspring of pairs of parents
@@ -6472,7 +7302,7 @@ int make_crosses_from_file(SimData* d, const char* input_file, GenOptions g) {
  * @param g options for the AlleleMatrix created. @see GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
  */
-int make_double_crosses_from_file(SimData* d, const char* input_file, GenOptions g) {
+int make_double_crosses_from_file(SimData* d, const char* input_file, const GenOptions g) {
 	struct TableSize t = get_file_dimensions(input_file, '\t');
 	if (t.num_rows < 1) {
 		warning( "No crosses exist in that file\n");
@@ -6487,7 +7317,7 @@ int make_double_crosses_from_file(SimData* d, const char* input_file, GenOptions
 
 	int combinations[2][t.num_rows];
 	char buffer[4][50];
-	char* to_buffer[] = {buffer[0], buffer[1], buffer[2], buffer[3]};
+    const char* to_buffer[] = {buffer[0], buffer[1], buffer[2], buffer[3]};
 	unsigned int g0_id[4];
 	int f1_i[2];
 	// for each row in file
@@ -6497,8 +7327,8 @@ int make_double_crosses_from_file(SimData* d, const char* input_file, GenOptions
 		get_ids_of_names(d->m, 4, to_buffer, g0_id);
 		if (g0_id[0] < 0 || g0_id[1] < 0 || g0_id[2] < 0 || g0_id[3] < 0) {
 			warning( "Could not go ahead with the line %d cross - g0 names not in records\n", i);
-			combinations[0][i] = -1;
-			combinations[1][i] = -1;
+            combinations[0][i] = UNINITIALISED;
+            combinations[1][i] = UNINITIALISED;
 			continue;
 		}
 
@@ -6514,8 +7344,8 @@ int make_double_crosses_from_file(SimData* d, const char* input_file, GenOptions
 				f1_i[1] = get_index_of_child(d->m, g0_id[1], g0_id[2]);
 				if (f1_i[0] < 0 || f1_i[1] < 0) {
 					warning( "Could not go ahead with the line %d cross - f1 children do not exist for this quartet\n", i);
-					combinations[0][i] = -1;
-					combinations[1][i] = -1;
+                    combinations[0][i] = UNINITIALISED;
+                    combinations[1][i] = UNINITIALISED;
 					continue;
 				}
 			}
@@ -6528,7 +7358,7 @@ int make_double_crosses_from_file(SimData* d, const char* input_file, GenOptions
 	}
 
 	fclose(fp);
-	return cross_these_combinations(d, t.num_rows, combinations, g);
+    return cross_these_combinations(d, t.num_rows, combinations[0], combinations[1], g);
 
 }
 
@@ -6546,14 +7376,14 @@ int make_double_crosses_from_file(SimData* d, const char* input_file, GenOptions
  * will be selected, if false the `top_n` with the highest breeding value are.
  * @returns the group number of the newly-created split-off group
  */
-int split_by_bv(SimData* d, int group, int top_n, int lowIsBest) {	
+int split_by_bv(SimData* d, const int group, const int top_n, const int lowIsBest) {
 	unsigned int group_size = get_group_size( d, group );
-    int* group_contents = get_group_indexes( d, group, group_size);
+    int group_contents[group_size];
+    get_group_indexes( d, group, group_size, group_contents );
 	
 	if (group_size <= top_n) {
 		// well we'll just have to move em all
 		int migration = split_from_group(d, group_size, group_contents);
-		free(group_contents);
 		return migration;
 	}
 	
@@ -6579,7 +7409,6 @@ int split_by_bv(SimData* d, int group, int top_n, int lowIsBest) {
 		top_individuals[i] = group_contents[p_fits[i] - fits.matrix[0]];
 	}
 	delete_dmatrix(&fits);
-	free(group_contents);
 
 	// send those n to a new group
 	return split_from_group(d, top_n, top_individuals);
@@ -6601,7 +7430,7 @@ int split_by_bv(SimData* d, int group, int top_n, int lowIsBest) {
 * @param group calculate breeding values for each genotype in the group with this group number.
 * @returns A DecimalMatrix containing the score for each individual in the group.
 */
-DecimalMatrix calculate_group_bvs(SimData* d, unsigned int group) {
+DecimalMatrix calculate_group_bvs(const SimData* d, const unsigned int group) {
 	// check that both of the items to be multiplied exist.
     if (d->e.effects.rows < 1 || d->m == NULL) {
 		error( "Either effect matrix or allele matrix does not exist\n");
@@ -6651,7 +7480,7 @@ DecimalMatrix calculate_group_bvs(SimData* d, unsigned int group) {
  * @param e pointer to the EffectMatrix that effect values have been loaded into.
  * @returns A DecimalMatrix containing the score for each individual in the group.
  */
-DecimalMatrix calculate_bvs( AlleleMatrix* m, EffectMatrix* e) {
+DecimalMatrix calculate_bvs( const AlleleMatrix* m, const EffectMatrix* e) {
 	// check that both of the items to be multiplied exist.
     if (e->effects.rows < 1 || m == NULL) {
 		error( "Either effect matrix or allele matrix does not exist\n");
@@ -6687,34 +7516,40 @@ DecimalMatrix calculate_bvs( AlleleMatrix* m, EffectMatrix* e) {
  * effect matrix to calculate breeding values.
  *
  * @param d pointer to the SimData.
- * @param group group number for which to calculate counts of the allele
+ * @param group group number for which to calculate counts of the allele, or 0
+ * to count alleles for all genotypes in the simulation
  * @param allele the single-character allele to be counting.
  * @param counts pointer to the DecimalMatrix into which to put the number
  * of `allele` occurences at each row/marker for each column/genotype in the group.
  * @returns 0 on success, nonzero on failure.
  * */
-int calculate_group_count_matrix_of_allele( SimData* d, unsigned int group, char allele, DecimalMatrix* counts) {
-	//DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, n_ids);
-	int groupSize = get_group_size(d, group);
-	if (counts->rows < groupSize || counts->cols < d->n_markers) {
-        fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
-                d->n_markers, groupSize, counts->rows, counts->cols);
-        return 1;
-	}
+int calculate_group_count_matrix_of_allele( const SimData* d, const unsigned int group, const char allele, DecimalMatrix* counts) {
+    if (group == 0) {
+        return UNINITIALISED; // @@
+    } else {
+        int groupSize = get_group_size(d, group);
+        if (counts->rows < groupSize || counts->cols < d->n_markers) {
+            fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
+                    d->n_markers, groupSize, counts->rows, counts->cols);
+            return 1;
+        }
 
-	char** genes = get_group_genes(d, group, groupSize);
+        char* genes[groupSize];
+        get_group_genes(d, group, groupSize, genes);
 
-	for (int i = 0; i < groupSize; ++i) {
-		R_CheckUserInterrupt();
-		for (int j = 0; j < d->n_markers; ++j) {
-			int cell_sum = 0;
-			if (genes[i][2*j] == allele)     cell_sum += 1;
-			if (genes[i][2*j + 1] == allele) cell_sum += 1;
-			counts->matrix[i][j] = cell_sum;
-		}
-	}
-    free(genes);
-	return 0;
+        for (int i = 0; i < groupSize; ++i) {
+            R_CheckUserInterrupt();
+            for (int j = 0; j < d->n_markers; ++j) {
+                int cell_sum = 0;
+                if (genes[i] != NULL) {
+                    if (genes[i][2*j] == allele)     cell_sum += 1;
+                    if (genes[i][2*j + 1] == allele) cell_sum += 1;
+                }
+                counts->matrix[i][j] = cell_sum;
+            }
+        }
+        return 0;
+    }
 }
 
 /** Calculates the number of times at each marker that two particular alleles appear
@@ -6727,7 +7562,8 @@ int calculate_group_count_matrix_of_allele( SimData* d, unsigned int group, char
  * calculations.
  *
  * @param d pointer to the SimData.
- * @param group group number for which to calculate counts of the allele
+ * @param group group number for which to calculate counts of the allele, or 0 to
+ * count alleles for all genotypes in the simulation
  * @param allele the first single-character allele to be counting.
  * @param counts pointer to the DecimalMatrix into which to put the number
  * of `allele` occurences at each row/marker for each column/genotype in the group.
@@ -6736,41 +7572,44 @@ int calculate_group_count_matrix_of_allele( SimData* d, unsigned int group, char
  * of `allele2` occurences at each row/marker for each column/genotype in the group.
  * @returns 0 on success, nonzero on failure.
  * */
-int calculate_group_doublecount_matrix_of_allele( SimData* d, unsigned int group, char allele, DecimalMatrix* counts, char allele2, DecimalMatrix* counts2) {
-	//DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, n_ids);
-	int groupSize = get_group_size(d, group);
-	if (counts->rows < groupSize || counts->cols < d->n_markers) {
-        fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
-                d->n_markers, groupSize, counts->rows, counts->cols);
-        return 1;
-	}
-    if (counts2->rows < groupSize || counts2->cols < d->n_markers) {
-        fprintf(stderr, "`counts2` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
-                d->n_markers, groupSize, counts2->rows, counts2->cols);
-        return 1;
-	}
+int calculate_group_doublecount_matrix_of_allele( const SimData* d, const unsigned int group, const char allele, DecimalMatrix* counts, const char allele2, DecimalMatrix* counts2) {
+    if (group == 0) {
+        return UNINITIALISED; //@@
+    } else {
+        int groupSize = get_group_size(d, group);
+        if (counts->rows < groupSize || counts->cols < d->n_markers) {
+            fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
+                    d->n_markers, groupSize, counts->rows, counts->cols);
+            return 1;
+        }
+        if (counts2->rows < groupSize || counts2->cols < d->n_markers) {
+            fprintf(stderr, "`counts2` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
+                    d->n_markers, groupSize, counts2->rows, counts2->cols);
+            return 1;
+        }
 
-	char** genes = get_group_genes(d, group, groupSize);
+        char* genes[groupSize];
+        get_group_genes(d, group, groupSize, genes);
 
-	for (int i = 0; i < groupSize; ++i) {
-		R_CheckUserInterrupt();
-		if (genes[i] == NULL) {
-			continue;
-		}
+        for (int i = 0; i < groupSize; ++i) {
+            R_CheckUserInterrupt();
+            if (genes[i] == NULL) {
+                continue;
+            }
 
-		for (int j = 0; j < d->n_markers; ++j) {
-			int cell_sum = 0;
-			int cell_sum2 = 0;
-			if      (genes[i][2*j] == allele)      { ++cell_sum; }
-			else if (genes[i][2*j] == allele2)     { ++cell_sum2;}
-			if      (genes[i][2*j + 1] == allele)  { ++cell_sum; }
-			else if (genes[i][2*j + 1] == allele2) { ++cell_sum2;}
-			counts->matrix[i][j] = cell_sum;
-			counts2->matrix[i][j] = cell_sum2;
-		}
-	}
-    free(genes);
-	return 0;
+            for (int j = 0; j < d->n_markers; ++j) {
+                int cell_sum = 0;
+                int cell_sum2 = 0;
+                if      (genes[i][2*j] == allele)      { ++cell_sum; }
+                else if (genes[i][2*j] == allele2)     { ++cell_sum2;}
+                if      (genes[i][2*j + 1] == allele)  { ++cell_sum; }
+                else if (genes[i][2*j + 1] == allele2) { ++cell_sum2;}
+                counts->matrix[i][j] = cell_sum;
+                counts2->matrix[i][j] = cell_sum2;
+            }
+        }
+        return 0;
+    }
 }
 
 /** Calculates the number of times at each marker that a particular allele appears
@@ -6784,27 +7623,28 @@ int calculate_group_doublecount_matrix_of_allele( SimData* d, unsigned int group
  * of `allele` occurences at each row/marker for each column/genotype in the AlleleMatrix.
  * @returns 0 on success, nonzero on failure.
  * */
-int calculate_count_matrix_of_allele( AlleleMatrix* m, char allele, DecimalMatrix* counts) {
+int calculate_count_matrix_of_allele( const AlleleMatrix* m, const char allele, DecimalMatrix* counts) {
 	//DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, m->n_genotypes);
-	if (counts->rows < m->n_genotypes || counts->cols < m->n_markers) {
-        warning( "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n", m->n_markers, m->n_genotypes, counts->rows, counts->cols);
+    if (counts->rows < m->n_genotypes || counts->cols < m->n_markers) {
+        fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
+                m->n_markers, m->n_genotypes, counts->rows, counts->cols);
         return 1;
-	}
+    }
 
-	for (int i = 0; i < m->n_genotypes; ++i) {
-		R_CheckUserInterrupt();
-		if (m->alleles[i] == NULL) {
-			continue;
-		}
+    for (int i = 0; i < m->n_genotypes; ++i) {
+        R_CheckUserInterrupt();
+        if (m->alleles[i] == NULL) {
+            continue;
+        }
 
-		for (int j = 0; j < m->n_markers; ++j) {
-			int cell_sum = 0;
-			if (m->alleles[i][2*j] == allele)     cell_sum += 1;
-			if (m->alleles[i][2*j + 1] == allele) cell_sum += 1;
-			counts->matrix[i][j] = cell_sum;
-		}
-	}
-	return 0;
+        for (int j = 0; j < m->n_markers; ++j) {
+            int cell_sum = 0;
+            if (m->alleles[i][2*j] == allele)     cell_sum += 1;
+            if (m->alleles[i][2*j + 1] == allele) cell_sum += 1;
+            counts->matrix[i][j] = cell_sum;
+        }
+    }
+    return 0;
 }
 
 /** Calculates the number of times at each marker that two particular alleles appear
@@ -6825,13 +7665,15 @@ int calculate_count_matrix_of_allele( AlleleMatrix* m, char allele, DecimalMatri
  * of `allele2` occurences at each row/marker for each column/genotype in the group.
  * @returns 0 on success, nonzero on failure.
  * */
-int calculate_doublecount_matrix_of_allele( AlleleMatrix* m, char allele, DecimalMatrix* counts, char allele2, DecimalMatrix* counts2) {
+int calculate_doublecount_matrix_of_allele( const AlleleMatrix* m, const char allele, DecimalMatrix* counts, const char allele2, DecimalMatrix* counts2) {
 	if (counts->rows < m->n_genotypes || counts->cols < m->n_markers) {
-        warning( "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n", m->n_markers, m->n_genotypes, counts->rows, counts->cols);
+        fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
+                m->n_markers, m->n_genotypes, counts->rows, counts->cols);
         return 1;
 	}
     if (counts2->rows < m->n_genotypes || counts2->cols < m->n_markers) {
-        warning( "`counts2` is the wrong size to be filled: needs %d by %d but is %d by %d\n", m->n_markers, m->n_genotypes, counts2->rows, counts2->cols);
+        fprintf(stderr, "`counts2` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
+                m->n_markers, m->n_genotypes, counts2->rows, counts2->cols);
         return 1;
 	}
 
@@ -6865,8 +7707,8 @@ int calculate_doublecount_matrix_of_allele( AlleleMatrix* m, char allele, Decima
  * @returns DecimalMatrix containing counts for every genotype in the AlleleMatrix
  * linked list.
  * */
-DecimalMatrix calculate_full_count_matrix_of_allele( AlleleMatrix* m, char allele) {
-	AlleleMatrix* currentm = m;
+DecimalMatrix calculate_full_count_matrix_of_allele( const AlleleMatrix* m, const char allele) {
+    const AlleleMatrix* currentm = m;
 	int size = 0;
 	do {
 		size += currentm->n_genotypes;
@@ -6914,7 +7756,7 @@ DecimalMatrix calculate_full_count_matrix_of_allele( AlleleMatrix* m, char allel
  * @param n number of blocks into which to split each chromosome.
  * @returns a struct containing the markers identified as belonging to each block.
  */
-MarkerBlocks create_n_blocks_by_chr(SimData* d, int n) {
+MarkerBlocks create_n_blocks_by_chr(const SimData* d, const int n) {
 	MarkerBlocks blocks;
     if (n < 1) {
         warning("Invalid n value: number of blocks must be positive.\n");
@@ -7010,7 +7852,7 @@ MarkerBlocks create_n_blocks_by_chr(SimData* d, int n) {
  * @returns a struct containing the markers identified as belonging to each block
  * according to their definitions in the file.
  */
-MarkerBlocks read_block_file(SimData* d, const char* block_file) {
+MarkerBlocks read_block_file(const SimData* d, const char* block_file) {
 	struct TableSize ts = get_file_dimensions(block_file, '\t');
 
 	MarkerBlocks blocks;
@@ -7049,7 +7891,7 @@ MarkerBlocks read_block_file(SimData* d, const char* block_file) {
 				markername[ni] = '\0';
 
 				// identify the index of this marker and save it in the temporary marker buffer `markerbuffer`
-				int markerindex = get_from_unordered_str_list(markername, d->markers, d->n_markers);
+                int markerindex = get_from_unordered_str_list(markername, d->n_markers, (const char**) d->markers);
 				if (markerindex >= 0) {
 					++(blocks.num_markers_in_block[bi]);
 					markerbuffer[mi] = markerindex;
@@ -7101,7 +7943,7 @@ MarkerBlocks read_block_file(SimData* d, const char* block_file) {
  * block effects/local BVs will be saved.
  * @param group group number from which to split the top individuals.
  */
-void calculate_group_local_bvs(SimData* d, MarkerBlocks b, const char* output_file, int group) {
+void calculate_group_local_bvs(const SimData* d, const MarkerBlocks b, const char* output_file, const int group) {
 
 	FILE* outfile;
 	if ((outfile = fopen(output_file, "w")) == NULL) {
@@ -7112,8 +7954,9 @@ void calculate_group_local_bvs(SimData* d, MarkerBlocks b, const char* output_fi
 	char buffer[bufferlen];
 
 	int gsize = get_group_size(d, group);
-	char** ggenos = get_group_genes(d, group, gsize);
-	char** gnames = get_group_names(d, group, gsize);
+    char* ggenos[gsize]; char* gnames[gsize];
+    get_group_genes(d, group, gsize, ggenos);
+    get_group_names(d, group, gsize, gnames);
 
 	double beffect;
 
@@ -7163,9 +8006,6 @@ void calculate_group_local_bvs(SimData* d, MarkerBlocks b, const char* output_fi
 		fwrite("\n", sizeof(char), 1, outfile);
 	}
 
-	free(ggenos);
-	free(gnames);
-
 	fflush(outfile);
 	fclose(outfile);
 	return;
@@ -7194,7 +8034,7 @@ void calculate_group_local_bvs(SimData* d, MarkerBlocks b, const char* output_fi
  * @param output_file string containing the filename of the file to which output
  * block effects/local BV will be saved.
  */
-void calculate_local_bvs(SimData* d, MarkerBlocks b, const char* output_file) {
+void calculate_local_bvs(const SimData* d, const MarkerBlocks b, const char* output_file) {
 	FILE* outfile;
 	if ((outfile = fopen(output_file, "w")) == NULL) {
 		error( "Failed to open file %s.\n", output_file);
@@ -7279,7 +8119,7 @@ void calculate_local_bvs(SimData* d, MarkerBlocks b, const char* output_file) {
  * @returns a heap array filled with a null-terminated string containing the highest
  * scoring allele at each marker.
  */
-char* calculate_optimal_alleles(SimData* d) {
+char* calculate_optimal_alleles(const SimData* d) {
 	if (d->e.effects.matrix == NULL || d->e.effects.rows < 1 || d->e.effect_names == NULL) {
 		warning( "No effect values are loaded\n");
 		return NULL;
@@ -7317,7 +8157,7 @@ char* calculate_optimal_alleles(SimData* d) {
  * @returns a heap array filled with a null-terminated string containing the highest
  * scoring allele at each marker.
  */
-char* calculate_optimal_available_alleles(SimData* d, unsigned int group) {
+char* calculate_optimal_available_alleles(const SimData* d, const unsigned int group) {
     if (d->e.effects.matrix == NULL || d->e.effects.rows < 1 || d->e.effect_names == NULL) {
         warning( "No effect values are loaded\n");
         return NULL;
@@ -7325,7 +8165,8 @@ char* calculate_optimal_available_alleles(SimData* d, unsigned int group) {
     // assumes no alleles in the matrix are spaces.
 
     int gsize = get_group_size(d, group);
-    char** ggenes = get_group_genes(d, group, gsize);
+    char* ggenes[gsize];
+    get_group_genes(d, group, gsize, ggenes);
 
     char* optimal = get_malloc(sizeof(char)* (d->n_markers + 1));
     char best_allele;
@@ -7373,7 +8214,6 @@ char* calculate_optimal_available_alleles(SimData* d, unsigned int group) {
         optimal[j] = best_allele;
     }
 
-    free(ggenes);
     optimal[d->n_markers] = '\0';
     return optimal;
 }
@@ -7387,13 +8227,12 @@ char* calculate_optimal_available_alleles(SimData* d, unsigned int group) {
  * @param d pointer to the SimData containing markers and marker effects.
  * @returns the fitness metric/breeding value of the best/ideal genotype.
  */
-double calculate_optimum_bv(SimData* d) {
+double calculate_optimum_bv(const SimData* d) {
 	double best_gebv = 0;
-	double best_score;
 
 	for (int i = 0; i < d->n_markers; ++i) {
 		// Find the allele with the highest effect
-		best_score = d->e.effects.matrix[0][i];
+        double best_score = d->e.effects.matrix[0][i];
 		for (int a = 1; a < d->e.effects.rows; ++a) {
 			if (d->e.effects.matrix[a][i] > best_score) {
 				best_score = d->e.effects.matrix[a][i];
@@ -7420,19 +8259,19 @@ double calculate_optimum_bv(SimData* d) {
  * @param group group number from which
  * @returns the fitness metric/breeding value of the best genotype
  */
-double calculate_optimal_available_bv(SimData* d, unsigned int group) {
+double calculate_optimal_available_bv(const SimData* d, const unsigned int group) {
     // assumes no alleles in the matrix are spaces.
 
     int gsize = get_group_size(d, group);
-    char** ggenes = get_group_genes(d, group, gsize);
+    char* ggenes[gsize];
+    get_group_genes(d, group, gsize, ggenes);
 
     double total_score = 0;
-    char best_allele;
-    double best_score;
 
     // for each locus
     for (int j = 0; j < d->n_markers; ++j) {
-        best_allele = '\0';
+        char best_allele = '\0';
+		double best_score;
         for (int i = 0; i < gsize; ++i) {
 
             // If the allele is different to the previous best (guaranteed if best_allele is not initialised)
@@ -7472,7 +8311,6 @@ double calculate_optimal_available_bv(SimData* d, unsigned int group) {
         total_score += (2*best_score);
     }
 
-    free(ggenes);
     return total_score;
 }
 
@@ -7484,7 +8322,7 @@ double calculate_optimal_available_bv(SimData* d, unsigned int group) {
  * @param d pointer to the SimData containing markers and marker effects.
  * @returns the fitness metric/breeding value of the worst genotype.
  */
-double calculate_minimum_bv(SimData* d) {
+double calculate_minimum_bv(const SimData* d) {
 	double worst_gebv = 0;
 	double worst_score;
 
@@ -7525,7 +8363,7 @@ double calculate_minimum_bv(SimData* d) {
  * @param f file pointer opened for writing to put the output
  * @param m pointer to the SimData whose data we print
 */
-void save_simdata(FILE* f, SimData* m) {
+void save_simdata(FILE* f, const SimData* m) {
 	/* Print the header. */
 	//fprintf(f, "name\t");
 	fwrite("name\t", sizeof(char), 5, f);
@@ -7591,7 +8429,7 @@ void save_simdata(FILE* f, SimData* m) {
  * @param d pointer to the SimData whose data we print
  * @param b MarkerBlocks struct containing the groupings of markers to print.
 */
-void save_marker_blocks(FILE* f, SimData* d, MarkerBlocks b) {
+void save_marker_blocks(FILE* f, const SimData* d, const MarkerBlocks b) {
 	const char header[] = "Chrom\tPos\tName\tClass\tMarkers\n";
 	fwrite(header, sizeof(char)*strlen(header), 1, f);
 
@@ -7634,7 +8472,7 @@ void save_marker_blocks(FILE* f, SimData* d, MarkerBlocks b) {
  * @param markers array of strings that correspond to names of the markers.
  * if this is null, the header row will be empty.
 */
-void save_allele_matrix(FILE* f, AlleleMatrix* m, char** markers) {
+void save_allele_matrix(FILE* f, const AlleleMatrix* m, const char** markers) {
 	/* Print header */
 	for (int i = 0; i < m->n_markers; ++i) {
 		if (markers != NULL) { // assume all-or-nothing with marker names
@@ -7690,9 +8528,9 @@ void save_allele_matrix(FILE* f, AlleleMatrix* m, char** markers) {
  * @param m pointer to the AlleleMatrix whose data we print
  * @param markers array of strings that correspond to names of the markers.
 */
-void save_transposed_allele_matrix(FILE* f, AlleleMatrix* m, char** markers) {
+void save_transposed_allele_matrix(FILE* f, const AlleleMatrix* m, const char** markers) {
 	// Count number of genotypes in the AM
-	AlleleMatrix* currentm = m; // current matrix
+    const AlleleMatrix* currentm = m; // current matrix
 	int tn_genotypes = 0;
 	do {
 		tn_genotypes += currentm->n_genotypes;
@@ -7767,9 +8605,11 @@ void save_group_alleles(FILE* f, SimData* d, int group_id) {
         warning("Group %d does not exist: no data saved.\n", group_id);
         return;
     }
-	char** alleles = get_group_genes( d, group_id, group_size);
-	char** names = get_group_names( d, group_id, group_size);
-	unsigned int* ids = get_group_ids( d, group_id, group_size);
+    char* alleles[group_size]; char* names[group_size];
+    unsigned int ids[group_size];
+    get_group_genes( d, group_id, group_size, alleles );
+    get_group_names( d, group_id, group_size, names );
+    get_group_ids( d, group_id, group_size, ids );
 
 	/* Print header */
 	//fwrite(&group_id, sizeof(int), 1, f);
@@ -7804,9 +8644,6 @@ void save_group_alleles(FILE* f, SimData* d, int group_id) {
 		///fprintf(f, "\n");
 		fwrite("\n", sizeof(char), 1, f);
 	}
-	free(alleles);
-	free(names);
-	free(ids);
 	fflush(f);
 
 }
@@ -7829,16 +8666,18 @@ void save_group_alleles(FILE* f, SimData* d, int group_id) {
  * the marker names.
  * @param group_id group number of the group of individuals whose genotypes to print.
 */
-void save_transposed_group_alleles(FILE* f, SimData* d, int group_id) {
+void save_transposed_group_alleles(FILE* f, const SimData* d, const int group_id) {
 	/* Get the stuff we'll be printing. */
 	int group_size = get_group_size( d, group_id);
     if (group_size < 1) {
         warning("Group %d does not exist: no data saved.\n", group_id);
         return;
     }
-	char** alleles = get_group_genes( d, group_id, group_size);
-	char** names = get_group_names( d, group_id, group_size);
-	unsigned int* ids = get_group_ids( d, group_id, group_size);
+    char* alleles[group_size]; char* names[group_size];
+    unsigned int ids[group_size];
+    get_group_genes( d, group_id, group_size, alleles );
+    get_group_names( d, group_id, group_size, names );
+    get_group_ids( d, group_id, group_size, ids );
 
 	/* Print header */
 	fprintf(f, "%d", group_id);
@@ -7864,9 +8703,6 @@ void save_transposed_group_alleles(FILE* f, SimData* d, int group_id) {
 		///fprintf(f, "\n");
 		fwrite("\n", sizeof(char), 1, f);
 	}
-	free(alleles);
-	free(names);
-	free(ids);
 	fflush(f);
 
 }
@@ -7893,14 +8729,18 @@ void save_transposed_group_alleles(FILE* f, SimData* d, int group_id) {
  * @param group group number of the group of individuals to print the
  * immediate parents of.
  */
-void save_group_one_step_pedigree(FILE* f, SimData* d, int group) {
+void save_group_one_step_pedigree(FILE* f, const SimData* d, const int group) {
 	int group_size = get_group_size( d, group);
     if (group_size < 1) {
         warning("Group %d does not exist: no data saved.\n", group);
         return;
     }
-	unsigned int* group_contents = get_group_ids( d, group, group_size);
-	char** group_names = get_group_names( d, group, group_size);
+
+
+    unsigned int group_contents[group_size];
+    get_group_ids( d, group, group_size, group_contents );
+    char* group_names[group_size];
+    get_group_names( d, group, group_size, group_names );
 	unsigned int pedigree[2];
 	char* name;
 
@@ -7937,8 +8777,6 @@ void save_group_one_step_pedigree(FILE* f, SimData* d, int group) {
 		}
 		fwrite("\n", sizeof(char), 1, f);
 	}
-	free(group_names);
-	free(group_contents);
 	fflush(f);
 }
 
@@ -7962,7 +8800,7 @@ void save_group_one_step_pedigree(FILE* f, SimData* d, int group) {
  * @param f file pointer opened for writing to put the output
  * @param d pointer to the SimData containing the genotypes and their pedigrees
  */
-void save_one_step_pedigree(FILE* f, SimData* d) {
+void save_one_step_pedigree(FILE* f, const SimData* d) {
 	unsigned int pedigree[2];
 	char* name;
 	AlleleMatrix* m = d->m;
@@ -8034,15 +8872,17 @@ void save_one_step_pedigree(FILE* f, SimData* d) {
  * @param group group number of the group of individuals to print the
  * pedigree of.
  */
-void save_group_full_pedigree(FILE* f, SimData* d, int group) {
+void save_group_full_pedigree(FILE* f, const SimData* d, const int group) {
 	int group_size = get_group_size( d, group);
     if (group_size < 1) {
         warning("Group %d does not exist: no data saved.\n", group);
         return;
     }
 
-	unsigned int* group_contents = get_group_ids( d, group, group_size);
-	char** group_names = get_group_names( d, group, group_size);
+    unsigned int group_contents[group_size];
+    get_group_ids( d, group, group_size, group_contents );
+    char* group_names[group_size];
+    get_group_names( d, group, group_size, group_names );
 	const char newline[] = "\n";
 	unsigned int pedigree[2];
 
@@ -8058,8 +8898,6 @@ void save_group_full_pedigree(FILE* f, SimData* d, int group) {
 		}
 		fwrite(newline, sizeof(char), 1, f);
 	}
-	free(group_names);
-	free(group_contents);
 	fflush(f);
 }
 
@@ -8091,7 +8929,7 @@ void save_group_full_pedigree(FILE* f, SimData* d, int group) {
  * @param f file pointer opened for writing to put the output
  * @param d pointer to the SimData containing all genotypes to print.
  */
-void save_full_pedigree(FILE* f, SimData* d) {
+void save_full_pedigree(FILE* f, const SimData* d) {
 	const char newline[] = "\n";
 
 	AlleleMatrix* m = d->m;
@@ -8145,7 +8983,7 @@ void save_full_pedigree(FILE* f, SimData* d) {
  * @param parents pointer to an AlleleMatrix that heads the linked list
  * containing the parents and other ancestry of the given genotypes.
  */
-void save_AM_pedigree(FILE* f, AlleleMatrix* m, SimData* parents) {
+void save_AM_pedigree(FILE* f, const AlleleMatrix* m, const SimData* parents) {
 	const char newline[] = "\n";
 
 	for (int i = 0; i < m->n_genotypes; ++i) {
@@ -8185,7 +9023,7 @@ void save_AM_pedigree(FILE* f, AlleleMatrix* m, SimData* parents) {
  * @param p1 the session-unique id of the first parent to be saved.
  * @param p2 the session-unique id of the second parent to be saved.
  */
-void save_parents_of(FILE* f, AlleleMatrix* m, unsigned int p1, unsigned int p2) {
+void save_parents_of(FILE* f, const AlleleMatrix* m, unsigned int p1, unsigned int p2) {
 	unsigned int pedigree[2];
 
 	// open brackets
@@ -8264,14 +9102,16 @@ void save_parents_of(FILE* f, AlleleMatrix* m, unsigned int p1, unsigned int p2)
  * @param group group number of the group of individuals to print the
  * breeding values of.
  */
-void save_group_bvs(FILE* f, SimData* d, int group) {
+void save_group_bvs(FILE* f, const SimData* d, const int group) {
 	int group_size = get_group_size( d, group);
     if (group_size < 1) {
         warning("Group %d does not exist: no data saved.\n", group);
         return;
     }
-	unsigned int* group_contents = get_group_ids( d, group, group_size);
-	char** group_names = get_group_names( d, group, group_size);
+    unsigned int group_contents[group_size];
+    get_group_ids( d, group, group_size, group_contents );
+    char* group_names[group_size];
+    get_group_names( d, group, group_size, group_names );
 	DecimalMatrix effects = calculate_group_bvs(d, group);
 	const char newline[] = "\n";
 	const char tab[] = "\t";
@@ -8291,8 +9131,6 @@ void save_group_bvs(FILE* f, SimData* d, int group) {
 	}
 
 	delete_dmatrix(&effects);
-	free(group_names);
-	free(group_contents);
 	fflush(f);
 }
 
@@ -8310,7 +9148,7 @@ void save_group_bvs(FILE* f, SimData* d, int group) {
  * @param f file pointer opened for writing to put the output
  * @param d pointer to the SimData containing the group members.
  */
-void save_bvs(FILE* f, SimData* d) {
+void save_bvs(FILE* f, const SimData* d) {
 	AlleleMatrix* am = d->m;
 	const char newline[] = "\n";
 	const char tab[] = "\t";
@@ -8356,7 +9194,7 @@ void save_bvs(FILE* f, SimData* d) {
  * @param ids array of ids to print alongside the BVs.
  * @param names array of names to print alongside the BVs.
  */
-void save_manual_bvs(FILE* f, DecimalMatrix* e, unsigned int* ids, char** names) {
+void save_manual_bvs(FILE* f, const DecimalMatrix* e, const unsigned int* ids, const char** names) {
 	char sep[] = "\t";
 	char newline[] = "\n";
 
@@ -8394,7 +9232,7 @@ void save_manual_bvs(FILE* f, DecimalMatrix* e, unsigned int* ids, char** names)
  * @param d pointer to the SimData containing the group members.
  * @param allele the allele character to count
  */
-void save_count_matrix(FILE* f, SimData* d, char allele) {
+void save_count_matrix(FILE* f, const SimData* d, const char allele) {
 	DecimalMatrix counts = calculate_full_count_matrix_of_allele(d->m, allele);
 
 	AlleleMatrix* currentm = d->m;
@@ -8417,11 +9255,11 @@ void save_count_matrix(FILE* f, SimData* d, char allele) {
 		if (d->markers != NULL && d->markers[i] != NULL) {
 			fwrite(d->markers[i], sizeof(char), strlen(d->markers[i]), f);
 		}
-		fwrite("\t", sizeof(char), 1, f);
 
 		for (int j = 0; j < counts.rows; ++j) { // loop through genotypes
 			// print the matrix entries
-			fprintf(f, "%d ", (int) counts.matrix[j][i]);
+            fwrite("\t", sizeof(char), 1, f);
+            fprintf(f, "%d", (int) counts.matrix[j][i]);
 		}
 		//print the newline
 		if (i + 1 < counts.rows) {
@@ -8452,13 +9290,15 @@ void save_count_matrix(FILE* f, SimData* d, char allele) {
  * allele count of.
  * @param allele the allele character to count
  */
-void save_count_matrix_of_group(FILE* f, SimData* d, char allele, int group) {
+void save_count_matrix_of_group(FILE* f, const SimData* d, const char allele, const int group) {
 	unsigned int group_size = get_group_size( d, group);
     if (group_size < 1) {
         warning("Group %d does not exist: no data saved.\n", group);
         return;
     }
-	char** group_names = get_group_names( d, group, group_size);
+
+    char* group_names[group_size];
+    get_group_names( d, group, group_size, group_names );
 	DecimalMatrix counts = generate_zero_dmatrix(group_size,d->n_markers);
 	calculate_group_count_matrix_of_allele(d,group,allele,&counts);
 
@@ -8478,19 +9318,20 @@ void save_count_matrix_of_group(FILE* f, SimData* d, char allele, int group) {
 		if (d->markers != NULL && d->markers[i] != NULL) {
 			fwrite(d->markers[i], sizeof(char), strlen(d->markers[i]), f);
 		}
-		fwrite("\t", sizeof(char), 1, f);
 
 		for (int j = 0; j < group_size; ++j) { // loop through genotypes
 			// print the matrix entries
-			fprintf(f, "%d ", (int) counts.matrix[j][i]);
+            fwrite("\t", sizeof(char), 1, f);
+            fprintf(f, "%d", (int) counts.matrix[j][i]);
 		}
 		//print the newline
-		if (i + 1 < group_size) {
+        if (i + 1 < d->n_markers) {
 			fwrite("\n", sizeof(char), 1, f);
 		}
 	}
 
 	delete_dmatrix(&counts);
-	free(group_names);
 	fflush(f);
 }
+
+#endif

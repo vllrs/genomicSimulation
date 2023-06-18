@@ -18,6 +18,7 @@
 		- `make.group.from.label.range`
 - Added a name setter function, for users who want control over the names of their simulated genotypes.
 	- `change.names.to.values`
+- Updated internals of `see.group.data` and `cross.combinations` to match changes to C version. 
 
 # genomicSimulation 0.2.2
 
