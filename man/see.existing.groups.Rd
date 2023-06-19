@@ -4,7 +4,10 @@
 \alias{see.existing.groups}
 \title{Get a list of the groups currently existing in the SimData}
 \usage{
-see.existing.groups()
+see.existing.groups(maxGroups = 10000L)
+}
+\arguments{
+\item{maxGroups}{maximum number of groups to return.}
 }
 \value{
 A dataframe containing two columns, the first, named "Group", 
@@ -32,8 +35,8 @@ Other grouping functions:
 \code{\link{make.group.from.label.range}()},
 \code{\link{make.group.from.label}()},
 \code{\link{make.group}()},
-\code{\link{make.label}()},
 \code{\link{see.group.data}()},
+\code{\link{see.group.gene.data}()},
 \code{\link{select.by.gebv}()}
 }
 \concept{grouping functions}

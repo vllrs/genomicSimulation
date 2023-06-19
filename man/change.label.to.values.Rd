@@ -4,7 +4,7 @@
 \alias{change.label.to.values}
 \title{Set values of a custom label}
 \usage{
-change.label.to.values(label, values, group = NA, startIndex = 0)
+change.label.to.values(label, values, group = NA, startIndex = 1)
 }
 \arguments{
 \item{label}{the label number of the label to change.}
@@ -45,6 +45,7 @@ Other label functions:
 \code{\link{change.names.to.values}()},
 \code{\link{delete.label}()},
 \code{\link{make.group.from.label.range}()},
-\code{\link{make.group.from.label}()}
+\code{\link{make.group.from.label}()},
+\code{\link{make.label}()}
 }
 \concept{label functions}

@@ -17,23 +17,13 @@ The label number of the new label created.
 \code{make.label} creates a new custom label with the given default value.
 }
 \seealso{
-Other grouping functions: 
-\code{\link{break.group.evenly}()},
-\code{\link{break.group.into.buckets}()},
-\code{\link{break.group.into.families}()},
-\code{\link{break.group.into.halfsib.families}()},
-\code{\link{break.group.into.individuals}()},
-\code{\link{break.group.randomly}()},
-\code{\link{break.group.with.probabilities}()},
-\code{\link{change.label.default}()},
-\code{\link{combine.groups}()},
-\code{\link{delete.group}()},
+Other label functions: 
+\code{\link{change.label.by.amount}()},
+\code{\link{change.label.to.this}()},
+\code{\link{change.label.to.values}()},
+\code{\link{change.names.to.values}()},
 \code{\link{delete.label}()},
 \code{\link{make.group.from.label.range}()},
-\code{\link{make.group.from.label}()},
-\code{\link{make.group}()},
-\code{\link{see.existing.groups}()},
-\code{\link{see.group.data}()},
-\code{\link{select.by.gebv}()}
+\code{\link{make.group.from.label}()}
 }
-\concept{grouping functions}
+\concept{label functions}

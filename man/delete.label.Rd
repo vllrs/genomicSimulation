@@ -7,7 +7,7 @@
 delete.label(labels)
 }
 \arguments{
-\item{groups}{an vector containing the label numbers of the labels to be deleted}
+\item{labels}{an vector containing the label numbers of the labels to be deleted}
 }
 \value{
 0 on success. An error is raised on failure.
@@ -23,7 +23,8 @@ Other label functions:
 \code{\link{change.label.to.values}()},
 \code{\link{change.names.to.values}()},
 \code{\link{make.group.from.label.range}()},
-\code{\link{make.group.from.label}()}
+\code{\link{make.group.from.label}()},
+\code{\link{make.label}()}
 
 Other grouping functions: 
 \code{\link{break.group.evenly}()},
@@ -39,9 +40,9 @@ Other grouping functions:
 \code{\link{make.group.from.label.range}()},
 \code{\link{make.group.from.label}()},
 \code{\link{make.group}()},
-\code{\link{make.label}()},
 \code{\link{see.existing.groups}()},
 \code{\link{see.group.data}()},
+\code{\link{see.group.gene.data}()},
 \code{\link{select.by.gebv}()}
 }
 \concept{grouping functions}

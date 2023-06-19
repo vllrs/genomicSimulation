@@ -234,7 +234,7 @@ change.label.by.amount <- function(label, amount, group=NA) {
 #' \code{delete.label} removes the given custom label(s) from all genotypes
 #' and deletes them from simulation memory.
 #'
-#' @param groups an vector containing the label numbers of the labels to be deleted
+#' @param labels an vector containing the label numbers of the labels to be deleted
 #' @return 0 on success. An error is raised on failure.
 #'
 #' @family label functions

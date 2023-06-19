@@ -58,8 +58,8 @@ Other grouping functions:
 \code{\link{make.group.from.label.range}()},
 \code{\link{make.group.from.label}()},
 \code{\link{make.group}()},
-\code{\link{make.label}()},
 \code{\link{see.existing.groups}()},
-\code{\link{see.group.data}()}
+\code{\link{see.group.data}()},
+\code{\link{see.group.gene.data}()}
 }
 \concept{grouping functions}

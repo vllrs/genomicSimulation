@@ -12,9 +12,9 @@
 
 <meta name="author" content="Kira Villiers" />
 
-<meta name="date" content="2023-04-19" />
+<meta name="date" content="2023-06-19" />
 
-<title>genomicSimulation (v0.2.2.4) Vignette</title>
+<title>genomicSimulation (v0.2.3) Vignette</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -121,13 +121,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; }
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -331,9 +338,9 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">genomicSimulation (v0.2.2.4) Vignette</h1>
+<h1 class="title toc-ignore">genomicSimulation (v0.2.3) Vignette</h1>
 <h4 class="author">Kira Villiers</h4>
-<h4 class="date">2023-04-19</h4>
+<h4 class="date">2023-06-19</h4>
 
 
 <div id="TOC">
@@ -614,7 +621,7 @@ group ceases to exist.</p>
 <h2><span class="header-section-number">3.3</span> Understanding Custom
 Labels</h2>
 <p>Sometimes you might have reason to want to track extra details about
-your genotypes (a common example is the age of the simulated
+your genotypes (a common use case would be the age of the simulated
 individual), or you might want a categorisation system that persists
 even when groups are broken apart, dissolved, and/or reformed in efforts
 to perform particular selection or mating procedure.</p>
@@ -636,7 +643,7 @@ not create a new group. Label manipulation functions like
 <code>change.label.by.amount</code> do follow the pattern and return 0,
 since they do not create a new group.</p>
 <p>Also like groups, use <code>delete.label</code> to delete a custom
-labe (all simulated individuals will still exist, but they will no
+label (all simulated individuals will still exist, but they will no
 longer have any value under the custom label that no longer exists).
 Merely removing the label ID from the R environment does nothing to
 remove the label from simulation memory.</p>
@@ -647,17 +654,17 @@ Identifiers</h2>
 <p>There are four categories of identifiers that may be observed during
 use of the simulation.</p>
 <ol style="list-style-type: decimal">
-<li>Group numbers, which were discussed in the preceding section on
-groups. They are integers greater than 0 that define a set of
+<li>Group numbers/group IDs, which were discussed in the preceding
+section on groups. They are integers greater than 0 that define a set of
 genotypes/lines. Any number of lines can share a group number, and a
 line’s group number may be changed over the course of the
 simulation.</li>
-<li>Label identifiers, which were discussed in the preceding section on
-labels. Like group numbers, they are integers greater than 0. They
-define a particular custom label. A label keeps its same identifier for
-its lifetime.<br />
+<li>Label IDs, which were discussed in the preceding section on labels.
+Like group numbers, they are integers greater than 0. They define a
+particular custom label. A label keeps its same identifier for its
+lifetime.<br />
 </li>
-<li>IDs. These are integers greater than 0 that are unique to a
+<li>Genotype IDs. These are integers greater than 0 that are unique to a
 particular genotype for the lifetime of the simulation. IDs are used for
 tracking pedigree. However, genotypes are not guaranteed to have an ID:
 genotypes created during crossing with the setting <code>give.ids</code>
@@ -765,7 +772,7 @@ numbers and call crossing functions.</p>
 <span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="fu">save.pedigrees</span>(<span class="st">&quot;a.txt&quot;</span>, f1, <span class="at">type=</span><span class="st">&quot;P&quot;</span>)</span>
 <span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span>
 <span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="fu">find.plot.crossovers</span>(<span class="st">&quot;a.txt&quot;</span>, <span class="st">&quot;b.txt&quot;</span>)</span></code></pre></div>
-<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Find the 25% with the top breeding value/GEBV</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>f1.selected <span class="ot">&lt;-</span> <span class="fu">select.by.gebv</span>(f1, <span class="at">percentage=</span><span class="dv">25</span>)</span>
@@ -798,11 +805,11 @@ numbers and call crossing functions.</p>
 <span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Show the save-as-you-go output file</span></span>
 <span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="fu">read.csv</span>(<span class="st">&quot;af6-genotype.txt&quot;</span>, <span class="at">sep=</span><span class="st">&#39;</span><span class="sc">\t</span><span class="st">&#39;</span>)</span>
 <span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    X m1 m2 m3</span></span>
-<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 32 TT AA AT</span></span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 33 TT AA TT</span></span>
-<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 34 TT AA AA</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 32 TT AA TT</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 33 TT AA AA</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 34 TT AA TT</span></span>
 <span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 35 TT AA TT</span></span>
-<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 36 TT AA AA</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 36 TT AA TT</span></span>
 <span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="co"># (cleanup)</span></span>

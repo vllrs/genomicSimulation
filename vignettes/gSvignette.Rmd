@@ -1,5 +1,5 @@
 ---
-title: "genomicSimulation (v0.2.2.4) Vignette"
+title: "genomicSimulation (v0.2.3) Vignette"
 author: "Kira Villiers"
 date: "`r Sys.Date()`"
 output:
@@ -9,7 +9,7 @@ output:
       toc: true
       #theme: simplex
 vignette: >
-  %\VignetteIndexEntry{genomicSimulation Vignette}
+  %\VignetteIndexEntry{genomicSimulation (v0.2.3) Vignette}
   %\VignetteEngine{knitr::rmarkdown}
   %\usepackage[utf8]{inputenc}
 ---
@@ -28,7 +28,7 @@ library(genomicSimulation)
 # Introduction
 genomicSimulation is a simple, fast scripting simulation tool for creating 'digital twins' of breeding schemes. The package tracks genotypes at an individual level, and performs stochastic simulation of meiosis (including crossing-over but not mutation) to simulate crossing.
 
-All core functionality is written in C. Performing the computation-intensive tasks at C-level allows for quick runtimes. Because it was initially created for simulating plant breeding programs, the package does not automatically track sex. 
+All core functionality is written in C. Performing the computation-intensive tasks at C-level allows for quick runtimes. Because it was initially created for simulating plant breeding programs, the package does not automatically track sex.
 
 Contact the package maintainers for any feature requests or improvement requests, or to report any bug or crash. 
 
@@ -104,7 +104,7 @@ Note that only genomicSimulation functions can actually make changes to the grou
 
 ## Understanding Custom Labels
 
-Sometimes you might have reason to want to track extra details about your genotypes (a common example is the age of the simulated individual), or you might want a categorisation system that persists even when groups are broken apart, dissolved, and/or reformed in efforts to perform particular selection or mating procedure.
+Sometimes you might have reason to want to track extra details about your genotypes (a common use case would be the age of the simulated individual), or you might want a categorisation system that persists even when groups are broken apart, dissolved, and/or reformed in efforts to perform particular selection or mating procedure.
 
 A custom label is an attribute or field that is stable until changed by the user. genomicSimulation gives its users the power to create as many labels as desired, to set default values for each label, and to change the value of the label on each simulated individual.
 
@@ -112,14 +112,14 @@ Every genotype in the simulation will hold some value in every label that exists
 
 Like group numbers, label IDs are integers greater than 0. The function `make.label` returns the label ID of the label it just created. This is an exception to the usual rule that functions return the group number of the group that was created, or 0 if they did not create a new group. Label manipulation functions like `change.label.by.amount` do follow the pattern and return 0, since they do not create a new group. 
 
-Also like groups, use `delete.label` to delete a custom labe (all simulated individuals will still exist, but they will no longer have any value under the custom label that no longer exists). Merely removing the label ID from the R environment does nothing to remove the label from simulation memory.
+Also like groups, use `delete.label` to delete a custom label (all simulated individuals will still exist, but they will no longer have any value under the custom label that no longer exists). Merely removing the label ID from the R environment does nothing to remove the label from simulation memory.
 
 ## Understanding Identifiers
 There are four categories of identifiers that may be observed during use of the simulation.
 
-1. Group numbers, which were discussed in the preceding section on groups. They are integers greater than 0 that define a set of genotypes/lines. Any number of lines can share a group number, and a line's group number may be changed over the course of the simulation.
-1. Label identifiers, which were discussed in the preceding section on labels. Like group numbers, they are integers greater than 0. They define a particular custom label. A label keeps its same identifier for its lifetime.  
-1. IDs. These are integers greater than 0 that are unique to a particular genotype for the lifetime of the simulation. IDs are used for tracking pedigree. However, genotypes are not guaranteed to have an ID: genotypes created during crossing with the setting `give.ids` set to FALSE will not be allocated IDs and will have 0 instead. 
+1. Group numbers/group IDs, which were discussed in the preceding section on groups. They are integers greater than 0 that define a set of genotypes/lines. Any number of lines can share a group number, and a line's group number may be changed over the course of the simulation.
+1. Label IDs, which were discussed in the preceding section on labels. Like group numbers, they are integers greater than 0. They define a particular custom label. A label keeps its same identifier for its lifetime.  
+1. Genotype IDs. These are integers greater than 0 that are unique to a particular genotype for the lifetime of the simulation. IDs are used for tracking pedigree. However, genotypes are not guaranteed to have an ID: genotypes created during crossing with the setting `give.ids` set to FALSE will not be allocated IDs and will have 0 instead. 
 1. Indexes. These represent the position/column number in the invisible table at which the genotype is stored. They are therefore unique to the genotype but not continuous over the lifetime of the simulation, because when genotypes/columns are deleted, the column numbers of the remaining genotypes may change. Because, unlike IDs, every genotype is guaranteed to have an index, functions like `make.group` and `cross.combinations` that act on specific genotypes (rather than groups) generally take indexes as inputs. Since indexes can change, however, it is important to not place a `delete.group` call between getting index data and using indexes in one of these function calls.
 
 ## Understanding Output Methods

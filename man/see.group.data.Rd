@@ -14,7 +14,10 @@ to be extracted. String parsing is case-insensitive.
 If the first character is 'N', the 'N'ames of group members will be extracted. 
 If the first character is 'D', the I'D's of group members will be extracted. 
 If the first character is 'X', the Inde'X'es of group members will be extracted. 
-If the first character is 'G', the 'G'enotypes of the group members will be extracted. 
+If the first character is 'G', the 'G'enotypes of the group members will be extracted.
+If the first character is 'C', the allele 'c'ounts of the group members for each marker
+will be extracted (that is, 0 for no copies of `count.allele` at that marker,
+1 for 1 copy, 2 for 2 copies, etc). A (group members)x(markers) matrix.
 If the first character is 'B', the 'b'reeding values/GEBVs of group members will be returned.
 If it starts with "P1", the first parent of each group member is returned. As usual in 
 genomicSimulation, if the parent has a name, its name will be what is returned, otherwise,
@@ -59,11 +62,12 @@ Other grouping functions:
 \code{\link{make.group.from.label.range}()},
 \code{\link{make.group.from.label}()},
 \code{\link{make.group}()},
-\code{\link{make.label}()},
 \code{\link{see.existing.groups}()},
+\code{\link{see.group.gene.data}()},
 \code{\link{select.by.gebv}()}
 
 Other data access functions: 
+\code{\link{see.group.gene.data}()},
 \code{\link{see.minimum.GEBV}()},
 \code{\link{see.optimal.GEBV}()},
 \code{\link{see.optimal.haplotype}()},

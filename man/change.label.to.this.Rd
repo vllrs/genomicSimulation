@@ -33,6 +33,7 @@ Other label functions:
 \code{\link{change.names.to.values}()},
 \code{\link{delete.label}()},
 \code{\link{make.group.from.label.range}()},
-\code{\link{make.group.from.label}()}
+\code{\link{make.group.from.label}()},
+\code{\link{make.label}()}
 }
 \concept{label functions}
