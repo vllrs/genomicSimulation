@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.2.1 - last edit 11 Nov 2022 */
+/* genomicSimulationC v0.2.3 - last edit 19 June 2023 */
 
 /** Options parameter to run SimData functions in their bare-bones form.*/
 const GenOptions BASIC_OPT = {
@@ -478,7 +478,7 @@ void set_names(AlleleMatrix* a, const char* prefix, const int suffix, const int 
  *
  * @param d pointer to the `SimData` whose child `AlleleMatrix`s will be given the new label.
  * @param setTo the value to which every genotype's label is initialised.
- * @returns the label index of the new label
+ * @returns the label id of the new label
 */
 int create_new_label(SimData* d, const int setTo) {
     // Add new label default
@@ -5232,11 +5232,15 @@ void load_effects_to_simdata(SimData* d, const char* filename) {
 
 	int n_loaded = 0;
 	int n_allele = 0; // count the different alleles we're tracking
-	const int MAX_SYMBOLS = 25;
-	char alleles_loaded[MAX_SYMBOLS + 1];
-	memset(alleles_loaded, '\0', MAX_SYMBOLS + 1);
-	double* effects_loaded[MAX_SYMBOLS];
-    memset(effects_loaded, 0, MAX_SYMBOLS);
+    int MAX_SYMBOLS = 10;
+    char* alleles_loaded = get_malloc(sizeof(char)*(MAX_SYMBOLS+1));
+    memset(alleles_loaded, '\0', sizeof(char)*(MAX_SYMBOLS+1));
+    double** effects_loaded = get_malloc(sizeof(double*)*(MAX_SYMBOLS+1));
+    memset(effects_loaded, 0, sizeof(double*)*MAX_SYMBOLS);
+    for (int i = 0; i < MAX_SYMBOLS; ++i) {
+        effects_loaded[i] = get_malloc(sizeof(double) * d->n_markers);
+        //memset((effects_loaded + symbol_index), 0, sizeof(double) * d->n_markers);
+    }
 
 	if (d->e.effects.matrix != NULL) {
 		delete_dmatrix(&(d->e.effects));
@@ -5260,16 +5264,29 @@ void load_effects_to_simdata(SimData* d, const char* filename) {
 				symbol_index = n_allele;
 				++n_allele;
 				alleles_loaded[symbol_index] = allele;
+                if (n_allele >= MAX_SYMBOLS) {
+                    char* temp1 = get_malloc(sizeof(char)*(MAX_SYMBOLS*2 + 1));
+                    memcpy(temp1, alleles_loaded, sizeof(char)*MAX_SYMBOLS);
+                    memset(temp1 + MAX_SYMBOLS, '\0', sizeof(char)*(MAX_SYMBOLS+1));
+                    double** temp2 = get_malloc(sizeof(double*)*(MAX_SYMBOLS*2 +1));
+                    memcpy(temp2, effects_loaded, sizeof(double*)*MAX_SYMBOLS);
+                    memset(effects_loaded+MAX_SYMBOLS, 0, sizeof(double*)*MAX_SYMBOLS);
+                    MAX_SYMBOLS *= 2;
+                    free(alleles_loaded);
+                    free(effects_loaded);
+                    alleles_loaded = temp1;
+                    effects_loaded = temp2;
+                }
 			} else {
 				symbol_index = symbol_location - alleles_loaded; // difference between the pointers
 			}
 
 			// now the marker is in our list and the allele value is valid
 			// so save the effect value in effects_loaded.
-            if (effects_loaded[symbol_index] == 0) { // 0 = NULL
+            /*if (effects_loaded[symbol_index] == 0) { // 0 = NULL
                 effects_loaded[symbol_index] = get_malloc(sizeof(double) * d->n_markers);
                 //memset((effects_loaded + symbol_index), 0, sizeof(double) * d->n_markers);
-			}
+            }*/
 			effects_loaded[symbol_index][location] = effect;
 			n_loaded += 1;
 		}
@@ -5866,6 +5883,7 @@ void generate_clone(SimData* d, const char* parent_genome, char* output) {
     return;
 }
 
+
 /** Performs random crosses among members of a group. If the group does not
  * have at least two members, the simulation exits. Selfing/crossing an individual
  * with itself is not permitted. The resulting genotypes are allocated to a new group.
@@ -6342,22 +6360,29 @@ int cross_randomly_between(SimData*d, const int group1, const int group2, const 
     }
 }
 
-/** Performs the crosses of pairs of parents whose indexes are provided in an array. The
- * resulting genotypes are allocated to a new group.
+/** Performs the crosses of pairs of parents whose indexes are provided in an
+ * array. The resulting genotypes are allocated to a new group.
  *
  * Preferences in GenOptions are applied to this cross. The family_size parameter
  * in GenOptions allows you to repeat each particular cross a
  * certain number of times.
  *
+ * Previously had a parameter combinations[2][n_combinations] instead of firstParents
+ * and secondParents. This was changed to lower the boilerplate needs of calling this
+ * function: now there is no need to create a 2-wide int* to hold the two separate parent
+ * vectors if they already exist.
+ *
  * @param d pointer to the SimData object that includes genetic map data and
  * allele data needed to simulate crossing.
- * @param combinations a 2D array of indexes, with the first dimension being parent 1 or 2,
- * and the second being the indexes of those parents for each combination to cross.
  * @param n_combinations the number of pairs of ids to cross/the length of `combinations`
+ * @param firstParents a vector of indexes of parents to be the first parent of each cross
+ * @param secondParents a vector of indexes of parents to be the second parent of each cross.
+ * firstParents[0] is crossed to secondParents[0], firstParents[1] is crossed to secondParents[1],
+ * and so forth.
  * @param g options for the genotypes created. @see GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
  */
-int cross_these_combinations(SimData* d, const int n_combinations, const int* firstParents, const int* secondParents, const GenOptions g) {
+int cross_these_combinations(SimData* d, const int n_combinations, const int firstParents[n_combinations], const int secondParents[n_combinations], const GenOptions g) {
 	if (n_combinations < 1) {
         warning("Invalid n_combinations value provided: n_combinations must be greater than 0.\n");
 		return 0;
@@ -8126,12 +8151,10 @@ char* calculate_optimal_alleles(const SimData* d) {
 	}
 
 	char* optimal = get_malloc(sizeof(char)* (d->n_markers + 1));
-	char best_allele;
-	double best_score;
 
 	for (int i = 0; i < d->n_markers; ++i) {
-		best_allele = d->e.effect_names[0];
-		best_score = d->e.effects.matrix[0][i];
+        char best_allele = d->e.effect_names[0];
+        double best_score = d->e.effects.matrix[0][i];
 		for (int a = 1; a < d->e.effects.rows; ++a) {
 			if (d->e.effects.matrix[a][i] > best_score) {
 				best_score = d->e.effects.matrix[a][i];
@@ -8169,12 +8192,11 @@ char* calculate_optimal_available_alleles(const SimData* d, const unsigned int g
     get_group_genes(d, group, gsize, ggenes);
 
     char* optimal = get_malloc(sizeof(char)* (d->n_markers + 1));
-    char best_allele;
-    double best_score;
 
     // for each locus
     for (int j = 0; j < d->n_markers; ++j) {
-        best_allele = '\0';
+        char best_allele = '\0';
+        double best_score;
         for (int i = 0; i < gsize; ++i) {
 
             // If the allele is different to the previous best (guaranteed if best_allele is not initialised)
@@ -8267,11 +8289,12 @@ double calculate_optimal_available_bv(const SimData* d, const unsigned int group
     get_group_genes(d, group, gsize, ggenes);
 
     double total_score = 0;
+    char best_allele;
+    double best_score;
 
     // for each locus
     for (int j = 0; j < d->n_markers; ++j) {
-        char best_allele = '\0';
-		double best_score;
+        best_allele = '\0';
         for (int i = 0; i < gsize; ++i) {
 
             // If the allele is different to the previous best (guaranteed if best_allele is not initialised)

@@ -1,6 +1,6 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
-/* genomicSimulationC v0.2.2.1 - last edit 11 Nov 2022 */
+/* genomicSimulationC v0.2.3 - last edit 19 June 2023 */
 
 #ifdef SIM_OPERATIONS
     #define RND_IMPLEMENTATION
@@ -123,7 +123,7 @@ typedef struct {
 */
 typedef struct {
 	int will_name_offspring; /**< A boolean: whether generated offspring should be given names. */
-	const char* offspring_name_prefix; /**< If `will_name_offspring` is true, generated
+    const char* offspring_name_prefix; /**< If `will_name_offspring` is true, generated
                            * offspring are named [offspring_name_prefix][index]. */
 
 	int family_size; /**< The number of offspring to produce from each cross.*/
@@ -134,7 +134,7 @@ typedef struct {
                             * offspring of an anonymous individual (one without an ID)
                             * cannot identify that individual as their parent. */
 
-	const char* filename_prefix; /**< A string used in save-as-you-go file names. */
+    const char* filename_prefix; /**< A string used in save-as-you-go file names. */
 	int will_save_pedigree_to_file; /**< A boolean. If true, the full/recursive
                             * pedigrees of every offspring generated in the cross
                             * are saved to "[filename_prefix}-pedigree.txt", even

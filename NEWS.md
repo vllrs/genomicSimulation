@@ -1,3 +1,9 @@
+# genomicSimulation 0.2.3.002
+
+## Bug Fixes
+
+- genomicSimulation had a chance of crashing on load.data for certain marker effect files. The chance was higher for effect files listing few markers or listing many alleles. This release is a quick-fix for this bug.
+
 # genomicSimulation 0.2.3 
 
 ## Improvements
