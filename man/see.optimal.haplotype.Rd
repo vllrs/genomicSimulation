@@ -4,7 +4,11 @@
 \alias{see.optimal.haplotype}
 \title{Get a string containing the ultimate/highest-scoring set of alleles.}
 \usage{
-see.optimal.haplotype()
+see.optimal.haplotype(eff.set = 1L)
+}
+\arguments{
+\item{eff.set}{identifier for the set of marker effects to use to calculate the
+haplotypes and haplotype scores.}
 }
 \value{
 A string containing the allele out of available alleles at that

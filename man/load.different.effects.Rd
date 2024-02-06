@@ -2,7 +2,7 @@
 % Please edit documentation in R/sim-loaders.R
 \name{load.different.effects}
 \alias{load.different.effects}
-\title{Replace effect values}
+\title{Add a new set of marker effect values}
 \usage{
 load.different.effects(effect.file)
 }
@@ -11,12 +11,13 @@ load.different.effects(effect.file)
 contain effect values for calculating GEBV for a trait}
 }
 \value{
-0 on success.
+The effect set ID. 1 for the first set loaded, 2 for the next, and so on.
+This should be passed to breeding-value-calculating functions to tell them to 
+use this set of marker effects.
 }
 \description{
-\code{load.different.effects} returns 0. Only the alleles at SNPs
-already tracked by the SimData are saved. The old effect values,
-if they exist, will be replaced with these new ones.
+Only the alleles at SNPs
+already tracked by the SimData are saved.
 }
 \seealso{
 Other loader functions: 

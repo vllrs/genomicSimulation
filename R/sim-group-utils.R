@@ -284,21 +284,23 @@ see.existing.groups <- function(maxGroups=10000L) {
 #' this is a whole-number percentage, i.e. for 5\%, set percentage=5 not 0.05.
 #' @param number If this is an integer and percentage and threshold are NULL, then
 #' the [number] with the best GEBVs will be selected into the new group.
+#' @param eff.set identifier for the set of marker effects to use to calculate the
+#' GEBVs.
 #' @return the group number of the new group, containing the genotypes that were 
 #' positively selected.
 #'
 #' @family grouping functions
 #' @export
-select.by.gebv <- function(from.group, low.score.best=FALSE, percentage=NULL, number=NULL) {
+select.by.gebv <- function(from.group, low.score.best=FALSE, percentage=NULL, number=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	if (sum(is.null(percentage), is.null(number)) == 1) {
 		if (is.null(percentage)) {
 			# we are selecting a certain number
-			return(.Call(SXP_simple_selection, sim.data$p, from.group, 
+			return(.Call(SXP_simple_selection, sim.data$p, from.group, eff.set,
 						number, low.score.best))
 		} else {
 			# we are selecting the top percentage
-			return(.Call(SXP_simple_selection_bypercent, sim.data$p, from.group, 
+			return(.Call(SXP_simple_selection_bypercent, sim.data$p, from.group, eff.set,
 			             percentage, low.score.best))
 		}
 	}

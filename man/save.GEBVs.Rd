@@ -4,7 +4,7 @@
 \alias{save.GEBVs}
 \title{Save the GEBVs of genotypes currently saved to the SimData.}
 \usage{
-save.GEBVs(filename, group = NULL)
+save.GEBVs(filename, group = NULL, eff.set = 1L)
 }
 \arguments{
 \item{filename}{A string containing a filename to which the output will
@@ -13,6 +13,9 @@ be written}
 \item{group}{If not set/set to NULL, will print all genotypes.
 Otherwise, if a group of that number exists, save only lines that belong
 to that group.}
+
+\item{eff.set}{identifier for the set of marker effects with which to calculate
+GEBVs.}
 }
 \value{
 0 on success. On failure an error will be raised.

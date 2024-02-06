@@ -5,7 +5,7 @@
 \title{Save the local GEBVs of each block in each selected line's haplotypes to a file, using
 blocks taken from a file.}
 \usage{
-save.local.GEBVs.by.file(filename, block.file, group = NULL)
+save.local.GEBVs.by.file(filename, block.file, group = NULL, eff.set = 1L)
 }
 \arguments{
 \item{filename}{A string containing a filename to which the output will
@@ -18,6 +18,9 @@ the only columns that will be used. Designed for the output of the function
 `st.def.hblocks` from the package SelectionTools}
 
 \item{group}{Save only lines that belong to this group.}
+
+\item{eff.set}{identifier for the set of marker effects with which to calculate 
+local GEBVs.}
 }
 \value{
 0 on success. On failure an error will be raised.

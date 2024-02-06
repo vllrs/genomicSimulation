@@ -8,7 +8,8 @@ select.by.gebv(
   from.group,
   low.score.best = FALSE,
   percentage = NULL,
-  number = NULL
+  number = NULL,
+  eff.set = 1L
 )
 }
 \arguments{
@@ -23,6 +24,9 @@ this is a whole-number percentage, i.e. for 5\%, set percentage=5 not 0.05.}
 
 \item{number}{If this is an integer and percentage and threshold are NULL, then
 the [number] with the best GEBVs will be selected into the new group.}
+
+\item{eff.set}{identifier for the set of marker effects to use to calculate the
+GEBVs.}
 }
 \value{
 the group number of the new group, containing the genotypes that were 
@@ -53,6 +57,7 @@ Other grouping functions:
 \code{\link{break.group.with.probabilities}()},
 \code{\link{change.label.default}()},
 \code{\link{combine.groups}()},
+\code{\link{delete.effect.set}()},
 \code{\link{delete.group}()},
 \code{\link{delete.label}()},
 \code{\link{make.group.from.label.range}()},

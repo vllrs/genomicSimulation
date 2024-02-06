@@ -1,3 +1,21 @@
+# genomicSimulation 0.2.4
+
+## New Features
+
+- Add ability to load multiple effect files. Multiple sets of marker effects can now be available at one time. Loading an effect file will return a marker effect set identifier that represents that particular set of marker effects. Sets of marker effects can be removed from memory using the new function delete.effect.set.
+
+## Improvements
+
+- BREAKING CHANGE: When load.data is called with an effect file, the return value is now a list containing an element $groupNum (identical to the old return value) and an element $effectID (representing the identifier of the marker effect set loaded). 
+- The save-as-you-go setting for saving breeding values in GenOptions now takes the identifier for a set of marker effects, if you wish to save the breeding values from that set of marker effects, or 0, to not use the save-as-you-go functionality.
+ 
+## Bug Fixes
+- Standardised file-output functions so that genotype names are consistently substituted with their PedigreeIDs, if the genotype does not have a name. 
+- Stopped save-as-you-go genotype saving repeating the header row (of genetic marker names) every 1000 rows. The header row now only appears in the first row.
+- Semicolon separators appear correctly in the output of save_marker_blocks
+- Pedigrees are printed consistently between group-specific and whole-simulation variants of the same function. Parents are no longer skipped in favour of starting with grandparents in group-specific functions.
+
+
 # genomicSimulation 0.2.3.002
 
 ## Bug Fixes

@@ -2,7 +2,8 @@
 #More in-depth testing and testing of how GenOptions options work is not yet implemented.
 
 test_that("cross.randomly works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #Make sure it doesn't crash and creates right-size group
   g2 <- cross.randomly(g, n.crosses=3, offspring=2, give.names=TRUE, name.prefix="cr")
@@ -24,7 +25,8 @@ test_that("cross.randomly works", {
 
 
 test_that("cross.combinations works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #Make sure it doesn't crash and creates right-size group
   g2 <- cross.combinations(first.parents=c(0L,1L), second.parents=c(3L,0L))
@@ -35,7 +37,8 @@ test_that("cross.combinations works", {
 })
 
 test_that("cross.combinations.file works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #Make sure it doesn't crash and creates right-size group
   g2 <- cross.combinations.file("helper_crosses.txt")
@@ -45,7 +48,8 @@ test_that("cross.combinations.file works", {
 })
 
 test_that("cross.all.pairs works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #Make sure it doesn't crash and creates right-size group
   g2 <- cross.all.pairs(g)
@@ -55,7 +59,8 @@ test_that("cross.all.pairs works", {
 })
 
 test_that("cross.dc.combinations.file works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #Make sure it doesn't crash and creates right-size group
   f <- cross.all.pairs(g)
@@ -66,7 +71,8 @@ test_that("cross.dc.combinations.file works", {
 })
 
 test_that("self.n.times works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #Make sure it doesn't crash and creates right-size group
   g2 <- self.n.times(g, 2)
@@ -76,7 +82,8 @@ test_that("self.n.times works", {
 })
 
 test_that("make.doubled.haploids works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #Make sure it doesn't crash and creates right-size group
   g2 <- make.doubled.haploids(g)
@@ -90,7 +97,8 @@ test_that("make.doubled.haploids works", {
 })
 
 test_that("make.clones works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #Make sure it doesn't crash and creates right-size group
   g2 <- make.clones(g)

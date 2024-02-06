@@ -1,5 +1,6 @@
 test_that("make.group moves the correct genotypes to a new group", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   g2 <- cross.randomly(g, n.crosses=5, offspring=1, give.names=TRUE, name.prefix="cr")
   
   #setup worked as expected
@@ -20,7 +21,8 @@ test_that("make.group moves the correct genotypes to a new group", {
 })
 
 test_that("labels can be used to split groups", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   indivs <- break.group.into.individuals(g)
   
@@ -41,7 +43,8 @@ test_that("labels can be used to split groups", {
 })
 
 test_that("combine.groups successfully merges 2+ groups", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   g2 <- cross.randomly(g, n.crosses=5, offspring=1)
   g3 <- cross.randomly(g, n.crosses=5, offspring=1)
   g4 <- cross.randomly(g, n.crosses=7, offspring=1)
@@ -59,7 +62,8 @@ test_that("combine.groups successfully merges 2+ groups", {
 })
 
 test_that("break.group.into.individuals runs successfully", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #setup worked as expected
   expect_identical(see.existing.groups(), data.frame("Group"=c(g),"GroupSize"=c(6L)))
@@ -71,7 +75,8 @@ test_that("break.group.into.individuals runs successfully", {
 })
 
 test_that("break.group.into.families runs successfully", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #setup
   g2 <- cross.combinations(0L,1L, give.names=T, name.prefix="two") #two7
@@ -95,7 +100,8 @@ test_that("break.group.into.families runs successfully", {
 
 
 test_that("break.group.into.halfsib.families runs successfully", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #setup
   g2 <- cross.combinations(0L,1L, give.names=T, name.prefix="two") #two7
@@ -117,7 +123,8 @@ test_that("break.group.into.halfsib.families runs successfully", {
 })
 
 test_that("break.group.randomly runs successfully", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #setup
   g2 <- cross.randomly(g, 2000)
@@ -136,7 +143,8 @@ test_that("break.group.randomly runs successfully", {
 
 
 test_that("break.group.with.probabilities runs successfully", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #setup
   g2 <- cross.randomly(g, 2000)
@@ -161,7 +169,8 @@ test_that("break.group.with.probabilities runs successfully", {
 
 
 test_that("break.group.evenly runs successfully", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #setup
   g2 <- cross.randomly(g, 20)
@@ -175,7 +184,8 @@ test_that("break.group.evenly runs successfully", {
 })
 
 test_that("break.group.into.buckets runs successfully", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   #setup
   g2 <- cross.randomly(g, 20)
@@ -192,17 +202,17 @@ test_that("break.group.into.buckets runs successfully", {
 
 
 test_that("select.by.gebv runs successfully", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
-  expect_identical(see.group.data(select.by.gebv(g, number=5), "X"), c(0L,1L,2L,3L,4L))
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  expect_identical(see.group.data(select.by.gebv(init$groupNum, number=5), "X"), c(0L,1L,2L,3L,4L))
   
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
-  expect_identical(see.group.data(select.by.gebv(g, low.score.best=T, number=2), "X"), c(3L,5L))
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  expect_identical(see.group.data(select.by.gebv(init$groupNum, low.score.best=T, number=2), "X"), c(3L,5L))
   
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
-  expect_identical(see.group.data(select.by.gebv(g, percentage=50), "X"), c(0L,1L,2L))
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  expect_identical(see.group.data(select.by.gebv(init$groupNum, percentage=50), "X"), c(0L,1L,2L))
   
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
-  expect_identical(see.group.data(select.by.gebv(g, low.score.best=T, percentage=20), "X"), c(5L))
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  expect_identical(see.group.data(select.by.gebv(init$groupNum, low.score.best=T, percentage=20), "X"), c(5L))
   
   expect_error(select.by.gebv(g, low.score.best=T),"Exactly one of parameters `percentage` and `number` must be set.")
   expect_error(select.by.gebv(g, percentage=20, number=2),"Exactly one of parameters `percentage` and `number` must be set.")

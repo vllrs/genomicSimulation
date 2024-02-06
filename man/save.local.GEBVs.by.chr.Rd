@@ -5,7 +5,7 @@
 \title{Save the local GEBVs of each block in each selected line's haplotypes to a file,
 using blocks created by slicing chromosomes into segments.}
 \usage{
-save.local.GEBVs.by.chr(filename, n.blocks.per.chr, group = NULL)
+save.local.GEBVs.by.chr(filename, n.blocks.per.chr, group = NULL, eff.set = 1L)
 }
 \arguments{
 \item{filename}{A string containing a filename to which the output will
@@ -15,6 +15,9 @@ be written}
 will be divided into.}
 
 \item{group}{Save only lines that belong to this group.}
+
+\item{eff.set}{identifier for the set of marker effects with which to calculate 
+local GEBVs.}
 }
 \value{
 0 on success. On failure an error will be raised.

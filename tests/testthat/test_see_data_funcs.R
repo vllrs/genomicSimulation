@@ -1,5 +1,6 @@
 test_that("see.existing.groups works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   g2 <- cross.randomly(g, n.crosses=5, offspring=1, give.names=TRUE, name.prefix="cr")
   
   expect_identical(see.existing.groups(), data.frame("Group"=c(g,g2),"GroupSize"=c(6L,5L)))
@@ -8,7 +9,8 @@ test_that("see.existing.groups works", {
 })
 
 test_that("see.group.data works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   expect_identical(see.group.data(g, "Names"), c("G01","G02","G03","G04","G05","G06"))
   
@@ -37,21 +39,25 @@ test_that("see.group.data works", {
 test_that("Functions to see optimal genotype and GEBV work", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
+  capture_output(eff2 <- load.different.effects("helper_eff_2.txt"), print=F)
+  
   expect_identical(see.optimal.haplotype(), "TAA")
   expect_equal(see.optimal.GEBV(), 1.8)
   expect_equal(see.minimum.GEBV(),-2.8)
   
-  capture_output(load.different.effects("helper_eff_2.txt"), print=F)
+  expect_identical(see.optimal.haplotype(eff2), "AAA")
+  expect_equal(see.optimal.GEBV(eff2), 4.2)
+  expect_equal(see.minimum.GEBV(eff2),-0.696)
   
-  expect_identical(see.optimal.haplotype(), "AAA")
-  expect_equal(see.optimal.GEBV(), 4.2)
-  expect_equal(see.minimum.GEBV(),-0.696)
+  delete.effect.set(c(1L,2L))
+  expect_error(see.optimal.GEBV()) # there are no effect sets left
   
   clear.simdata()
 })
 
 test_that("Functions to see optimal genotype and GEBV of a group work", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   expect_identical(see.optimal.haplotype(), "TAA")
   expect_equal(see.optimal.GEBV(), 1.8)

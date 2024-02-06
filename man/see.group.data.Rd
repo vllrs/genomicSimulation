@@ -4,7 +4,7 @@
 \alias{see.group.data}
 \title{Get data of all individuals that belong to a group.}
 \usage{
-see.group.data(group, data.type)
+see.group.data(group, data.type, effect.set = 1L)
 }
 \arguments{
 \item{group}{an integer: the group number of the group to have a look at}
@@ -26,6 +26,9 @@ If it starts with "P2", the second parent of each group member is returned. As u
 genomicSimulation, if the parent has a name, its name will be what is returned, otherwise,
 it will be its ID.
 If it starts with "ped", the full pedigree log of each group member is returned.}
+
+\item{effect.set}{identifier for the set of marker effects to be used to calculate breeding values.
+This parameter is only used if the data.type corresponds to a request for breeding values/GEBVs.}
 }
 \value{
 A vector containing the desired data output for each member of the group.
@@ -57,6 +60,7 @@ Other grouping functions:
 \code{\link{break.group.with.probabilities}()},
 \code{\link{change.label.default}()},
 \code{\link{combine.groups}()},
+\code{\link{delete.effect.set}()},
 \code{\link{delete.group}()},
 \code{\link{delete.label}()},
 \code{\link{make.group.from.label.range}()},

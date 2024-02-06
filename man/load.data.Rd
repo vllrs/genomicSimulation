@@ -18,7 +18,10 @@ file should contain effect values for calculating GEBVs of a trait}
 }
 \value{
 The group number of the genotypes loaded from allele.file. This is
-always 1 in the current implementation.
+always 1 in the current implementation. If an effect file was also loaded, the 
+return value will be a list with two entries: groupNum, for the group number of the
+first group loaded, and EffectID, for the identifier for the set of marker effects
+loaded from the effect file.
 }
 \description{
 \code{load.data} returns the group number of the group the starting

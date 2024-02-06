@@ -11,18 +11,23 @@
 #' @param effect.file (optional) A string containing a filename. The
 #' file should contain effect values for calculating GEBVs of a trait
 #' @return The group number of the genotypes loaded from allele.file. This is
-#' always 1 in the current implementation.
+#' always 1 in the current implementation. If an effect file was also loaded, the 
+#' return value will be a list with two entries: groupNum, for the group number of the
+#' first group loaded, and EffectID, for the identifier for the set of marker effects
+#' loaded from the effect file.
 #'
 #' @family loader functions
 #' @export
 load.data <- function(allele.file, map.file, effect.file=NULL) {
 	if (is.null(effect.file)) {
 		sim.data$p <- .Call(SXP_load_data, allele.file, map.file)
+		#the group number of the first group is always 1
+		return(c(groupNum=1L)) 
 	} else {
 		sim.data$p <- .Call(SXP_load_data_weff, allele.file, map.file, effect.file)
+		return(list(groupNum=1L,effectID=1L))
 	}
-	#the group number of the first group is always 1
-	return(1L) 
+	
 }
 
 #' Load more genotypes to the existing SimData object from a file
@@ -43,15 +48,16 @@ load.more.genotypes <- function(allele.file) {
 
 
 
-#' Replace effect values
+#' Add a new set of marker effect values
 #'
-#' \code{load.different.effects} returns 0. Only the alleles at SNPs
-#' already tracked by the SimData are saved. The old effect values,
-#' if they exist, will be replaced with these new ones.
+#' Only the alleles at SNPs
+#' already tracked by the SimData are saved. 
 #'
 #' @param effect.file A string containing a filename. The file should
 #' contain effect values for calculating GEBV for a trait
-#' @return 0 on success.
+#' @return The effect set ID. 1 for the first set loaded, 2 for the next, and so on.
+#' This should be passed to breeding-value-calculating functions to tell them to 
+#' use this set of marker effects.
 #'
 #' @family loader functions
 #' @export
@@ -244,6 +250,22 @@ delete.label <- function(labels) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   return(.Call(SXP_delete_label, sim.data$p, labels))
 }
+
+
+#' Delete marker effect set(s)
+#'
+#' \code{delete.effect.set} removes the given marker effect set(s) from simulation memory.
+#'
+#' @param effect.sets an vector containing the label numbers of the labels to be deleted
+#' @return 0 on success. An error is raised on failure.
+#'
+#' @family grouping functions
+#' @export
+delete.effect.set <- function(effect.sets) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_delete_eff_set, sim.data$p, effect.sets))
+}
+
 
 
 #' Identify historical crossover events

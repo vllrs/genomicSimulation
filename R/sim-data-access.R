@@ -31,14 +31,16 @@
 #' genomicSimulation, if the parent has a name, its name will be what is returned, otherwise,
 #' it will be its ID.
 #' If it starts with "ped", the full pedigree log of each group member is returned.
+#' @param effect.set identifier for the set of marker effects to be used to calculate breeding values.
+#' This parameter is only used if the data.type corresponds to a request for breeding values/GEBVs.
 #' @return A vector containing the desired data output for each member of the group.
 #'
 #' @family grouping functions
 #' @family data access functions
 #' @export
-see.group.data <- function(group, data.type) {
+see.group.data <- function(group, data.type, effect.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_get_group_data, sim.data$p, group, toupper(data.type)))
+	return(.Call(SXP_get_group_data, sim.data$p, group, toupper(data.type), effect.set))
 }
 
 #' Get genotypes or allele counts of a group as a matrix.
@@ -81,6 +83,8 @@ see.group.gene.data <- function(group, count.allele=NA_character_) {
 #' raised if no effect values have been loaded. The optimal genotype (assuming
 #' only additive allele effects) is just the doubled version of this haplotype.
 #'
+#' @param eff.set identifier for the set of marker effects to use to calculate the
+#' haplotypes and haplotype scores.
 #' @return A string containing the allele out of available alleles at that
 #' marker that has the highest effect value. The string will be ordered in
 #' genome order (lowest chromosome and lowest position to highest) according
@@ -88,9 +92,9 @@ see.group.gene.data <- function(group, count.allele=NA_character_) {
 #'
 #' @family data access functions
 #' @export
-see.optimal.haplotype <- function() {
+see.optimal.haplotype <- function(eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_get_best_haplotype, sim.data$p))
+	return(.Call(SXP_get_best_haplotype, sim.data$p, eff.set))
 }
 
 #' Get a string containing the ultimate/highest-scoring set of alleles available
@@ -104,6 +108,8 @@ see.optimal.haplotype <- function() {
 #' @param group an integer: the group number of the group to have a look at. 
 #' Can be a vector of groups, in which case the calculation will be run independently
 #' for each group.
+#' @param eff.set identifier for the set of marker effects to use to calculate the
+#' optimal haplotype and haplotype breeding values
 #' @return A string containing the allele out of all alleles in the group
 #' that has the highest effect value at that locus. The string will be ordered in
 #' genome order (lowest chromosome and lowest position to highest) according
@@ -111,9 +117,9 @@ see.optimal.haplotype <- function() {
 #'
 #' @family data access functions
 #' @export
-see.optimal.possible.haplotype <- function(group) {
+see.optimal.possible.haplotype <- function(group, eff.set=1L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_get_best_available_haplotype, sim.data$p, group))  
+  return(.Call(SXP_get_best_available_haplotype, sim.data$p, group, eff.set))  
 }
 
 #' Get the ultimate/highest-possible GEBV given the current loaded effect values.
@@ -121,14 +127,17 @@ see.optimal.possible.haplotype <- function(group) {
 #' \code{see.optimal.GEBV} allows you to extract the optimal GEBV
 #' according to the current loaded effect values. An error is 
 #' raised if no effect values have been loaded.
+#' 
+#' @param eff.set identifier for the set of marker effects to use to calculate the
+#' maximal GEBV
 #'
 #' @return The highest possible GEBV
 #'
 #' @family data access functions
 #' @export
-see.optimal.GEBV <- function() {
+see.optimal.GEBV <- function(eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_get_best_GEBV, sim.data$p))
+	return(.Call(SXP_get_best_GEBV, sim.data$p, eff.set))
 }
 
 #' Get the ultimate/highest-possible GEBV given the pool of alleles available in
@@ -142,14 +151,16 @@ see.optimal.GEBV <- function() {
 #' @param group an integer: the group number of the group to have a look at.
 #' Can be a vector of groups, in which case the calculation will be run independently
 #' for each group.
+#' @param eff.set identifier for the set of marker effects to use to calculate the
+#' optimal possible GEBV
 #' @return The highest possible GEBV that can be created from alleles available
 #' in the group.
 #'
 #' @family data access functions
 #' @export
-see.optimal.possible.GEBV <- function(group) {
+see.optimal.possible.GEBV <- function(group, eff.set=1L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_get_best_available_GEBV, sim.data$p, group))    
+  return(.Call(SXP_get_best_available_GEBV, sim.data$p, group, eff.set))    
 }
 
 #' Get the lowest-possible GEBV given the current loaded effect values.
@@ -157,12 +168,15 @@ see.optimal.possible.GEBV <- function(group) {
 #' \code{see.minimum.GEBV} allows you to extract the lowest GEBV score
 #' possible according to the current loaded effect values. An error is 
 #' raised if no effect values have been loaded.
+#' 
+#' @param eff.set identifier for the set of marker effects to use to calculate the
+#' minimum GEBV.
 #'
 #' @return The lowest possible GEBV
 #'
 #' @family data access functions
 #' @export
-see.minimum.GEBV <- function() {
+see.minimum.GEBV <- function(eff.set=1L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_get_worst_GEBV, sim.data$p))
+  return(.Call(SXP_get_worst_GEBV, sim.data$p, eff.set))
 }

@@ -12,9 +12,9 @@
 
 <meta name="author" content="Kira Villiers" />
 
-<meta name="date" content="2023-06-19" />
+<meta name="date" content="2024-02-06" />
 
-<title>genomicSimulation (v0.2.3) Vignette</title>
+<title>genomicSimulation (v0.2.4) Vignette</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -338,9 +338,9 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">genomicSimulation (v0.2.3) Vignette</h1>
+<h1 class="title toc-ignore">genomicSimulation (v0.2.4) Vignette</h1>
 <h4 class="author">Kira Villiers</h4>
-<h4 class="date">2023-06-19</h4>
+<h4 class="date">2024-02-06</h4>
 
 
 <div id="TOC">
@@ -419,6 +419,19 @@ GEBVs</a></li>
 </ul>
 </div>
 
+<p><strong>Significant changes in v0.2.4</strong>:</p>
+<ul>
+<li>Multiple sets of marker effects can now be loaded at a time.</li>
+<li>If load.data is called with an effect.file, then its return type
+will be a list with two elements ($groupNum, the group number of the
+founder group, and $effectID, the identifier of the set of effects
+loaded from the effect file) instead of only the group number. Scripts
+that use a line like <code>group0 &lt;- load.data(...)</code> might need
+updating to
+<code>init &lt;- load.data(...); group0 &lt;- init$groupNum</code>. (or
+to <code>load.data(...); group0 &lt;- 1L</code>, since both of the
+numbers in the list will be exactly 1.)</li>
+</ul>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(genomicSimulation)</span></code></pre></div>
 <div id="introduction" class="section level1" number="1">
 <h1><span class="header-section-number">1</span> Introduction</h1>
@@ -535,15 +548,15 @@ Formats: Linkage maps). These are the only details that cannot be
 changed after creation without clearing the <code>SimData</code>: they
 serve as the foundation of the invisible table.</p>
 <p>The <code>SimData</code> object saves names of markers as-is, as long
-as the name is under 30 characters long. Behaviour is undefined if any
-marker name is longer than 30 characters. (The currently-non-modifiable
+as the name is under 45 characters long. Behaviour is undefined if any
+marker name is longer than 45 characters. (The currently-non-modifiable
 NAME_LENGTH setting (see Indexes: Global Settings Index) is associated
 with work on fixing this limitation).</p>
-<p>Becauses the <code>SimData</code> stores its markers in genome order,
+<p>Because the <code>SimData</code> stores its markers in genome order,
 any outputs produced will have the markers ordered according to the
 genetic map loaded at its creation. If an output method provides
 genotypes as strings of alleles, the string will also be ordered
-according ot this genetic map.</p>
+according to this genetic map.</p>
 <p>Note that genomicSimulation does not care what potential
 values/alleles the marker can take. Any 8-bit non-space character will
 be accepted as an allele. This means SNP markers can be represented with
@@ -564,9 +577,15 @@ File Formats: Effect files). The genetic breeding values are then
 calculated by adding up the effects of each allele in the genotype for
 which there is an effect loaded (that is, markers and alleles not
 mentioned in the effect file contribute nothing to the score).</p>
-<p>Only one ‘set’ of effect values can be loaded at a time, but effect
-files can be swapped out at any time using
-<code>load.different.effects()</code>.</p>
+<p>Additional sets of marker effects can be loaded in with
+<code>load.different.effects()</code>. Each set of marker effects will
+have a numeric identifier (sequential natural numbers starting at 1),
+which is presented to the user as the return value from the function
+that loaded that effect file. All breeding value calculations will, by
+default, use the first loaded set of marker effects. The numeric
+identifier of a different set of marker effects can be passed to the
+<code>eff.set</code> parameter of these functions to use that marker
+effect set instead.</p>
 </div>
 <div id="genotypes" class="section level3" number="3.1.3">
 <h3><span class="header-section-number">3.1.3</span> Genotypes</h3>
@@ -602,20 +621,14 @@ genotypes can only be deleted once.</p>
 not guaranteed to be allocated sequentially, because some crossing
 functions may create and delete temporary groups to carry out their
 task, so the final group number could be ‘out of order’.</p>
-<p>Every function except those that pull data into R (functions whose
-names begin with <code>see.</code>) and the special case of
-<code>make.label</code> (see following section: it returns one integer
-but that integer does not represent a group number) return either one
-integer or a vector of integers. If the integer is 0, it means the
-function succeeded but it is not a function that acts on groups.
-Otherwise, the return value is the group number(s) of the group(s) that
-were created. This means that in your R environment, the groups you are
-working with will be to all intents and purposes just integers.</p>
-<p>Note that only genomicSimulation functions can actually make changes
-to the groups. Modifying the numbers returned by genomicSimulation in
-the R environment will have no effect, and furthermore genomicSimulation
-will not, for example, delete a number in the R environment if that
-group ceases to exist.</p>
+<p>The group numbers of groups created or modified by a function call
+will be given in the return value of the function. In your R
+environment, the groups you are working with will be to all intents and
+purposes just integers. Note that only genomicSimulation functions can
+actually make changes to the groups. Modifying the numbers returned by
+genomicSimulation in the R environment will have no effect, and
+furthermore genomicSimulation will not, for example, delete a number in
+the R environment if that group ceases to exist.</p>
 </div>
 <div id="understanding-custom-labels" class="section level2" number="3.3">
 <h2><span class="header-section-number">3.3</span> Understanding Custom
@@ -651,7 +664,7 @@ remove the label from simulation memory.</p>
 <div id="understanding-identifiers" class="section level2" number="3.4">
 <h2><span class="header-section-number">3.4</span> Understanding
 Identifiers</h2>
-<p>There are four categories of identifiers that may be observed during
+<p>There are five categories of identifiers that may be observed during
 use of the simulation.</p>
 <ol style="list-style-type: decimal">
 <li>Group numbers/group IDs, which were discussed in the preceding
@@ -664,11 +677,19 @@ Like group numbers, they are integers greater than 0. They define a
 particular custom label. A label keeps its same identifier for its
 lifetime.<br />
 </li>
-<li>Genotype IDs. These are integers greater than 0 that are unique to a
-particular genotype for the lifetime of the simulation. IDs are used for
-tracking pedigree. However, genotypes are not guaranteed to have an ID:
-genotypes created during crossing with the setting <code>give.ids</code>
-set to FALSE will not be allocated IDs and will have 0 instead.</li>
+<li>Effect Set IDs, which were discussed in the preceding section on
+sets of marker effects for calculating breeding values. Like group
+numbers and label IDs, they are integers greater than 0. They define a
+particular set of marker effects. A marker effect set keeps its same
+identifier for its lifetime in the simulation (though, if you load the
+same effect file multiple times, there could be multiple identical
+marker effect sets in the simulation).</li>
+<li>Genotype Pedigree IDs. These are integers greater than 0 that are
+unique to a particular genotype for the lifetime of the simulation. IDs
+are used for tracking pedigree. However, genotypes are not guaranteed to
+have an ID: genotypes created during crossing with the setting
+<code>give.ids</code> set to FALSE will not be allocated IDs and will
+have 0 instead.</li>
 <li>Indexes. These represent the position/column number in the invisible
 table at which the genotype is stored. They are therefore unique to the
 genotype but not continuous over the lifetime of the simulation, because
@@ -681,6 +702,16 @@ however, it is important to not place a <code>delete.group</code> call
 between getting index data and using indexes in one of these function
 calls.</li>
 </ol>
+<p>The return values of nearly every function in the package (excluding
+the functions that pull data into R, whose names begin with
+<code>see.</code>) are vectors of integers representing one of the first
+three identifiers, above. If the function is <code>make.label</code>, it
+returns the new label’s ID. If the function is
+<code>load.different.effects</code>, it returns the marker effect set
+from the provided effect file’s new effect set ID. Most commonly, if the
+function created or modified groups, the return value(s) are the group
+number(s) of the group(s) created or modified. If the function returns
+0, then it succeeded but did not change any groups.</p>
 </div>
 <div id="understanding-output-methods" class="section level2" number="3.5">
 <h2><span class="header-section-number">3.5</span> Understanding Output
@@ -758,21 +789,23 @@ numbers and call crossing functions.</p>
 <span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 m2 T -0.5</span></span>
 <span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Starting to use genomicSimulation: load the small initial data set</span></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>g0 <span class="ot">&lt;-</span> <span class="fu">load.data</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>,</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>init <span class="ot">&lt;-</span> <span class="fu">load.data</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>,</span>
 <span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;../tests/testthat/helper_map.txt&quot;</span>,</span>
 <span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;../tests/testthat/helper_eff.txt&quot;</span>)</span>
 <span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 genotypes of 3 markers were loaded. 0 pairs of alleles could not be loaded</span></span>
 <span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 markers with map positions. 0 markers remain unmapped.</span></span>
 <span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 effect values spanning 2 alleles loaded.</span></span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Do random crosses from the progenitor lines. </span></span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>f1 <span class="ot">&lt;-</span> <span class="fu">cross.randomly</span>(g0, <span class="at">n.crosses=</span><span class="dv">20</span>, <span class="at">give.names=</span><span class="cn">TRUE</span>, <span class="at">name.prefix=</span><span class="st">&quot;F1.&quot;</span>)</span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="co">#(Let&#39;s see what crossovers occured. For this few markers we don&#39;t get much information.)</span></span>
-<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="fu">save.pedigrees</span>(<span class="st">&quot;a.txt&quot;</span>, f1, <span class="at">type=</span><span class="st">&quot;P&quot;</span>)</span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="fu">find.plot.crossovers</span>(<span class="st">&quot;a.txt&quot;</span>, <span class="st">&quot;b.txt&quot;</span>)</span></code></pre></div>
-<p><img src="data:image/png;base64,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" /><!-- --></p>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>g0 <span class="ot">&lt;-</span> init<span class="sc">$</span>groupNum</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="co"># eff1 &lt;- init$effectID, the identifier of the effect file loaded, is the other entry in the list &#39;init&#39;</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Do random crosses from the progenitor lines. </span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>f1 <span class="ot">&lt;-</span> <span class="fu">cross.randomly</span>(g0, <span class="at">n.crosses=</span><span class="dv">20</span>, <span class="at">give.names=</span><span class="cn">TRUE</span>, <span class="at">name.prefix=</span><span class="st">&quot;F1.&quot;</span>)</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="co">#(Let&#39;s see what crossovers occured. For this few markers we don&#39;t get much information.)</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="fu">save.pedigrees</span>(<span class="st">&quot;a.txt&quot;</span>, f1, <span class="at">type=</span><span class="st">&quot;P&quot;</span>)</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="fu">find.plot.crossovers</span>(<span class="st">&quot;a.txt&quot;</span>, <span class="st">&quot;b.txt&quot;</span>)</span></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Find the 25% with the top breeding value/GEBV</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>f1.selected <span class="ot">&lt;-</span> <span class="fu">select.by.gebv</span>(f1, <span class="at">percentage=</span><span class="dv">25</span>)</span>
@@ -806,7 +839,7 @@ numbers and call crossing functions.</p>
 <span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="fu">read.csv</span>(<span class="st">&quot;af6-genotype.txt&quot;</span>, <span class="at">sep=</span><span class="st">&#39;</span><span class="sc">\t</span><span class="st">&#39;</span>)</span>
 <span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    X m1 m2 m3</span></span>
 <span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 32 TT AA TT</span></span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 33 TT AA AA</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 33 TT AA TT</span></span>
 <span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 34 TT AA TT</span></span>
 <span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 35 TT AA TT</span></span>
 <span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 36 TT AA TT</span></span>
@@ -833,56 +866,58 @@ mostly to the fact that animals come in male and female varieties.</p>
 <p>genomicSimulation does not track sex of genotypes. The group system
 can however be used to that effect.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Starting to use genomicSimulation: load the small initial data set</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>cows <span class="ot">&lt;-</span> <span class="fu">load.data</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>,</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>init <span class="ot">&lt;-</span> <span class="fu">load.data</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>,</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;../tests/testthat/helper_map.txt&quot;</span>,</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;../tests/testthat/helper_eff.txt&quot;</span>)</span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 genotypes of 3 markers were loaded. 0 pairs of alleles could not be loaded</span></span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 markers with map positions. 0 markers remain unmapped.</span></span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 effect values spanning 2 alleles loaded.</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the small initial data set again, pretending this represents a different set of genotypes</span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>bulls <span class="ot">&lt;-</span> <span class="fu">load.more.genotypes</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>) </span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 genotypes were loaded.</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Create some offspring</span></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>f1 <span class="ot">&lt;-</span> <span class="fu">cross.randomly.between</span>(cows, bulls, <span class="at">n.crosses=</span><span class="dv">5</span>)</span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulate the sex of offspring</span></span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>temporary <span class="ot">&lt;-</span> <span class="fu">break.group.randomly</span>(f1, <span class="at">into.n=</span><span class="dv">2</span>)</span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>calvesF <span class="ot">&lt;-</span> temporary[<span class="dv">1</span>]; calvesM <span class="ot">&lt;-</span> temporary[<span class="dv">2</span>]; <span class="fu">rm</span>(temporary);</span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co">#... and so forth</span></span></code></pre></div>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>cows <span class="ot">&lt;-</span> init<span class="sc">$</span>groupNum</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the small initial data set again, pretending this represents a different set of genotypes</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>bulls <span class="ot">&lt;-</span> <span class="fu">load.more.genotypes</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>) </span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 genotypes were loaded.</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Create some offspring</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>f1 <span class="ot">&lt;-</span> <span class="fu">cross.randomly.between</span>(cows, bulls, <span class="at">n.crosses=</span><span class="dv">5</span>)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulate the sex of offspring</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>temporary <span class="ot">&lt;-</span> <span class="fu">break.group.randomly</span>(f1, <span class="at">into.n=</span><span class="dv">2</span>)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>calvesF <span class="ot">&lt;-</span> temporary[<span class="dv">1</span>]; calvesM <span class="ot">&lt;-</span> temporary[<span class="dv">2</span>]; <span class="fu">rm</span>(temporary);</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co">#... and so forth</span></span></code></pre></div>
 <p>Alternatively, a custom label could be used to track sex:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Starting to use genomicSimulation: load the small initial data set</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>cows <span class="ot">&lt;-</span> <span class="fu">load.data</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>,</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>init <span class="ot">&lt;-</span> <span class="fu">load.data</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>,</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;../tests/testthat/helper_map.txt&quot;</span>,</span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;../tests/testthat/helper_eff.txt&quot;</span>)</span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 genotypes of 3 markers were loaded. 0 pairs of alleles could not be loaded</span></span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 markers with map positions. 0 markers remain unmapped.</span></span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 effect values spanning 2 alleles loaded.</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the small initial data set again, pretending this represents a different set of genotypes</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>bulls <span class="ot">&lt;-</span> <span class="fu">load.more.genotypes</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>) </span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 genotypes were loaded.</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Define our interpretation of the custom label</span></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>FEMALE <span class="ot">&lt;-</span> 1L</span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>MALE <span class="ot">&lt;-</span> 2L</span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the label</span></span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>sexLabel <span class="ot">&lt;-</span> <span class="fu">make.label</span>(<span class="at">default=</span>FEMALE)</span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="fu">change.label.to.this</span>(sexLabel, MALE, <span class="at">group=</span>bulls)</span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Create some offspring</span></span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>f1 <span class="ot">&lt;-</span> <span class="fu">cross.randomly.between</span>(cows, bulls, <span class="at">n.crosses=</span><span class="dv">5</span>)</span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulate the sex of offspring</span></span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="fu">change.label.to.values</span>(sexLabel, <span class="at">values=</span><span class="fu">c</span>(<span class="fu">sample</span>(<span class="fu">c</span>(FEMALE,MALE), <span class="at">size=</span><span class="dv">5</span>, <span class="at">replace=</span><span class="cn">TRUE</span>)), <span class="at">group=</span>f1)</span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span>
-<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Then split up your calves as needed</span></span>
-<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>calvesF <span class="ot">&lt;-</span> <span class="fu">make.group.from.label</span>(sexLabel, FEMALE, <span class="at">group=</span>f1)</span>
-<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>calvesM <span class="ot">&lt;-</span> f1 <span class="co">#the calves left in F1 must be all the males</span></span>
-<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="co">#... and so on</span></span></code></pre></div>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>cows <span class="ot">&lt;-</span> init<span class="sc">$</span>groupNum</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the small initial data set again, pretending this represents a different set of genotypes</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>bulls <span class="ot">&lt;-</span> <span class="fu">load.more.genotypes</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>) </span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 genotypes were loaded.</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Define our interpretation of the custom label</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>FEMALE <span class="ot">&lt;-</span> 1L</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>MALE <span class="ot">&lt;-</span> 2L</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the label</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>sexLabel <span class="ot">&lt;-</span> <span class="fu">make.label</span>(<span class="at">default=</span>FEMALE)</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="fu">change.label.to.this</span>(sexLabel, MALE, <span class="at">group=</span>bulls)</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Create some offspring</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>f1 <span class="ot">&lt;-</span> <span class="fu">cross.randomly.between</span>(cows, bulls, <span class="at">n.crosses=</span><span class="dv">5</span>)</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulate the sex of offspring</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="fu">change.label.to.values</span>(sexLabel, <span class="at">values=</span><span class="fu">c</span>(<span class="fu">sample</span>(<span class="fu">c</span>(FEMALE,MALE), <span class="at">size=</span><span class="dv">5</span>, <span class="at">replace=</span><span class="cn">TRUE</span>)), <span class="at">group=</span>f1)</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Then split up your calves as needed</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>calvesF <span class="ot">&lt;-</span> <span class="fu">make.group.from.label</span>(sexLabel, FEMALE, <span class="at">group=</span>f1)</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>calvesM <span class="ot">&lt;-</span> f1 <span class="co">#the calves left in F1 must be all the males</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="co">#... and so on</span></span></code></pre></div>
 <p>More sample scripts for simulating common scenarios using
 genomicSimulation can be found in <a href="https://vllrs.github.io/genomicSimulationC/html/templates.html">this
 Templates page</a>.</p>
@@ -933,32 +968,33 @@ selection:</p>
 <span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <p>and uses it via the make.group interface:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>g0 <span class="ot">&lt;-</span> <span class="fu">load.data</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>,</span>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>init <span class="ot">&lt;-</span> <span class="fu">load.data</span>(<span class="st">&quot;../tests/testthat/helper_genotypes.txt&quot;</span>,</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;../tests/testthat/helper_map.txt&quot;</span>,</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;../tests/testthat/helper_eff.txt&quot;</span>)</span>
 <span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 genotypes of 3 markers were loaded. 0 pairs of alleles could not be loaded</span></span>
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 markers with map positions. 0 markers remain unmapped.</span></span>
 <span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 effect values spanning 2 alleles loaded.</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulate crosses</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>f1 <span class="ot">&lt;-</span> <span class="fu">cross.randomly</span>(g0, <span class="at">n.crosses=</span><span class="dv">15</span>, <span class="at">offspring=</span><span class="dv">3</span>)</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply custom selection method</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>f1.selected <span class="ot">&lt;-</span> <span class="fu">make.group</span>(<span class="fu">get.top.10.phenotypes</span>(f1, <span class="fl">0.3</span>))</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co"># (delete the non-selected genotypes)</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="fu">delete.group</span>(f1)</span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 35 genotypes were deleted</span></span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="co"># ... repeat for further generations</span></span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>f2 <span class="ot">&lt;-</span> <span class="fu">cross.randomly</span>(f1.selected, <span class="at">n.crosses=</span><span class="dv">100</span>)</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>f2.selected <span class="ot">&lt;-</span> <span class="fu">make.group</span>(<span class="fu">get.top.10.phenotypes</span>(f2, <span class="fl">0.5</span>))</span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="co"># ...</span></span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="fu">delete.group</span>(<span class="fu">c</span>(f1.selected,f2,f2.selected))</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10 genotypes were deleted</span></span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 90 genotypes were deleted</span></span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10 genotypes were deleted</span></span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span></code></pre></div>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>g0 <span class="ot">&lt;-</span> init<span class="sc">$</span>groupNum</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulate crosses</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>f1 <span class="ot">&lt;-</span> <span class="fu">cross.randomly</span>(g0, <span class="at">n.crosses=</span><span class="dv">15</span>, <span class="at">offspring=</span><span class="dv">3</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply custom selection method</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>f1.selected <span class="ot">&lt;-</span> <span class="fu">make.group</span>(<span class="fu">get.top.10.phenotypes</span>(f1, <span class="fl">0.3</span>))</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co"># (delete the non-selected genotypes)</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="fu">delete.group</span>(f1)</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 35 genotypes were deleted</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="co"># ... repeat for further generations</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>f2 <span class="ot">&lt;-</span> <span class="fu">cross.randomly</span>(f1.selected, <span class="at">n.crosses=</span><span class="dv">100</span>)</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>f2.selected <span class="ot">&lt;-</span> <span class="fu">make.group</span>(<span class="fu">get.top.10.phenotypes</span>(f2, <span class="fl">0.5</span>))</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="co"># ...</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="fu">delete.group</span>(<span class="fu">c</span>(f1.selected,f2,f2.selected))</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10 genotypes were deleted</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 90 genotypes were deleted</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10 genotypes were deleted</span></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span></code></pre></div>
 <p>The <a href="https://www.biorxiv.org/content/10.1101/2021.12.12.472291v2">writeup
 on bioRxiv</a> includes the simulation results of a sample breeding
 program similar to this concept.</p>
@@ -1101,8 +1137,12 @@ shared set of optional parameters, described in </em>
 <p>Loading data:</p>
 <ul>
 <li><code>[group] &lt;- load.data(allele.file, map.file, effect.file = NULL)</code></li>
+<li>If the effect file in <code>load.data</code> is not NULL, the return
+type is instead
+<code>list(groupNum=[group], effectID=[effect set])</code></li>
 <li><code>[group] &lt;- load.more.genotypes(allele.file)</code></li>
-<li><code>load.different.effects(effect.file)</code></li>
+<li><code>[effect set] &lt;- load.different.effects(effect.file)</code></li>
+<li><code>delete.effect.set(effect.sets)</code></li>
 </ul>
 <p>Simulating crossing:</p>
 <ul>
@@ -1116,17 +1156,18 @@ shared set of optional parameters, described in </em>
 <li><code>[group] &lt;- make.clones(group,inherit.names,[[settings]])</code></li>
 <li><code>[group] &lt;- make.doubled.haploids(group,[[settings]])</code></li>
 </ul>
-<p>Manipulating custom labels: -
-<code>[label] &lt;- make.label(default)</code> -
-<code>delete.label(labels)</code> -
-<code>change.label.default(label, default)</code> -
-<code>change.label.to.values(label, values, in group/no group, startIndex)</code>
-- <code>change.label.to.this(label, value, in group(s)/no group)</code>
--
-<code>change.label.by.amount(label, amount, in group(s)/no group)</code></p>
+<p>Manipulating custom labels:</p>
+<ul>
+<li><code>[label] &lt;- make.label(default)</code></li>
+<li><code>delete.label(labels)</code></li>
+<li><code>change.label.default(label, default)</code></li>
+<li><code>change.label.to.values(label, values, in group/no group, startIndex)</code></li>
+<li><code>change.label.to.this(label, value, in group(s)/no group)</code></li>
+<li><code>change.label.by.amount(label, amount, in group(s)/no group)</code></li>
+</ul>
 <p>Performing selection:</p>
 <ul>
-<li><code>[selected.group] &lt;- select.by.gebv(from.group, low.score.best = FALSE, percentage OR number)</code></li>
+<li><code>[selected.group] &lt;- select.by.gebv(from.group, low.score.best = FALSE, percentage OR number, eff.set=1L)</code></li>
 <li>For more customised selection, use the process
 <ul>
 <li><code>info &lt;- data.frame(&quot;i&quot; = see.group.data(from.group,&quot;X&quot;), &quot;Data&quot;=see.group.data(from.group,...))</code></li>
@@ -1161,19 +1202,19 @@ selection]</li>
 <li><code>save.genotypes(filename, group = NULL, type = &quot;R&quot;)</code></li>
 <li><code>save.allele.counts(filename, group = NULL, allele)</code></li>
 <li><code>save.pedigrees(filename, group = NULL, type = &quot;R&quot;)</code></li>
-<li><code>save.GEBVs(filename, group = NULL)</code></li>
-<li><code>save.local.GEBVs.by.chr(filename, n.blocks.per.chr, group = NULL)</code></li>
-<li><code>save.local.GEBVs.by.file(filename, block.file, group = NULL)</code></li>
+<li><code>save.GEBVs(filename, group = NULL, eff.set=1L)</code></li>
+<li><code>save.local.GEBVs.by.chr(filename, n.blocks.per.chr, group = NULL, eff.set=1L)</code></li>
+<li><code>save.local.GEBVs.by.file(filename, block.file, group = NULL, eff.set=1L)</code></li>
 </ul>
 <p>View data (pulls data into R dataframes):</p>
 <ul>
 <li><code>[dataframe containing current existing groups and their sizes] &lt;- see.existing.groups()</code></li>
-<li><code>[vector containing the chosen data] &lt;- see.group.data(group, data.type)</code></li>
-<li><code>[string containing best allele at each SNP] &lt;- see.optimal.haplotype()</code></li>
-<li><code>[string containing best allele that exists in the group at each SNP] &lt;- see.optimal.possible.haplotype()</code></li>
-<li><code>[float: the maximum possible GEBV] &lt;- see.optimal.GEBV()</code></li>
-<li><code>[float: the maximum possible GEBV from the pool of alleles that exist in the group] &lt;- see.optimal.possible.GEBV()</code></li>
-<li><code>[float: the minimum possible GEBV] &lt;- see.minimum.GEBV()</code></li>
+<li><code>[vector containing the chosen data] &lt;- see.group.data(group, data.type, eff.set=1L)</code></li>
+<li><code>[string containing best allele at each SNP] &lt;- see.optimal.haplotype(eff.set=1L)</code></li>
+<li><code>[string containing best allele that exists in the group at each SNP] &lt;- see.optimal.possible.haplotype(eff.set=1L)</code></li>
+<li><code>[float: the maximum possible GEBV] &lt;- see.optimal.GEBV(eff.set=1L)</code></li>
+<li><code>[float: the maximum possible GEBV from the pool of alleles that exist in the group] &lt;- see.optimal.possible.GEBV(eff.set=1L)</code></li>
+<li><code>[float: the minimum possible GEBV] &lt;- see.minimum.GEBV(eff.set=1L)</code></li>
 </ul>
 <p>Identify recombination events:</p>
 <ul>
@@ -1220,9 +1261,11 @@ save.genotype=TRUE.</li>
 <li><code>save.pedigree</code> : A boolean. If TRUE, saves the pedigree
 in recursive format of each generated genotype to the text file with
 filename “[file.prefix]-pedigree”.</li>
-<li><code>save.gebv</code> : A boolean. If TRUE, saves the GEBVs of each
-generated genotype to the tab-separated text file with filename
-“[file.prefix]-eff”.</li>
+<li><code>save.gebv</code> : An integer. If 0, does not save GEBVs. If
+greater than 0, saves the GEBVs of each generated genotype to the
+tab-separated text file with filename “[file.prefix]-eff”. The GEBVs
+will be calculated using the marker effect set whose identifier was
+given to this parameter.</li>
 <li><code>save.genotype</code> : A boolean. If TRUE, saves the SNP/line
 matrix in regular format (generated genotypes as rows, SNPs as columns)
 to the tab-separated text file with filename
@@ -1337,6 +1380,13 @@ via <code>save.genotypes</code> with <code>type = &quot;T&quot;</code>.</p>
 m1 TT     TT     TA
 m2 AA     AA     AA
 m3 TT     TT     TT</code></pre>
+<p>If the members of a specific group are saved, rather than every
+genotype in the simulation, the output format will include the group
+number in the corner cell of the table. For example, if group 5 had
+members F107 and F108:</p>
+<pre><code>5   m1  m2  m3
+F107    TT  AA  TT
+F108    TT  AA  TT</code></pre>
 </div>
 <div id="saving-pedigrees" class="section level3" number="6.5.2">
 <h3><span class="header-section-number">6.5.2</span> Saving
@@ -1351,7 +1401,8 @@ F2011   F108   F109</code></pre>
 <p>This is a tab-separated text file. The first column is the child
 name, and the next two columns are the names of its immediate parents
 (or single parent duplicated if it was produced by selfing or doubling
-haploids). If names are not available, IDs are used instead.</p>
+haploids). If names are not available, IDs are used instead. If parents
+are unknown, the columns will be blank.</p>
 <ul>
 <li><code>save.pedigrees</code>, with <code>type = &quot;R&quot;</code>, or
 crossing with setting <code>save.pedigree = TRUE</code>, which save in
@@ -1409,14 +1460,8 @@ b000001_2 ...</code></pre>
 <div id="save-a-summary-of-the-simdata" class="section level3" number="6.5.5">
 <h3><span class="header-section-number">6.5.5</span> Save a summary of
 the <code>SimData</code></h3>
-<p>The function <code>save.genome.model</code> is available to print out
-the map and effect values that the current <code>SimData</code> is
-using. The format in which it prints them is:</p>
-<pre><code>name    chr pos A   T
-m1  1   5.200000    -0.800000   0.900000
-m2  1   8.300000    -0.100000   -0.500000
-m3  3   15.000000   0.100000    -0.100000</code></pre>
-<p>This is a tab-separated text file.</p>
+<p>The function <code>save.genome.model</code> is deprecated. A
+replacement will be developed.</p>
 </div>
 <div id="recombination-counters" class="section level3" number="6.5.6">
 <h3><span class="header-section-number">6.5.6</span> Recombination

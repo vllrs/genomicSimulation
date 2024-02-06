@@ -30,6 +30,7 @@ Other grouping functions:
 \code{\link{break.group.with.probabilities}()},
 \code{\link{change.label.default}()},
 \code{\link{combine.groups}()},
+\code{\link{delete.effect.set}()},
 \code{\link{delete.group}()},
 \code{\link{delete.label}()},
 \code{\link{make.group.from.label.range}()},

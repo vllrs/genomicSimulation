@@ -5,12 +5,15 @@
 \title{Get a string containing the ultimate/highest-scoring set of alleles available
 in the current group.}
 \usage{
-see.optimal.possible.haplotype(group)
+see.optimal.possible.haplotype(group, eff.set = 1L)
 }
 \arguments{
 \item{group}{an integer: the group number of the group to have a look at. 
 Can be a vector of groups, in which case the calculation will be run independently
 for each group.}
+
+\item{eff.set}{identifier for the set of marker effects to use to calculate the
+optimal haplotype and haplotype breeding values}
 }
 \value{
 A string containing the allele out of all alleles in the group

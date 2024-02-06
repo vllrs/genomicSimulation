@@ -1,15 +1,17 @@
 test_that("GEBVs are correctly calculated and shared with the see function", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
-  expect_equal(see.group.data(g, "bv"), c(1.4,1.4,1.6,-0.1,0.6,-0.3))
+  expect_equal(see.group.data(g, "bv", 1L), c(1.4,1.4,1.6,-0.1,0.6,-0.3))
   
-  capture_output(load.different.effects("helper_eff_2.txt"), print=F)
+  capture_output(eff2 <- load.different.effects("helper_eff_2.txt"), print=F)
   
-  expect_equal(see.group.data(g,"bv"), c(0.804,0.804,1.404,2.502,-0.696,1.902))
+  expect_equal(see.group.data(g,"bv", eff2), c(0.804,0.804,1.404,2.502,-0.696,1.902))
 })
 
 test_that("GEBVs are correctly calculated and shared with the save function", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   expect_equal(save.GEBVs("imaginar", group=g),0)
   f_out <- readLines("imaginar")
@@ -36,7 +38,8 @@ test_that("GEBVs are correctly calculated and shared with the save function", {
 
 
 test_that("Local GEBVs using blocks from file are correctly calculated and saved", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   expect_equal(save.local.GEBVs.by.file("imaginar", "helper_blocks.txt", group=g),0)
   f_out <- readLines("imaginar")
@@ -71,7 +74,8 @@ test_that("Local GEBVs using blocks from file are correctly calculated and saved
 })
 
 test_that("Local GEBVs using blocks from slicing are correctly calculated and saved", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff_2.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff_2.txt"), print=F)
+  g <- init$groupNum
   
   expect_equal(save.local.GEBVs.by.chr("imagina", 2, group=g),0)
   f_out <- readLines("imagina")

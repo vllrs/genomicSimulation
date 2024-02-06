@@ -138,13 +138,15 @@ save.pedigrees <- function(filename, group=NULL, type="R") {
 #' @param group If not set/set to NULL, will print all genotypes.
 #' Otherwise, if a group of that number exists, save only lines that belong
 #' to that group.
+#' @param eff.set identifier for the set of marker effects with which to calculate
+#' GEBVs.
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
 #' @export
-save.GEBVs <- function(filename, group=NULL) {
+save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_GEBVs, sim.data$p, filename, group))
+	return(.Call(SXP_save_GEBVs, sim.data$p, filename, group, eff.set))
 }
 
 #' Save the local GEBVs of each block in each selected line's haplotypes to a file, using
@@ -164,13 +166,15 @@ save.GEBVs <- function(filename, group=NULL) {
 #' the only columns that will be used. Designed for the output of the function 
 #' `st.def.hblocks` from the package SelectionTools
 #' @param group Save only lines that belong to this group.
+#' @param eff.set identifier for the set of marker effects with which to calculate 
+#' local GEBVs.
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
 #' @export
-save.local.GEBVs.by.file <- function(filename, block.file, group=NULL) {
+save.local.GEBVs.by.file <- function(filename, block.file, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_file_block_effects, sim.data$p, filename, block.file, group))
+	return(.Call(SXP_save_file_block_effects, sim.data$p, filename, block.file, group, eff.set))
 }
 
 #' Save the local GEBVs of each block in each selected line's haplotypes to a file,
@@ -188,11 +192,13 @@ save.local.GEBVs.by.file <- function(filename, block.file, group=NULL) {
 #' @param n.blocks.per.chr An integer containing the number of blocks each chromosome
 #' will be divided into.
 #' @param group Save only lines that belong to this group.
+#' @param eff.set identifier for the set of marker effects with which to calculate 
+#' local GEBVs.
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
 #' @export
-save.local.GEBVs.by.chr <- function(filename, n.blocks.per.chr, group=NULL) {
+save.local.GEBVs.by.chr <- function(filename, n.blocks.per.chr, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_chrsplit_block_effects, sim.data$p, filename, n.blocks.per.chr, group))
+	return(.Call(SXP_save_chrsplit_block_effects, sim.data$p, filename, n.blocks.per.chr, group, eff.set))
 }

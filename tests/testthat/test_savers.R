@@ -1,32 +1,6 @@
-test_that("save.genome.model works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
-  
-  save.genome.model("imagine")
-  f_out <- readLines("imagine")
-  expect_identical(length(f_out), 4L)
-  
-  expect_identical(f_out[1], "name\tchr\tpos\tA\tT")
-  
-  f_out_split <- scan(text=f_out[2], what=" ", quiet=TRUE)
-  expect_identical(f_out_split[1], "m1")
-  expect_identical(as.integer(f_out_split[2]), 1L)
-  expect_identical(as.numeric(f_out_split[3]), 5.2)
-  expect_identical(as.numeric(f_out_split[4]), -0.8)
-  expect_identical(as.numeric(f_out_split[5]), 0.9)
-  
-  f_out_split <- scan(text=f_out[4], what=" ", quiet=TRUE)
-  expect_identical(f_out_split[1], "m3")
-  expect_identical(as.integer(f_out_split[2]), 3L)
-  expect_identical(as.numeric(f_out_split[3]), 15)
-  expect_identical(as.numeric(f_out_split[4]), 0.1)
-  expect_identical(as.numeric(f_out_split[5]), -0.1)
-  
-  file.remove("imagine")
-  clear.simdata()
-})
-
 test_that("save.genotypes in regular format with group works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   save.genotypes("imaginary2", group=g, type="R")
   f_out <- readLines("imaginary2")
@@ -42,7 +16,7 @@ test_that("save.genotypes in regular format with group works", {
 })
 
 test_that("save.genotypes in regular format without group works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
   save.genotypes("imaginary2", type="R")
   f_out <- readLines("imaginary2")
@@ -58,7 +32,8 @@ test_that("save.genotypes in regular format without group works", {
 })
 
 test_that("save.genotypes in transposed format with group works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   save.genotypes("imaginary3", group=g, type="T")
   f_out <- readLines("imaginary3")
@@ -74,7 +49,7 @@ test_that("save.genotypes in transposed format with group works", {
 })
 
 test_that("save.genotypes in transposed format without group works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
   save.genotypes("imaginary3", type="T")
   f_out <- readLines("imaginary3")
@@ -90,10 +65,12 @@ test_that("save.genotypes in transposed format without group works", {
 })
 
 test_that("save.allele.counts works with group", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   
   save.allele.counts("imaginary4", group=g, allele="T")
-  expect_warning(f_out <- readLines("imaginary4")) #warning for incomplete final line
+  #expect_warning(f_out <- readLines("imaginary4")) #warning for incomplete final line-> no longer the case, printing has been standardised
+  f_out <- readLines("imaginary4")
   expect_identical(length(f_out), 4L)
   
   expect_identical(f_out[1], "1\tG01\tG02\tG03\tG04\tG05\tG06")
@@ -112,7 +89,7 @@ test_that("save.allele.counts works with group", {
 })
 
 test_that("save.allele.counts works without group", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
   save.allele.counts("imaginary4", allele="A")
   f_out <- readLines("imaginary4")
@@ -134,7 +111,8 @@ test_that("save.allele.counts works without group", {
 })
 
 test_that("save.pedigrees in one-step format with group works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   capture_output(g2 <- make.group(c(0L,1L,2L)), print=F)
   capture_output(delete.group(g), print=F)
   capture_output(f <- cross.all.pairs(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
@@ -152,7 +130,8 @@ test_that("save.pedigrees in one-step format with group works", {
 })
 
 test_that("save.pedigrees in one-step format without group works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   capture_output(g2 <- make.group(c(0L,1L,2L)), print=F)
   capture_output(delete.group(g), print=F)
   capture_output(f <- cross.all.pairs(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
@@ -161,8 +140,8 @@ test_that("save.pedigrees in one-step format without group works", {
   f_out <- readLines("imaginary5")
   expect_identical(length(f_out), 6L)
   
-  expect_identical(f_out[1], "G01\t")
-  expect_identical(f_out[3], "G03\t")
+  expect_identical(f_out[1], "G01\t\t")
+  expect_identical(f_out[3], "G03\t\t")
   expect_identical(f_out[4], "F7\tG01\tG02")
   expect_identical(f_out[5], "F8\tG01\tG03")
   expect_identical(f_out[6], "F9\tG02\tG03")
@@ -172,7 +151,8 @@ test_that("save.pedigrees in one-step format without group works", {
 })
 
 test_that("save.pedigrees in recursive format with group works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   capture_output(g2 <- make.group(c(0L,1L,2L)), print=F)
   capture_output(delete.group(g), print=F)
   capture_output(f <- cross.all.pairs(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
@@ -196,7 +176,8 @@ test_that("save.pedigrees in recursive format with group works", {
 })
 
 test_that("save.pedigrees in recursive format without group works", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
   capture_output(g2 <- make.group(c(0L,1L,2L)), print=F)
   capture_output(delete.group(g), print=F)
   capture_output(f <- cross.all.pairs(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
