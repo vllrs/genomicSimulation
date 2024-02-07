@@ -34,7 +34,7 @@ test_that("package can load files", {
 #})
 
 test_that("package can create and delete labels", {
-  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
   expect_identical(make.label(7L), 1L)
   expect_identical(make.label(-2), 2L)
@@ -44,6 +44,22 @@ test_that("package can create and delete labels", {
   
   expect_identical(delete.label(1L), 0L)
   expect_identical(make.label(0L), 1L)
+  
+  clear.simdata()
+})
+
+test_that("package can load multiple effect sets", {
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  expect_identical(init$effectID, 1L)
+  capture_output(eff2 <- load.different.effects("helper_eff_2.txt"), print=F)
+  expect_identical(eff2, 2L)
+  
+  delete.effect.set(2L)
+  
+  capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt"), print=F)
+  capture_output(eff3 <- load.different.effects("helper_eff.txt"), print=F)
+  expect_identical(eff3, 1L)
   
   clear.simdata()
 })

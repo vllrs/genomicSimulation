@@ -22,8 +22,6 @@ test_that("cross.randomly works", {
   clear.simdata()
 })
 
-
-
 test_that("cross.combinations works", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   g <- init$groupNum

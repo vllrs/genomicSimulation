@@ -1,21 +1,3 @@
-#' Delete a group's worth of genotypes
-#'
-#' \code{delete.group} finds the genotypes of the given group and removes
-#' them from the SimData object's storage. A message is printed explaining
-#' how many genotypes were deleted.
-#' 
-#' Multiple group input supported.
-#'
-#' @param groups an vector containing the group numbers of the groups to be deleted
-#' @return 0 on success. An error is raised on failure.
-#'
-#' @family grouping functions
-#' @export
-delete.group <- function(groups) {
-	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_delete_group, sim.data$p, groups))
-}
-
 #' Assign multiple groups' worth of genotypes to a single group
 #'
 #' \code{combine.group} combines the members of multple groups
@@ -243,25 +225,110 @@ make.group.from.label.range <- function(label, rangeLowEnd, rangeHighEnd, group=
 }
 
 
-#' Get a list of the groups currently existing in the SimData
+#' Change the default value of a custom label
 #'
-#' \code{see.existing.groups} scans the saved data for groups that currently
-#' have members and returns their group numbers and number of members.
+#' \code{change.label.default} changes the default (birth) value of a custom
+#' label(s) to the given integer value(s).
+#' 
+#' If `defaults` is shorter than `labels` 
 #'
-#' @param maxGroups maximum number of groups to return. 
-#' @return A dataframe containing two columns, the first, named "Group", 
-#' being the group numbers of every group in the SimData that currently 
-#' has members, the second, named "GroupSize", being 
-#' the number of genotypes currently allocated to that group
+#' @param labels the label(s) of which to change the default values.
+#' @param defaults the new default value of the new custom label. All genotypes
+#' generated in future will have this value for this label. If there are multiple
+#' labels, then `defaults` should be a vector of the same length, with the new
+#' defaults for each label in `labels` at corresponding positions.
+#' @return 0 on success
 #'
 #' @family grouping functions
 #' @export
-see.existing.groups <- function(maxGroups=10000L) {
-	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	d <- data.frame(.Call(SXP_get_groups, sim.data$p, maxGroups))
-	colnames(d) <- c("Group", "GroupSize")
-	return(d)
+change.label.default <- function(labels, defaults) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_change_label_default, sim.data$p, labels, defaults))
 }
+
+
+#' Set values of a custom label
+#'
+#' \code{change.label.to.values} changes the values of a custom label for all 
+#' genotypes or for members of group(s) to a sequence of values.
+#' 
+#' The function orders the genotypes selected by the `group` parameter by their
+#' index, finds the `startIndex`th genotype (counting up from 0), then copies
+#' the vector `values` entry-by-entry into the appropriate label of 
+#' the genotypes from there on.
+#' 
+#' If the vector of values provided is longer than the number of genotypes after
+#' the `startIndex`th that are selected by the `group` parameter, then trailing 
+#' values are ignored. 
+#' If the vector of values provided is shorter than the number of genotypes after
+#' the `startIndex`th that are selected by the `group` parameter, then trailing 
+#' genotypes are left unchanged. 
+#'
+#' @param label the label number of the label to change.
+#' @param values A vector of integer values to copy into the label. 
+#' @param group NA or 0 to apply the values to all genotypes in simulation memory,
+#' or a group number to apply the values to only members of that group.
+#' @param startIndex The position within the list of genotypes identified by `group`
+#' and sorted by their index that the first entry of `values` should be copied into.
+#' The first position in the list is considered index 1.
+#' @return 0 on success
+#'
+#' @family label functions
+#' @export
+change.label.to.values <- function(label, values, group=NA, startIndex=1) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_change_label_values, sim.data$p, label, 
+               values, group, startIndex))    
+}
+
+
+#' Set a flat value for a custom label
+#'
+#' \code{change.label.to} changes the value of a custom label for all 
+#' genotypes or for members of group(s) to a certain value.
+#' 
+#' Multiple group input supported.
+#'
+#' @param label the label number of the label to set.
+#' @param value an integer to which the label value of all genotypes selected 
+#' by the `group` parameter will be changed.
+#' @param group NA or 0 to change all genotypes in simulation memory,
+#' or a group number or vector of group numbers to change only
+#' members of those groups.
+#' @return 0 on success
+#'
+#' @family label functions
+#' @export
+change.label.to.this <- function(label, value, group=NA) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_change_label_const, sim.data$p, label, value, group))  
+}
+
+
+#' Add/subtract from a custom label
+#'
+#' \code{change.label.by.amount} changes the values of a custom
+#' label for all genotypes or for members of group(s) by a given increment amount, 
+#' positive or negative.
+#' 
+#' Multiple group input supported.
+#'
+#' @param label the label number of the label to change.
+#' @param amount the integer change to modify the label value for the chosen
+#' genotypes. eg. 1 for incrementing label values by 1, -3 to subtract 3 from
+#' all label values.
+#' @param group NA or 0 to apply this increment to all genotypes in simulation memory,
+#' or a group number or vector of group numbers to apply the incrememnt to only
+#' members of those groups.
+#' @return 0 on success
+#'
+#' @family label functions
+#' @export
+change.label.by.amount <- function(label, amount, group=NA) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_change_label_amount, sim.data$p, label, amount, group))
+}
+
 
 #' Perform selection on a group by true GEBV.
 #'
