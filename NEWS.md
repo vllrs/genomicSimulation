@@ -1,3 +1,9 @@
+# genomicSimulation 0.2.4.002
+
+## Bug Fixes
+- A quick-fix to group modification functions crashing R if there are more than 10 groups in existence. Full fix coming soon.
+
+
 # genomicSimulation 0.2.4
 
 ## New Features

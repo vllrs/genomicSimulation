@@ -355,6 +355,7 @@ int _ascending_double_comparer(const void* pp0, const void* pp1);
 int _ascending_float_comparer(const void* p0, const void* p1);
 int _ascending_int_comparer(const void* p0, const void* p1);
 int _ascending_int_dcomparer(const void* pp0, const void* pp1);
+int _ascending_GroupNum_comparer(const void* p0, const void* p1);
 /**@}*/
 
 /** @defgroup getters Data Access and Search Functions
