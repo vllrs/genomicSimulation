@@ -178,7 +178,8 @@ test_that("break.group.evenly runs successfully", {
   fs <- break.group.evenly(g)
   f2s <- break.group.evenly(g2, 3)
   
-  expect_identical(see.existing.groups(), data.frame("Group"=sort(c(fs,f2s)),"GroupSize"=c(3L,7L,3L, 7L, 6L)))
+  truth = data.frame("Group"=c(fs,f2s),"GroupSize"=c(3L,3L,7L,7L,6L))
+  expect_identical(see.existing.groups(), truth[order(truth$Group),])
   #does not check that the groups are shuffled properly
   
 })
@@ -192,7 +193,8 @@ test_that("break.group.into.buckets runs successfully", {
   
   fs <- break.group.into.buckets(g2, c(3L,13L))
   
-  expect_identical(see.existing.groups(), data.frame("Group"=sort(c(g,fs)),"GroupSize"=c(6L,3L,13L,4L)))
+  truth <- data.frame("Group"=c(g,fs),"GroupSize"=c(6L,3L,13L,4L))
+  expect_identical(see.existing.groups(), truth[order(truth$Group),])
   #does not check that the groups are shuffled properly
   
   #does-not-crash test

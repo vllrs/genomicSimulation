@@ -605,15 +605,14 @@ SEXP SXP_split_individuals(SEXP exd, SEXP s_group) {
 
 	int group_size = get_group_size(d, GROUPNUM_IFY(group_id));
 	GroupNum results[group_size];
-	memset(results, 0, sizeof(GroupNum) * group_size);
 
 	// do the actual split
-	split_into_individuals(d, GROUPNUM_IFY(group_id), results);
+	int nsplit = split_into_individuals(d, GROUPNUM_IFY(group_id), group_size, results);
 
 	// Get an R vector of the same length as the number of new size 1 groups created
-	SEXP out = PROTECT(allocVector(INTSXP, group_size));
+	SEXP out = PROTECT(allocVector(INTSXP, nsplit));
 	int* outc = INTEGER(out);
-	for (int i = 0; i < group_size; ++i) {
+	for (int i = 0; i < nsplit; ++i) {
 		outc[i] = results[i].num;
 	}
 
@@ -631,19 +630,9 @@ SEXP SXP_split_familywise(SEXP exd, SEXP s_group) {
 
 	int group_size = get_group_size(d, GROUPNUM_IFY(group_id));
 	GroupNum results[group_size];
-	memset(results, 0, sizeof(GroupNum) * group_size);
 
 	// do the actual split
-	split_into_families(d, GROUPNUM_IFY(group_id), results);
-
-	// calculate how many groups were created
-	int groups_created = group_size;
-	for (int i = 0; i < group_size; ++i) {
-		if (results[i].num == NO_GROUP.num) { // because if a group was created it would not be 0
-			groups_created = i;
-			break;
-		}
-	}
+	int groups_created = split_into_families(d, GROUPNUM_IFY(group_id), group_size, results);
 
 	// Get an R vector of the same length as the number of new groups created
 	SEXP out = PROTECT(allocVector(INTSXP, groups_created));
@@ -671,19 +660,10 @@ SEXP SXP_split_halfsibwise(SEXP exd, SEXP s_group, SEXP s_parent) {
 
 	int group_size = get_group_size(d, GROUPNUM_IFY(group_id));
 	GroupNum results[group_size];
-	memset(results, 0, sizeof(GroupNum) * group_size);
 
 	// do the actual split
-	split_into_halfsib_families(d, GROUPNUM_IFY(group_id), parent_num, results);
-
-	// calculate how many groups were created
-	int groups_created = group_size;
-	for (int i = 0; i < group_size; ++i) {
-		if (results[i].num == NO_GROUP.num) { // because if a group was created it would not be 0
-			groups_created = i;
-			break;
-		}
-	}
+	int groups_created = split_into_halfsib_families(d, GROUPNUM_IFY(group_id), 
+                                                  parent_num, group_size, results);
 
 	// Get an R vector of the same length as the number of newgroups created
 	SEXP out = PROTECT(allocVector(INTSXP, groups_created));
@@ -723,8 +703,7 @@ SEXP SXP_split_randomly(SEXP exd, SEXP s_group, SEXP s_n) {
 
 	} else {
 		GroupNum results[n_groups];
-		memset(results, 0, sizeof(GroupNum) * n_groups);
-		split_randomly_into_n(d, GROUPNUM_IFY(group_id), n_groups, results);
+		n_groups = split_randomly_into_n(d, GROUPNUM_IFY(group_id), n_groups, results);
 
 		SEXP out = PROTECT(allocVector(INTSXP, n_groups));
 		int* outc = INTEGER(out);
@@ -764,7 +743,6 @@ SEXP SXP_split_evenly(SEXP exd, SEXP s_group, SEXP s_n) {
 
 	} else {
 		GroupNum results[n_groups];
-		memset(results, 0, sizeof(GroupNum) * n_groups);
 		split_evenly_into_n(d, GROUPNUM_IFY(group_id), n_groups, results);
 
 		SEXP out = PROTECT(allocVector(INTSXP, n_groups));
@@ -794,7 +772,6 @@ SEXP SXP_split_buckets(SEXP exd, SEXP s_group, SEXP s_buckets) {
 	int* counts = INTEGER(s_buckets);
 
 	GroupNum results[n_groups];
-	memset(results, 0, sizeof(GroupNum) * n_groups);
 	split_by_specific_counts_into_n(d, GROUPNUM_IFY(group_id), n_groups, counts, results);
 
 	SEXP out = PROTECT(allocVector(INTSXP, n_groups));
@@ -841,7 +818,7 @@ SEXP SXP_split_out(SEXP exd, SEXP s_indexes) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
 	int n = length(s_indexes);
-	int *ns = INTEGER(s_indexes);
+	unsigned int *ns = (unsigned int*) INTEGER(s_indexes);
 	for (int i = 0; i < n; ++i) {
 		if (ns[i] == NA_INTEGER || ns[i] < 0) {
 			error("The `indexes` vector contains at least one invalid index.\n");
@@ -967,7 +944,7 @@ SEXP SXP_group_eval(SEXP exd, SEXP s_group, SEXP s_eff_set) {
 	}
 
 	int group_size = get_group_size(d, GROUPNUM_IFY(group_id));
-	int* inds = get_malloc(sizeof(int) * group_size);
+	unsigned int* inds = get_malloc(sizeof(unsigned int) * group_size);
 	get_group_indexes(d, GROUPNUM_IFY(group_id), group_size, inds);
 	DecimalMatrix gebvs = calculate_group_bvs(d, GROUPNUM_IFY(group_id), EFFECTID_IFY(eff_id));
 
@@ -1238,19 +1215,12 @@ SEXP SXP_send_map(SEXP exd) {
 }
 
 // get the active groups currently for a summary
-SEXP SXP_get_groups(SEXP exd, SEXP s_maxGroups) {
+SEXP SXP_get_groups(SEXP exd) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int n_groups = asInteger(s_maxGroups);
-	if (n_groups == NA_INTEGER || n_groups < 0) {
-	  error("`maxGroups` parameter is of invalid type.\n");
-	}
-
-	GroupNum out_groups[n_groups];
-	memset(out_groups, 0, sizeof(GroupNum) * n_groups);
-	int out_counts[n_groups];
-	memset(out_counts, 0, sizeof(int) * n_groups);
-	n_groups = get_existing_group_counts(d, n_groups, out_groups, out_counts);
+	GroupNum out_groups[d->n_groups];
+	unsigned int out_counts[d->n_groups];
+	int n_groups = get_existing_group_counts(d, out_groups, out_counts);
 
 	SEXP out = PROTECT(allocVector(VECSXP, 2));
 	SEXP s_groups = PROTECT(allocVector(INTSXP, n_groups));
@@ -1300,8 +1270,7 @@ SEXP SXP_get_group_data(SEXP exd, SEXP s_group, SEXP s_whatData, SEXP s_which) {
 		return out;
 
 	} else if (c == 'X') {
-		int data[group_size];
-		memset(data, 0, sizeof(int) * group_size);
+		unsigned int data[group_size];
 		get_group_indexes(d, GROUPNUM_IFY(group_id), group_size, data);
 
 		// save to an R vector

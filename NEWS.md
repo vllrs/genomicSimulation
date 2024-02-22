@@ -1,3 +1,15 @@
+
+# genomicSimulation 0.2.4.003
+
+## Bug Fixes 
+
+- Group modification functions no longer crash R if there are more than 10 groups in existence.
+
+## Improvements
+
+- Parameter `maxgroups` in `get.existing.groups` removed. A call to `get.existing.groups` will now return all of the existing groups in the simulation.
+- Under-the-hood improvements to group manipulation functions.
+
 # genomicSimulation 0.2.4.002
 
 ## Bug Fixes

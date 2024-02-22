@@ -71,7 +71,6 @@ see.group.gene.data <- function(group, count.allele=NA_character_) {
 #' \code{see.existing.groups} scans the saved data for groups that currently
 #' have members and returns their group numbers and number of members.
 #'
-#' @param maxGroups maximum number of groups to return. 
 #' @return A dataframe containing two columns, the first, named "Group", 
 #' being the group numbers of every group in the SimData that currently 
 #' has members, the second, named "GroupSize", being 
@@ -79,9 +78,9 @@ see.group.gene.data <- function(group, count.allele=NA_character_) {
 #'
 #' @family grouping functions
 #' @export
-see.existing.groups <- function(maxGroups=10000L) {
+see.existing.groups <- function() {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	d <- data.frame(.Call(SXP_get_groups, sim.data$p, maxGroups))
+	d <- data.frame(.Call(SXP_get_groups, sim.data$p))
 	colnames(d) <- c("Group", "GroupSize")
 	return(d)
 }

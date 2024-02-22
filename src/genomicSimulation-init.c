@@ -21,7 +21,7 @@ R_CallMethodDef calledMethods[] = {
 	{"SXP_get_worst_GEBV", (DL_FUNC) &SXP_get_worst_GEBV, 2},
 	{"SXP_get_group_data", (DL_FUNC) &SXP_get_group_data, 4},
 	{"SXP_get_group_gene_data", (DL_FUNC) &SXP_get_group_gene_data, 3},
-	{"SXP_get_groups", (DL_FUNC) &SXP_get_groups, 2},
+	{"SXP_get_groups", (DL_FUNC) &SXP_get_groups, 1},
 	{"SXP_group_eval", (DL_FUNC) &SXP_group_eval, 3},
 	{"SXP_save_GEBVs", (DL_FUNC) &SXP_save_GEBVs, 4},
 	{"SXP_save_chrsplit_block_effects", (DL_FUNC) &SXP_save_chrsplit_block_effects, 5},
