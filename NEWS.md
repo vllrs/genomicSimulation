@@ -1,3 +1,7 @@
+## Improvements 
+
+- Under-the-hood improvements to crossing functions.
+- Same script and same random seed will produce different genotypes post-v0.2.4.003, because gametes are now generated successively (first one, then the other) rather than simultaneously.
 
 # genomicSimulation 0.2.4.003
 

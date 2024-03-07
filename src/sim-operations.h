@@ -361,6 +361,28 @@ int _ascending_index_comparer(const void* p0, const void* p1);
 int _ascending_GroupNum_comparer(const void* p0, const void* p1);
 /**@}*/
 
+
+/** @defgroup loaders Setup Functions
+ *
+ * For setup of the simulation (loading founders, genetic maps, and optionally allele effects).
+ *
+ * @{
+ */
+AlleleMatrix* create_empty_allelematrix(const int n_markers, const int n_labels, const int labelDefaults[n_labels], const int n_genotypes);
+SimData* create_empty_simdata();
+void clear_simdata(SimData* d);
+
+GroupNum load_transposed_genes_to_simdata(SimData* d, const char* filename);
+GroupNum load_more_transposed_genes_to_simdata(SimData* d, const char* filename);
+GroupNum load_genes_to_simdata(SimData* d, const char* filename); //@ add
+GroupNum load_more_genes_to_simdata(SimData* d, const char* filename); //@ add
+GroupNum load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename);
+void load_genmap_to_simdata(SimData* d, const char* filename);
+EffectID load_effects_to_simdata(SimData* d, const char* filename);
+struct GroupAndEffectSet load_all_simdata(SimData* d, const char* data_file, const char* map_file, const char* effect_file);
+/** @} */
+
+
 /** @defgroup getters Data Access and Search Functions
  *
  * For non-persistent access to simulation results and contents.
@@ -411,7 +433,7 @@ static inline int isValidLocation(const GenoLocation g) {
  *  @see create_bidirectional_iter
  */
 typedef struct {
-    const SimData* d; /**< Simulation data through which to iterate */
+    SimData* d; /**< Simulation data through which to iterate */
     const GroupNum group; /**< Group through which to iterate. If it is 0,
                           * then iterate through all genotypes in the simulation.
                           * Otherwise, iterate through members of the group with
@@ -442,7 +464,7 @@ typedef struct {
  *  @see create_randomaccess_iter
  */
 typedef struct {
-    const SimData* d; /**< Simulation data through which to iterate */
+    SimData* d; /**< Simulation data through which to iterate */
     const GroupNum group; /**< Group through which to iterate. If it is 0,
                           * then iterate through all genotypes in the simulation.
                           * Otherwise, iterate through members of the group with
@@ -461,8 +483,8 @@ typedef struct {
                      * This value is left uninitialised until then. */
 } RandomAccessIterator;
 
-BidirectionalIterator create_bidirectional_iter( const SimData* d, const GroupNum group);
-RandomAccessIterator create_randomaccess_iter( const SimData* d, const GroupNum group);
+BidirectionalIterator create_bidirectional_iter( SimData* d, const GroupNum group);
+RandomAccessIterator create_randomaccess_iter( SimData* d, const GroupNum group);
 
 AlleleMatrix* get_nth_AlleleMatrix( AlleleMatrix* listStart, const unsigned int n);
 
@@ -492,6 +514,24 @@ GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n);
  */
 static inline char* get_name(const GenoLocation loc) {
     return loc.localAM->names[loc.localPos];
+}
+
+/** Get the name of a genotype
+ *
+ * @param loc location of the relevant genotype
+ * @return shallow copy of the name of the
+ * genotype at location `loc`
+ */
+/** Set the name of a genotype
+ *
+ * @param loc location of the relevant genotype
+ * @param name name of the genotype
+ * at location `loc` after this call
+ */
+static inline void set_name(const GenoLocation loc, char* name) {
+    char* oldname = loc.localAM->names[loc.localPos];
+    if (oldname != NULL) free(oldname);
+    loc.localAM->names[loc.localPos] = name;
 }
 
 /** Get the alleles of a genotype
@@ -622,6 +662,7 @@ int get_existing_group_counts( SimData* d, GroupNum* out_groups, unsigned int* o
     /**@}*/
 /**@}*/
 
+
 /** @defgroup groupmod Seletion/Group Modification Functions
  *
  * For simulation of selection or structure in breeding programs.
@@ -629,11 +670,16 @@ int get_existing_group_counts( SimData* d, GroupNum* out_groups, unsigned int* o
  * @{
  */
 GroupNum combine_groups( SimData* d, const int list_len, const GroupNum group_ids[list_len]);
+GroupNum split_from_group( SimData* d, const int n, const unsigned int indexes_to_split[n]);
+GroupNum split_by_label_value( SimData* d, const GroupNum group, const LabelID whichLabel, const int valueToSplit);
+GroupNum split_by_label_range( SimData* d, const GroupNum group, const LabelID whichLabel, const int valueLowBound, const int valueHighBound);
 
+// GENERIC
 unsigned int _split_by_somequality( SimData* d, const GroupNum group_id,
         void* somequality_data,
         GroupNum (*somequality_tester)(GenoLocation, void*, unsigned int, unsigned int, GroupNum*),
         unsigned int maxentries_results, GroupNum* results);
+// APPLICATIONS
 unsigned int split_into_individuals( SimData* d, const GroupNum group_id, unsigned int maxentries_results, GroupNum results[maxentries_results]);
     //GroupNum __split_by_quality__individuate(GenoLocation loc, void** datastore, unsigned int maxgroups, unsigned int groupsfound, GroupNum** results);
 unsigned int split_into_families(SimData* d, const GroupNum group_id, unsigned int maxentries_results, GroupNum results[maxentries_results]);
@@ -643,13 +689,11 @@ unsigned int split_into_halfsib_families( SimData* d, const GroupNum group_id, c
     //GroupNum __split_by_quality__halfsib2(GenoLocation loc, void** datastore, unsigned int maxgroups, unsigned int groupsfound, GroupNum* results);
     //    GroupNum __split_by_quality__halfsibtemplate(GenoLocation loc, void** datastore, unsigned int maxgroups, unsigned int groupsfound, GroupNum* results, PedigreeID (*getparent)(GenoLocation));
 
-GroupNum split_from_group( SimData* d, const int n, const unsigned int indexes_to_split[n]);
-GroupNum split_by_label_value( SimData* d, const GroupNum group, const LabelID whichLabel, const int valueToSplit);
-GroupNum split_by_label_range( SimData* d, const GroupNum group, const LabelID whichLabel, const int valueLowBound, const int valueHighBound);
-
+// GENERIC
 unsigned int _split_by_someallocation( SimData* d, const GroupNum group_id, void* someallocator_data,
         GroupNum (*someallocator)(GenoLocation, SimData*, void*, unsigned int, unsigned int*, GroupNum*),
         unsigned int n_outgroups, GroupNum outgroups[n_outgroups]);
+// APPLICATIONS
 GroupNum split_evenly_into_two(SimData* d, const GroupNum group_id);
     // GroupNum __split_by_allocator__knowncounts(GenoLocation loc, SimData* d, void* datastore, unsigned int n_outgroups, unsigned int* subgroupsfound, GroupNum* outgroups)
 unsigned int split_evenly_into_n(SimData* d, const GroupNum group_id, const int n, GroupNum* results);
@@ -659,106 +703,9 @@ unsigned int split_randomly_into_n(SimData* d, const GroupNum group_id, const in
     // GroupNum __split_by_allocator__equalprob(GenoLocation loc, SimData* d, void* datastore, unsigned int n_outgroups, unsigned int* subgroupsfound, GroupNum* outgroups);
 unsigned int split_by_probabilities_into_n(SimData* d, const GroupNum group_id, const int n, const double* probs, GroupNum* results);
     // GroupNum __split_by_allocator__unequalprobs(GenoLocation loc, SimData* d, void* datastore, unsigned int n_outgroups, unsigned int* subgroupsfound, GroupNum* outgroups);
+
 /**@}*/
 
-/** @defgroup deletors Deletor Functions
- *
- * For deleting and free associated memory of data structures.
- *
- * @ingroup structs
- * @{
- */
-void delete_group(SimData* d, const GroupNum group_id);
-void delete_label(SimData* d, const LabelID whichLabel);
-void delete_genmap(GeneticMap* m);
-void delete_allele_matrix(AlleleMatrix* m);
-void delete_effect_matrix(EffectMatrix* m);
-void delete_eff_set(SimData* d, EffectID whichID);
-void delete_simdata(SimData* m);
-void delete_markerblocks(MarkerBlocks* b);
-void delete_dmatrix(DecimalMatrix* m);
-void delete_bidirectional_iter(BidirectionalIterator* it);
-void delete_randomaccess_iter(RandomAccessIterator* it);
-/**@}*/
-
-/** @defgroup loaders Setup Functions
- *
- * For setup of the simulation (loading founders, genetic maps, and optionally allele effects).
- *
- * @{
- */
-AlleleMatrix* create_empty_allelematrix(const int n_markers, const int n_labels, const int labelDefaults[n_labels], const int n_genotypes);
-SimData* create_empty_simdata();
-void clear_simdata(SimData* d);
-
-GroupNum load_transposed_genes_to_simdata(SimData* d, const char* filename);
-GroupNum load_more_transposed_genes_to_simdata(SimData* d, const char* filename);
-GroupNum load_genes_to_simdata(SimData* d, const char* filename); //@ add
-GroupNum load_more_genes_to_simdata(SimData* d, const char* filename); //@ add
-GroupNum load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename);
-void load_genmap_to_simdata(SimData* d, const char* filename);
-EffectID load_effects_to_simdata(SimData* d, const char* filename);
-struct GroupAndEffectSet load_all_simdata(SimData* d, const char* data_file, const char* map_file, const char* effect_file);
-/** @} */
-
-/** @defgroup recomb Recombination Calculators
- *
- * Experimental functions for retroactively calculating number of recombinations.
- *
- * This functionality is for interest only. It is not clear, or tidy,
- * or checked against real data.
- *
- * @{
- */
-int* calculate_min_recombinations_fw1(SimData* d, char* parent1, unsigned int p1num, char* parent2,
-		unsigned int p2num, char* offspring, int certain); // forward filling, window size 1
-int* calculate_min_recombinations_fwn(SimData* d, char* parent1, unsigned int p1num, char* parent2,
-		unsigned int p2num, char* offspring, int window_size, int certain); // forward filling, window size n
-
-
-// int has_same_alleles(char* p1, char* p2, int i);
-// int has_same_alleles_window(char* g1, char* g2, int start, int w);
-/** Simple operator to determine if at marker i, two genotypes share at least
- * one allele. Checks only 3 of four possible permutations because assumes
- * there cannot be more than two alleles at a given marker.
- *
- * @param p1 pointer to a character array genotype of the type stored in an AlleleMatrix
- * (2*n_markers long, representing the two alleles at a marker consecutively) for the first
- * of the genotypes to compare.
- * @param p2 pointer to a character array genotype for the second of the genotypes to compare.
- * @param i index of the marker at which to perform the check
- * @returns boolean result of the check
- */
-static inline int has_same_alleles(const char* p1, const char* p2, const int i) {
-	return (p1[i<<1] == p2[i<<1] || p1[(i<<1) + 1] == p2[i] || p1[i] == p2[(i<<1) + 1]);
-}
-// w is window length, i is start value
-/** Simple operator to determine if at markers with indexes i to i+w inclusive, two genotypes
- * share at least one allele. Checks only 3 of four possible permutations at each marker
- * because assumes there cannot be more than two alleles at a given marker. For the return value
- * to be true, there must be at least one match at every one of the markers in the window.
- *
- * @param g1 pointer to a character array genotype of the type stored in an AlleleMatrix
- * (2*n_markers long, representing the two alleles at a marker consecutively) for the first
- * of the genotypes to compare.
- * @param g2 pointer to a character array genotype for the second of the genotypes to compare.
- * @param start index of the first marker in the window over which to perform the check
- * @param w length of the window over which to perform the check
- * @returns boolean result of the check
- */
-static inline int has_same_alleles_window(const char* g1, const char* g2, const int start, const int w) {
-	int same = TRUE;
-	int i;
-	for (int j = 0; j < w; ++j) {
-		i = start + j;
-		same = same && (g1[i<<1] == g2[i<<1] || g1[(i<<1) + 1] == g2[i] || g1[i] == g2[(i<<1) + 1]);
-	}
-	return same;
-}
-
-int calculate_recombinations_from_file(SimData* d, const char* input_file, const char* output_file,
-		int window_len, int certain);
-/**@}*/
 
 /** @defgroup crossers Crossing and Progression Simulation Functions
  *
@@ -779,10 +726,40 @@ void generate_doubled_haploid(SimData* d, const char* parent_genome, char* outpu
 void generate_clone(SimData* d, const char* parent_genome, char* output);
     /**@}*/
 
+// SUPPORTER FUNCS FOR GENOPTIONS OPTIONS
+FILE* _genoptions_setup_save_pedigrees(const GenOptions g);
+FILE* _genoptions_setup_save_bvs(const SimData* d, const GenOptions g, int* effIndexp);
+FILE* _genoptions_setup_save_genotypes(const SimData* d, const GenOptions g);
+void _genoptions_save_pedigrees(FILE* fp, SimData* d, AlleleMatrix* tosave);
+void _genoptions_save_bvs(FILE* fe, EffectMatrix* effMatrices, int effIndex, AlleleMatrix* tosave);
+void _genoptions_save_genotypes(FILE* fg, AlleleMatrix* tosave);
+void _genoptions_give_names_and_ids(AlleleMatrix* am, SimData* d, const GenOptions g);
+
+// Double underscores in front of name represent parameter functions for a generic function.
+// PARAMETER FUNCTIONS FOR THE FOLLOWING GENERIC
+void __make_offspring_cross(SimData* d, void* datastore, GenoLocation parents[static 2], GenoLocation putHere);
+void __make_offspring_self_n_times(SimData* d, void* datastore, GenoLocation parents[static 2], GenoLocation putHere);
+void __make_offspring_doubled_haploids(SimData* d, void* datastore, GenoLocation parents[static 2], GenoLocation putHere);
+void __make_offspring_clones(SimData* d, void* datastore, GenoLocation parents[static 2], GenoLocation putHere);
+
+int __parentChooser_cross_randomly(void* parentIterator, void* datastore, unsigned int* counter, GenoLocation parents[static 2]);
+int __parentChooser_cross_randomly_between(void* parentIterator, void* datastore, unsigned int* counter, GenoLocation parents[static 2]);
+int __parentChooser_cross_combos(void* parentIterator, void* datastore, unsigned int* counter, GenoLocation parents[static 2]);
+int __parentChooser_selfing(void* parentIterator, void* datastore, unsigned int* counter, GenoLocation parents[static 2]);
+int __parentChooser_cloning(void* parentIterator, void* datastore, unsigned int* counter, GenoLocation parents[static 2]);
+
+// GENERIC
+GroupNum _make_new_genotypes(SimData* d, const GenOptions g,
+        void* parentIterator, void* datastore,
+        int (*parentChooser)(void*, void*, unsigned int*, GenoLocation[static 2]),
+        void (*offspringGenerator)(SimData*, void*, GenoLocation[static 2], GenoLocation) );
+// APPLICATIONS
 GroupNum cross_random_individuals(SimData* d, const GroupNum from_group, const int n_crosses, const int cap, const GenOptions g);
+	int _random_cross_checks(SimData* d, const GroupNum from_group, const int n_crosses, const int cap);
+	unsigned int _specialised_random_draw(SimData* d, unsigned int max, unsigned int cap, unsigned int* member_uses, unsigned int noCollision);
 GroupNum cross_randomly_between(SimData*d, const GroupNum group1, const GroupNum group2, const int n_crosses, const int cap1, const int cap2, const GenOptions g);
 GroupNum cross_these_combinations(SimData* d, const int n_combinations, const int* firstParents, const int* secondParents, const GenOptions g);
-GroupNum self_n_times(SimData* d, const int n, const GroupNum group, const GenOptions g);
+GroupNum self_n_times(SimData* d, const unsigned int n, const GroupNum group, const GenOptions g);
 GroupNum make_doubled_haploids(SimData* d, const GroupNum group, const GenOptions g);
 GroupNum make_clones(SimData* d, const GroupNum group, const int inherit_names, const GenOptions g);
 
@@ -791,6 +768,7 @@ GroupNum make_n_crosses_from_top_m_percent(SimData* d, const int n, const int m,
 GroupNum make_crosses_from_file(SimData* d, const char* input_file, const GenOptions g);
 GroupNum make_double_crosses_from_file(SimData* d, const char* input_file, const GenOptions g);
 /**@}*/
+
 
 /** @defgroup calculators Breeding Value and Allele Count Calculators
  *
@@ -818,6 +796,28 @@ double calculate_optimum_bv(const SimData* d, const EffectID effID);
 double calculate_optimal_available_bv(const SimData* d, const GroupNum group, const EffectID effID);
 double calculate_minimum_bv(const SimData* d, const EffectID effID);
 /**@}*/
+
+
+/** @defgroup deletors Deletor Functions
+ *
+ * For deleting and free associated memory of data structures.
+ *
+ * @ingroup structs
+ * @{
+ */
+void delete_group(SimData* d, const GroupNum group_id);
+void delete_label(SimData* d, const LabelID whichLabel);
+void delete_genmap(GeneticMap* m);
+void delete_allele_matrix(AlleleMatrix* m);
+void delete_effect_matrix(EffectMatrix* m);
+void delete_eff_set(SimData* d, EffectID whichID);
+void delete_simdata(SimData* m);
+void delete_markerblocks(MarkerBlocks* b);
+void delete_dmatrix(DecimalMatrix* m);
+void delete_bidirectional_iter(BidirectionalIterator* it);
+void delete_randomaccess_iter(RandomAccessIterator* it);
+/**@}*/
+
 
 /** @defgroup savers Saving Functions
  *
@@ -850,4 +850,65 @@ void save_count_matrix(FILE* f, const SimData* d, const char allele);
 void save_count_matrix_of_group(FILE* f, const SimData* d, const char allele, const GroupNum group);
 
 /**@}*/
+
+
+/** @defgroup recomb Recombination Calculators
+ *
+ * Experimental functions for retroactively calculating number of recombinations.
+ *
+ * This functionality is for interest only. It is not clear, or tidy,
+ * or checked against real data.
+ *
+ * @{
+ */
+int* calculate_min_recombinations_fw1(SimData* d, char* parent1, unsigned int p1num, char* parent2,
+        unsigned int p2num, char* offspring, int certain); // forward filling, window size 1
+int* calculate_min_recombinations_fwn(SimData* d, char* parent1, unsigned int p1num, char* parent2,
+        unsigned int p2num, char* offspring, int window_size, int certain); // forward filling, window size n
+
+
+// int has_same_alleles(char* p1, char* p2, int i);
+// int has_same_alleles_window(char* g1, char* g2, int start, int w);
+/** Simple operator to determine if at marker i, two genotypes share at least
+ * one allele. Checks only 3 of four possible permutations because assumes
+ * there cannot be more than two alleles at a given marker.
+ *
+ * @param p1 pointer to a character array genotype of the type stored in an AlleleMatrix
+ * (2*n_markers long, representing the two alleles at a marker consecutively) for the first
+ * of the genotypes to compare.
+ * @param p2 pointer to a character array genotype for the second of the genotypes to compare.
+ * @param i index of the marker at which to perform the check
+ * @returns boolean result of the check
+ */
+static inline int has_same_alleles(const char* p1, const char* p2, const int i) {
+    return (p1[i<<1] == p2[i<<1] || p1[(i<<1) + 1] == p2[i] || p1[i] == p2[(i<<1) + 1]);
+}
+// w is window length, i is start value
+/** Simple operator to determine if at markers with indexes i to i+w inclusive, two genotypes
+ * share at least one allele. Checks only 3 of four possible permutations at each marker
+ * because assumes there cannot be more than two alleles at a given marker. For the return value
+ * to be true, there must be at least one match at every one of the markers in the window.
+ *
+ * @param g1 pointer to a character array genotype of the type stored in an AlleleMatrix
+ * (2*n_markers long, representing the two alleles at a marker consecutively) for the first
+ * of the genotypes to compare.
+ * @param g2 pointer to a character array genotype for the second of the genotypes to compare.
+ * @param start index of the first marker in the window over which to perform the check
+ * @param w length of the window over which to perform the check
+ * @returns boolean result of the check
+ */
+static inline int has_same_alleles_window(const char* g1, const char* g2, const int start, const int w) {
+    int same = TRUE;
+    int i;
+    for (int j = 0; j < w; ++j) {
+        i = start + j;
+        same = same && (g1[i<<1] == g2[i<<1] || g1[(i<<1) + 1] == g2[i] || g1[i] == g2[(i<<1) + 1]);
+    }
+    return same;
+}
+
+int calculate_recombinations_from_file(SimData* d, const char* input_file, const char* output_file,
+        int window_len, int certain);
+/**@}*/
+
 #endif
