@@ -1,6 +1,6 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
-/* genomicSimulationC v0.2.4.003 - last edit 22 Feb 2024 */
+/* genomicSimulationC v0.2.4.004 - last edit 8 Mar 2024 */
 
 #ifdef SIM_OPERATIONS
     #define RND_IMPLEMENTATION
@@ -459,6 +459,15 @@ typedef struct {
 
 } BidirectionalIterator;
 
+/** A structure to iterate forwards through all
+ *  positions in the AlleleMatrix linked list in SimData. Used
+ *  in @see condense_allele_matrix. Internal, not recommended for end users.
+ */
+struct GappyIterator {
+    GenoLocation cursor;
+    unsigned int cursorAMIndex;
+};
+
 /** A structure to search and cache indexes of all
  *  genotypes in a SimData or of all the members of a group.
  *  @see create_randomaccess_iter
@@ -493,6 +502,11 @@ GenoLocation set_bidirectional_iter_to_end(BidirectionalIterator* it);
 GenoLocation next_forwards(BidirectionalIterator* it);
 GenoLocation next_backwards(BidirectionalIterator* it);
 GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n);
+
+//GenoLocation nextgappy_get_gap(struct GappyIterator* it);
+//GenoLocation nextgappy_get_nongap(struct GappyIterator* it);
+//GenoLocation nextgappy_valid_pos(struct GappyIterator* it);
+//void _move_genotype(GenoLocation from, GenoLocation to, int* label_defaults);
     /**@}*/
 
     /** @defgroup liteget Getting data from an Iterator

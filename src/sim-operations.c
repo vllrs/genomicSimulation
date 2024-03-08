@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.4.003 - last edit 22 Feb 2024 */
+/* genomicSimulationC v0.2.4.004 - last edit 28 Mar 2024 */
 
 /** Options parameter to run SimData functions in their bare-bones form.*/
 const GenOptions BASIC_OPT = {
@@ -1065,6 +1065,118 @@ int _ascending_GroupNum_comparer(const void* p0, const void* p1) {
     }
 }
 
+/** Move all details of the genotype at one GenoLocation to another GenoLocation.
+ *
+ * After the genotype at @a GenoLocation @a from has been copied to @a GenoLocation @a to,
+ * the information is cleared from @a GenoLocation @a from.
+ *
+ * @param label_defaults array of default values for custom labels. Is assumed to have length
+ * AlleleMatrix.n_labels at least. Note that this function does not copy or clear any custom labels
+ * if @from and @to's AlleleMatrix.n_labels are different.
+ */
+void _move_genotype(GenoLocation from, GenoLocation to, int* label_defaults) {
+    if (to.localAM == from.localAM && to.localPos == from.localPos) {
+        return;
+    }
+    if (to.localAM->groups[to.localPos].num != NO_GROUP.num) {
+        warning("In moving a genotype from %p:%d to %p:%d, the genotype at %p:%d will be overwritten\n", from.localAM, from.localPos, to.localAM, to.localPos, to.localAM, to.localPos);
+        --to.localAM->n_genotypes;
+    }
+    to.localAM->alleles[to.localPos] = from.localAM->alleles[from.localPos];
+    from.localAM->alleles[from.localPos] = NULL;
+
+    to.localAM->names[to.localPos] = from.localAM->names[from.localPos];
+    from.localAM->names[from.localPos] = NULL;
+
+    to.localAM->ids[to.localPos] = from.localAM->ids[from.localPos];
+    from.localAM->ids[from.localPos] = NO_PEDIGREE;
+
+    to.localAM->pedigrees[0][to.localPos] = from.localAM->pedigrees[0][from.localPos];
+    from.localAM->pedigrees[0][from.localPos] = NO_PEDIGREE;
+    to.localAM->pedigrees[1][to.localPos] = from.localAM->pedigrees[1][from.localPos];
+    from.localAM->pedigrees[1][from.localPos] = NO_PEDIGREE;
+
+    to.localAM->groups[to.localPos] = from.localAM->groups[from.localPos];
+    from.localAM->groups[from.localPos] = NO_GROUP;
+
+    if (to.localAM->n_labels != from.localAM->n_labels) {
+        warning("Origin and destination when copying genotype do not have the same number of custom labels (n_labels). The genotype now at %p:%d will have lost its label data.\n", to.localAM, to.localPos);
+    } else {
+        for (int i = 0; i < to.localAM->n_labels; ++i) {
+            to.localAM->labels[i][to.localPos] = from.localAM->labels[i][from.localPos];
+            from.localAM->labels[i][from.localPos] = label_defaults[i];
+        }
+    }
+
+    if (from.localAM != to.localAM) {
+        --from.localAM->n_genotypes;
+        ++to.localAM->n_genotypes;
+    }
+}
+
+/** Sets the current cursor position in a GappyIterator to the next valid position, if the cursor is not already a valid position.
+ *
+ * Valid positions in the linked list of AlleleMatrices may contain genotypes or not.
+*/
+GenoLocation nextgappy_valid_pos(struct GappyIterator* it) {
+    if (it->cursor.localAM == NULL) {
+        it->cursor = INVALID_GENO_LOCATION;
+    } else if (it->cursor.localPos >= CONTIG_WIDTH) {
+        it->cursor.localPos = 0;
+        it->cursor.localAM = it->cursor.localAM->next;
+        ++it->cursorAMIndex;
+        if (it->cursor.localAM == NULL) {
+            it->cursor = INVALID_GENO_LOCATION;
+        }
+    }
+    return it->cursor;
+}
+
+/** Sets the current cursor position in a GappyIterator to the next empty position, if the cursor is not already an empty position.
+ *
+ * Empty positions do not contain genotypes. This function does not change the cursor position if the curstor is already on a gap.
+*/
+GenoLocation nextgappy_get_gap(struct GappyIterator* it) {
+    if (!IS_VALID_LOCATION(nextgappy_valid_pos(it))) {
+        return INVALID_GENO_LOCATION;
+    }
+
+    while (it->cursor.localAM->groups[it->cursor.localPos].num != NO_GROUP.num) {
+
+        // Trusts that n_genotypes is correct.
+        if (it->cursor.localAM->n_genotypes == CONTIG_WIDTH) { // work-saver: skip this AlleleMatrix if it is already known to be full.
+            it->cursor.localAM = it->cursor.localAM->next;
+        } else {
+            ++it->cursor.localPos;
+        }
+
+        if (!IS_VALID_LOCATION(nextgappy_valid_pos(it))) {
+            return INVALID_GENO_LOCATION;
+        }
+    }
+
+    return it->cursor;
+}
+
+/** Sets the current cursor position in a GappyIterator to the next filled position, if the cursor is not already a filled position.
+ *
+ * Non-gap positions do contain genotypes. This function does not change the cursor position if the curstor is already on a non-gap.
+*/
+GenoLocation nextgappy_get_nongap(struct GappyIterator* it) {
+    if (!IS_VALID_LOCATION(nextgappy_valid_pos(it))) {
+        return INVALID_GENO_LOCATION;
+    }
+
+    while (it->cursor.localAM->groups[it->cursor.localPos].num == NO_GROUP.num) {
+        ++it->cursor.localPos;
+        if (!IS_VALID_LOCATION(nextgappy_valid_pos(it))) {
+            return INVALID_GENO_LOCATION;
+        }
+    }
+
+    return it->cursor;
+}
+
 
 /** A function to tidy the internal storage of genotypes after addition
  * or deletion of genotypes in the SimData. Not intended to be called by an
@@ -1072,117 +1184,46 @@ int _ascending_GroupNum_comparer(const void* p0, const void* p1) {
  *
  * Ideally, we want all AlleleMatrix structs in the SimData's linked list
  * to have no gaps. That is, if there are more than CONTIG_WIDTH genotypes, the
- * first AM should be full/contain CONTIG_WIDTH genotypes, and so forth, and the
- * AM at the end should have its n genotypes having indexes < n (so all at
- * the start of the AM with no gaps in-between).
+ * all AlleleMatrix structs except the last should be full (contain CONTIG_WIDTH genotypes),
+ * and the last should have the remaining n genotypes at local indexes 0 to n-1
+ * (so all at the start of the AlleleMatrix, with no gaps between them).
  *
- * This function achieves the cleanup by using two pointers: a filler out
+ * We trust that each AlleleMatrix's n_genotypes is correct.
+ *
+ * This function achieves the cleanup by using two pointers: a checker out
  * the front that identifies a genotype that needs to be shifted back/that
  * occurs after a gap, and a filler that identifies each gap and copies
- * the genotype at the filler back into it.
+ * the genotype at the checker back into it.
  *
  * @param d The SimData struct on which to operate.
  */
 void condense_allele_matrix( SimData* d) {
-	int checker, filler;
-	AlleleMatrix* checker_m = d->m, *filler_m = d->m;
+    // Find the first gap
+    struct GappyIterator filler = {.cursor=(GenoLocation){.localAM=d->m, .localPos=0}, .cursorAMIndex=0};
+    nextgappy_get_gap(&filler);
 
-	// find the first empty space with filler
-	while (1) {
-		if (filler_m->n_genotypes < CONTIG_WIDTH) {
-			for (filler = 0; filler < CONTIG_WIDTH; ++filler) {
-				// an individual is considered to not exist if it has no genome.
-				if (filler_m->alleles[filler] == NULL) {
-					break; // escape for loop
-				}
-			}
-			// assume we've found one, since n_genotypes < CONTIG_WIDTH.
-			break; // escape while loop
-		}
+    if (!IS_VALID_LOCATION(filler.cursor)) {
+        return; // no gaps found
+    }
 
-		if (filler_m->next == NULL) {
-			// No empty spaces
-			return;
-		} else {
-			filler_m = filler_m->next;
-		}
-	}
+    struct GappyIterator checker = filler; // copy filler
+    ++checker.cursor.localPos;
+    nextgappy_get_nongap(&checker);
 
-	// loop through all genotypes with checker, shifting them back when we find them.
-	while (1) {
-		for (checker = 0; checker < CONTIG_WIDTH; ++checker) {
-			if (checker_m->alleles[checker] == NULL) {
-				// check our filler has a substitute
-				while (filler_m->alleles[filler] == NULL) {
-					++filler;
-					if (filler >= CONTIG_WIDTH) {
-						// move to the next AM
-						if (filler_m->next != NULL) {
-							filler_m = filler_m->next;
-							filler = 0;
-						} else {
-							return;
-						}
-					}
-				}
+    while (IS_VALID_LOCATION(filler.cursor) && IS_VALID_LOCATION(checker.cursor)) {
+        _move_genotype(checker.cursor, filler.cursor, d->label_defaults);
 
-				// put in the substitute
-				checker_m->alleles[checker] = filler_m->alleles[filler];
-				filler_m->alleles[filler] = NULL;
-				checker_m->names[checker] = filler_m->names[filler];
-				filler_m->names[filler] = NULL;
-				checker_m->ids[checker] = filler_m->ids[filler];
-                filler_m->ids[filler] = NO_PEDIGREE;
-                // Assumes n_labels will be consistent across all AlleleMatrix in the linked list
-                // and all labels arrays will be of full CONTIG_WIDTH.
-                // If the AlleleMatrix linked list is valid, this is true.
-                for (int i = 0; i < d->n_labels; ++i) {
-                    checker_m->labels[i][checker] = filler_m->labels[i][filler];
-                    filler_m->labels[i][filler] = d->label_defaults[i];
-                }
-				checker_m->pedigrees[0][checker] = filler_m->pedigrees[0][filler];
-				checker_m->pedigrees[1][checker] = filler_m->pedigrees[1][filler];
-                filler_m->pedigrees[0][filler] = NO_PEDIGREE;
-                filler_m->pedigrees[1][filler] = NO_PEDIGREE;
-				checker_m->groups[checker] = filler_m->groups[filler];
-                filler_m->groups[filler] = NO_GROUP;
-				if (checker_m != filler_m) {
-					++ checker_m->n_genotypes;
-					-- filler_m->n_genotypes;
+        ++filler.cursor.localPos;
+        nextgappy_get_gap(&filler);
 
-					if (filler_m->n_genotypes == 0) {
-						// find the previous matrix in the linked list
-						AlleleMatrix* previous = checker_m;
-						while (previous->next != filler_m) {
-							previous = previous->next;
-							if (previous == NULL) {
-								error( "Error: filler got somewhere checker can't go.\n");
-							}
-						}
-						// delete this one and cut it out of the list
-						previous->next = filler_m->next;
-						filler_m->next = NULL; // so we don't delete the rest of the list
-						delete_allele_matrix(filler_m);
-						// move our filler values on
-						if (previous->next == NULL) {
-							return;
-						} else {
-							filler_m = previous->next;
-							filler = 0;
-						}
+        ++checker.cursor.localPos;
+        nextgappy_get_nongap(&checker);
+    }
 
-					}
-				}
-			}
-		}
-
-		// We're done with the AM, move on to the next one.
-		if (checker_m->next == NULL) {
-			error( "During allele matrix condensing, checker got ahead of filler somehow\n");
-		} else {
-			checker_m = checker_m->next;
-		}
-	}
+    if (filler.cursor.localAM->next != NULL && filler.cursor.localAM->next->n_genotypes == 0) {
+        delete_allele_matrix(filler.cursor.localAM->next);
+        filler.cursor.localAM->next = NULL;
+    }
 }
 
 

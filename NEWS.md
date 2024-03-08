@@ -1,6 +1,10 @@
+## Bug Fixes
+
+- Fixed a bug where some genotypes lost their group numbers during internal data-structure tidying in large simulations.
+
 ## Improvements 
 
-- Under-the-hood improvements to crossing functions.
+- Under-the-hood improvements to crossing functions and to the internal tidying function.
 - Same script and same random seed will produce different genotypes post-v0.2.4.003, because gametes are now generated successively (first one, then the other) rather than simultaneously.
 
 # genomicSimulation 0.2.4.003
