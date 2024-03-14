@@ -16,31 +16,40 @@
 #' @param group an integer: the group number of the group to have a look at
 #' @param data.type a string that will be used to identify the type of data
 #' to be extracted. String parsing is case-insensitive.
-#' If the first character is 'N', the 'N'ames of group members will be extracted. 
-#' If the first character is 'D', the I'D's of group members will be extracted. 
-#' If the first character is 'X', the Inde'X'es of group members will be extracted. 
-#' If the first character is 'G', the 'G'enotypes of the group members will be extracted.
-#' If the first character is 'C', the allele 'c'ounts of the group members for each marker
+#' \itemize{
+#' \item If the first character is 'N', the 'N'ames of group members will be extracted. 
+#' \item If the first character is 'D', the I'D's of group members will be extracted. 
+#' \item If the first character is 'X', the Inde'X'es of group members will be extracted. 
+#' \item If the first character is 'G', the 'G'enotypes of the group members will be extracted.
+#' \item If the first character is 'C', the allele 'c'ounts of the group members for each marker
 #' will be extracted (that is, 0 for no copies of `count.allele` at that marker,
 #'1 for 1 copy, 2 for 2 copies, etc). A (group members)x(markers) matrix.
-#' If the first character is 'B', the 'b'reeding values/GEBVs of group members will be returned.
-#' If it starts with "P1", the first parent of each group member is returned. As usual in 
+#' \item If the first character is 'B', the 'b'reeding values/GEBVs of group members will be returned.
+#' The breeding values will be calculated according to the effect set whose identifier
+#' is provided by the effect.set parameter (by default, the first set of marker effects loaded).
+#' \item If it starts with "P1", the first parent of each group member is returned. As usual in 
 #' genomicSimulation, if the parent has a name, its name will be what is returned, otherwise,
 #' it will be its ID.
-#' If it starts with "P2", the second parent of each group member is returned. As usual in 
+#' \item If it starts with "P2", the second parent of each group member is returned. As usual in 
 #' genomicSimulation, if the parent has a name, its name will be what is returned, otherwise,
 #' it will be its ID.
-#' If it starts with "ped", the full pedigree log of each group member is returned.
+#' \item If it starts with "ped", the full pedigree log of each group member is returned.
+#' \item If it starts with "L", the values of a custom 'l'abel will be returned. The values 
+#' will be shown for the custom label whose identifier is provided by the label parameter
+#' (by default, the first custom label created).
+#' }
 #' @param effect.set identifier for the set of marker effects to be used to calculate breeding values.
 #' This parameter is only used if the data.type corresponds to a request for breeding values/GEBVs.
+#' @param label identifier for the custom label to be viewed. This parameter is only used 
+#' if the data.type corresponds to a request for viewing custom label values.
 #' @return A vector containing the desired data output for each member of the group.
 #'
 #' @family grouping functions
 #' @family data access functions
 #' @export
-see.group.data <- function(group, data.type, effect.set=1L) {
+see.group.data <- function(group, data.type, effect.set=1L, label=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_see_group_data, sim.data$p, group, toupper(data.type), effect.set))
+	return(.Call(SXP_see_group_data, sim.data$p, group, toupper(data.type), effect.set, label))
 }
 
 #' Get genotypes or allele counts of a group as a matrix.

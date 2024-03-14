@@ -176,6 +176,8 @@ SOFTWARE.
 #define get_group                  gsc_get_group
 #define set_group                  gsc_set_group
 #define get_label_value            gsc_get_label_value
+#define get_index_of_label         gsc_get_index_of_label
+#define get_index_of_eff_set       gsc_get_index_of_eff_set
 #define get_existing_groups        gsc_get_existing_groups
 #define get_existing_group_counts  gsc_get_existing_group_counts
 #define get_group_size             gsc_get_group_size

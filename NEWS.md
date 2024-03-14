@@ -1,9 +1,14 @@
+## New Features 
+
+- Can now observe the values of custom labels using `see.group.data`. 
+
 ## Bug Fixes
 
 - Fixed a bug where some genotypes lost their group numbers during internal data-structure tidying in large simulations.
 
 ## Improvements 
 
+- Some culling of (unused) dependencies means we can now release genomicSimulation (R version) under the same MIT license as the C version.
 - Increased function naming consistency between R and C versions of the package. However, this means some R functions have changed names. Old function names still work (they directly call the new function name), but sometime in the future the old names may be removed. (Old name) -> (new recommended name) pairs for the R package are as follows:
 	- see.minimum.GEBV ->            see.minimal.GEBV
 	- select.by.gebv ->              break.group.by.GEBV

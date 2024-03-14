@@ -33,6 +33,21 @@ test_that("see.group.data works", {
   expect_identical(see.group.data(g3,"P2"), c("7", "8"))
   expect_identical(see.group.data(g3,"pedigree"), c("9\t=(7=(G01,G03))", "10\t=(8=(G02,G04))"))
   
+  # little bit of excessive label testing snuck in here
+  expect_error(see.group.data(g,"Label"),"Need to create at least one custom label before requesting custom label values")
+  l1 <- create.new.label(10)
+  expect_error(see.group.data(g,"L",label=(l1+5)),"`label` parameter does not match a current existing custom label id")
+  expect_identical(see.group.data(g,"L",label=l1),rep(10L,6))
+  l2 <- create.new.label(-3)
+  expect_identical(see.group.data(g,"L",label=l1),rep(10L,6))
+  expect_identical(see.group.data(g,"L",label=l2),rep(-3L,6))
+  change.label.by.amount(l2,2)
+  expect_identical(see.group.data(g,"L",label=l2),rep(-1L,6))
+  expect_identical(see.group.data(g,"L",label=l1),rep(10L,6))
+  change.label.to.values(l1,1:5,group=g,startIndex=2)
+  expect_identical(see.group.data(g,"L",label=l1),c(10L,1L,2L,3L,4L,5L))
+  expect_identical(see.group.data(g,"L",label=l2),rep(-1L,6))
+  
   clear.simdata()
 })
 
