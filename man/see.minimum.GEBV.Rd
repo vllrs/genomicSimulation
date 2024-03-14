@@ -2,29 +2,18 @@
 % Please edit documentation in R/sim-calculators.R
 \name{see.minimum.GEBV}
 \alias{see.minimum.GEBV}
-\title{Get the lowest-possible GEBV given the current loaded effect values.}
+\alias{see.minimum.gebv}
+\title{OLD NAME | Get the lowest-possible GEBV given the current loaded effect values.}
 \usage{
 see.minimum.GEBV(eff.set = 1L)
 }
-\arguments{
-\item{eff.set}{identifier for the set of marker effects to use to calculate the
-minimum GEBV.}
-}
-\value{
-The lowest possible GEBV
-}
 \description{
-\code{see.minimum.GEBV} allows you to extract the lowest GEBV score
-possible according to the current loaded effect values. An error is 
-raised if no effect values have been loaded.
+! This is the old name for \code{see.minimal.GEBV}. From genomicSimulation v0.2.5,
+\code{see.minimal.GEBV} is the recommended name over \code{see.minimum.GEBV}. 
+\code{see.minimum.GEBV} may become deprecated in future, when the package reaches 
+stability.
 }
 \seealso{
-Other data access functions: 
-\code{\link{see.group.data}()},
-\code{\link{see.group.gene.data}()},
-\code{\link{see.optimal.GEBV}()},
-\code{\link{see.optimal.haplotype}()},
-\code{\link{see.optimal.possible.GEBV}()},
-\code{\link{see.optimal.possible.haplotype}()}
+\link{see.minimal.GEBV}
 }
-\concept{data access functions}
+\keyword{internal}

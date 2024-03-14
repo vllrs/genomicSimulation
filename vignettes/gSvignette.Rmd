@@ -1,5 +1,5 @@
 ---
-title: "genomicSimulation (v0.2.4) Vignette"
+title: "genomicSimulation (v0.2.5) Vignette"
 author: "Kira Villiers"
 date: "`r Sys.Date()`"
 output:
@@ -9,7 +9,7 @@ output:
       toc: true
       #theme: simplex
 vignette: >
-  %\VignetteIndexEntry{genomicSimulation (v0.2.4) Vignette}
+  %\VignetteIndexEntry{genomicSimulation (v0.2.5) Vignette}
   %\VignetteEngine{knitr::rmarkdown}
   %\usepackage[utf8]{inputenc}
 ---
@@ -21,10 +21,28 @@ knitr::opts_chunk$set(
 )
 ```
 
-**Significant changes in v0.2.4**:
+**Significant changes in v0.2.5**:
 
-- Multiple sets of marker effects can now be loaded at a time.
-- If load.data is called with an effect.file, then its return type will be a list with two elements (\$groupNum, the group number of the founder group, and \$effectID, the identifier of the set of effects loaded from the effect file) instead of only the group number. Scripts that use a line like `group0 <- load.data(...)` might need updating to `init <- load.data(...); group0 <- init$groupNum`. (or to `load.data(...); group0 <- 1L`, since both of the numbers in the list will be exactly 1.)
+- As part of efforts to increase naming consistency between R and C versions of the package, some R functions have changed names. The old function names still work, but may become deprecated at some point in future.
+
+| Old name | New (recommended) name |
+|:-----    | :----- |
+| see.minimum.GEBV | see.minimal.GEBV |
+| select.by.gebv | break.group.by.GEBV |
+| make.group.from.label | break.group.by.label.value |
+| make.group.from.label.range | break.group.by.label.range |
+| make.label | create.new.label |
+| load.different.effects | load.more.effects |
+| cross.randomly | make.random.crosses |
+| cross.randomly.between | make.random.crosses.between |
+| cross.combinations | make.targeted.crosses |
+| cross.combinations.file | make.crosses.from.file |
+| cross.dc.combinations.file | make.double.crosses.from.file |
+| cross.all.pairs | make.all.unidirectional.crosses |
+| save.local.GEBVs.by.file | save.local.GEBVs.blocks.from.file |
+| save.local.GEBVs.by.chr | save.local.GEBVs.blocks.from.chrsplit |
+	
+See package's NEWS.md file for more detail and other changes.
 
 ```{r setup}
 library(genomicSimulation)
@@ -141,8 +159,8 @@ See the indexes of this vignette for information on available functions and outp
 A simple workflow for this package could be:
 
 1. Load progenitor lines and SNP data; save the group number of the progenitor lines. (The effect values for calculating breeding values for a desired trait can be loaded here too, if desired). Suggested function: `load.data`
-1. Perform crossing from the progenitor group. Keep a hold of the group number of these crosses. Example function: `cross.randomly`
-1. Perform selection on the F1 generation generated above. Example function: `select.by.gebv`
+1. Perform crossing from the progenitor group. Keep a hold of the group number of these crosses. Example function: `make.random.crosses`
+1. Perform selection on the F1 generation generated above. Example function: `break.group.by.GEBV`
 1. Perform more crossing from the F1 generation (using the group number from the above step).
 1. Repeat for further generations.
 1. Save the final genotypes (and/or effect values and/or pedigrees) to files. Example function: `save.genotypes`
@@ -164,20 +182,20 @@ g0 <- init$groupNum
 # eff1 <- init$effectID, the identifier of the effect file loaded, is the other entry in the list 'init'
 
 # Do random crosses from the progenitor lines. 
-f1 <- cross.randomly(g0, n.crosses=20, give.names=TRUE, name.prefix="F1.")
+f1 <- make.random.crosses(g0, n.crosses=20, give.names=TRUE, name.prefix="F1.")
 
 #(Let's see what crossovers occured. For this few markers we don't get much information.)
 save.pedigrees("a.txt", f1, type="P")
 find.plot.crossovers("a.txt", "b.txt")
 
 # Find the 25% with the top breeding value/GEBV
-f1.selected <- select.by.gebv(f1, percentage=25)
+f1.selected <- break.group.by.GEBV(f1, percentage=25)
 
 # Delete groups we are not currently using, to free up some memory.
 delete.group(f1)
 
 # Make 40 random crosses from those selected 25%
-f2 <- cross.randomly(f1.selected, n.crosses=5)
+f2 <- make.random.crosses(f1.selected, n.crosses=5)
 delete.group(f1.selected)
 
 # Complete 4 rounds of selfing with save-as-you-go genotype saving
@@ -215,7 +233,7 @@ cows <- init$groupNum
 bulls <- load.more.genotypes("../tests/testthat/helper_genotypes.txt") 
 
 # Create some offspring
-f1 <- cross.randomly.between(cows, bulls, n.crosses=5)
+f1 <- make.random.crosses.between(cows, bulls, n.crosses=5)
 
 # Simulate the sex of offspring
 temporary <- break.group.randomly(f1, into.n=2)
@@ -243,13 +261,13 @@ sexLabel <- make.label(default=FEMALE)
 change.label.to.this(sexLabel, MALE, group=bulls)
 
 # Create some offspring
-f1 <- cross.randomly.between(cows, bulls, n.crosses=5)
+f1 <- make.random.crosses.between(cows, bulls, n.crosses=5)
 
 # Simulate the sex of offspring
 change.label.to.values(sexLabel, values=c(sample(c(FEMALE,MALE), size=5, replace=TRUE)), group=f1)
 
 # Then split up your calves as needed
-calvesF <- make.group.from.label(sexLabel, FEMALE, group=f1)
+calvesF <- break.group.by.label.value(sexLabel, FEMALE, group=f1)
 calvesM <- f1 #the calves left in F1 must be all the males
 
 #... and so on
@@ -294,14 +312,14 @@ init <- load.data("../tests/testthat/helper_genotypes.txt",
 g0 <- init$groupNum
 
 # Simulate crosses
-f1 <- cross.randomly(g0, n.crosses=15, offspring=3)
+f1 <- make.random.crosses(g0, n.crosses=15, offspring=3)
 # Apply custom selection method
 f1.selected <- make.group(get.top.10.phenotypes(f1, 0.3))
 # (delete the non-selected genotypes)
 delete.group(f1)
 
 # ... repeat for further generations
-f2 <- cross.randomly(f1.selected, n.crosses=100)
+f2 <- make.random.crosses(f1.selected, n.crosses=100)
 f2.selected <- make.group(get.top.10.phenotypes(f2, 0.5))
 
 # ...
@@ -354,8 +372,11 @@ This functionality is very much untested and incomplete.
 
 # Indexes
 ## Global Settings Index
-- NAME_LENGTH (default 45). This parameter is not yet modifiable in the R version
-- CONTIG_WIDTH (default 1000). This parameter is not yet modifiable in the R version
+
+- NAME_LENGTH (default 45).
+- CONTIG_WIDTH (default 1000).
+
+Generally, these default parameter settings should be satisfactory. If you do need to change them, add a line of the format `#define CONTIG_WIDTH 2048`, with your desired variable to modify and desired value to change it to, to the first line of `src/genomicSimulation-init.c`.
 
 ## Function Index
 *Use the R documentation (eg. type `?load.data` in the RStudio console) to get descriptions of these functions.*
@@ -376,24 +397,24 @@ Loading data:
 - `[group] <- load.data(allele.file, map.file, effect.file = NULL)`
 - If the effect file in `load.data` is not NULL, the return type is instead `list(groupNum=[group], effectID=[effect set])`
 - `[group] <- load.more.genotypes(allele.file)`
-- `[effect set] <- load.different.effects(effect.file)`
+- `[effect set] <- load.more.effects(effect.file)`
 - `delete.effect.set(effect.sets)`
 
 Simulating crossing:
 
-- `[group] <- cross.randomly(group,n.crosses,[[settings]])`
-- `[group] <- cross.randomly.between(group1,group2,cap1,cap2,n.crosses,[[settings]])`
-- `[group] <- cross.combinations(first.parents,second.parents,[[settings]])`
-- `[group] <- cross.combinations.file(cross.file,[[settings]])`
-- `[group] <- cross.dc.combinations.file(cross.file,[[settings]])`
-- `[group] <- cross.all.pairs(group,[[settings]])`
+- `[group] <- make.random.crosses(group,n.crosses,[[settings]])`
+- `[group] <- make.random.crosses.between(group1,group2,cap1,cap2,n.crosses,[[settings]])`
+- `[group] <- make.targeted.crosses(first.parents,second.parents,[[settings]])`
+- `[group] <- make.crosses.from.file(cross.file,[[settings]])`
+- `[group] <- make.double.crosses.from.file(cross.file,[[settings]])`
+- `[group] <- make.all.unidirectional.crosses(group,[[settings]])`
 - `[group] <- self.n.times(group,n,[[settings]])`
 - `[group] <- make.clones(group,inherit.names,[[settings]])`
 - `[group] <- make.doubled.haploids(group,[[settings]])`
 
 Manipulating custom labels:
 
-- `[label] <- make.label(default)`
+- `[label] <- create.new.label(default)`
 - `delete.label(labels)`
 - `change.label.default(label, default)`
 - `change.label.to.values(label, values, in group/no group, startIndex)`
@@ -402,7 +423,7 @@ Manipulating custom labels:
 
 Performing selection:
 
-- `[selected.group] <- select.by.gebv(from.group, low.score.best = FALSE, percentage OR number, eff.set=1L)`
+- `[selected.group] <- break.group.by.GEBV(from.group, low.score.best = FALSE, percentage OR number, eff.set=1L)`
 - For more customised selection, use the process
   - `info <- data.frame("i" = see.group.data(from.group,"X"), "Data"=see.group.data(from.group,...))`
   - `selected.info <- `[some R manipulation on `info` that discards rows not selected under the custom selection]
@@ -413,8 +434,8 @@ Modify groupings:
 - `delete.group(groups)`
 - `[group] <- combine.groups(groups)`
 - `[group] <- make.group(indexes)`
-- `[group] <- make.group.from.label(label, value, in group(s)/no group)`
-- `[group] <- make.group.from.label.range(label, rangeLowEnd, rangeHighEnd, in group(s)/no group)`
+- `[group] <- break.group.by.label.value(label, value, in group(s)/no group)`
+- `[group] <- break.group.by.label.range(label, rangeLowEnd, rangeHighEnd, in group(s)/no group)`
 - `[vector of groups] <- break.group.into.individuals(group)`
 - `[vector of groups] <- break.group.into.families(group)`
 - `[vector of groups] <- break.group.into.halfsib.families(group)`
@@ -425,7 +446,6 @@ Modify groupings:
 
 Save data (saves results to files):
 
-- `save.genome.model(filename)`
 - `save.genotypes(filename, group = NULL, type = "R")`
 - `save.allele.counts(filename, group = NULL, allele)`
 - `save.pedigrees(filename, group = NULL, type = "R")`
@@ -441,7 +461,7 @@ View data (pulls data into R dataframes):
 - `[string containing best allele that exists in the group at each SNP] <- see.optimal.possible.haplotype(eff.set=1L)`
 - `[float: the maximum possible GEBV] <- see.optimal.GEBV(eff.set=1L)`
 - `[float: the maximum possible GEBV from the pool of alleles that exist in the group] <- see.optimal.possible.GEBV(eff.set=1L)`
-- `[float: the minimum possible GEBV] <- see.minimum.GEBV(eff.set=1L)`
+- `[float: the minimum possible GEBV] <- see.minimal.GEBV(eff.set=1L)`
 
 Identify recombination events:
 
@@ -511,16 +531,16 @@ The first column should be a SNP marker name, the second should be the allele th
 A particular SNP/allele combination not being included in the file is equivalent to that combination having an effect value of 0. If a particular SNP/allele combination is included multiple times in a file, only the last occurence is saved.
 
 ### Combination crossing functions
-Two crossing functions (`cross.combinations.file` and `cross.dc.combinations.file`) take instructions from files.
+Two crossing functions (`make.crosses.from.file` and `make.double.crosses.from.file`) take instructions from files.
 
-- `cross.combinations.file` : Take a file containing tab-separated pairs of line names and perform those crosses. An example file looks like:
+- `make.crosses.from.file` : Take a file containing tab-separated pairs of line names and perform those crosses. An example file looks like:
 ```
 G01	G02
 G01	G03
 G05	G06
 G01	G04
 ```
-- `cross.dc.combinations.file` : Supposes that only the names of the precursor lines are known but specific crosses between F1 individuals are wanted. Assumes that those F1 individuals have been produced with id allocation/pedigree tracking turned on. The function therefore reads in a tab-separated file that looks like the below to perform the cross between the offspring of G01 and G02, and the offspring of G03 and G05, and so forth.
+- `make.double.crosses.from.file` : Supposes that only the names of the precursor lines are known but specific crosses between F1 individuals are wanted. Assumes that those F1 individuals have been produced with id allocation/pedigree tracking turned on. The function therefore reads in a tab-separated file that looks like the below to perform the cross between the offspring of G01 and G02, and the offspring of G03 and G05, and so forth.
 ```
 G01	G02	G03	G05
 G01	G03	G05	G06

@@ -2,28 +2,17 @@
 % Please edit documentation in R/sim-setup.R
 \name{make.label}
 \alias{make.label}
-\title{Create a custom label}
+\title{OLD NAME | Create a custom label}
 \usage{
 make.label(default)
 }
-\arguments{
-\item{default}{the default value of the new custom label. All current genotypes
-and all genotypes generated in future will have this value for this label.}
-}
-\value{
-The label number of the new label created.
-}
 \description{
-\code{make.label} creates a new custom label with the given default value.
+! This is the old name for \code{create.new.label}. From genomicSimulation v0.2.5,
+\code{create.new.label} is the recommended name over \code{make.label}. 
+\code{make.label} may become deprecated in future, when the package reaches 
+stability.
 }
 \seealso{
-Other label functions: 
-\code{\link{change.label.by.amount}()},
-\code{\link{change.label.to.this}()},
-\code{\link{change.label.to.values}()},
-\code{\link{change.names.to.values}()},
-\code{\link{delete.label}()},
-\code{\link{make.group.from.label.range}()},
-\code{\link{make.group.from.label}()}
+\link{create.new.label}
 }
-\concept{label functions}
+\keyword{internal}

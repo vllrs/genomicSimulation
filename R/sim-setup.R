@@ -19,15 +19,13 @@
 #' @family loader functions
 #' @export
 load.data <- function(allele.file, map.file, effect.file=NULL) {
+	sim.data$p <- .Call(SXP_load_data, allele.file, map.file, effect.file)
+	#the group number of the first group is always 1
 	if (is.null(effect.file)) {
-		sim.data$p <- .Call(SXP_load_data, allele.file, map.file)
-		#the group number of the first group is always 1
 		return(c(groupNum=1L)) 
 	} else {
-		sim.data$p <- .Call(SXP_load_data_weff, allele.file, map.file, effect.file)
 		return(list(groupNum=1L,effectID=1L))
 	}
-	
 }
 
 #' Load more genotypes to the existing SimData object from a file
@@ -46,8 +44,6 @@ load.more.genotypes <- function(allele.file) {
 	return(.Call(SXP_load_more_genotypes, sim.data$p, allele.file)) 
 }
 
-
-
 #' Add a new set of marker effect values
 #'
 #' Only the alleles at SNPs
@@ -61,11 +57,25 @@ load.more.genotypes <- function(allele.file) {
 #'
 #' @family loader functions
 #' @export
-load.different.effects <- function(effect.file) {
+load.more.effects <- function(effect.file) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_load_new_effects, sim.data$p, effect.file)) 
+	return(.Call(SXP_load_more_effects, sim.data$p, effect.file)) 
 }
 
+#' OLD NAME | Add a new set of marker effect values
+#' 
+#' ! This is the old name for \code{load.more.effects}. From genomicSimulation v0.2.5,
+#' \code{load.more.effects} is the recommended name over \code{load.different.effects}. 
+#' \code{load.different.effects} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{load.more.effects}
+#' 
+#' @keywords internal 
+#' @export
+load.different.effects <- function(effect.file) {
+  return(load.more.effects(effect.file))
+}
 
 #' Create a custom label
 #'
@@ -77,7 +87,22 @@ load.different.effects <- function(effect.file) {
 #'
 #' @family label functions
 #' @export
-make.label <- function(default) {
+create.new.label <- function(default) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_create_label, sim.data$p, default))
+  return(.Call(SXP_create_new_label, sim.data$p, default))
+}
+
+#' OLD NAME | Create a custom label
+#' 
+#' ! This is the old name for \code{create.new.label}. From genomicSimulation v0.2.5,
+#' \code{create.new.label} is the recommended name over \code{make.label}. 
+#' \code{make.label} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{create.new.label}
+#' 
+#' @keywords internal 
+#' @export
+make.label <- function(default) {
+  return(create.new.label(default))
 }

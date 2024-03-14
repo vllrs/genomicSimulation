@@ -37,12 +37,12 @@ genotype names are left unchanged.
 }
 \seealso{
 Other label functions: 
+\code{\link{break.group.by.label.range}()},
+\code{\link{break.group.by.label.value}()},
 \code{\link{change.label.by.amount}()},
 \code{\link{change.label.to.this}()},
 \code{\link{change.label.to.values}()},
-\code{\link{delete.label}()},
-\code{\link{make.group.from.label.range}()},
-\code{\link{make.group.from.label}()},
-\code{\link{make.label}()}
+\code{\link{create.new.label}()},
+\code{\link{delete.label}()}
 }
 \concept{label functions}

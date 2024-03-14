@@ -2,27 +2,17 @@
 % Please edit documentation in R/sim-setup.R
 \name{load.different.effects}
 \alias{load.different.effects}
-\title{Add a new set of marker effect values}
+\title{OLD NAME | Add a new set of marker effect values}
 \usage{
 load.different.effects(effect.file)
 }
-\arguments{
-\item{effect.file}{A string containing a filename. The file should
-contain effect values for calculating GEBV for a trait}
-}
-\value{
-The effect set ID. 1 for the first set loaded, 2 for the next, and so on.
-This should be passed to breeding-value-calculating functions to tell them to 
-use this set of marker effects.
-}
 \description{
-Only the alleles at SNPs
-already tracked by the SimData are saved.
+! This is the old name for \code{load.more.effects}. From genomicSimulation v0.2.5,
+\code{load.more.effects} is the recommended name over \code{load.different.effects}. 
+\code{load.different.effects} may become deprecated in future, when the package reaches 
+stability.
 }
 \seealso{
-Other loader functions: 
-\code{\link{clear.simdata}()},
-\code{\link{load.data}()},
-\code{\link{load.more.genotypes}()}
+\link{load.more.effects}
 }
-\concept{loader functions}
+\keyword{internal}

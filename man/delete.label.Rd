@@ -18,15 +18,18 @@ and deletes them from simulation memory.
 }
 \seealso{
 Other label functions: 
+\code{\link{break.group.by.label.range}()},
+\code{\link{break.group.by.label.value}()},
 \code{\link{change.label.by.amount}()},
 \code{\link{change.label.to.this}()},
 \code{\link{change.label.to.values}()},
 \code{\link{change.names.to.values}()},
-\code{\link{make.group.from.label.range}()},
-\code{\link{make.group.from.label}()},
-\code{\link{make.label}()}
+\code{\link{create.new.label}()}
 
 Other grouping functions: 
+\code{\link{break.group.by.GEBV}()},
+\code{\link{break.group.by.label.range}()},
+\code{\link{break.group.by.label.value}()},
 \code{\link{break.group.evenly}()},
 \code{\link{break.group.into.buckets}()},
 \code{\link{break.group.into.families}()},
@@ -38,13 +41,10 @@ Other grouping functions:
 \code{\link{combine.groups}()},
 \code{\link{delete.effect.set}()},
 \code{\link{delete.group}()},
-\code{\link{make.group.from.label.range}()},
-\code{\link{make.group.from.label}()},
 \code{\link{make.group}()},
 \code{\link{see.existing.groups}()},
 \code{\link{see.group.data}()},
-\code{\link{see.group.gene.data}()},
-\code{\link{select.by.gebv}()}
+\code{\link{see.group.gene.data}()}
 }
 \concept{grouping functions}
 \concept{label functions}

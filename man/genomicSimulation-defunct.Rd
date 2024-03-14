@@ -14,10 +14,15 @@ be written}
 0 on success. On failure an error will be raised.
 }
 \description{
-\code{save.genome.model} saves the SNP names, their linkage map positions, 
-and the effect values for calculating GEBVs (if applicable) to a file.
+**DEFUNCT**
+> This function was never correctly implemented. 
+An implementation may return at some future date.
+Original documentation below.
 }
 \details{
+\code{save.genome.model} saves the SNP names, their linkage map positions, 
+and the effect values for calculating GEBVs (if applicable) to a file.
+
 The output is printed with first a tab-separated header row, containing
 the column names "name", "chr", "pos", then all alleles for which the saved
 SimData has effect values, if it has any. The subsequent lines, also tab-separated,
@@ -30,8 +35,9 @@ Other saving functions:
 \code{\link{save.GEBVs}()},
 \code{\link{save.allele.counts}()},
 \code{\link{save.genotypes}()},
-\code{\link{save.local.GEBVs.by.chr}()},
-\code{\link{save.local.GEBVs.by.file}()},
+\code{\link{save.local.GEBVs.blocks.from.chrsplit}()},
+\code{\link{save.local.GEBVs.blocks.from.file}()},
 \code{\link{save.pedigrees}()}
 }
 \concept{saving functions}
+\keyword{internal}

@@ -2,6 +2,7 @@
 % Please edit documentation in R/sim-printers.R
 \name{save.GEBVs}
 \alias{save.GEBVs}
+\alias{save.gebvs}
 \title{Save the GEBVs of genotypes currently saved to the SimData.}
 \usage{
 save.GEBVs(filename, group = NULL, eff.set = 1L)
@@ -34,8 +35,8 @@ Other saving functions:
 \code{\link{save.allele.counts}()},
 \code{\link{save.genome.model}()},
 \code{\link{save.genotypes}()},
-\code{\link{save.local.GEBVs.by.chr}()},
-\code{\link{save.local.GEBVs.by.file}()},
+\code{\link{save.local.GEBVs.blocks.from.chrsplit}()},
+\code{\link{save.local.GEBVs.blocks.from.file}()},
 \code{\link{save.pedigrees}()}
 }
 \concept{saving functions}

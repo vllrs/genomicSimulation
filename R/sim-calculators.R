@@ -16,7 +16,7 @@
 #' @export
 see.optimal.haplotype <- function(eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_get_best_haplotype, sim.data$p, eff.set))
+	return(.Call(SXP_see_optimal_haplotype, sim.data$p, eff.set))
 }
 
 #' Get a string containing the ultimate/highest-scoring set of alleles available
@@ -41,7 +41,7 @@ see.optimal.haplotype <- function(eff.set=1L) {
 #' @export
 see.optimal.possible.haplotype <- function(group, eff.set=1L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_get_best_available_haplotype, sim.data$p, group, eff.set))  
+  return(.Call(SXP_get_optimal_possible_haplotype, sim.data$p, group, eff.set))  
 }
 
 #' Get the ultimate/highest-possible GEBV given the current loaded effect values.
@@ -57,9 +57,10 @@ see.optimal.possible.haplotype <- function(group, eff.set=1L) {
 #'
 #' @family data access functions
 #' @export
+#' @aliases see.optimal.gebv
 see.optimal.GEBV <- function(eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_get_best_GEBV, sim.data$p, eff.set))
+	return(.Call(SXP_get_optimal_GEBV, sim.data$p, eff.set))
 }
 
 #' Get the ultimate/highest-possible GEBV given the pool of alleles available in
@@ -80,14 +81,15 @@ see.optimal.GEBV <- function(eff.set=1L) {
 #'
 #' @family data access functions
 #' @export
+#' @aliases see.optimal.possible.gebv
 see.optimal.possible.GEBV <- function(group, eff.set=1L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_get_best_available_GEBV, sim.data$p, group, eff.set))    
+  return(.Call(SXP_get_optimal_possible_GEBV, sim.data$p, group, eff.set))    
 }
 
 #' Get the lowest-possible GEBV given the current loaded effect values.
 #'
-#' \code{see.minimum.GEBV} allows you to extract the lowest GEBV score
+#' \code{see.minimal.GEBV} allows you to extract the lowest GEBV score
 #' possible according to the current loaded effect values. An error is 
 #' raised if no effect values have been loaded.
 #' 
@@ -98,9 +100,26 @@ see.optimal.possible.GEBV <- function(group, eff.set=1L) {
 #'
 #' @family data access functions
 #' @export
-see.minimum.GEBV <- function(eff.set=1L) {
+#' @aliases see.minimal.gebv
+see.minimal.GEBV <- function(eff.set=1L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_get_worst_GEBV, sim.data$p, eff.set))
+  return(.Call(SXP_get_minimal_GEBV, sim.data$p, eff.set))
+}
+
+#' OLD NAME | Get the lowest-possible GEBV given the current loaded effect values.
+#' 
+#' ! This is the old name for \code{see.minimal.GEBV}. From genomicSimulation v0.2.5,
+#' \code{see.minimal.GEBV} is the recommended name over \code{see.minimum.GEBV}. 
+#' \code{see.minimum.GEBV} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{see.minimal.GEBV}
+#' 
+#' @keywords internal 
+#' @export
+#' @aliases see.minimum.gebv
+see.minimum.GEBV <- function(eff.set=1L) {
+  return(see.minimal.GEBV(eff.set))
 }
 
 
@@ -109,6 +128,8 @@ see.minimum.GEBV <- function(eff.set=1L) {
 #' \code{find.crossovers} identifies alleles in genotypes that must
 #' have come from one parent or another, and so estimates the sections
 #' of the genotype that must have come from each parent.
+#' 
+#' **Experimental function: may be changed or removed at any time, and result validity is not promised.**
 #'
 #' @param parentage.file A string containing a filename. The file should
 #' contain tab-separated, the name of an line and the name of its parents.
@@ -138,6 +159,8 @@ find.crossovers <- function(parentage.file, out.file, window.size=1, certainty=T
 #' \code{plot.crossovers} identifies alleles in genotypes that must
 #' have come from one parent or another, and so estimates the sections
 #' of the genotype that must have come from each parent. It plots the result using ggplot
+#'
+#' **Experimental function: may be changed or removed at any time, and result validity is not promised.**
 #'
 #' @inheritParams find.crossovers
 #' @return 0 on success. The result will be printed to the file of name out.file

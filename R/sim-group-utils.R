@@ -27,7 +27,7 @@ combine.groups <- function(groups) {
 #' @export
 break.group.into.individuals <- function(group) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_split_individuals, sim.data$p, group))
+	return(.Call(SXP_break_group_into_individuals, sim.data$p, group))
 }
 
 #' Assign each family inside a group to separate new groups
@@ -42,7 +42,7 @@ break.group.into.individuals <- function(group) {
 #' @export
 break.group.into.families <- function(group) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_split_familywise, sim.data$p, group))
+	return(.Call(SXP_break_group_into_families, sim.data$p, group))
 }
 
 #' Assign all genotypes inside a group that share one parent 
@@ -61,7 +61,7 @@ break.group.into.families <- function(group) {
 #' @export
 break.group.into.halfsib.families <- function(group, parent) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_split_halfsibwise, sim.data$p, group, parent))
+  return(.Call(SXP_break_group_into_halfsib_families, sim.data$p, group, parent))
 }
 
 #' Randomly assign each genotype inside a group to one of n groups, with equal
@@ -77,7 +77,7 @@ break.group.into.halfsib.families <- function(group, parent) {
 #' @export
 break.group.randomly <- function(group, into.n=2) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_split_randomly, sim.data$p, group, into.n))  
+  return(.Call(SXP_break_group_randomly, sim.data$p, group, into.n))  
 }
 
 #' Randomly split all genotypes in a group between n identical-size groups.
@@ -93,7 +93,7 @@ break.group.randomly <- function(group, into.n=2) {
 #' @export
 break.group.evenly <- function(group, into.n=2) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_split_evenly, sim.data$p, group, into.n))  
+  return(.Call(SXP_break_group_evenly, sim.data$p, group, into.n))  
 }
 
 #' Randomly split all genotypes in a group between a set of specified-capacity
@@ -120,7 +120,7 @@ break.group.evenly <- function(group, into.n=2) {
 #' @export
 break.group.into.buckets <- function(group, buckets) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_split_buckets, sim.data$p, group, buckets))  
+  return(.Call(SXP_break_group_into_buckets, sim.data$p, group, buckets))  
 }
 
 #' Randomly split all genotypes in a group between a set of buckets with provided 
@@ -151,13 +151,17 @@ break.group.into.buckets <- function(group, buckets) {
 #' @export
 break.group.with.probabilities <- function(group, probabilities) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_split_probabilities, sim.data$p, group, probabilities))  
+  return(.Call(SXP_break_group_into_probabilities, sim.data$p, group, probabilities))  
 }
 
 #' Assign certain genotypes to a new group by index
 #'
 #' \code{make.group} allocates the genotypes with indexes in the vector
 #' indexes to a single new group.
+#'
+#' Unlike other functions in this package with the prefix \code{make},
+#' \code{make.group} does not create any new genotypes, only changes the 
+#' group allocation of already-existing genotypes.
 #'
 #' @param indexes A vector of integers containing the indexes of the genotypes
 #' to move to the new group. Use \code{get.group.data} to get these
@@ -167,12 +171,12 @@ break.group.with.probabilities <- function(group, probabilities) {
 #' @export
 make.group <- function(indexes) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_split_out, sim.data$p, indexes))
+	return(.Call(SXP_make_group_from, sim.data$p, indexes))
 }
 
 #' Assign genotypes with a certain label value to a new group
 #'
-#' \code{make.group.from.label} allocates the genotypes with a particular value
+#' \code{break.group.by.label.value} allocates the genotypes with a particular value
 #' for a given custom label to a new group.
 #' 
 #' Multiple group inputs supported. All selected genotypes, no matter their 
@@ -190,15 +194,29 @@ make.group <- function(indexes) {
 #' @family label functions
 #' @family grouping functions
 #' @export
-make.group.from.label <- function(label, value, group=NA) {
+break.group.by.label.value <- function(label, value, group=NA) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_split_by_label_value, sim.data$p, label, value, group))
+  return(.Call(SXP_break_group_by_label_value, sim.data$p, label, value, group))
 }
 
+#' OLD NAME | Assign genotypes with a certain label value to a new group
+#' 
+#' ! This is the old name for \code{break.group.by.label.value}. From genomicSimulation v0.2.5,
+#' \code{break.group.by.label.value} is the recommended name over \code{make.group.from.label}. 
+#' \code{make.group.from.label} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{break.group.by.label.value}
+#' 
+#' @keywords internal 
+#' @export
+make.group.from.label <- function(label, value, group=NA) {
+  return(break.group.by.label.value(label,value,group))
+}
 
 #' Assign genotypes with label values in a certain range to a new group
 #'
-#' \code{make.group.from.label.range} allocates the genotypes with label values
+#' \code{break.group.by.label.range} allocates the genotypes with label values
 #' for a given custom label in a certain range from `rangeLowEnd` to `rangeHighEnd`
 #' inclusive to a new group.
 #' 
@@ -218,10 +236,25 @@ make.group.from.label <- function(label, value, group=NA) {
 #' @family label functions
 #' @family grouping functions
 #' @export
-make.group.from.label.range <- function(label, rangeLowEnd, rangeHighEnd, group=NA) {
+break.group.by.label.range <- function(label, rangeLowEnd, rangeHighEnd, group=NA) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_split_by_label_range, sim.data$p, label, rangeLowEnd, rangeHighEnd,
+  return(.Call(SXP_break_group_by_label_range, sim.data$p, label, rangeLowEnd, rangeHighEnd,
                group))
+}
+
+#' OLD NAME | Assign genotypes with label values in a certain range to a new group
+#' 
+#' ! This is the old name for \code{break.group.by.label.range}. From genomicSimulation v0.2.5,
+#' \code{break.group.by.label.range} is the recommended name over \code{make.group.from.label.range}. 
+#' \code{make.group.from.label.range} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{break.group.by.label.range}
+#' 
+#' @keywords internal 
+#' @export
+make.group.from.label.range <- function(label, rangeLowEnd, rangeHighEnd, group=NA) {
+  return(break.group.by.label.range(label,rangeLowEnd,rangeHighEnd,group))
 }
 
 
@@ -277,7 +310,7 @@ change.label.default <- function(labels, defaults) {
 #' @export
 change.label.to.values <- function(label, values, group=NA, startIndex=1) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_change_label_values, sim.data$p, label, 
+  return(.Call(SXP_change_label_to_values, sim.data$p, label, 
                values, group, startIndex))    
 }
 
@@ -301,7 +334,7 @@ change.label.to.values <- function(label, values, group=NA, startIndex=1) {
 #' @export
 change.label.to.this <- function(label, value, group=NA) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_change_label_const, sim.data$p, label, value, group))  
+  return(.Call(SXP_change_label_to_this, sim.data$p, label, value, group))  
 }
 
 
@@ -326,7 +359,7 @@ change.label.to.this <- function(label, value, group=NA) {
 #' @export
 change.label.by.amount <- function(label, amount, group=NA) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_change_label_amount, sim.data$p, label, amount, group))
+  return(.Call(SXP_change_label_by_amount, sim.data$p, label, amount, group))
 }
 
 
@@ -358,18 +391,34 @@ change.label.by.amount <- function(label, amount, group=NA) {
 #'
 #' @family grouping functions
 #' @export
-select.by.gebv <- function(from.group, low.score.best=FALSE, percentage=NULL, number=NULL, eff.set=1L) {
+#' @aliases break.group.by.gebv
+break.group.by.GEBV <- function(from.group, low.score.best=FALSE, percentage=NULL, number=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	if (sum(is.null(percentage), is.null(number)) == 1) {
 		if (is.null(percentage)) {
 			# we are selecting a certain number
-			return(.Call(SXP_simple_selection, sim.data$p, from.group, eff.set,
+			return(.Call(SXP_break_group_by_GEBV_num, sim.data$p, from.group, eff.set,
 						number, low.score.best))
 		} else {
 			# we are selecting the top percentage
-			return(.Call(SXP_simple_selection_bypercent, sim.data$p, from.group, eff.set,
+			return(.Call(SXP_break_group_by_GEBV_percent, sim.data$p, from.group, eff.set,
 			             percentage, low.score.best))
 		}
 	}
 	stop("Exactly one of parameters `percentage` and `number` must be set.")
+}
+
+#' OLD NAME | Perform selection on a group by true GEBV.
+#' 
+#' ! This is the old name for \code{break.group.by.GEBV}. From genomicSimulation v0.2.5,
+#' \code{break.group.by.GEBV} is the recommended name over \code{select.by.gebv}. 
+#' \code{select.by.gebv} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{break.group.by.GEBV}
+#' 
+#' @keywords internal 
+#' @export
+select.by.gebv <- function(from.group, low.score.best=FALSE, percentage=NULL, number=NULL, eff.set=1L) {
+  return(break.group.by.GEBV(from.group,low.score.best,percentage,number,eff.set))
 }

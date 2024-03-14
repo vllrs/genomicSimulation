@@ -40,7 +40,7 @@
 #' @export
 see.group.data <- function(group, data.type, effect.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_get_group_data, sim.data$p, group, toupper(data.type), effect.set))
+	return(.Call(SXP_see_group_data, sim.data$p, group, toupper(data.type), effect.set))
 }
 
 #' Get genotypes or allele counts of a group as a matrix.
@@ -62,7 +62,7 @@ see.group.data <- function(group, data.type, effect.set=1L) {
 see.group.gene.data <- function(group, count.allele=NA_character_) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   
-  return(.Call(SXP_get_group_gene_data, sim.data$p, group, count.allele))
+  return(.Call(SXP_see_group_gene_data, sim.data$p, group, count.allele))
 } 
 
 
@@ -80,7 +80,7 @@ see.group.gene.data <- function(group, count.allele=NA_character_) {
 #' @export
 see.existing.groups <- function() {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	d <- data.frame(.Call(SXP_get_groups, sim.data$p))
+	d <- data.frame(.Call(SXP_see_existing_groups, sim.data$p))
 	colnames(d) <- c("Group", "GroupSize")
 	return(d)
 }
@@ -114,5 +114,5 @@ see.existing.groups <- function() {
 #' @export
 change.names.to.values <- function(values, group=NA, startIndex=0) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_change_name_values, sim.data$p, values, group, startIndex))    
+  return(.Call(SXP_change_name_to_values, sim.data$p, values, group, startIndex))    
 }

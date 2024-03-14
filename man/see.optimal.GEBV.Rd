@@ -2,6 +2,7 @@
 % Please edit documentation in R/sim-calculators.R
 \name{see.optimal.GEBV}
 \alias{see.optimal.GEBV}
+\alias{see.optimal.gebv}
 \title{Get the ultimate/highest-possible GEBV given the current loaded effect values.}
 \usage{
 see.optimal.GEBV(eff.set = 1L)
@@ -22,7 +23,7 @@ raised if no effect values have been loaded.
 Other data access functions: 
 \code{\link{see.group.data}()},
 \code{\link{see.group.gene.data}()},
-\code{\link{see.minimum.GEBV}()},
+\code{\link{see.minimal.GEBV}()},
 \code{\link{see.optimal.haplotype}()},
 \code{\link{see.optimal.possible.GEBV}()},
 \code{\link{see.optimal.possible.haplotype}()}

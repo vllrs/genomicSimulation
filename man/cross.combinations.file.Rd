@@ -2,7 +2,7 @@
 % Please edit documentation in R/sim-progression.R
 \name{cross.combinations.file}
 \alias{cross.combinations.file}
-\title{Performs defined crosses as laid out in a file.}
+\title{OLD NAME | Performs defined crosses as laid out in a file.}
 \usage{
 cross.combinations.file(
   cross.file,
@@ -18,81 +18,13 @@ cross.combinations.file(
   save.genotype = FALSE
 )
 }
-\arguments{
-\item{cross.file}{a string containing a filename. The file should be available
-to read and contain a tab-separated pair of names on each line. Each line
-represents a cross to make.}
-
-\item{offspring}{The number of times each combination in the file is crossed.}
-
-\item{retain}{A boolean, repesenting whether to save the generated
-genotypes to memory or discard them. You may wish to discard them
-but save to file if you are generating too many crosses to save into
-memory.}
-
-\item{give.names}{A boolean representing whether or not to produce names
-for the new genotypes generated. The names produced would have format [name.prefix][id]}
-
-\item{name.prefix}{A string. If give.names is TRUE, the id is concatenated to 
-this to produce the name of each new genotype.}
-
-\item{track.pedigree}{A boolean representing whether or not to save the ids
-of the parents of each new genotype to the new genotype's pedigree. If this is 
-false, the new genotype's pedigree is unknown.}
-
-\item{give.ids}{A boolean representing whether or not to allocate each new 
-genotype an id. If this is FALSE, the new genotype is 'invisible' to pedigree trackers and
-even if the pedigree of its offspring is supposedly tracked, the pedigree trackers
-will not be able to identify the progenitors of its offspring. Furthermore, if it is
-false and names are generated using give.names, all names generated in the same group will
-be the same. Probably you'd only have this FALSE if you were discarding the results or worried
-about id overflow.}
-
-\item{file.prefix}{A string representing the prefix of files produced if save.pedigree=TRUE, 
-save.gebv=TRUE, or save.genotype=TRUE.}
-
-\item{save.pedigree}{A boolean. If TRUE, saves the pedigree in recursive format of each
-generated genotype to the file with filename "[file.prefix]-pedigree". This is a text file. 
-Generated genotypes are saved progressively (up to 1000 at a time), so if the 
-full result of a crosser function call will not fit in memory, this setting can allow
-you to still get results.}
-
-\item{save.gebv}{A boolean. If TRUE, saves the GEBVs of each generated genotype to the
-file with filename "[file.prefix]-eff". This is a tab-separated text file. 
-Valuse for generated genotypes are calculated and saved progressively (up to 1000 at a 
-time), so if the full result of a crosser function call will not fit in memory, this 
-setting can allow you to still get results.}
-
-\item{save.genotype}{A boolean. If TRUE, saves the SNP/line matrix in regular format
-(generated genotypes as rows, SNPs as columns) to the file with filename 
-"[file.prefix]-genome". This is a tab-separated text file. 
-Generated genotypes are saved progressively (up to 1000 at a time), so if the 
-full result of a crosser function call will not fit in memory, this setting can allow
-you to still get results.}
-}
-\value{
-The group number of the new crosses produced
-}
 \description{
-\code{cross.combinations.file} returns the group number of the group
-that the new genotypes were loaded into.
-}
-\details{
-The offspring parameter represents the number of times each cross in the file
-is carried out.
-
-The function searches for the parents of each cross by name, so parents must
-have loaded names for this function to work.
+! This is the old name for \code{make.crosses.from.file}. From genomicSimulation v0.2.5,
+\code{make.crosses.from.file} is the recommended name over \code{cross.combinations.file}. 
+\code{cross.combinations.file} may become deprecated in future, when the package reaches 
+stability.
 }
 \seealso{
-Other crossing functions: 
-\code{\link{cross.all.pairs}()},
-\code{\link{cross.combinations}()},
-\code{\link{cross.dc.combinations.file}()},
-\code{\link{cross.randomly.between}()},
-\code{\link{cross.randomly}()},
-\code{\link{make.clones}()},
-\code{\link{make.doubled.haploids}()},
-\code{\link{self.n.times}()}
+\link{make.crosses.from.file}
 }
-\concept{crossing functions}
+\keyword{internal}

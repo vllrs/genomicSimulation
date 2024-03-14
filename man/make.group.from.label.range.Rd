@@ -2,64 +2,17 @@
 % Please edit documentation in R/sim-group-utils.R
 \name{make.group.from.label.range}
 \alias{make.group.from.label.range}
-\title{Assign genotypes with label values in a certain range to a new group}
+\title{OLD NAME | Assign genotypes with label values in a certain range to a new group}
 \usage{
 make.group.from.label.range(label, rangeLowEnd, rangeHighEnd, group = NA)
 }
-\arguments{
-\item{label}{the label number of the label to look at.}
-
-\item{rangeLowEnd}{minimum integer value of label `label` that is to be put
-in the new group.}
-
-\item{rangeHighEnd}{maximum integer value of label `label` that is to be put
-in the new group.}
-
-\item{group}{NA or 0 to search through all genotypes in simulation memory,
-or a group number or vector of group numbers to search only
-members of those groups.}
-}
-\value{
-the group number of the new group
-}
 \description{
-\code{make.group.from.label.range} allocates the genotypes with label values
-for a given custom label in a certain range from `rangeLowEnd` to `rangeHighEnd`
-inclusive to a new group.
-}
-\details{
-Multiple group inputs supported. All selected genotypes, no matter their 
-group of origin, will be moved into the same output group.
+! This is the old name for \code{break.group.by.label.range}. From genomicSimulation v0.2.5,
+\code{break.group.by.label.range} is the recommended name over \code{make.group.from.label.range}. 
+\code{make.group.from.label.range} may become deprecated in future, when the package reaches 
+stability.
 }
 \seealso{
-Other label functions: 
-\code{\link{change.label.by.amount}()},
-\code{\link{change.label.to.this}()},
-\code{\link{change.label.to.values}()},
-\code{\link{change.names.to.values}()},
-\code{\link{delete.label}()},
-\code{\link{make.group.from.label}()},
-\code{\link{make.label}()}
-
-Other grouping functions: 
-\code{\link{break.group.evenly}()},
-\code{\link{break.group.into.buckets}()},
-\code{\link{break.group.into.families}()},
-\code{\link{break.group.into.halfsib.families}()},
-\code{\link{break.group.into.individuals}()},
-\code{\link{break.group.randomly}()},
-\code{\link{break.group.with.probabilities}()},
-\code{\link{change.label.default}()},
-\code{\link{combine.groups}()},
-\code{\link{delete.effect.set}()},
-\code{\link{delete.group}()},
-\code{\link{delete.label}()},
-\code{\link{make.group.from.label}()},
-\code{\link{make.group}()},
-\code{\link{see.existing.groups}()},
-\code{\link{see.group.data}()},
-\code{\link{see.group.gene.data}()},
-\code{\link{select.by.gebv}()}
+\link{break.group.by.label.range}
 }
-\concept{grouping functions}
-\concept{label functions}
+\keyword{internal}

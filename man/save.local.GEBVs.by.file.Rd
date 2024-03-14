@@ -2,43 +2,19 @@
 % Please edit documentation in R/sim-printers.R
 \name{save.local.GEBVs.by.file}
 \alias{save.local.GEBVs.by.file}
-\title{Save the local GEBVs of each block in each selected line's haplotypes to a file, using
-blocks taken from a file.}
+\alias{save.local.gebvs.by.file}
+\title{OLD NAME | Save the local GEBVs of each block in each selected line's 
+haplotypes to a file, using blocks taken from a file.}
 \usage{
 save.local.GEBVs.by.file(filename, block.file, group = NULL, eff.set = 1L)
 }
-\arguments{
-\item{filename}{A string containing a filename to which the output will
-be written}
-
-\item{block.file}{A string containing a filename from which the blocks should be read.
-It should have five columns and a header row. The third column (block name) and 
-fifth column (semicolon-separated marker names for the markers in the block) are 
-the only columns that will be used. Designed for the output of the function 
-`st.def.hblocks` from the package SelectionTools}
-
-\item{group}{Save only lines that belong to this group.}
-
-\item{eff.set}{identifier for the set of marker effects with which to calculate 
-local GEBVs.}
-}
-\value{
-0 on success. On failure an error will be raised.
-}
 \description{
-\code{save.local.GEBVs.by.file} calculates GEBVs for each block of markers listed in 
-`block.file` for the maternal and paternal halves of its genotype. The results
-are saved to a file. The output file is formatted with the blocks as unlabelled columns
-and two rows for each genotype, named [line name]_1 and [line name]_2. The entries
-in this matrix are the calculated local GEBVs/block effects.
+! This is the old name for \code{save.local.GEBVs.blocks.from.file}. From genomicSimulation v0.2.5,
+\code{save.local.GEBVs.blocks.from.file} is the recommended name over \code{save.local.GEBVs.by.file}. 
+\code{save.local.GEBVs.by.file} may become deprecated in future, when the package reaches 
+stability.
 }
 \seealso{
-Other saving functions: 
-\code{\link{save.GEBVs}()},
-\code{\link{save.allele.counts}()},
-\code{\link{save.genome.model}()},
-\code{\link{save.genotypes}()},
-\code{\link{save.local.GEBVs.by.chr}()},
-\code{\link{save.pedigrees}()}
+\link{save.local.GEBVs.blocks.from.file}
 }
-\concept{saving functions}
+\keyword{internal}

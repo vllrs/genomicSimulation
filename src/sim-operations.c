@@ -1,25 +1,24 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.4.004 - last edit 28 Mar 2024 */
+/* genomicSimulationC v0.2.4.005 - last edit 13 Mar 2024 */
 
-/** Options parameter to run SimData functions in their bare-bones form.*/
-const GenOptions BASIC_OPT = {
-	.will_name_offspring = FALSE,
+/** Default parameter values for GenOptions, to help with quick scripts and prototypes.
+ *
+ * @shortnamed{BASIC_OPT}
+ */
+const gsc_GenOptions gsc_BASIC_OPT = {
+	.will_name_offspring = GSC_FALSE,
 	.offspring_name_prefix = NULL,
 	.family_size = 1,
-	.will_track_pedigree = FALSE,
-	.will_allocate_ids = TRUE,
+	.will_track_pedigree = GSC_FALSE,
+	.will_allocate_ids = GSC_TRUE,
 	.filename_prefix = NULL,
-	.will_save_pedigree_to_file = FALSE,
-    .will_save_bvs_to_file = NOT_AN_EFFECT_SET,
-	.will_save_alleles_to_file = FALSE,
-	.will_save_to_simdata = TRUE
+	.will_save_pedigree_to_file = GSC_FALSE,
+    .will_save_bvs_to_file = gsc_NOT_AN_EFFECT_SET,
+	.will_save_alleles_to_file = GSC_FALSE,
+	.will_save_to_simdata = GSC_TRUE
 };
-/*const GenoLocation INVALID_GENO_LOCATION = {
-   .localAM = NULL,
-   .localPos = UNINITIALISED
-};*/
 
 /** Replace calls to malloc direct with this function, which errors and exits
  * with status 2 if memory allocation fails.
@@ -28,19 +27,19 @@ const GenOptions BASIC_OPT = {
  * regular malloc call.
  * @returns pointer to the allocated space.
  */
-void* get_malloc(const unsigned int size) {
+static void* gsc_malloc_wrap(const unsigned int size) {
     if (size == 0) {
-        warning( "0 memory allocation requested. The maintainer isn't sure why that would happen.\n");
+        warning( "0 memory allocation requested.\n");
         return NULL;
     }
-	void* v = malloc(size);
+	void* v = GSC_MALLOC(size);
 	if (v == NULL) {
 		error( "Memory allocation failed. Exiting.\n");
 	}
 	return v;
 }
 
-/** Creator for an empty AlleleMatrix object of a given size. Includes memory
+/** Creator for an empty gsc_AlleleMatrix object of a given size. Includes memory
  * allocation for `n_genotypes` worth of `.alleles`.
  *
  * @param n_markers number of rows/markers to create
@@ -50,26 +49,26 @@ void* get_malloc(const unsigned int size) {
  * @param n_genotypes number of individuals to create. This includes filling the first
  * n_genotypes entries of .alleles with heap char* of length n_markers, so that the
  * alleles for these can be added without further memory allocation.
- * @returns pointer to the empty created AlleleMatrix
+ * @returns pointer to the empty created gsc_AlleleMatrix
  */
-AlleleMatrix* create_empty_allelematrix(const int n_markers, const int n_labels, const int labelDefaults[n_labels], const int n_genotypes) {
-	AlleleMatrix* m = get_malloc(sizeof(AlleleMatrix));
+gsc_AlleleMatrix* gsc_create_empty_allelematrix(const int n_markers, const int n_labels, const int labelDefaults[n_labels], const int n_genotypes) {
+	gsc_AlleleMatrix* m = gsc_malloc_wrap(sizeof(gsc_AlleleMatrix));
 
 	m->n_genotypes = n_genotypes;
 	m->n_markers = n_markers;
     m->n_labels = n_labels;
-	//m->alleles = get_malloc(sizeof(char*) * CONTIG_WIDTH);
+	//m->alleles = gsc_malloc_wrap(sizeof(char*) * CONTIG_WIDTH);
 	for (int i = 0; i < n_genotypes; ++i) {
-		m->alleles[i] = get_malloc(sizeof(char) * (n_markers<<1));
+		m->alleles[i] = gsc_malloc_wrap(sizeof(char) * (n_markers<<1));
 		memset(m->alleles[i], 0, sizeof(char) * (n_markers<<1));
 		//m->ids[i] = 0;
 	}
 	memset(m->alleles + n_genotypes, 0, sizeof(char*) * (CONTIG_WIDTH - n_genotypes)); // setting the pointers to NULL
 
     if (n_labels > 0) {
-        m->labels = get_malloc(sizeof(int*) * n_labels);
+        m->labels = gsc_malloc_wrap(sizeof(int*) * n_labels);
         for (int i = 0; i < n_labels; ++i) {
-            m->labels[i] = get_malloc(sizeof(int) * CONTIG_WIDTH);
+            m->labels[i] = gsc_malloc_wrap(sizeof(int) * CONTIG_WIDTH);
             for (int j = 0; j < CONTIG_WIDTH; ++j) {
                 m->labels[i][j] = labelDefaults[i];
             }
@@ -77,14 +76,14 @@ AlleleMatrix* create_empty_allelematrix(const int n_markers, const int n_labels,
     } else if (n_labels == 0) {
         m->labels = NULL;
     } else {
-        warning( "Invalid negative number of labels provided to create_empty_allelematrix");
+        warning( "Invalid negative number of labels provided to gsc_create_empty_allelematrix");
         m->labels = NULL;
     }
 
-    memset(m->ids, 0, sizeof(PedigreeID) * CONTIG_WIDTH);
-    memset(m->pedigrees[0], 0, sizeof(PedigreeID) * CONTIG_WIDTH);
-    memset(m->pedigrees[1], 0, sizeof(PedigreeID) * CONTIG_WIDTH);
-    memset(m->groups, 0, sizeof(GroupNum) * CONTIG_WIDTH);
+    memset(m->ids, 0, sizeof(gsc_PedigreeID) * CONTIG_WIDTH);
+    memset(m->pedigrees[0], 0, sizeof(gsc_PedigreeID) * CONTIG_WIDTH);
+    memset(m->pedigrees[1], 0, sizeof(gsc_PedigreeID) * CONTIG_WIDTH);
+    memset(m->groups, 0, sizeof(gsc_GroupNum) * CONTIG_WIDTH);
 	memset(m->names, 0, sizeof(char*) * CONTIG_WIDTH); // setting the pointers to NULL
 
 	m->next = NULL;
@@ -92,13 +91,15 @@ AlleleMatrix* create_empty_allelematrix(const int n_markers, const int n_labels,
 	return m;
 }
 
-/** Creator for an empty SimData object on the heap. This is the main struct
+/** Creator for an empty gsc_SimData object on the heap. This is the main struct
  * that will contain/manage simulation data.
  *
- * @returns pointer to the empty created SimData
+ * @shortnamed{create_empty_simdata}
+ *
+ * @returns pointer to the empty created gsc_SimData
  */
-SimData* create_empty_simdata() {
-	SimData* d = get_malloc(sizeof(SimData));
+gsc_SimData* gsc_create_empty_simdata() {
+	gsc_SimData* d = gsc_malloc_wrap(sizeof(gsc_SimData));
 	d->n_markers = 0;
 	d->markers = NULL;
     d->n_labels = 0;
@@ -112,49 +113,51 @@ SimData* create_empty_simdata() {
     d->n_eff_sets = 0;
     d->e = NULL;
     ;
-    d->current_id = NO_PEDIGREE;
+    d->current_id = gsc_NO_PEDIGREE;
     d->n_groups = 0;
 	return d;
 }
 
-/** Clear a SimData object on the heap.
+/** Clear a gsc_SimData object on the heap.
  *
- *  Has the effects of delete_simdata followed by create_empty_simdata,
+ *  Has the effects of gsc_delete_simdata followed by gsc_create_empty_simdata,
  *  but guarantees the use of the same memory location for the
- *  new SimData.
+ *  new gsc_SimData.
  *
- *  @param d pointer to the SimData to be cleared.
+ * @shortnamed{clear_simdata}
+ *
+ *  @param d pointer to the gsc_SimData to be cleared.
  */
-void clear_simdata(SimData* d) {
+void gsc_clear_simdata(gsc_SimData* d) {
     // Free marker names
     if (d->markers != NULL) {
         for (int i = 0; i < d->n_markers; i++) {
             if (d->markers[i] != NULL) {
-                free(d->markers[i]);
+                GSC_FREE(d->markers[i]);
             }
         }
-        free(d->markers);
+        GSC_FREE(d->markers);
     }
     // Free label defaults
     if (d->n_labels > 0) {
         if (d->label_ids != NULL) {
-            free(d->label_ids);
+            GSC_FREE(d->label_ids);
         }
         if (d->label_defaults != NULL) {
-            free(d->label_defaults);
+            GSC_FREE(d->label_defaults);
         }
     }
 
     // Free other details
-    delete_genmap(&(d->map));
+    gsc_delete_genmap(&(d->map));
     for (int i = 0; i < d->n_eff_sets; ++i) {
-        delete_effect_matrix(&(d->e[i]));
+        gsc_delete_effect_matrix(&(d->e[i]));
     }
     if (d->n_eff_sets > 0) {
-        free(d->eff_set_ids);
-        free(d->e);
+        GSC_FREE(d->eff_set_ids);
+        GSC_FREE(d->e);
     }
-    delete_allele_matrix(d->m);
+    gsc_delete_allele_matrix(d->m);
 
     // Clear all values
     d->n_markers = 0;
@@ -169,7 +172,7 @@ void clear_simdata(SimData* d) {
     d->m = NULL;
     d->n_eff_sets = 0;
     d->e = NULL;
-    d->current_id = NO_PEDIGREE;
+    d->current_id = gsc_NO_PEDIGREE;
     d->n_groups = 0;
 }
 
@@ -177,22 +180,22 @@ void clear_simdata(SimData* d) {
 /*------------------------Supporter Functions--------------------------------*/
 
 /** Allocate lifetime-unique ids to each genotype in the range of whole
- * SimData indexes `from_index` to `to_index` inclusive. Not intended to
+ * gsc_SimData indexes `from_index` to `to_index` inclusive. Not intended to
  * be called by an end user.
  *
- * @param d the SimData struct on which to perform actions
+ * @param d the gsc_SimData struct on which to perform actions
  * @param from_index the starting 0-based index of the range to allocate ids
  * @param to_index the last 0-based index in the range to allocate ids
  */
-void set_ids(SimData* d, const int from_index, const int to_index) {
+static void gsc_set_ids(gsc_SimData* d, const int from_index, const int to_index) {
 	if (to_index < from_index) {
 		warning( "Bad range for setting ids\n");
 		return;
 	}
 
-	AlleleMatrix* m = d->m;
+	gsc_AlleleMatrix* m = d->m;
 	int i, total_i = 0;
-	// find the AlleleMatrix from_index belongs to
+	// find the gsc_AlleleMatrix from_index belongs to
 	while (total_i + m->n_genotypes <= from_index) {
 		if (m->next == NULL) {
 			warning( "That index does not exist.");
@@ -229,7 +232,7 @@ void set_ids(SimData* d, const int from_index, const int to_index) {
 }
 
 /** Opens a table file and reads the number of columns and rows
- * (including headers) separated by `sep` into a TableSize struct that is
+ * (including headers) separated by `sep` into a gsc_TableSize struct that is
  * returned.
  *
  * If the file fails to open, the simulation exits.
@@ -243,11 +246,11 @@ void set_ids(SimData* d, const int from_index, const int to_index) {
  *
  * @param filename the path/name to the table file whose dimensions we want
  * @param sep the character that separates columns in the file eg tab
- * @returns TableSize struct with .num_columns and .num_rows filled. These
+ * @returns gsc_TableSize struct with .num_columns and .num_rows filled. These
  * counts include header rows/columns and exclude blank rows.
  */
-struct TableSize get_file_dimensions(const char* filename, const char sep) {
-	struct TableSize details;
+struct gsc_TableSize gsc_get_file_dimensions(const char* filename, const char sep) {
+	struct gsc_TableSize details;
 	details.num_columns = 0;
 	details.num_rows = 0;
 
@@ -272,7 +275,7 @@ struct TableSize get_file_dimensions(const char* filename, const char sep) {
 	// now get all the rows. What we care about in the rows is the number of them
 	c = fgetc(fp);
 	int sep_count = 0; // for each row, count the columns to make sure they match and the file is valid
-	int has_length = FALSE;
+	int has_length = GSC_FALSE;
 	while (c != EOF) {
 		R_CheckUserInterrupt();
 		if (c == '\n') {
@@ -286,12 +289,12 @@ struct TableSize get_file_dimensions(const char* filename, const char sep) {
 				error( "Bad columns on row %d\n", details.num_rows + 1);
 			}
 			sep_count = 0;
-			has_length = FALSE;
+			has_length = GSC_FALSE;
 
 		} else if (c == sep) {
 			sep_count += 1;
-		} else if (has_length == FALSE) {
-			has_length = TRUE;
+		} else if (has_length == GSC_FALSE) {
+			has_length = GSC_TRUE;
 		}
 		c = fgetc(fp);
 	}
@@ -305,8 +308,8 @@ struct TableSize get_file_dimensions(const char* filename, const char sep) {
 
 /** Returns the located index in an array of integers where the integer
  * is `target`. Returns -1 if no match was found.
- * @see get_from_unordered_str_list()
- * @see get_from_ordered_pedigree_list()
+ * @see gsc_get_from_unordered_str_list()
+ * @see gsc_get_from_ordered_pedigree_list()
  *
  * The list is assumed to be sorted in ascending order. Only integers
  * >0 are considered valid; entries of 0 are considered empty and can
@@ -321,7 +324,7 @@ struct TableSize get_file_dimensions(const char* filename, const char sep) {
  * @returns Index in `list` where we find the same integer as
  * `target`, or -1 if no match is found.
  */
-int get_from_ordered_uint_list(const unsigned int target, const unsigned int listLen, const unsigned int list[listLen]) {
+int gsc_get_from_ordered_uint_list(const unsigned int target, const unsigned int listLen, const unsigned int list[listLen]) {
     unsigned int first = 0, last = listLen - 1;
     int index = (first + last) / 2;
     while (list[index] != target && first <= last) {
@@ -376,10 +379,10 @@ int get_from_ordered_uint_list(const unsigned int target, const unsigned int lis
     return index;
 }
 
-/** Returns the located index in an array of PedigreeIDs where the PedigreeID
+/** Returns the located index in an array of gsc_PedigreeIDs where the gsc_PedigreeID
  * is `target`. Returns -1 if no match was found.
- * @see get_from_unordered_str_list()
- * @see get_from_ordered_uint_list()
+ * @see gsc_get_from_unordered_str_list()
+ * @see gsc_get_from_ordered_uint_list()
  *
  * The list is assumed to be sorted in ascending order. Only IDs
  * >0 are considered valid; entries of 0 are considered empty and can
@@ -394,14 +397,14 @@ int get_from_ordered_uint_list(const unsigned int target, const unsigned int lis
  * @returns Index in `list` where we find the same integer as
  * `target`, or -1 if no match is found.
  */
-int get_from_ordered_pedigree_list(const PedigreeID target, const unsigned int listLen, const PedigreeID list[listLen]) {
+int gsc_get_from_ordered_pedigree_list(const gsc_PedigreeID target, const unsigned int listLen, const gsc_PedigreeID list[listLen]) {
     unsigned int first = 0, last = listLen - 1;
     int index = (first + last) / 2;
     while (list[index].id != target.id && first <= last) {
-        if (list[index].id == NO_PEDIGREE.id) {
+        if (list[index].id == gsc_NO_PEDIGREE.id) {
             int lookahead = 1;
             while(1) {
-                if (index+lookahead <= last && list[index+lookahead].id != NO_PEDIGREE.id) {
+                if (index+lookahead <= last && list[index+lookahead].id != gsc_NO_PEDIGREE.id) {
                     if (list[index+lookahead].id == target.id) {
                         return index+lookahead;
                     } else if (list[index+lookahead].id < target.id) {
@@ -411,7 +414,7 @@ int get_from_ordered_pedigree_list(const PedigreeID target, const unsigned int l
                         last = index - 1;
                         break;
                     }
-                } else if (index-lookahead <= last && list[index-lookahead].id != NO_PEDIGREE.id) {
+                } else if (index-lookahead <= last && list[index-lookahead].id != gsc_NO_PEDIGREE.id) {
                     if (list[index-lookahead].id == target.id) {
                         return index-lookahead;
                     } else if (list[index-lookahead].id < target.id) {
@@ -451,8 +454,8 @@ int get_from_ordered_pedigree_list(const PedigreeID target, const unsigned int l
 
 /** Returns the first located index in an array of strings where the string
  * is the same as the string `target`. Returns -1 if no match was found.
- * @see get_from_ordered_uint_list()
- * @see get_from_ordered_pedigree_list()
+ * @see gsc_get_from_ordered_uint_list()
+ * @see gsc_get_from_ordered_pedigree_list()
  *
  * The list of strings is not assumed to be sorted.
  *
@@ -462,7 +465,7 @@ int get_from_ordered_pedigree_list(const PedigreeID target, const unsigned int l
  * @returns Index in `list` where we find the same string as
  * `target`, or -1 if no match is found.
  */
-int get_from_unordered_str_list(const char* target, const int listLen, const char* list[listLen]) {
+int gsc_get_from_unordered_str_list(const char* target, const int listLen, const char* list[listLen]) {
     for (int i = 0; i < listLen; ++i) {
 		if (strcmp(list[i], target) == 0) {
 			return i;
@@ -476,7 +479,7 @@ int get_from_unordered_str_list(const char* target, const int listLen, const cha
  *
  * Modified from https://benpfaff.org/writings/clc/shuffle.html
  *
- * @param d SimData, only used for pointer to random number generator
+ * @param d gsc_SimData, only used for pointer to random number generator
  * @param sequence the array
  * @param total_n length of the array
  * @param n_to_shuffle After calling this function, the first n_to_shuffle
@@ -485,12 +488,6 @@ int get_from_unordered_str_list(const char* target, const int listLen, const cha
  * positions have only been calculated for the first 'n_to_shuffle' entries.
  */
 void shuffle_up_to( unsigned int* sequence, const unsigned int total_n, const unsigned int n_to_shuffle) {
-    // Commented out because we assume calling functions know what they're doing.
-    /*if (n_to_shuffle < 1 || total_n < n_to_shuffle) {
-        warning("Invalid array shuffling parameters. Something's wrong, contact package maintainers.\n");
-        return;
-    }*/
-
 	if (n_to_shuffle > 1) {
         unsigned int maxi = total_n > n_to_shuffle ? n_to_shuffle - 1 : total_n - 1;
 		unsigned int i;
@@ -507,7 +504,7 @@ void shuffle_up_to( unsigned int* sequence, const unsigned int total_n, const un
 }
 
 /** Fills the designated section of the `.names` array in an
- * AlleleMatrix with the pattern `prefix`index. This function is not intended
+ * gsc_AlleleMatrix with the pattern `prefix`index. This function is not intended
  * to be called by an end user.
  *
  * In future this function could be expanded to allow for different naming formats.
@@ -515,13 +512,13 @@ void shuffle_up_to( unsigned int* sequence, const unsigned int total_n, const un
  * The index is padded with zeros depending on the size of
  * `a->n_genotypes`.
  *
- * @param a pointer to the AlleleMatrix whose `.names` to modify
+ * @param a pointer to the gsc_AlleleMatrix whose `.names` to modify
  * @param prefix the prefix to add to the suffix to make the new genotype name
  * @param suffix suffixes start at this value and increment for each additional name
  * @param from_index the new names are added to this index and all those following it in this
- * AlleleMatrix.
+ * gsc_AlleleMatrix.
 */
-void set_names(AlleleMatrix* a, const char* prefix, const int suffix, const int from_index) {
+static void gsc_set_names(gsc_AlleleMatrix* a, const char* prefix, const int suffix, const int from_index) {
 	char sname[NAME_LENGTH];
 	char format[NAME_LENGTH];
 	if (prefix == NULL) {
@@ -529,7 +526,7 @@ void set_names(AlleleMatrix* a, const char* prefix, const int suffix, const int 
 		prefix = "";
 	}
 	// use sname to save the number of digits to pad by:
-	sprintf(sname, "%%0%dd", get_integer_digits(a->n_genotypes - from_index));  // Creates: %0[n]d
+	sprintf(sname, "%%0%dd", gsc_get_integer_digits(a->n_genotypes - from_index));  // Creates: %0[n]d
 	sprintf(format, "%s%s", prefix, sname);
 
     int livingsuffix = suffix;
@@ -537,12 +534,12 @@ void set_names(AlleleMatrix* a, const char* prefix, const int suffix, const int 
 	for (int i = from_index; i < a->n_genotypes; ++i) {
 		// clear name if it's pre-existing
 		if (a->names[i] != NULL) {
-			free(a->names[i]);
+			GSC_FREE(a->names[i]);
 		}
 
 		// save new name
         sprintf(sname, format, livingsuffix);
-		a->names[i] = get_malloc(sizeof(char) * (strlen(sname) + 1));
+		a->names[i] = gsc_malloc_wrap(sizeof(char) * (strlen(sname) + 1));
 		strcpy(a->names[i], sname);
 
         ++livingsuffix;
@@ -552,45 +549,47 @@ void set_names(AlleleMatrix* a, const char* prefix, const int suffix, const int 
 /** Initialises a new custom label.
  *
  * Creates a new custom label on every genotype currently and in future belonging
- * to the SimData. The value of the label is set as `setTo` for every genotype.
+ * to the gsc_SimData. The value of the label is set as `setTo` for every genotype.
  *
- * @param d pointer to the `SimData` whose child `AlleleMatrix`s will be given the new label.
+ * @shortnamed{create_new_label}
+ *
+ * @param d pointer to the `gsc_SimData` whose child `gsc_AlleleMatrix`s will be given the new label.
  * @param setTo the value to which every genotype's label is initialised.
  * @returns the label id of the new label
 */
-LabelID create_new_label(SimData* d, const int setTo) {
+gsc_LabelID gsc_create_new_label(gsc_SimData* d, const int setTo) {
     // Add new label default
     if (d->n_labels == 0) {
-        d->label_ids = get_malloc(sizeof(LabelID) * 1);
-        d->label_ids[0] = (LabelID){.id=1};
+        d->label_ids = gsc_malloc_wrap(sizeof(gsc_LabelID) * 1);
+        d->label_ids[0] = (gsc_LabelID){.id=1};
 
-        d->label_defaults = get_malloc(sizeof(int) * 1);
+        d->label_defaults = gsc_malloc_wrap(sizeof(int) * 1);
         d->label_defaults[0] = setTo;
 
     } else if (d->n_labels > 0) {
 
-        LabelID* new_label_ids;
+        gsc_LabelID* new_label_ids;
         if (d->label_ids != NULL) {
-            new_label_ids = get_malloc(sizeof(LabelID) * (d->n_labels + 1));
-            memcpy(new_label_ids,d->label_ids,sizeof(LabelID)*d->n_labels);
-            new_label_ids[d->n_labels] = get_new_label_id(d);
-            free(d->label_ids);
+            new_label_ids = gsc_malloc_wrap(sizeof(gsc_LabelID) * (d->n_labels + 1));
+            memcpy(new_label_ids,d->label_ids,sizeof(gsc_LabelID)*d->n_labels);
+            new_label_ids[d->n_labels] = gsc_get_new_label_id(d);
+            GSC_FREE(d->label_ids);
 
         } else { // d->label_ids == NULL
             // If the other labels do not have identifiers, they're corrupted and
             // deserve to be destroyed.
-            new_label_ids = get_malloc(sizeof(LabelID) * 1);
+            new_label_ids = gsc_malloc_wrap(sizeof(gsc_LabelID) * 1);
             d->n_labels = 0;
-            new_label_ids[d->n_labels] = get_new_label_id(d);
+            new_label_ids[d->n_labels] = gsc_get_new_label_id(d);
         }
         d->label_ids = new_label_ids;
 
-        int* new_label_defaults = get_malloc(sizeof(int) * (d->n_labels + 1));
+        int* new_label_defaults = gsc_malloc_wrap(sizeof(int) * (d->n_labels + 1));
         if (d->label_defaults != NULL) {
             for (int i = 0; i < d->n_labels; ++i) {
                 new_label_defaults[i] = d->label_defaults[i];
             }
-            free(d->label_defaults);
+            GSC_FREE(d->label_defaults);
         } else if (d->n_labels > 0) {
             memset(new_label_defaults, 0, sizeof(int) * d->n_labels);
         }
@@ -598,21 +597,21 @@ LabelID create_new_label(SimData* d, const int setTo) {
         d->label_defaults = new_label_defaults;
 
     } else {
-        warning( "Labels malformed; SimData may be corrupted.\n");
-        return (LabelID){.id=UNINITIALISED};
+        warning( "Labels malformed; gsc_SimData may be corrupted.\n");
+        return (gsc_LabelID){.id=GSC_UNINIT};
     }
     d->n_labels += 1;
 
     // Set all values of that label to the default
-    AlleleMatrix* m = d->m;
-    int warned = FALSE;
+    gsc_AlleleMatrix* m = d->m;
+    int warned = GSC_FALSE;
     do {
         // Do we need to destroy the extant label table? happens if label_ids were missing and we discarded them
         if (m->n_labels != d->n_labels - 1 && m->labels != NULL) {
             for (int i = 0; i < m->n_labels; ++i) {
-                free(m->labels[i]);
+                GSC_FREE(m->labels[i]);
             }
-            free(m->labels);
+            GSC_FREE(m->labels);
             m->labels = NULL;
         }
 
@@ -624,12 +623,12 @@ LabelID create_new_label(SimData* d, const int setTo) {
 
             // Create label list
             int** oldLabelList = m->labels;
-            m->labels = get_malloc(sizeof(int*) * m->n_labels);
+            m->labels = gsc_malloc_wrap(sizeof(int*) * m->n_labels);
             for (int i = 0; i < m->n_labels - 1; ++i) {
                 m->labels[i] = oldLabelList[i];
             }
-            m->labels[newLabel] = get_malloc(sizeof(int) * CONTIG_WIDTH);
-            free(oldLabelList);
+            m->labels[newLabel] = gsc_malloc_wrap(sizeof(int) * CONTIG_WIDTH);
+            GSC_FREE(oldLabelList);
 
             // Set labels
             if (setTo == 0) {
@@ -643,8 +642,8 @@ LabelID create_new_label(SimData* d, const int setTo) {
         // Consider the case we need to initialise the label list
         } else if (m->n_labels == 1 && m->labels == NULL) {
             // Create the label list
-            m->labels = get_malloc(sizeof(int*) * 1);
-            m->labels[0] = get_malloc(sizeof(int) * CONTIG_WIDTH);
+            m->labels = gsc_malloc_wrap(sizeof(int*) * 1);
+            m->labels[0] = gsc_malloc_wrap(sizeof(int) * CONTIG_WIDTH);
 
             // Set labels
             if (setTo == 0) {
@@ -656,8 +655,8 @@ LabelID create_new_label(SimData* d, const int setTo) {
             }
 
         } else if (!warned) {
-            warning( "Unable to create new label for all genotypes; SimData may be corrupted.\n");
-            warned = TRUE;
+            warning( "Unable to create new label for all genotypes; gsc_SimData may be corrupted.\n");
+            warned = GSC_TRUE;
         }
 
     } while ((m = m->next) != NULL);
@@ -669,13 +668,15 @@ LabelID create_new_label(SimData* d, const int setTo) {
  * Sets the default (birth) value of the custom label that has index `whichLabel` to the
  * value `newDefault`.
  *
- * @param d pointer to the `SimData` containing the genotypes and labels to be relabelle
+ * @shortnamed{change_label_default}
+ *
+ * @param d pointer to the `gsc_SimData` containing the genotypes and labels to be relabelle
  * @param whichLabel the label id of the relevant label.
  * @param newDefault the value to which the appropriate label's default will be set.
 */
-void set_label_default(SimData* d, const LabelID whichLabel, const int newDefault) {
+void gsc_change_label_default(gsc_SimData* d, const gsc_LabelID whichLabel, const int newDefault) {
     int labelIndex;
-    if (whichLabel.id == NOT_A_LABEL.id || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+    if (whichLabel.id == gsc_NOT_A_LABEL.id || (labelIndex = gsc_get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel.id);
         return;
     }
@@ -689,23 +690,25 @@ void set_label_default(SimData* d, const LabelID whichLabel, const int newDefaul
  * will modify the label of every single genotype in the simulation, or
  * just modify the label of every member of a given group.
  *
- * @param d pointer to the `SimData` containing the genotypes and labels to be relabelled
+ * @shortnamed{change_label_to}
+ *
+ * @param d pointer to the `gsc_SimData` containing the genotypes and labels to be relabelled
  * @param whichGroup 0 to modify the relevant labels of all extant genotypes,
  * or a positive integer to modify the relevant labels of all members of group `whichGroup`.
  * @param whichLabel the label id of the relevant label.
  * @param setTo the value to which the appropriate labels will be set.
 */
-void set_labels_to_const(SimData* d, const GroupNum whichGroup, const LabelID whichLabel, const int setTo) {
+void gsc_change_label_to(gsc_SimData* d, const gsc_GroupNum whichGroup, const gsc_LabelID whichLabel, const int setTo) {
     int labelIndex;
-    if (whichLabel.id == NOT_A_LABEL.id || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+    if (whichLabel.id == gsc_NOT_A_LABEL.id || (labelIndex = gsc_get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel.id);
         return;
     }
     // Risks: if m->labels or m->labels[i] don't exist for labels where they should,
     // will get some out of bounds accesses.
 
-    AlleleMatrix* m = d->m;
-    if (whichGroup.num != NO_GROUP.num) { // set the labels of group members
+    gsc_AlleleMatrix* m = d->m;
+    if (whichGroup.num != gsc_NO_GROUP.num) { // set the labels of group members
         do {
 
             for (int i = 0; i < m->n_genotypes; ++i) {
@@ -738,7 +741,9 @@ void set_labels_to_const(SimData* d, const GroupNum whichGroup, const LabelID wh
  * will modify the label of every single genotype in the simulation, or
  * just modify the label of every member of a given group.
  *
- * @param d pointer to the `SimData` containing the genotypes and labels to be relabelled
+ * @shortnamed{change_label_by_amount}
+ *
+ * @param d pointer to the `gsc_SimData` containing the genotypes and labels to be relabelled
  * @param whichGroup 0 to modify the relevant labels of all extant genotypes,
  * or a positive integer to modify the relevant labels of all members of group `whichGroup.
  * @param whichLabel the label id of the relevant label.
@@ -746,17 +751,17 @@ void set_labels_to_const(SimData* d, const GroupNum whichGroup, const LabelID wh
  * a value of 1 would increase all relevant labels by 1, a value of -2 would subtract 2 from
  * each relevant label.
 */
-void increment_labels(SimData* d, const GroupNum whichGroup, const LabelID whichLabel, const int byValue) {
+void gsc_change_label_by_amount(gsc_SimData* d, const gsc_GroupNum whichGroup, const gsc_LabelID whichLabel, const int byValue) {
     int labelIndex;
-    if (whichLabel.id == NOT_A_LABEL.id || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+    if (whichLabel.id == gsc_NOT_A_LABEL.id || (labelIndex = gsc_get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel.id);
         return;
     }
     // Risks: if m->labels or m->labels[i] don't exist for labels where they should,
     // will get some out of bounds accesses.
 
-    AlleleMatrix* m = d->m;
-    if (whichGroup.num != NO_GROUP.num) { // set the labels of group members
+    gsc_AlleleMatrix* m = d->m;
+    if (whichGroup.num != gsc_NO_GROUP.num) { // set the labels of group members
         do {
 
             for (int i = 0; i < m->n_genotypes; ++i) {
@@ -790,7 +795,9 @@ void increment_labels(SimData* d, const GroupNum whichGroup, const LabelID which
  * If `n_values` is longer than the number of genotypes in the right group
  * after `startIndex`, then the extra values are ignored.
  *
- * @param d pointer to the `SimData` containing the genotypes and labels to be relabelled
+ * @shortnamed{change_label_to_values}
+ *
+ * @param d pointer to the `gsc_SimData` containing the genotypes and labels to be relabelled
  * @param whichGroup 0 to set the label of the genotypes with global indexes between
  * `startIndex` and `startIndex + n_values`, or a positive integer to set the label
  * of the `startIndex`th to `startIndex + n_values`th members of group `whichGroup`.
@@ -799,17 +806,17 @@ void increment_labels(SimData* d, const GroupNum whichGroup, const LabelID which
  * @param n_values length of `values`
  * @param values vector of integers to paste into the chosen custom label of the chosen genotypes.
 */
-void set_labels_to_values(SimData* d, const GroupNum whichGroup, const int startIndex, const LabelID whichLabel,
+void gsc_change_label_to_values(gsc_SimData* d, const gsc_GroupNum whichGroup, const int startIndex, const gsc_LabelID whichLabel,
                           const int n_values, const int values[n_values]) {
     int labelIndex;
-    if (whichLabel.id == NOT_A_LABEL.id || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+    if (whichLabel.id == gsc_NOT_A_LABEL.id || (labelIndex = gsc_get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel.id);
         return;
     }
 
-    AlleleMatrix* m = d->m;
+    gsc_AlleleMatrix* m = d->m;
     int currentIndex = 0;
-    if (whichGroup.num != NO_GROUP.num) { // set the labels of group members
+    if (whichGroup.num != gsc_NO_GROUP.num) { // set the labels of group members
         // First scan through to find firstIndex
         do {
 
@@ -857,7 +864,9 @@ void set_labels_to_values(SimData* d, const GroupNum whichGroup, const int start
  * If `n_values` is longer than the number of genotypes in the right group
  * after `startIndex`, then the extra values are ignored.
  *
- * @param d pointer to the `SimData` containing the genotypes to be renamed
+ * @shortnamed{change_names_to_values}
+ *
+ * @param d pointer to the `gsc_SimData` containing the genotypes to be renamed
  * @param whichGroup 0 to set the names of the genotypes with global indexes between
  * `startIndex` and `startIndex + n_values`, or a positive integer to set the names
  * of the `startIndex`th to `startIndex + n_values`th members of group `whichGroup`.
@@ -865,12 +874,12 @@ void set_labels_to_values(SimData* d, const GroupNum whichGroup, const int start
  * @param n_values length of `values`
  * @param values vector of integers to paste into the name field of the chosen genotypes.
 */
-void set_names_to_values(SimData* d, const GroupNum whichGroup, const int startIndex, const int n_values, const char* values[n_values]) {
+void gsc_change_names_to_values(gsc_SimData* d, const gsc_GroupNum whichGroup, const int startIndex, const int n_values, const char* values[n_values]) {
     // this will be much improved once we can hash our names.
 
-    AlleleMatrix* m = d->m;
+    gsc_AlleleMatrix* m = d->m;
     int currentIndex = 0;
-    if (whichGroup.num != NO_GROUP.num) { // set the names of group members
+    if (whichGroup.num != gsc_NO_GROUP.num) { // set the names of group members
         // First scan through to find firstIndex
         do {
 
@@ -880,12 +889,12 @@ void set_names_to_values(SimData* d, const GroupNum whichGroup, const int startI
                     if (currentIndex >= startIndex) {
                         // clear name if it's pre-existing
                         if (m->names[i] != NULL) {
-                            free(m->names[i]);
+                            GSC_FREE(m->names[i]);
                         }
 
                         // save new name
                         const int whichName = currentIndex - startIndex;
-                        m->names[i] = get_malloc(sizeof(char) * (strlen(values[whichName]) + 1));
+                        m->names[i] = gsc_malloc_wrap(sizeof(char) * (strlen(values[whichName]) + 1));
                         strcpy(m->names[i], values[whichName]);
                     }
                     currentIndex++;
@@ -905,13 +914,13 @@ void set_names_to_values(SimData* d, const GroupNum whichGroup, const int startI
                 if (currentIndex >= startIndex) {
                     // clear name if it's pre-existing
                     if (m->names[i] != NULL) {
-                        free(m->names[i]);
+                        GSC_FREE(m->names[i]);
                     }
 
                     // save new name
                     const int whichName = currentIndex - startIndex;
                     const int nameLen = strlen(values[whichName]);
-                    m->names[i] = get_malloc(sizeof(char) * (nameLen + 1));
+                    m->names[i] = gsc_malloc_wrap(sizeof(char) * (nameLen + 1));
                     strncpy(m->names[i], values[whichName], nameLen);
                 }
                 currentIndex++;
@@ -929,7 +938,7 @@ void set_names_to_values(SimData* d, const GroupNum whichGroup, const int startI
  * @param i the integer whose digits are to be counted.
  * @returns the number of digits to print `i`
  */
-int get_integer_digits(const int i) {
+int gsc_get_integer_digits(const int i) {
     int digits = 0, ii = i;
     while (ii != 0) {
         ii = ii / 10;
@@ -939,23 +948,23 @@ int get_integer_digits(const int i) {
 }
 
 
-/** Comparator function for qsort. Used to compare an array of MarkerPosition**
+/** Comparator function for qsort. Used to compare an array of gsc_MarkerPosition**
  * @see sort_markers()
  *
- * Use this on an array of pointers to values in SimData.map.positions.
+ * Use this on an array of pointers to values in gsc_SimData.map.positions.
  *
  * Sorts lower chromosome numbers before higher chromosome numbers. Within
  * chromosomes, sorts lower positions before higher ones.
  *
- * If chromosome number is 0, the MarkerPosition is considered uninitialised.
+ * If chromosome number is 0, the gsc_MarkerPosition is considered uninitialised.
  * All unitialised values are moved to the end. The ordering of uninitialised
  * values amongst themselves is undefined.
  *
  * Reference: https://stackoverflow.com/questions/32948281/c-sort-two-arrays-the-same-way
  */
-int _simdata_pos_compare(const void *pp0, const void *pp1) {
-	MarkerPosition marker0_pos = **(MarkerPosition**)pp0;
-	MarkerPosition marker1_pos = **(MarkerPosition**)pp1;
+static int gsc_helper_simdata_pos_compare(const void *pp0, const void *pp1) {
+	gsc_MarkerPosition marker0_pos = **(gsc_MarkerPosition**)pp0;
+	gsc_MarkerPosition marker1_pos = **(gsc_MarkerPosition**)pp1;
 	// first, move any empties towards the end.
 	if (marker0_pos.chromosome == 0) {
 		if (marker1_pos.chromosome == 0) {
@@ -982,12 +991,12 @@ int _simdata_pos_compare(const void *pp0, const void *pp1) {
 
 /** Comparator function for qsort. Used to compare an array of doubles* to sort
  * them in descending order of the doubles they point to.
- * @see split_by_bv()
+ * @see gsc_split_by_bv()
  *
  * Sorts higher numbers before lower numbers. If they are equal, their
  * order after comparison is undefined.
  */
-int _descending_double_comparer(const void* pp0, const void* pp1) {
+static int gsc_helper_descending_double_comparer(const void* pp0, const void* pp1) {
 	double d0 = **(double **)pp0;
 	double d1 = **(double **)pp1;
 	if (d0 > d1) {
@@ -999,12 +1008,12 @@ int _descending_double_comparer(const void* pp0, const void* pp1) {
 
 /** Comparator function for qsort. Used to compare an array of doubles* to sort
  * them in ascending order of the doubles they point to.
- * @see split_by_bv()
+ * @see gsc_split_by_bv()
  *
  * Sorts lower numbers before higher numbers. If they are equal, their
  * order after comparison is undefined.
  */
-int _ascending_double_comparer(const void* pp0, const void* pp1) {
+static int gsc_helper_ascending_double_comparer(const void* pp0, const void* pp1) {
 	double d0 = **(double **)pp0;
 	double d1 = **(double **)pp1;
 	if (d0 < d1) {
@@ -1016,12 +1025,12 @@ int _ascending_double_comparer(const void* pp0, const void* pp1) {
 
 /** Comparator function for qsort. Used to compare an array of floats to sort
  * them in ascending order.
- * @see generate_gamete()
+ * @see gsc_generate_gamete()
  *
  * Sorts lower numbers before higher numbers. If floats are equal, their
  * order after comparison is undefined.
  */
-int _ascending_float_comparer(const void* p0, const void* p1) {
+static int gsc_helper_ascending_float_comparer(const void* p0, const void* p1) {
 	float f0 = *(float *)p0;
 	float f1 = *(float *)p1;
 	if (f0 < f1) {
@@ -1031,54 +1040,21 @@ int _ascending_float_comparer(const void* p0, const void* p1) {
 	}
 }
 
-/** Comparator function for qsort. Used to compare an array of unsigned int to sort
- * them in ascending order.
- * @see split_from_group()
- *
- * Sorts lower numbers before higher numbers. If floats are equal, their
- * order after comparison is undefined.
- */
-int _ascending_index_comparer(const void* p0, const void* p1) {
-    int f0 = *(unsigned int *)p0;
-    int f1 = *(unsigned int *)p1;
-    if (f0 < f1) {
-        return -1;
-    } else {
-        return (f0 > f1); // 0 if equal, 1 if f0 is greater
-    }
-}
 
-/** Comparator function for qsort. Used to compare an array of GroupNums to sort
- * them in ascending order.
- * @see get_existing_groups()
+/** Move all details of the genotype at one gsc_GenoLocation to another gsc_GenoLocation.
  *
- * Sorts lower numbers before higher numbers. If floats are equal, their
- * order after comparison is undefined.
- */
-int _ascending_GroupNum_comparer(const void* p0, const void* p1) {
-    GroupNum f0 = *(GroupNum *)p0;
-    GroupNum f1 = *(GroupNum *)p1;
-    if (f0.num < f1.num) {
-        return -1;
-    } else {
-        return (f0.num > f1.num); // 0 if equal, 1 if f0 is greater
-    }
-}
-
-/** Move all details of the genotype at one GenoLocation to another GenoLocation.
- *
- * After the genotype at @a GenoLocation @a from has been copied to @a GenoLocation @a to,
- * the information is cleared from @a GenoLocation @a from.
+ * After the genotype at @a gsc_GenoLocation @a from has been copied to @a gsc_GenoLocation @a to,
+ * the information is cleared from @a gsc_GenoLocation @a from.
  *
  * @param label_defaults array of default values for custom labels. Is assumed to have length
- * AlleleMatrix.n_labels at least. Note that this function does not copy or clear any custom labels
- * if @from and @to's AlleleMatrix.n_labels are different.
+ * gsc_AlleleMatrix.n_labels at least. Note that this function does not copy or clear any custom labels
+ * if @from and @to's gsc_AlleleMatrix.n_labels are different.
  */
-void _move_genotype(GenoLocation from, GenoLocation to, int* label_defaults) {
+void gsc_move_genotype(gsc_GenoLocation from, gsc_GenoLocation to, int* label_defaults) {
     if (to.localAM == from.localAM && to.localPos == from.localPos) {
         return;
     }
-    if (to.localAM->groups[to.localPos].num != NO_GROUP.num) {
+    if (to.localAM->groups[to.localPos].num != gsc_NO_GROUP.num) {
         warning("In moving a genotype from %p:%d to %p:%d, the genotype at %p:%d will be overwritten\n", from.localAM, from.localPos, to.localAM, to.localPos, to.localAM, to.localPos);
         --to.localAM->n_genotypes;
     }
@@ -1089,15 +1065,15 @@ void _move_genotype(GenoLocation from, GenoLocation to, int* label_defaults) {
     from.localAM->names[from.localPos] = NULL;
 
     to.localAM->ids[to.localPos] = from.localAM->ids[from.localPos];
-    from.localAM->ids[from.localPos] = NO_PEDIGREE;
+    from.localAM->ids[from.localPos] = gsc_NO_PEDIGREE;
 
     to.localAM->pedigrees[0][to.localPos] = from.localAM->pedigrees[0][from.localPos];
-    from.localAM->pedigrees[0][from.localPos] = NO_PEDIGREE;
+    from.localAM->pedigrees[0][from.localPos] = gsc_NO_PEDIGREE;
     to.localAM->pedigrees[1][to.localPos] = from.localAM->pedigrees[1][from.localPos];
-    from.localAM->pedigrees[1][from.localPos] = NO_PEDIGREE;
+    from.localAM->pedigrees[1][from.localPos] = gsc_NO_PEDIGREE;
 
     to.localAM->groups[to.localPos] = from.localAM->groups[from.localPos];
-    from.localAM->groups[from.localPos] = NO_GROUP;
+    from.localAM->groups[from.localPos] = gsc_NO_GROUP;
 
     if (to.localAM->n_labels != from.localAM->n_labels) {
         warning("Origin and destination when copying genotype do not have the same number of custom labels (n_labels). The genotype now at %p:%d will have lost its label data.\n", to.localAM, to.localPos);
@@ -1114,63 +1090,63 @@ void _move_genotype(GenoLocation from, GenoLocation to, int* label_defaults) {
     }
 }
 
-/** Sets the current cursor position in a GappyIterator to the next valid position, if the cursor is not already a valid position.
+/** Sets the current cursor position in a gsc_GappyIterator to the next valid position, if the cursor is not already a valid position.
  *
  * Valid positions in the linked list of AlleleMatrices may contain genotypes or not.
 */
-GenoLocation nextgappy_valid_pos(struct GappyIterator* it) {
+static gsc_GenoLocation gsc_nextgappy_valid_pos(struct gsc_GappyIterator* it) {
     if (it->cursor.localAM == NULL) {
-        it->cursor = INVALID_GENO_LOCATION;
+        it->cursor = gsc_INVALID_GENO_LOCATION;
     } else if (it->cursor.localPos >= CONTIG_WIDTH) {
         it->cursor.localPos = 0;
         it->cursor.localAM = it->cursor.localAM->next;
         ++it->cursorAMIndex;
         if (it->cursor.localAM == NULL) {
-            it->cursor = INVALID_GENO_LOCATION;
+            it->cursor = gsc_INVALID_GENO_LOCATION;
         }
     }
     return it->cursor;
 }
 
-/** Sets the current cursor position in a GappyIterator to the next empty position, if the cursor is not already an empty position.
+/** Sets the current cursor position in a gsc_GappyIterator to the next empty position, if the cursor is not already an empty position.
  *
  * Empty positions do not contain genotypes. This function does not change the cursor position if the curstor is already on a gap.
 */
-GenoLocation nextgappy_get_gap(struct GappyIterator* it) {
-    if (!IS_VALID_LOCATION(nextgappy_valid_pos(it))) {
-        return INVALID_GENO_LOCATION;
+static gsc_GenoLocation gsc_nextgappy_get_gap(struct gsc_GappyIterator* it) {
+    if (!gsc_IS_VALID_LOCATION(gsc_nextgappy_valid_pos(it))) {
+        return gsc_INVALID_GENO_LOCATION;
     }
 
-    while (it->cursor.localAM->groups[it->cursor.localPos].num != NO_GROUP.num) {
+    while (it->cursor.localAM->groups[it->cursor.localPos].num != gsc_NO_GROUP.num) {
 
         // Trusts that n_genotypes is correct.
-        if (it->cursor.localAM->n_genotypes == CONTIG_WIDTH) { // work-saver: skip this AlleleMatrix if it is already known to be full.
+        if (it->cursor.localAM->n_genotypes == CONTIG_WIDTH) { // work-saver: skip this gsc_AlleleMatrix if it is already known to be full.
             it->cursor.localAM = it->cursor.localAM->next;
         } else {
             ++it->cursor.localPos;
         }
 
-        if (!IS_VALID_LOCATION(nextgappy_valid_pos(it))) {
-            return INVALID_GENO_LOCATION;
+        if (!gsc_IS_VALID_LOCATION(gsc_nextgappy_valid_pos(it))) {
+            return gsc_INVALID_GENO_LOCATION;
         }
     }
 
     return it->cursor;
 }
 
-/** Sets the current cursor position in a GappyIterator to the next filled position, if the cursor is not already a filled position.
+/** Sets the current cursor position in a gsc_GappyIterator to the next filled position, if the cursor is not already a filled position.
  *
  * Non-gap positions do contain genotypes. This function does not change the cursor position if the curstor is already on a non-gap.
 */
-GenoLocation nextgappy_get_nongap(struct GappyIterator* it) {
-    if (!IS_VALID_LOCATION(nextgappy_valid_pos(it))) {
-        return INVALID_GENO_LOCATION;
+static gsc_GenoLocation gsc_nextgappy_get_nongap(struct gsc_GappyIterator* it) {
+    if (!gsc_IS_VALID_LOCATION(gsc_nextgappy_valid_pos(it))) {
+        return gsc_INVALID_GENO_LOCATION;
     }
 
-    while (it->cursor.localAM->groups[it->cursor.localPos].num == NO_GROUP.num) {
+    while (it->cursor.localAM->groups[it->cursor.localPos].num == gsc_NO_GROUP.num) {
         ++it->cursor.localPos;
-        if (!IS_VALID_LOCATION(nextgappy_valid_pos(it))) {
-            return INVALID_GENO_LOCATION;
+        if (!gsc_IS_VALID_LOCATION(gsc_nextgappy_valid_pos(it))) {
+            return gsc_INVALID_GENO_LOCATION;
         }
     }
 
@@ -1179,49 +1155,49 @@ GenoLocation nextgappy_get_nongap(struct GappyIterator* it) {
 
 
 /** A function to tidy the internal storage of genotypes after addition
- * or deletion of genotypes in the SimData. Not intended to be called by an
+ * or deletion of genotypes in the gsc_SimData. Not intended to be called by an
  * end user - functions which require it should be calling it already.
  *
- * Ideally, we want all AlleleMatrix structs in the SimData's linked list
+ * Ideally, we want all gsc_AlleleMatrix structs in the gsc_SimData's linked list
  * to have no gaps. That is, if there are more than CONTIG_WIDTH genotypes, the
- * all AlleleMatrix structs except the last should be full (contain CONTIG_WIDTH genotypes),
+ * all gsc_AlleleMatrix structs except the last should be full (contain CONTIG_WIDTH genotypes),
  * and the last should have the remaining n genotypes at local indexes 0 to n-1
- * (so all at the start of the AlleleMatrix, with no gaps between them).
+ * (so all at the start of the gsc_AlleleMatrix, with no gaps between them).
  *
- * We trust that each AlleleMatrix's n_genotypes is correct.
+ * We trust that each gsc_AlleleMatrix's n_genotypes is correct.
  *
  * This function achieves the cleanup by using two pointers: a checker out
  * the front that identifies a genotype that needs to be shifted back/that
  * occurs after a gap, and a filler that identifies each gap and copies
  * the genotype at the checker back into it.
  *
- * @param d The SimData struct on which to operate.
+ * @param d The gsc_SimData struct on which to operate.
  */
-void condense_allele_matrix( SimData* d) {
+void gsc_condense_allele_matrix( gsc_SimData* d) {
     // Find the first gap
-    struct GappyIterator filler = {.cursor=(GenoLocation){.localAM=d->m, .localPos=0}, .cursorAMIndex=0};
-    nextgappy_get_gap(&filler);
+    struct gsc_GappyIterator filler = {.cursor=(gsc_GenoLocation){.localAM=d->m, .localPos=0}, .cursorAMIndex=0};
+    gsc_nextgappy_get_gap(&filler);
 
-    if (!IS_VALID_LOCATION(filler.cursor)) {
+    if (!gsc_IS_VALID_LOCATION(filler.cursor)) {
         return; // no gaps found
     }
 
-    struct GappyIterator checker = filler; // copy filler
+    struct gsc_GappyIterator checker = filler; // copy filler
     ++checker.cursor.localPos;
-    nextgappy_get_nongap(&checker);
+    gsc_nextgappy_get_nongap(&checker);
 
-    while (IS_VALID_LOCATION(filler.cursor) && IS_VALID_LOCATION(checker.cursor)) {
-        _move_genotype(checker.cursor, filler.cursor, d->label_defaults);
+    while (gsc_IS_VALID_LOCATION(filler.cursor) && gsc_IS_VALID_LOCATION(checker.cursor)) {
+        gsc_move_genotype(checker.cursor, filler.cursor, d->label_defaults);
 
         ++filler.cursor.localPos;
-        nextgappy_get_gap(&filler);
+        gsc_nextgappy_get_gap(&filler);
 
         ++checker.cursor.localPos;
-        nextgappy_get_nongap(&checker);
+        gsc_nextgappy_get_nongap(&checker);
     }
 
     if (filler.cursor.localAM->next != NULL && filler.cursor.localAM->next->n_genotypes == 0) {
-        delete_allele_matrix(filler.cursor.localAM->next);
+        gsc_delete_allele_matrix(filler.cursor.localAM->next);
         filler.cursor.localAM->next = NULL;
     }
 }
@@ -1237,37 +1213,39 @@ void condense_allele_matrix( SimData* d) {
  *  or all genotypes in the simulation, forwards or backwards.
  *  The iterator is not initialised to any location at this point. The first call to
  *  a next* function will initialise it, or you can manually initialise using
- *  set_bidirectional_iter_to_start or set_bidirectional_iter_to_end. next_forwards will
- *  initialise it to the first in the group, or call next_backwards to initialise it to the
+ *  gsc_set_bidirectional_iter_to_start or gsc_set_bidirectional_iter_to_end. gsc_next_forwards will
+ *  initialise it to the first in the group, or call gsc_next_backwards to initialise it to the
  *  last in the group.
+ *
+ * @shortnamed{create_bidirectional_iter}
  *
  *  @warning An initialised iterator is only valid if no genotypes have been added
  *  to the group and no genotypes in the simulation as a whole have been removed
  *  since its creation. Discard the old iterator and create a new one when the state
  *  of the simulation changes.
  *
- *  @param d pointer to the SimData containing the genotypes to iterate through
+ *  @param d pointer to the gsc_SimData containing the genotypes to iterate through
  *  @param group the group number of the group to iterate through, or 0 to iterate
  *  through all genotypes.
- * @returns uninitialised BidirectionalIterator for the provided group.
+ * @returns uninitialised gsc_BidirectionalIterator for the provided group.
  */
-BidirectionalIterator create_bidirectional_iter( SimData* d, const GroupNum group) {
-    return (BidirectionalIterator) {
+gsc_BidirectionalIterator gsc_create_bidirectional_iter( gsc_SimData* d, const gsc_GroupNum group) {
+    return (gsc_BidirectionalIterator) {
         .d = d,
         .group = group,
-        .localPos = UNINITIALISED,
+        .localPos = GSC_UNINIT,
 
         .cachedAM = d->m,
         .cachedAMIndex = 0,
 
-        .atStart = FALSE,
-        .atEnd = FALSE
+        .atStart = GSC_FALSE,
+        .atEnd = GSC_FALSE
     };
 }
 
 /** Create a Random Access Iterator
  *
- *  A random access iterator and the function next_get_nth() can be used to
+ *  A random access iterator and the function gsc_next_get_nth() can be used to
  *  get any genotype in the simulation by index or any genotype in a group
  *  by within-group index.
  *
@@ -1280,30 +1258,32 @@ BidirectionalIterator create_bidirectional_iter( SimData* d, const GroupNum grou
  *  that group could be found in the simulation, so the iterator will never
  *  return a valid position.
  *
+ * @shortnamed{create_randomaccess_iter}
+ *
  *  @warning An initialised iterator is only valid if no genotypes have been added
  *  to the group and no genotypes in the simulation as a whole have been removed
  *  since its creation. Discard the old iterator and create a new one when the state
  *  of the simulation changes.
  *
- *  @param d pointer to the SimData containing the genotypes to iterate through
+ *  @param d pointer to the gsc_SimData containing the genotypes to iterate through
  *  @param group the group number of the group to iterate through, or 0 to iterate
  *  through all genotypes.
  * @returns initialised Random Access iterator for the provided group.
 */
-RandomAccessIterator create_randomaccess_iter( SimData* d, const GroupNum group) {
+gsc_RandomAccessIterator gsc_create_randomaccess_iter( gsc_SimData* d, const gsc_GroupNum group) {
     unsigned long first = 0;
-    AlleleMatrix* firstAM = d->m;
-    char anyExist = TRUE;
+    gsc_AlleleMatrix* firstAM = d->m;
+    char anyExist = GSC_TRUE;
 
     // Want to know:
     // - is this group empty? (randomAccess should know if group size is 0)
     // - what is the first genotype index in this group?
 
-    if (group.num == NO_GROUP.num) { // scanning all genotypes
+    if (group.num == gsc_NO_GROUP.num) { // scanning all genotypes
         while (firstAM->n_genotypes == 0) {
             if (firstAM->next == NULL) {
-                // SimData is empty. Nowhere to go.
-                anyExist = FALSE;
+                // gsc_SimData is empty. Nowhere to go.
+                anyExist = GSC_FALSE;
 
             } else { // Keep moving forwards through the list. Not polite enough to clean up the blank AM.
 
@@ -1313,68 +1293,68 @@ RandomAccessIterator create_randomaccess_iter( SimData* d, const GroupNum group)
 
     } else { // scanning a specific group
 
-        char exitNow = FALSE;
-        while (exitNow == FALSE) {
+        char exitNow = GSC_FALSE;
+        while (exitNow == GSC_FALSE) {
 
             // Set first, firstAM, firstAMIndex if appropriate
             for (int i = 0; i < firstAM->n_genotypes; ++i) {
                 if (firstAM->groups[i].num == group.num) {
                     first = i;
-                    exitNow = TRUE;
+                    exitNow = GSC_TRUE;
                     break;
                 }
             }
 
             // Move along and set anyExist if appropriate
-            if (exitNow == FALSE) {
+            if (exitNow == GSC_FALSE) {
                 firstAM = firstAM->next;
                 if (firstAM == NULL) {
-                    anyExist = FALSE;
-                    exitNow = TRUE;
+                    anyExist = GSC_FALSE;
+                    exitNow = GSC_TRUE;
                 }
             }
         }
 
     }
 
-    GenoLocation* cache = NULL;
+    gsc_GenoLocation* cache = NULL;
     unsigned int cacheSize = 0;
     if (anyExist) {
         cacheSize = 50;
-        cache = get_malloc((sizeof(GenoLocation)*cacheSize));
-        cache[0] = (GenoLocation) {
+        cache = gsc_malloc_wrap((sizeof(gsc_GenoLocation)*cacheSize));
+        cache[0] = (gsc_GenoLocation) {
                 .localAM= firstAM,
                 .localPos = first,
         };
         for (int i = 1; i < cacheSize; ++i) {
-            cache[i] = INVALID_GENO_LOCATION;
+            cache[i] = gsc_INVALID_GENO_LOCATION;
         }
 
     }
 
-    return (RandomAccessIterator) {
+    return (gsc_RandomAccessIterator) {
         .d = d,
         .group = group,
 
-        .largestCached = anyExist ? 0 : UNINITIALISED,
-        .groupSize = anyExist ? UNINITIALISED : 0,
+        .largestCached = anyExist ? 0 : GSC_UNINIT,
+        .groupSize = anyExist ? GSC_UNINIT : 0,
         .cacheSize = cacheSize,
         .cache = cache
     };
 }
 
-/** Get an AlleleMatrix by index in the linked list
+/** Get an gsc_AlleleMatrix by index in the linked list
  *
- *  listStart is considered the 0th AlleleMatrix (0-based indexing)
+ *  listStart is considered the 0th gsc_AlleleMatrix (0-based indexing)
  *
- *  @param listStart the 0th AlleleMatrix in the linked list
- *  @param n the index of the desired AlleleMatrix in the linked list
- *  @returns pointer to the nth AlleleMatrix, if it exists in the list, or
+ *  @param listStart the 0th gsc_AlleleMatrix in the linked list
+ *  @param n the index of the desired gsc_AlleleMatrix in the linked list
+ *  @returns pointer to the nth gsc_AlleleMatrix, if it exists in the list, or
  *  NULL if the list is shorter than n
  */
-AlleleMatrix* get_nth_AlleleMatrix(AlleleMatrix* listStart, const unsigned int n) {
+gsc_AlleleMatrix* gsc_get_nth_AlleleMatrix(gsc_AlleleMatrix* listStart, const unsigned int n) {
     unsigned int currentIndex = 0;
-    AlleleMatrix* am = listStart;
+    gsc_AlleleMatrix* am = listStart;
     while (currentIndex < n) {
         if (am->next == NULL) {
             return NULL;
@@ -1386,53 +1366,30 @@ AlleleMatrix* get_nth_AlleleMatrix(AlleleMatrix* listStart, const unsigned int n
     return am;
 }
 
-/** Check nothing in the BidirectionalIterator is obviously invalid
- *
- * Not everything can be checked but we can check if our cursor is on
- * a member of the expected group.
- *
- *  @warning An initialised iterator is only valid if no genotypes have been added
- *  to the group and no genotypes in the simulation as a whole have been removed
- *  since its creation. Discard the old iterator and create a new one when the state
- *  of the simulation changes.
- *
- * @param it Bidirectional iterator to check. Contains a reference to the
- * relevant SimData.
- * @returns FALSE if the current global position is invalid for the SimData
- * (has the wrong group number or is larger than the number of genotypes
- * in the SimData), and TRUE otherwise.
- */
-int validate_bidirectional_cache(BidirectionalIterator* it) {
-    if (it->localPos != UNINITIALISED && it->group.num != NO_GROUP.num &&
-            it->cachedAM->groups[it->localPos].num != it->group.num) {
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
 /** Initialise a Bidirectional iterator to the start of its sequence.
  *
- *  Can be used to reset a BidirectionalIterator so that it is pointing
+ *  Can be used to reset a gsc_BidirectionalIterator so that it is pointing
  *  at the very first member of the group it is looping through.
+ *
+ * @shortnamed{set_bidirectional_iter_to_start}
  *
  * @param it BidirectioanlIterator to initialise
  * @return location of the first member of the sequence.
  */
-GenoLocation set_bidirectional_iter_to_start(BidirectionalIterator* it) {
+gsc_GenoLocation gsc_set_bidirectional_iter_to_start(gsc_BidirectionalIterator* it) {
     unsigned int first = 0;
-    AlleleMatrix* firstAM = it->d->m;
+    gsc_AlleleMatrix* firstAM = it->d->m;
     unsigned int firstAMIndex = 0;
-    char anyExist = TRUE;
+    char anyExist = GSC_TRUE;
 
     // Want to know:
     // - is this group empty? (iterator should know if it is at the end as well as at the start)
     // - what is the first genotype index in this group?
 
-    if (it->group.num == NO_GROUP.num) {
+    if (it->group.num == gsc_NO_GROUP.num) {
         while (firstAM->n_genotypes == 0) {
             if (firstAM->next == NULL) {
-                anyExist = FALSE; // SimData is empty.
+                anyExist = GSC_FALSE; // gsc_SimData is empty.
 
             } else { // (Not polite enough to clean up the blank AM.)
                 firstAM = firstAM->next;
@@ -1445,38 +1402,38 @@ GenoLocation set_bidirectional_iter_to_start(BidirectionalIterator* it) {
 
     } else { // scanning a specific group
 
-        char exitNow = FALSE;
-        while (exitNow == FALSE) {
+        char exitNow = GSC_FALSE;
+        while (exitNow == GSC_FALSE) {
 
             // Set first, firstAM, firstAMIndex if appropriate
             for (int i = 0; i < firstAM->n_genotypes; ++i) {
                 if (firstAM->groups[i].num == it->group.num) {
                     first = i;
-                    exitNow = TRUE;
+                    exitNow = GSC_TRUE;
                     break;
                 }
             }
 
             // Move along and set anyExist if appropriate
-            if (exitNow == FALSE) {
+            if (exitNow == GSC_FALSE) {
                 firstAM = firstAM->next;
                 firstAMIndex++;
                 if (firstAM == NULL) {
-                    first = UNINITIALISED;
-                    anyExist = FALSE;
-                    exitNow = TRUE;
+                    first = GSC_UNINIT;
+                    anyExist = GSC_FALSE;
+                    exitNow = GSC_TRUE;
                 }
             }
         }
     }
 
     it->localPos = first;
-    it->atStart = TRUE;
+    it->atStart = GSC_TRUE;
     it->atEnd = !anyExist;
     it->cachedAM = firstAM;
     it->cachedAMIndex = firstAMIndex;
 
-    return (GenoLocation) {
+    return (gsc_GenoLocation) {
         .localAM = firstAM,
         .localPos = first
     };
@@ -1484,23 +1441,25 @@ GenoLocation set_bidirectional_iter_to_start(BidirectionalIterator* it) {
 
 /** Initialise a Bidirectional iterator to the end of its sequence.
  *
- *  Can be used to reset a BidirectionalIterator so that it is pointing
+ *  Can be used to reset a gsc_BidirectionalIterator so that it is pointing
  *  at the very last member of the group it is looping through.
+ *
+ * @shortnamed{set_bidirectional_iter_to_end}
  *
  * @param it BidirectioanlIterator to initialise
  * @return location of the last member of the sequence.
  */
-GenoLocation set_bidirectional_iter_to_end(BidirectionalIterator* it) {
+gsc_GenoLocation gsc_set_bidirectional_iter_to_end(gsc_BidirectionalIterator* it) {
     unsigned long last = 0;
-    AlleleMatrix* lastAM = it->d->m;
+    gsc_AlleleMatrix* lastAM = it->d->m;
     unsigned int lastAMIndex = 0;
-    char anyExist = TRUE;
+    char anyExist = GSC_TRUE;
 
     // Want to know:
     // - is this group empty? (iterator should know if it is at the end as well as at the start)
     // - what is the first genotype index in this group?
 
-    if (it->group.num == NO_GROUP.num) {
+    if (it->group.num == gsc_NO_GROUP.num) {
         while (lastAM->next != NULL && lastAM->next->n_genotypes != 0) {
             lastAM = lastAM->next;
             lastAMIndex++;
@@ -1508,7 +1467,7 @@ GenoLocation set_bidirectional_iter_to_end(BidirectionalIterator* it) {
         if (lastAMIndex > 0 || lastAM->n_genotypes > 0) {
             last = lastAM->n_genotypes - 1;
         } else {
-            anyExist = FALSE;
+            anyExist = GSC_FALSE;
         }
 
     } else { // scanning a specific group
@@ -1519,26 +1478,26 @@ GenoLocation set_bidirectional_iter_to_end(BidirectionalIterator* it) {
             lastAMIndex++;
         }
 
-        char exitNow = FALSE;
-        while (exitNow == FALSE) {
+        char exitNow = GSC_FALSE;
+        while (exitNow == GSC_FALSE) {
 
             // Set first, firstAM, firstAMIndex if appropriate
             for (int i = lastAM->n_genotypes - 1; i >= 0; --i) {
                 if (lastAM->groups[i].num == it->group.num) {
                     last = i;
-                    exitNow = TRUE;
+                    exitNow = GSC_TRUE;
                     break;
                 }
             }
 
             // Move along and set anyExist if appropriate
-            if (exitNow == FALSE) {
+            if (exitNow == GSC_FALSE) {
                 --lastAMIndex;
-                lastAM = get_nth_AlleleMatrix(it->d->m, lastAMIndex);
+                lastAM = gsc_get_nth_AlleleMatrix(it->d->m, lastAMIndex);
                 if (lastAM->n_genotypes == 0) {
-                    last = UNINITIALISED;
-                    anyExist = FALSE;
-                    exitNow = TRUE;
+                    last = GSC_UNINIT;
+                    anyExist = GSC_FALSE;
+                    exitNow = GSC_TRUE;
                 }
             }
         }
@@ -1546,11 +1505,11 @@ GenoLocation set_bidirectional_iter_to_end(BidirectionalIterator* it) {
 
     it->localPos = last;
     it->atStart = !anyExist;
-    it->atEnd = TRUE;
+    it->atEnd = GSC_TRUE;
     it->cachedAM = lastAM;
     it->cachedAMIndex = lastAMIndex;
 
-    return (GenoLocation) {
+    return (gsc_GenoLocation) {
         .localAM = lastAM,
         .localPos = last
     };
@@ -1559,45 +1518,47 @@ GenoLocation set_bidirectional_iter_to_end(BidirectionalIterator* it) {
 
 /** Get the next location from a bidirectional iterator
  *
- * Moves the pointer of a BidirectionalIterator forwards by
+ * Moves the pointer of a gsc_BidirectionalIterator forwards by
  * one step, and returns the new location it points to. If
- * the BidirectionalIterator is not initialised, then initialises
+ * the gsc_BidirectionalIterator is not initialised, then initialises
  * it to the very first element.
  *
- * Returns INVALID_GENO_LOCATION
- * if the BidirectionalIterator is corrupted or if it is at the
+ * Returns gsc_INVALID_GENO_LOCATION
+ * if the gsc_BidirectionalIterator is corrupted or if it is at the
  * end of the sequence. Test the return value of this function
- * with @see IS_VALID_LOCATION() or @see isValidLocation().
+ * with @ref gsc_IS_VALID_LOCATION().
  *
- * @param it the BidirectionalIterator to iterate forwards
+ * @shortnamed{next_forwards}
+ *
+ * @param it the gsc_BidirectionalIterator to iterate forwards
  * @returns the location of the next genotype in the sequence,
- * or INVALID_GENO_LOCATION if the iterator is corrupted or
+ * or gsc_INVALID_GENO_LOCATION if the iterator is corrupted or
  * the iterator's pointer is already at the last element.
  */
-GenoLocation next_forwards(BidirectionalIterator* it) {
-    if (it->localPos == UNINITIALISED) {
-        return set_bidirectional_iter_to_start(it);
+gsc_GenoLocation gsc_next_forwards(gsc_BidirectionalIterator* it) {
+    if (it->localPos == GSC_UNINIT) {
+        return gsc_set_bidirectional_iter_to_start(it);
     }
 
-    if (it->atEnd) { // || validate_bidirectional_cache(it) == FALSE) { // can't use this because what if our iterator user is modifying group allocations?
-        return INVALID_GENO_LOCATION;
+    if (it->atEnd) { // || validate_bidirectional_cache(it) == GSC_FALSE) { // can't use this because what if our iterator user is modifying group allocations?
+        return gsc_INVALID_GENO_LOCATION;
     }
 
-    if (it->group.num == NO_GROUP.num) {
+    if (it->group.num == gsc_NO_GROUP.num) {
 
         // Search for the next value.
         if (it->localPos + 1 < it->cachedAM->n_genotypes) {
-            // The next value is in the same AlleleMatrix
+            // The next value is in the same gsc_AlleleMatrix
             it->localPos++;
-            it->atStart = FALSE;
-            return (GenoLocation) {
+            it->atStart = GSC_FALSE;
+            return (gsc_GenoLocation) {
                 .localAM = it->cachedAM,
                 .localPos = it->localPos
             };
 
         } else {
-            // The next value is in the next AlleleMatrix
-            AlleleMatrix* nextAM = it->cachedAM;
+            // The next value is in the next gsc_AlleleMatrix
+            gsc_AlleleMatrix* nextAM = it->cachedAM;
             int nextAMIndex = it->cachedAMIndex;
             do {
                 nextAM = nextAM->next;
@@ -1605,15 +1566,15 @@ GenoLocation next_forwards(BidirectionalIterator* it) {
             } while (nextAM != NULL && nextAM->n_genotypes == 0);
 
             if (nextAM == NULL) {
-                // There is no further AlleleMatrix; we are at the end of the iterator.
-                it->atEnd = TRUE;
-                return INVALID_GENO_LOCATION;
+                // There is no further gsc_AlleleMatrix; we are at the end of the iterator.
+                it->atEnd = GSC_TRUE;
+                return gsc_INVALID_GENO_LOCATION;
             } else {
                 it->cachedAM = nextAM;
                 it->cachedAMIndex = nextAMIndex;
                 it->localPos = 0;
-                it->atStart = FALSE;
-                return (GenoLocation) {
+                it->atStart = GSC_FALSE;
+                return (gsc_GenoLocation) {
                     .localAM = it->cachedAM,
                     .localPos = 0
                 };
@@ -1627,8 +1588,8 @@ GenoLocation next_forwards(BidirectionalIterator* it) {
             if (it->localPos + 1 < it->cachedAM->n_genotypes) {
                 for (++it->localPos; it->localPos < it->cachedAM->n_genotypes; ++it->localPos) {
                     if (it->cachedAM->groups[it->localPos].num == it->group.num) {
-                        it->atStart = FALSE;
-                        return (GenoLocation) {
+                        it->atStart = GSC_FALSE;
+                        return (gsc_GenoLocation) {
                             .localAM = it->cachedAM,
                             .localPos = it->localPos
                         };
@@ -1636,7 +1597,7 @@ GenoLocation next_forwards(BidirectionalIterator* it) {
                 }
             }
 
-            AlleleMatrix* nextAM = it->cachedAM;
+            gsc_AlleleMatrix* nextAM = it->cachedAM;
             int nextAMIndex = it->cachedAMIndex;
             do {
                 nextAM = nextAM->next;
@@ -1644,16 +1605,16 @@ GenoLocation next_forwards(BidirectionalIterator* it) {
             } while (nextAM != NULL && nextAM->n_genotypes == 0);
 
             if (nextAM == NULL) {
-                // There is no further AlleleMatrix; we are at the end of the iterator.
-                it->atEnd = TRUE;
-                return INVALID_GENO_LOCATION;
+                // There is no further gsc_AlleleMatrix; we are at the end of the iterator.
+                it->atEnd = GSC_TRUE;
+                return gsc_INVALID_GENO_LOCATION;
             } else {
                 it->cachedAM = nextAM;
                 it->cachedAMIndex = nextAMIndex;
                 it->localPos = 0;
                 if (it->cachedAM->groups[it->localPos].num == it->group.num) {
-                    it->atStart = FALSE;
-                    return (GenoLocation) {
+                    it->atStart = GSC_FALSE;
+                    return (gsc_GenoLocation) {
                         .localAM = it->cachedAM,
                         .localPos = it->localPos
                     };
@@ -1667,68 +1628,70 @@ GenoLocation next_forwards(BidirectionalIterator* it) {
 
 /** Get the previous location from a bidirectional iterator
  *
- * Moves the pointer of a BidirectionalIterator backwards by
+ * Moves the pointer of a gsc_BidirectionalIterator backwards by
  * one step, and returns the new location it points to. If
- * the BidirectionalIterator is not initialised, then initialises
+ * the gsc_BidirectionalIterator is not initialised, then initialises
  * it to the very last element.
  *
- * Slightly slower than next_forwards, because the AlleleMatrix linked list
- * is not bidirectional. To find the preceding AlleleMatrix, it needs to
- * count forwards from the beginning of the list to find the n-1th AlleleMatrix.
+ * Slightly slower than gsc_next_forwards, because the gsc_AlleleMatrix linked list
+ * is not bidirectional. To find the preceding gsc_AlleleMatrix, it needs to
+ * count forwards from the beginning of the list to find the n-1th gsc_AlleleMatrix.
  *
- * Returns INVALID_GENO_LOCATION
- * if the BidirectionalIterator is corrupted or if it is at the
+ * Returns gsc_INVALID_GENO_LOCATION
+ * if the gsc_BidirectionalIterator is corrupted or if it is at the
  * beginning of the sequence. Test the return value of this function
- * with @see isValidLocation().
+ * with @ref gsc_IS_VALID_LOCATION().
  *
- * @param it the BidirectionalIterator to iterate backwards
+ * @shortnamed{next_backwards}
+ *
+ * @param it the gsc_BidirectionalIterator to iterate backwards
  * @returns the location of the previous genotype in the sequence,
- * or INVALID_GENO_LOCATION if the iterator is corrupted or
+ * or gsc_INVALID_GENO_LOCATION if the iterator is corrupted or
  * the iterator's pointer is already at the first element.
  */
-GenoLocation next_backwards(BidirectionalIterator* it) {
-    if (it->localPos == UNINITIALISED) {
-        return set_bidirectional_iter_to_end(it);
+gsc_GenoLocation gsc_next_backwards(gsc_BidirectionalIterator* it) {
+    if (it->localPos == GSC_UNINIT) {
+        return gsc_set_bidirectional_iter_to_end(it);
     }
 
-    if (it->atStart) { //|| validate_bidirectional_cache(it) == FALSE) {
-        return INVALID_GENO_LOCATION;
+    if (it->atStart) { //|| validate_bidirectional_cache(it) == GSC_FALSE) {
+        return gsc_INVALID_GENO_LOCATION;
     }
 
-    if (it->group.num == NO_GROUP.num) {
+    if (it->group.num == gsc_NO_GROUP.num) {
 
         // Search for the previous value.
         if (it->localPos > 0) {
-            // The previous value is in the same AlleleMatrix
+            // The previous value is in the same gsc_AlleleMatrix
             it->localPos--;
-            it->atEnd = FALSE;
-            return (GenoLocation) {
+            it->atEnd = GSC_FALSE;
+            return (gsc_GenoLocation) {
                 .localAM = it->cachedAM,
                 .localPos = it->localPos
             };
 
         } else {
-            // The previous value is in the previous AlleleMatrix
+            // The previous value is in the previous gsc_AlleleMatrix
             if (it->cachedAMIndex == 0) {
-                it->atStart = TRUE;
-                return INVALID_GENO_LOCATION;
+                it->atStart = GSC_TRUE;
+                return gsc_INVALID_GENO_LOCATION;
             } else {
-                AlleleMatrix* nextAM = it->cachedAM;
+                gsc_AlleleMatrix* nextAM = it->cachedAM;
                 int nextAMIndex = it->cachedAMIndex;
                 do {
                     nextAMIndex--;
-                    nextAM = get_nth_AlleleMatrix(it->d->m, nextAMIndex);
+                    nextAM = gsc_get_nth_AlleleMatrix(it->d->m, nextAMIndex);
                 } while (nextAM != NULL && nextAM->n_genotypes == 0);
 
                 if (nextAM == NULL) {
-                    it->atStart = TRUE;
-                    return INVALID_GENO_LOCATION;
+                    it->atStart = GSC_TRUE;
+                    return gsc_INVALID_GENO_LOCATION;
                 } else {
                     it->cachedAM = nextAM;
                     it->cachedAMIndex = nextAMIndex;
                     it->localPos = it->cachedAM->n_genotypes - 1;
-                    it->atEnd = FALSE;
-                    return (GenoLocation) {
+                    it->atEnd = GSC_FALSE;
+                    return (gsc_GenoLocation) {
                         .localAM = it->cachedAM,
                         .localPos = it->localPos
                     };
@@ -1743,8 +1706,8 @@ GenoLocation next_backwards(BidirectionalIterator* it) {
             if (it->localPos > 0) {
                 for (--it->localPos; it->localPos >= 0; --it->localPos) {
                     if (it->cachedAM->groups[it->localPos].num == it->group.num) {
-                        it->atEnd = FALSE;
-                        return (GenoLocation) {
+                        it->atEnd = GSC_FALSE;
+                        return (gsc_GenoLocation) {
                             .localAM = it->cachedAM,
                             .localPos = it->localPos
                         };
@@ -1753,27 +1716,27 @@ GenoLocation next_backwards(BidirectionalIterator* it) {
             }
 
             if (it->cachedAMIndex == 0) {
-                it->atStart = TRUE;
+                it->atStart = GSC_TRUE;
                 it->localPos = 0;
-                return INVALID_GENO_LOCATION;
+                return gsc_INVALID_GENO_LOCATION;
             } else {
-                AlleleMatrix* nextAM = it->cachedAM;
+                gsc_AlleleMatrix* nextAM = it->cachedAM;
                 int nextAMIndex = it->cachedAMIndex;
                 do {
                     nextAMIndex--;
-                    nextAM = get_nth_AlleleMatrix(it->d->m, nextAMIndex);
+                    nextAM = gsc_get_nth_AlleleMatrix(it->d->m, nextAMIndex);
                 } while (nextAM != NULL && nextAM->n_genotypes == 0);
 
                 if (nextAM == NULL) {
-                    it->atStart = TRUE;
-                    return INVALID_GENO_LOCATION;
+                    it->atStart = GSC_TRUE;
+                    return gsc_INVALID_GENO_LOCATION;
                 } else {
                     it->cachedAM = nextAM;
                     it->cachedAMIndex = nextAMIndex;
                     it->localPos = it->cachedAM->n_genotypes - 1;
                     if (it->cachedAM->groups[it->localPos].num == it->group.num) {
-                        it->atEnd = FALSE;
-                        return (GenoLocation) {
+                        it->atEnd = GSC_FALSE;
+                        return (gsc_GenoLocation) {
                             .localAM = it->cachedAM,
                             .localPos = it->localPos
                         };
@@ -1785,38 +1748,40 @@ GenoLocation next_backwards(BidirectionalIterator* it) {
 }
 
 
-/** Get a location by index using a RandomAccessIterator
+/** Get a location by index using a gsc_RandomAccessIterator
  *
  * Gives the location of the provided global index (if `it->group == 0`)
  * or the location of the provided group index (if `it->group` is not 0),
- * by first searching the RandomAccessIterator's cache for it and if
- * not, searching the SimData for it and adding it and its predecessors
+ * by first searching the gsc_RandomAccessIterator's cache for it and if
+ * not, searching the gsc_SimData for it and adding it and its predecessors
  * to the cache.
  *
- * Returns INVALID_GENO_LOCATION
+ * Returns gsc_INVALID_GENO_LOCATION
  * if the iterator is corrupted or the index is invalid. Check the
- * return value with @see isValidLocation().
+ * return value with @ref gsc_IS_VALID_LOCATION().
  *
- * @param it the RandomAccessIterator to read and update the cache of.
+ * @shortnamed{next_get_nth}
+ *
+ * @param it the gsc_RandomAccessIterator to read and update the cache of.
  * @param n If the iterator is iterating through all genotypes, the global 
  * index in the simulation of the genotype you want to access. If the iterator
  * is iterating through the group, the within-group index of the genotype 
  * you want to access. In either case the first genotype is at index 0.
  * @returns the location of the nth genotype/nth group member, or
- * INVALID_GENO_LOCATION if the index is invalid.
+ * gsc_INVALID_GENO_LOCATION if the index is invalid.
  */
-GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n) {
+gsc_GenoLocation gsc_next_get_nth(gsc_RandomAccessIterator* it, const unsigned int n) {
     // Step 0: First check n is in our group index range as far as we know it
     // (If it->groupSize is negative then we don't know the range)
     if (it->groupSize > 0 && it->groupSize <= n) {
-        return INVALID_GENO_LOCATION;
+        return gsc_INVALID_GENO_LOCATION;
     }
 
     // Step 1: Check if we have it in the cache.
     if (n < it->cacheSize) {
         // 'n' is less than or equal to our current furthest cached group member.
 
-        if (IS_VALID_LOCATION(it->cache[n])) {
+        if (gsc_IS_VALID_LOCATION(it->cache[n])) {
             return it->cache[n];
         }
 
@@ -1831,13 +1796,13 @@ GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n) {
         while (newCacheSize < n+1) {
             newCacheSize = newCacheSize << 1;
         }
-        GenoLocation* newCache = get_malloc(sizeof(GenoLocation)*newCacheSize);
+        gsc_GenoLocation* newCache = gsc_malloc_wrap(sizeof(gsc_GenoLocation)*newCacheSize);
         int i = 0;
         for (; i < it->cacheSize; ++i) {
             newCache[i] = it->cache[i];
         }
         for (; i < newCacheSize; ++i) {
-            newCache[i] = INVALID_GENO_LOCATION;
+            newCache[i] = gsc_INVALID_GENO_LOCATION;
         }
         it->cacheSize = newCacheSize;
         it->cache = newCache;
@@ -1845,28 +1810,28 @@ GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n) {
 
     // Validity checks for a random access iterator: largestCached must exist,
     // is indeed cached and belongs to the same group
-    if (it->largestCached < 0 || (!IS_VALID_LOCATION(it->cache[it->largestCached]) &&
-            (it->group.num == NO_GROUP.num || it->group.num != get_group(it->cache[it->largestCached]).num))) {
-        return INVALID_GENO_LOCATION;
+    if (it->largestCached < 0 || (!gsc_IS_VALID_LOCATION(it->cache[it->largestCached]) &&
+            (it->group.num == gsc_NO_GROUP.num || it->group.num != gsc_get_group(it->cache[it->largestCached]).num))) {
+        return gsc_INVALID_GENO_LOCATION;
     }
 
     // Step 2: Actually finding the nth group member.
-    if (it->group.num == NO_GROUP.num) {
-        // Assuming all non-end AlleleMatrix are filled to CONTIG_WIDTH
-        GenoLocation expectedLocation = {
-            .localAM = get_nth_AlleleMatrix(it->d->m, n / CONTIG_WIDTH),
+    if (it->group.num == gsc_NO_GROUP.num) {
+        // Assuming all non-end gsc_AlleleMatrix are filled to CONTIG_WIDTH
+        gsc_GenoLocation expectedLocation = {
+            .localAM = gsc_get_nth_AlleleMatrix(it->d->m, n / CONTIG_WIDTH),
             .localPos = n % CONTIG_WIDTH
         };
         // Check n was not too large
         if (expectedLocation.localAM == NULL ||
                 expectedLocation.localAM->n_genotypes <= expectedLocation.localPos) {
-            return INVALID_GENO_LOCATION;
+            return gsc_INVALID_GENO_LOCATION;
         }
         return expectedLocation;
 
     } else { // searching for a particular group
 
-        AlleleMatrix* currentAM;
+        gsc_AlleleMatrix* currentAM;
         int groupN;
         int localPos;
         if (it->largestCached < n) {
@@ -1879,7 +1844,7 @@ GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n) {
                     // If we found a group member, cache it and count upwards towards n
                     if (currentAM->groups[localPos].num == it->group.num) {
                         it->largestCached = ++groupN;
-                        it->cache[groupN] = (GenoLocation) {
+                        it->cache[groupN] = (gsc_GenoLocation) {
                             .localAM = currentAM,
                             .localPos = localPos
                         };
@@ -1892,7 +1857,7 @@ GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n) {
                 if (currentAM->next == NULL || currentAM->next->n_genotypes == 0) {
                     // We are at the end of the iterator and have not found n
                     it->groupSize = groupN + 1;
-                    return INVALID_GENO_LOCATION;
+                    return gsc_INVALID_GENO_LOCATION;
                 } else {
                     currentAM = currentAM->next;
                     localPos = 0;
@@ -1903,7 +1868,7 @@ GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n) {
         } else {
             // With current method of filling cache, this branch will never be taken
 
-            // Search backwards from largestCached for one AlleleMatrix, to take advantage of that pointer
+            // Search backwards from largestCached for one gsc_AlleleMatrix, to take advantage of that pointer
             if (it->cache[it->largestCached].localAM != it->d->m) {
                 currentAM = it->cache[it->largestCached].localAM;
                 groupN = it->largestCached;
@@ -1912,7 +1877,7 @@ GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n) {
                     // If we found a group member, cache it and count down towards n
                     if (currentAM->groups[localPos].num == it->group.num) {
                         --groupN;
-                        it->cache[groupN] = (GenoLocation) {
+                        it->cache[groupN] = (gsc_GenoLocation) {
                             .localAM = currentAM,
                             .localPos = localPos
                         };
@@ -1932,7 +1897,7 @@ GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n) {
                     // If we found a group member, cache it and count upwards towards n
                     if (currentAM->groups[localPos].num == it->group.num) {
                         ++groupN;
-                        it->cache[groupN] = (GenoLocation) {
+                        it->cache[groupN] = (gsc_GenoLocation) {
                             .localAM = currentAM,
                             .localPos = localPos
                         };
@@ -1946,7 +1911,7 @@ GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n) {
                     // We are at the end of the iterator and have not found n. Also we didn't reach
                     // 'largestCached' yet. Something is wrong with the iterator
                     it->groupSize = groupN + 1;
-                    return INVALID_GENO_LOCATION;
+                    return gsc_INVALID_GENO_LOCATION;
                 } else {
                     currentAM = currentAM->next;
                     localPos = 0;
@@ -1955,7 +1920,7 @@ GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n) {
 
             // We were somehow unable to find the nth group member. Something is probably wrong
             // with the iterator
-            return INVALID_GENO_LOCATION;
+            return gsc_INVALID_GENO_LOCATION;
 
         }
     }
@@ -1963,17 +1928,17 @@ GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n) {
 
 /** Returns the name of the genotype with a given id.
  *
- * The function uses a bisection search on the AlleleMatrix where it should be
+ * The function uses a bisection search on the gsc_AlleleMatrix where it should be
  * found. Searching by id is therefore fast.
- * @see get_from_ordered_pedigree_list()
+ * @see gsc_get_from_ordered_pedigree_list()
  *
- * This function assumes that ids are never reshuffled in the SimData. This is true
- * as long as condense_allele_matrix's process of moving genotypes while retaining
+ * This function assumes that ids are never reshuffled in the gsc_SimData. This is true
+ * as long as gsc_condense_allele_matrix's process of moving genotypes while retaining
  * their order is the only genotype-rearranging function in use.
  * This function's algorithm will need to
  * be revisited if different genotype-rearranging processes are implemented.
  *
- * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * @param start Pointer to the first of a linked list of gsc_AlleleMatrixes in which
  * the genotype with the provided id is assumed to be found.
  * @param id the id of the genotype whose name is sought
  * @returns the name of the genotype that has id `id`, as a copy of the pointer
@@ -1981,24 +1946,24 @@ GenoLocation next_get_nth(RandomAccessIterator* it, const unsigned int n) {
  * from this function). Returns NULL if the ID does not exist. Note the return value
  * might also be NULL if the genotype of this ID has no name.
  */
-char* get_name_of_id( const AlleleMatrix* start, const PedigreeID id) {
-    if (id.id == NO_PEDIGREE.id) {
+char* gsc_get_name_of_id( const gsc_AlleleMatrix* start, const gsc_PedigreeID id) {
+    if (id.id == gsc_NO_PEDIGREE.id) {
         warning( "Invalid ID %d\n", id.id);
 		return NULL;
 	}
 	if (start == NULL) {
 		error( "Invalid nonexistent allelematrix\n");
 	}
-    const AlleleMatrix* m = start;
+    const gsc_AlleleMatrix* m = start;
 
 	while (1) {
         // try to find our id. Does this AM potentially have the right range for it?
         // If we're not sure, because either of the endpoints does not have its ID tracked,
         // check anyway
-        if (m->n_genotypes != 0 && (id.id >= m->ids[0].id || m->ids[0].id == NO_PEDIGREE.id) &&
-                (id.id <= m->ids[m->n_genotypes - 1].id || m->ids[m->n_genotypes - 1].id == NO_PEDIGREE.id)) {
+        if (m->n_genotypes != 0 && (id.id >= m->ids[0].id || m->ids[0].id == gsc_NO_PEDIGREE.id) &&
+                (id.id <= m->ids[m->n_genotypes - 1].id || m->ids[m->n_genotypes - 1].id == gsc_NO_PEDIGREE.id)) {
 
-            int index = get_from_ordered_pedigree_list(id, m->n_genotypes, m->ids);
+            int index = gsc_get_from_ordered_pedigree_list(id, m->n_genotypes, m->ids);
 
             if (index < 0) {
                 // search failed
@@ -2024,77 +1989,20 @@ char* get_name_of_id( const AlleleMatrix* start, const PedigreeID id) {
     }
 }
 
-/** Returns the alleles at each marker of the genotype with a given id.
- *
- * The function uses a bisection search on the AlleleMatrix where it should be
- * found. Searching by id is therefore fast.
- * @see get_from_ordered_pedigree_list()
- *
- * This function assumes that ids are never reshuffled in the SimData. This is true
- * as long as condense_allele_matrix's process of moving genotypes while retaining
- * their order is the only genotype-rearranging function in use.
- * This function's algorithm will need to
- * be revisited if different genotype-rearranging processes are implemented.
- *
- * @param start Pointer to the first of a linked list of AlleleMatrixes in which
- * the genotype with the provided id is assumed to be found.
- * @param id the id of the genotype whose alleles are sought
- * @returns the alleles of the genotype that has id `id`, as a copy of the pointer
- * to the heap memory where the genotype is saved (so *don't* free the pointer returned
- * from this function). It points to a sequence of characters, ordered according to
- * the markers in the SimData to which the AlleleMatrix belongs. Returns NULL if the
- * ID does not exist.
- */
-char* get_genes_of_id ( const AlleleMatrix* start, const PedigreeID id) {
-	if (start == NULL) {
-		error( "Invalid nonexistent allelematrix\n");
-	}
-    const AlleleMatrix* m = start;
-
-	while (1) {
-		// try to find our id. Does this AM have the right range for it?
-        if (m->n_genotypes != 0 && id.id >= m->ids[0].id && id.id <= m->ids[m->n_genotypes - 1].id) {
-			// perform binary search to find the exact index.
-            int index = get_from_ordered_pedigree_list(id, m->n_genotypes, m->ids);
-
-			if (index < 0) {
-				// search failed
-				if (m->next == NULL) {
-                    warning( "Could not find the ID %d: did you prematurely delete this genotype?\n", id.id);
-					return NULL;
-				} else {
-					m = m->next;
-					continue;
-				}
-			}
-
-			return m->alleles[index];
-
-		}
-
-		if (m->next == NULL) {
-            warning( "Could not find the ID %d: did you prematurely delete this genotype?\n", id.id);
-			return NULL;
-		} else {
-			m = m->next;
-		}
-	}
-}
-
 /** Saves the ids of the parents of a genotype with a particular id to
  * the output array `output`.
  *
- * The function uses a bisection search on the AlleleMatrix where it should be
+ * The function uses a bisection search on the gsc_AlleleMatrix where it should be
  * found. Searching by id is therefore fast.
- * @see get_from_ordered_pedigree_list()
+ * @see gsc_get_from_ordered_pedigree_list()
  *
- * This function assumes that ids are never reshuffled in the SimData. This is true
- * as long as condense_allele_matrix's process of moving genotypes while retaining
+ * This function assumes that ids are never reshuffled in the gsc_SimData. This is true
+ * as long as gsc_condense_allele_matrix's process of moving genotypes while retaining
  * their order is the only genotype-rearranging function in use.
  * This function's algorithm will need to
  * be revisited if different genotype-rearranging processes are implemented.
  *
- * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * @param start Pointer to the first of a linked list of gsc_AlleleMatrixes in which
  * the genotype with the provided id is assumed to be found.
  * @param id the id of the genotype whose parents are sought
  * @param output An array which the calling function can access where this function
@@ -2104,19 +2012,19 @@ char* get_genes_of_id ( const AlleleMatrix* start, const PedigreeID id) {
  * not exist. The ids of both parents if at least one parent is
  * known/nonzero are saved to the array `output`.
  */
-int get_parents_of_id( const AlleleMatrix* start, const PedigreeID id, PedigreeID output[2]) {
-    if (id.id == NO_PEDIGREE.id) {
+int gsc_get_parents_of_id( const gsc_AlleleMatrix* start, const gsc_PedigreeID id, gsc_PedigreeID output[2]) {
+    if (id.id == gsc_NO_PEDIGREE.id) {
 		return 1;
 	}
 	if (start == NULL) {
 		error( "Invalid nonexistent allelematrix\n");
 	}
-    const AlleleMatrix* m = start;
+    const gsc_AlleleMatrix* m = start;
 	while (1) {
 		// try to find our id. Does this AM have the right range for it?
         if (m->n_genotypes != 0 && id.id >= m->ids[0].id && id.id <= m->ids[m->n_genotypes - 1].id) {
 			// perform binary search to find the exact index.
-            int index = get_from_ordered_pedigree_list(id, m->n_genotypes, m->ids);
+            int index = gsc_get_from_ordered_pedigree_list(id, m->n_genotypes, m->ids);
 
 			if (index < 0) {
 				// search failed
@@ -2129,7 +2037,7 @@ int get_parents_of_id( const AlleleMatrix* start, const PedigreeID id, PedigreeI
                 continue;
             } else {
 
-                if (m->pedigrees[0][index].id != NO_PEDIGREE.id || m->pedigrees[1][index].id != NO_PEDIGREE.id) {
+                if (m->pedigrees[0][index].id != gsc_NO_PEDIGREE.id || m->pedigrees[1][index].id != gsc_NO_PEDIGREE.id) {
                     output[0] = m->pedigrees[0][index];
                     output[1] = m->pedigrees[1][index];
                     return 0;
@@ -2148,13 +2056,13 @@ int get_parents_of_id( const AlleleMatrix* start, const PedigreeID id, PedigreeI
 	}
 }
 
-/** Search for genotypes with certain names in a linked list of AlleleMatrix and
+/** Search for genotypes with certain names in a linked list of gsc_AlleleMatrix and
  * save the ids of those names. Exits if any name cannot be found.
  *
  * This function must check every name in the linked list for matches, so will be
  * relatively slow.
  *
- * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * @param start Pointer to the first of a linked list of gsc_AlleleMatrixes in which
  * the genotype with the provided id is assumed to be found.
  * @param n_names the length of the array of names which are being sought.
  * @param names an array of names whose ids are being sought.
@@ -2162,9 +2070,9 @@ int get_parents_of_id( const AlleleMatrix* start, const PedigreeID id, PedigreeI
  * be accessed by the calling function. The ids of each name are saved to corresponding
  * indexes in the array this pointer points to.
  */
-void get_ids_of_names( const AlleleMatrix* start, const int n_names, const char* names[n_names], PedigreeID* output) {
+void gsc_get_ids_of_names( const gsc_AlleleMatrix* start, const int n_names, const char* names[n_names], gsc_PedigreeID* output) {
     if (start == NULL || (start->n_genotypes <= 0 && start->next == NULL)) {
-        warning("Invalid start parameter: AlleleMatrix* `start` must exist\n");
+        warning("Invalid start parameter: gsc_AlleleMatrix* `start` must exist\n");
         return;
     }
     if (n_names < 1) {
@@ -2174,18 +2082,18 @@ void get_ids_of_names( const AlleleMatrix* start, const int n_names, const char*
 
     int found;
 	//int ids = malloc(sizeof(int) * n_names);
-    const AlleleMatrix* m;
+    const gsc_AlleleMatrix* m;
 	int i, j;
 
 	for (i = 0; i < n_names; ++i) {
-		found = FALSE;
-        output[i] = NO_PEDIGREE;
+		found = GSC_FALSE;
+        output[i] = gsc_NO_PEDIGREE;
 		m = start;
 		while (1) {
 			// try to identify the name in this AM
 			for (j = 0; j < m->n_genotypes; ++j) {
 				if (strcmp(m->names[j], names[i]) == 0) {
-					found = TRUE;
+					found = GSC_TRUE;
 					output[i] = m->ids[j];
 					break;
 				}
@@ -2202,61 +2110,24 @@ void get_ids_of_names( const AlleleMatrix* start, const int n_names, const char*
 }
 
 /** Search for a genotype with parentage matching two given parent ids in a linked
- * list of AlleleMatrix, and return its id. Exits if such a child cannot be found.
+ * list of gsc_AlleleMatrix, and return its index. Exits if such a child cannot be found.
  *
  * This function must check every genotype in the linked list for matches, so will be
  * relatively slow.
  *
- * @param start Pointer to the first of a linked list of AlleleMatrixes in which
- * the child is assumed to be found.
- * @param parent1id one of the parents of the genotype must have this id.
- * @param parent2id the other parent of the genotype must have this id.
- * @returns the id of the first sequentially located genotype whose parents match the
- * two parent ids provided
- */
-PedigreeID get_id_of_child( const AlleleMatrix* start, const PedigreeID parent1id, const PedigreeID parent2id) {
-    if (start == NULL || (start->n_genotypes <= 0 && start->next == NULL)) {
-        warning("Invalid start parameter: AlleleMatrix* `start` must exist\n");
-        return NO_PEDIGREE;
-    }
-    const AlleleMatrix* m = start;
-	int j;
-
-	while (1) {
-		// try to identify the child in this AM
-		for (j = 0; j < m->n_genotypes; ++j) {
-            if ((parent1id.id == m->pedigrees[0][j].id && parent2id.id == m->pedigrees[1][j].id) ||
-                    (parent1id.id == m->pedigrees[1][j].id && parent2id.id == m->pedigrees[0][j].id)) {
-				return m->ids[j];
-			}
-		}
-
-		if ((m = m->next) == NULL) {
-            warning( "Didn't find the child of %d & %d\n", parent1id.id, parent2id.id);
-            return NO_PEDIGREE;
-		}
-	}
-}
-
-/** Search for a genotype with parentage matching two given parent ids in a linked
- * list of AlleleMatrix, and return its index. Exits if such a child cannot be found.
- *
- * This function must check every genotype in the linked list for matches, so will be
- * relatively slow.
- *
- * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * @param start Pointer to the first of a linked list of gsc_AlleleMatrixes in which
  * the child is assumed to be found.
  * @param parent1id one of the parents of the genotype must have this id.
  * @param parent2id the other parent of the genotype must have this id.
  * @returns the index (0-based, starting at the start of `start`) of the first sequentially
  * located genotype whose parents match the two parent ids provided
  */
-int get_index_of_child( const AlleleMatrix* start, const PedigreeID parent1id, const PedigreeID parent2id) {
+int gsc_get_index_of_child( const gsc_AlleleMatrix* start, const gsc_PedigreeID parent1id, const gsc_PedigreeID parent2id) {
     if (start == NULL || (start->n_genotypes <= 0 && start->next == NULL)) {
-        warning("Invalid start parameter: AlleleMatrix* `start` must exist\n");
-        return UNINITIALISED;
+        warning("Invalid start parameter: gsc_AlleleMatrix* `start` must exist\n");
+        return GSC_UNINIT;
     }
-    const AlleleMatrix* m = start;
+    const gsc_AlleleMatrix* m = start;
 	int j, total_j = 0;
 
 	while (1) {
@@ -2275,23 +2146,23 @@ int get_index_of_child( const AlleleMatrix* start, const PedigreeID parent1id, c
 }
 
 /** Search for a genotype with a particular name in a linked
- * list of AlleleMatrix, and return its index. Exits if such a child cannot be found.
+ * list of gsc_AlleleMatrix, and return its index. Exits if such a child cannot be found.
  *
  * This function must check every genotype in the linked list for matches, so will be
  * relatively slow.
  *
- * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * @param start Pointer to the first of a linked list of gsc_AlleleMatrixes in which
  * the genotype is assumed to be found.
  * @param name a string to match to the name of the target
  * @returns the index (0-based, starting at the start of `start`) of the first sequentially
  * located genotype whose name is the same as the provided name.
  */
-int get_index_of_name( const AlleleMatrix* start, const char* name) {
+int gsc_get_index_of_name( const gsc_AlleleMatrix* start, const char* name) {
     if (start == NULL || (start->n_genotypes <= 0 && start->next == NULL)) {
-        warning("Invalid start parameter: AlleleMatrix* `start` must exist\n");
-        return UNINITIALISED;
+        warning("Invalid start parameter: gsc_AlleleMatrix* `start` must exist\n");
+        return GSC_UNINIT;
     }
-    const AlleleMatrix* m = start;
+    const gsc_AlleleMatrix* m = start;
 	int j, total_j = 0;
 
 	while (1) {
@@ -2312,19 +2183,19 @@ int get_index_of_name( const AlleleMatrix* start, const char* name) {
  * starting at the first entry of `start` and continuing through the linked list
  * to which `start` belongs. Exits if the linked list does not contain that index.
  *
- * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * @param start Pointer to the first of a linked list of gsc_AlleleMatrixes in which
  * to locate the id at a particular index.
  * @param index the index of the target. It is assumed to start at 0 at the start
  * of the matrix in `start` and be incremented up until the last entry in the matrix
  * of the last entry in the linked list.
  * @returns the lifetime-unique id of the genotype found at that index.
  */
-PedigreeID get_id_of_index( const AlleleMatrix* start, const int index) {
+gsc_PedigreeID gsc_get_id_of_index( const gsc_AlleleMatrix* start, const int index) {
     if (start == NULL) {
-        warning("Invalid start parameter: AlleleMatrix* `start` must exist\n");
-        return NO_PEDIGREE;
+        warning("Invalid start parameter: gsc_AlleleMatrix* `start` must exist\n");
+        return gsc_NO_PEDIGREE;
     }
-    const AlleleMatrix* m = start;
+    const gsc_AlleleMatrix* m = start;
 	int total_j = 0;
 
 	while (1) {
@@ -2337,7 +2208,7 @@ PedigreeID get_id_of_index( const AlleleMatrix* start, const int index) {
 
 		if ((m = m->next) == NULL) {
 			warning( "Didn't find the index %d\n", index);
-            return NO_PEDIGREE;
+            return gsc_NO_PEDIGREE;
 		}
 	}
 }
@@ -2346,7 +2217,7 @@ PedigreeID get_id_of_index( const AlleleMatrix* start, const int index) {
  * starting at the first entry of `start` and continuing through the linked list
  * to which `start` belongs. Exits if the linked list does not contain that index.
  *
- * @param start Pointer to the first of a linked list of AlleleMatrixes in which
+ * @param start Pointer to the first of a linked list of gsc_AlleleMatrixes in which
  * to locate the id at a particular index.
  * @param index the index of the target. It is assumed to start at 0 at the start
  * of the matrix in `start` and be incremented up until the last entry in the matrix
@@ -2354,9 +2225,9 @@ PedigreeID get_id_of_index( const AlleleMatrix* start, const int index) {
  * @returns the alleles of the genotype that has idnex `index`, as a copy of the pointer
  * to the heap memory where the genotype is saved (so *don't* free the pointer returned
  * from this function). It points to a sequence of characters, ordered according to
- * the markers in the SimData to which the AlleleMatrix belongs.
+ * the markers in the gsc_SimData to which the gsc_AlleleMatrix belongs.
  */
-char* get_genes_of_index( const AlleleMatrix* start, const int index) {
+char* gsc_get_genes_of_index( const gsc_AlleleMatrix* start, const int index) {
 	if (index < 0) {
 		warning( "Invalid negative index %d\n", index);
 		return NULL;
@@ -2364,7 +2235,7 @@ char* get_genes_of_index( const AlleleMatrix* start, const int index) {
 	if (start == NULL) {
 		error( "Invalid nonexistent allelematrix\n");
 	}
-    const AlleleMatrix* m = start;
+    const gsc_AlleleMatrix* m = start;
 	int total_j = 0;
 
 	while (1) {
@@ -2391,23 +2262,25 @@ char* get_genes_of_index( const AlleleMatrix* start, const int index) {
  * The function does so by setting the group membership of every genotype
  * belonging to one of the groups to the same group number.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{combine_groups}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param list_len the number of groups to be combined
  * @param group_ids an array of group numbers containing the groups that
  * are to be combined.
  * @returns the group number of the new combined group.
  */
-GroupNum combine_groups( SimData* d, const int list_len, const GroupNum group_ids[list_len]) {
+gsc_GroupNum gsc_combine_groups( gsc_SimData* d, const int list_len, const gsc_GroupNum group_ids[list_len]) {
 
     // Find the first group in the list that exists. In most use cases this will be the
     // first group in the list, so not too much of a performance penalty.
-    GroupNum outGroup = NO_GROUP;
+    gsc_GroupNum outGroup = gsc_NO_GROUP;
     int i = 0;
     for (; i < list_len; ++i) {
-        GroupNum candidate = group_ids[i];
-        BidirectionalIterator testit = create_bidirectional_iter(d,candidate);
-        GenoLocation testloc = next_forwards(&testit);
-        if (IS_VALID_LOCATION(testloc)) {
+        gsc_GroupNum candidate = group_ids[i];
+        gsc_BidirectionalIterator testit = gsc_create_bidirectional_iter(d,candidate);
+        gsc_GenoLocation testloc = gsc_next_forwards(&testit);
+        if (gsc_IS_VALID_LOCATION(testloc)) {
             outGroup = candidate;
             break;
         }
@@ -2420,13 +2293,13 @@ GroupNum combine_groups( SimData* d, const int list_len, const GroupNum group_id
         if (group_ids[i].num == group_ids[i+1].num) {
             return outGroup;
         }
-        BidirectionalIterator it = create_bidirectional_iter(d,group_ids[i+1]);
-        GenoLocation loc = next_forwards(&it);
-        int anyFound = IS_VALID_LOCATION(loc);
+        gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d,group_ids[i+1]);
+        gsc_GenoLocation loc = gsc_next_forwards(&it);
+        int anyFound = gsc_IS_VALID_LOCATION(loc);
 
-        while (IS_VALID_LOCATION(loc)) {
-            set_group(loc,outGroup);
-            loc = next_forwards(&it);
+        while (gsc_IS_VALID_LOCATION(loc)) {
+            gsc_set_group(loc,outGroup);
+            loc = gsc_next_forwards(&it);
         }
 
         if (anyFound) {
@@ -2436,36 +2309,36 @@ GroupNum combine_groups( SimData* d, const int list_len, const GroupNum group_id
 
 	} else {
         int anyFound[remaininglistlen];
-        memset(anyFound, FALSE, sizeof(int)*remaininglistlen);
+        memset(anyFound, GSC_FALSE, sizeof(int)*remaininglistlen);
         int isDuplicate[remaininglistlen];
-        memset(isDuplicate, FALSE, sizeof(int)*remaininglistlen);
+        memset(isDuplicate, GSC_FALSE, sizeof(int)*remaininglistlen);
         for (int ii = i; ii < list_len; ++ii) {
             for (int jj = ii+1; jj < list_len; ++jj) {
                 if (group_ids[ii].num == group_ids[jj].num) {
-                    isDuplicate[jj-i] = TRUE;
+                    isDuplicate[jj-i] = GSC_TRUE;
                 }
             }
         }
 
-        BidirectionalIterator it = create_bidirectional_iter(d,NO_GROUP);
-        GroupNum cachedgroup = NO_GROUP; // just for speedier lookups. Groups tend to be stored contiguous in most simulations.
-        GenoLocation loc = next_forwards(&it);
+        gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d,gsc_NO_GROUP);
+        gsc_GroupNum cachedgroup = gsc_NO_GROUP; // just for speedier lookups. Groups tend to be stored contiguous in most simulations.
+        gsc_GenoLocation loc = gsc_next_forwards(&it);
 
-        while (IS_VALID_LOCATION(loc)) {
-            if (get_group(loc).num == cachedgroup.num) {
-                set_group(loc,outGroup);
+        while (gsc_IS_VALID_LOCATION(loc)) {
+            if (gsc_get_group(loc).num == cachedgroup.num) {
+                gsc_set_group(loc,outGroup);
             } else {
                 for (int k = i+1; k < list_len; ++k) {
-                    if (get_group(loc).num == group_ids[k].num) {
-                        set_group(loc,outGroup);
+                    if (gsc_get_group(loc).num == group_ids[k].num) {
+                        gsc_set_group(loc,outGroup);
                         cachedgroup = group_ids[k];
-                        anyFound[k-i] = TRUE;
+                        anyFound[k-i] = GSC_TRUE;
                         break;
                     }
                 }
             }
 
-            loc = next_forwards(&it);
+            loc = gsc_next_forwards(&it);
         }
 
         int groupsgone = 0;
@@ -2485,26 +2358,28 @@ GroupNum combine_groups( SimData* d, const int list_len, const GroupNum group_id
  * Does not check if all the indexes are valid/if all indexes have successfully
  * had their groups changed.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{make_group_from}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param n the number of indexes provided
- * @param indexes_to_split an array containing the indexes (0-based, starting
+ * @param genotype_indexes an array containing the indexes (0-based, starting
  * at the first entry at `d->m`) of the genotypes to allocate to the new group.
  * @returns the group number of the new group to which the provided indexes
  * have been allocated.
  */
-GroupNum split_from_group( SimData* d, const int n, const unsigned int indexes_to_split[n]) {
+gsc_GroupNum gsc_make_group_from( gsc_SimData* d, const int n, const unsigned int genotype_indexes[n]) {
     if (n < 1) {
         warning("Invalid n value: length of allocation list must be positive.\n");
-        return NO_GROUP;
+        return gsc_NO_GROUP;
     }
 	
-    GroupNum newGroup = get_new_group_num(d);
-	RandomAccessIterator it = create_randomaccess_iter(d, NO_GROUP);
+    gsc_GroupNum newGroup = gsc_get_new_group_num(d);
+	gsc_RandomAccessIterator it = gsc_create_randomaccess_iter(d, gsc_NO_GROUP);
     unsigned int invalidLocations = 0;
     for (int i = 0; i < n; ++i) {
-		GenoLocation loc = next_get_nth(&it, indexes_to_split[i]);
-        if (IS_VALID_LOCATION(loc)) {
-            set_group(loc,newGroup);
+		gsc_GenoLocation loc = gsc_next_get_nth(&it, genotype_indexes[i]);
+        if (gsc_IS_VALID_LOCATION(loc)) {
+            gsc_set_group(loc,newGroup);
         } else {
             invalidLocations++;
         }
@@ -2529,7 +2404,9 @@ GroupNum split_from_group( SimData* d, const int n, const unsigned int indexes_t
  * Returns 0 for invalid parameters, or if no genotypes were found that fit the
  * criteria to be moved to the new group.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{split_by_label_value}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group If `group` > 0, then only genotypes with group number `group`
  * AND `whichLabel` value `valueToSplit` will be moved to the new group. Otherwise,
  * all genotypes with `whichLabel` value `valueToSplit` will be moved to the next group.
@@ -2539,32 +2416,32 @@ GroupNum split_from_group( SimData* d, const int n, const unsigned int indexes_t
  * @returns the group number of the new group to which the genotypes with that value
  * for that label were allocated, or 0 if no genotypes that fit the criteria were found.
  */
-GroupNum split_by_label_value( SimData* d, const GroupNum group, const LabelID whichLabel, const int valueToSplit) {
+gsc_GroupNum gsc_split_by_label_value( gsc_SimData* d, const gsc_GroupNum group, const gsc_LabelID whichLabel, const int valueToSplit) {
     int labelIndex;
-    if (whichLabel.id == NOT_A_LABEL.id || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+    if (whichLabel.id == gsc_NOT_A_LABEL.id || (labelIndex = gsc_get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel.id);
-        return NO_GROUP;
+        return gsc_NO_GROUP;
     }
 	
-	GroupNum newGroup = get_new_group_num(d);
-    int anyFound = FALSE;
+	gsc_GroupNum newGroup = gsc_get_new_group_num(d);
+    int anyFound = GSC_FALSE;
 	
-    BidirectionalIterator it = create_bidirectional_iter(d, group);
-	GenoLocation loc = next_forwards(&it);
-    while (IS_VALID_LOCATION(loc)) {
-		if (get_label_value(loc,labelIndex) == valueToSplit) {
-			set_group(loc,newGroup);
-			anyFound = TRUE;
+    gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d, group);
+	gsc_GenoLocation loc = gsc_next_forwards(&it);
+    while (gsc_IS_VALID_LOCATION(loc)) {
+		if (gsc_get_label_value(loc,labelIndex) == valueToSplit) {
+			gsc_set_group(loc,newGroup);
+			anyFound = GSC_TRUE;
 		}
 		
-		loc = next_forwards(&it);
+		loc = gsc_next_forwards(&it);
 	}
 	
     if (anyFound) {
         d->n_groups++;
         return newGroup;
     } else {
-        return NO_GROUP;
+        return gsc_NO_GROUP;
     }
 
 }
@@ -2578,7 +2455,9 @@ GroupNum split_by_label_value( SimData* d, const GroupNum group, const LabelID w
  * Returns 0 for invalid parameters, or if no genotypes were found that fit the
  * criteria to be moved to the new group.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{split_by_label_range}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group If `group` > 0, then only genotypes with group number `group`
  * AND `whichLabel` value `valueToSplit` will be moved to the new group. Otherwise,
  * all genotypes with `whichLabel` value `valueToSplit` will be moved to the next group.
@@ -2590,37 +2469,37 @@ GroupNum split_by_label_value( SimData* d, const GroupNum group, const LabelID w
  * @returns the group number of the new group to which the genotypes with that value
  * for that label were allocated, or 0 if no genotypes that fit the criteria were found.
  */
-GroupNum split_by_label_range( SimData* d, const GroupNum group, const LabelID whichLabel, const int valueLowBound, const int valueHighBound) {
+gsc_GroupNum gsc_split_by_label_range( gsc_SimData* d, const gsc_GroupNum group, const gsc_LabelID whichLabel, const int valueLowBound, const int valueHighBound) {
     int labelIndex;
-    if (whichLabel.id == NOT_A_LABEL.id || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+    if (whichLabel.id == gsc_NOT_A_LABEL.id || (labelIndex = gsc_get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel.id);
-        return NO_GROUP;
+        return gsc_NO_GROUP;
     }
     if (valueLowBound > valueHighBound) {
         warning( "Empty range %d to %d: no group created\n", valueLowBound, valueHighBound);
-        return NO_GROUP;
+        return gsc_NO_GROUP;
     }
 
-    GroupNum newGroup = get_new_group_num(d);
-    int anyFound = FALSE; 
+    gsc_GroupNum newGroup = gsc_get_new_group_num(d);
+    int anyFound = GSC_FALSE; 
 	
-    BidirectionalIterator it = create_bidirectional_iter(d, group);
-	GenoLocation loc = next_forwards(&it);
-    while (IS_VALID_LOCATION(loc)) {
-		if (get_label_value(loc,labelIndex) >= valueLowBound &&
-				get_label_value(loc,labelIndex) <= valueHighBound) {
-			set_group(loc,newGroup);
-			anyFound = TRUE;
+    gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d, group);
+	gsc_GenoLocation loc = gsc_next_forwards(&it);
+    while (gsc_IS_VALID_LOCATION(loc)) {
+		if (gsc_get_label_value(loc,labelIndex) >= valueLowBound &&
+				gsc_get_label_value(loc,labelIndex) <= valueHighBound) {
+			gsc_set_group(loc,newGroup);
+			anyFound = GSC_TRUE;
 		}
 		
-		loc = next_forwards(&it);
+		loc = gsc_next_forwards(&it);
 	}
 
     if (anyFound) {
         d->n_groups++;
         return newGroup;
     } else {
-        return NO_GROUP; // no values with that label
+        return gsc_NO_GROUP; // no values with that label
     }
 }
 
@@ -2629,14 +2508,14 @@ GroupNum split_by_label_range( SimData* d, const GroupNum group, const LabelID w
  *
  *  Somequality: you don't know how many variants of that quality there are,
  *  so you don't initially know how many groups you will have.
- * @see _split_by_someallocation
+ * @see gsc_scaffold_split_by_someallocation
  *
- * Takes a parameter @a somequality_tester that uses a GenoLocation, somequality_data,
+ * Takes a parameter @a somequality_tester that uses a gsc_GenoLocation, somequality_data,
  * the maximum possible number of groups you're splitting into, the current number of new groups
  * that have allocations, and the list of potential group numbers for new groups. It should return
  * a group number (taken from some position in that final parameter) if the genotype
- * at that GenoLocation is to be added to one of the groups that already has allocations,
- * or return NO_GROUP if it is to be allocated to one of the groups beyond the [value of the
+ * at that gsc_GenoLocation is to be added to one of the groups that already has allocations,
+ * or return gsc_NO_GROUP if it is to be allocated to one of the groups beyond the [value of the
  * second-last parameter]th (This is so that this caller function can keep allocate new group
  * numbers and keep track of how many subgroups have been found).
  *
@@ -2646,24 +2525,24 @@ GroupNum split_by_label_range( SimData* d, const GroupNum group, const LabelID w
  *
  * @return number of groups created. May be less or more than @a maxentries_results.
 */
-unsigned int _split_by_somequality( SimData* d, const GroupNum group_id,  
+unsigned int gsc_scaffold_split_by_somequality( gsc_SimData* d, const gsc_GroupNum group_id,  
 		void* somequality_data,
-        GroupNum (*somequality_tester)(GenoLocation, void*, unsigned int, unsigned int, GroupNum*),
-        unsigned int maxentries_results, GroupNum results[maxentries_results]) {
+        gsc_GroupNum (*somequality_tester)(gsc_GenoLocation, void*, unsigned int, unsigned int, gsc_GroupNum*),
+        unsigned int maxentries_results, gsc_GroupNum results[maxentries_results]) {
 	
 	// Access existing groups (to be used to find unused group numbers,
 	// and to find maximum number of groups we'd be able to create)
-    GroupNum currentgroups[d->n_groups];
+    gsc_GroupNum currentgroups[d->n_groups];
     unsigned int currentsizes[d->n_groups];
-    int n_groups = get_existing_group_counts(d, currentgroups, currentsizes);
+    int n_groups = gsc_get_existing_group_counts(d, currentgroups, currentsizes);
     int bookmark = 0;
-    GroupNum nextgroup = NO_GROUP;
+    gsc_GroupNum nextgroup = gsc_NO_GROUP;
 
     unsigned int splitgroupsize = 0;
     for (int i = 0; i < n_groups; ++i) {
         if (currentgroups[i].num == group_id.num) {
             splitgroupsize = currentsizes[i];
-            //free(currentsizes);
+            //GSC_FREE(currentsizes);
             break;
         }
     }
@@ -2672,41 +2551,41 @@ unsigned int _split_by_somequality( SimData* d, const GroupNum group_id,
     }
 	
 	unsigned int subgroupsfound = 0;
-    GroupNum outgroups[splitgroupsize];
+    gsc_GroupNum outgroups[splitgroupsize];
 	
-	BidirectionalIterator it = create_bidirectional_iter(d,group_id);
-    GenoLocation loc = next_forwards(&it);
-    while (IS_VALID_LOCATION(loc)) {
-		// Return group number if it should be assigned to an already-extant group. Otherwise return NO_GROUP and this generic caller function will allocated it one. 
-		GroupNum assignedgroup = somequality_tester(loc, somequality_data,splitgroupsize, subgroupsfound, outgroups);
+	gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d,group_id);
+    gsc_GenoLocation loc = gsc_next_forwards(&it);
+    while (gsc_IS_VALID_LOCATION(loc)) {
+		// Return group number if it should be assigned to an already-extant group. Otherwise return gsc_NO_GROUP and this generic caller function will allocated it one. 
+		gsc_GroupNum assignedgroup = somequality_tester(loc, somequality_data,splitgroupsize, subgroupsfound, outgroups);
 		
-		if (assignedgroup.num == NO_GROUP.num) {
-			nextgroup = get_next_free_group_num(n_groups,currentgroups,&bookmark,nextgroup);
+		if (assignedgroup.num == gsc_NO_GROUP.num) {
+			nextgroup = gsc_get_next_free_group_num(n_groups,currentgroups,&bookmark,nextgroup);
 			assignedgroup = nextgroup;
 			outgroups[subgroupsfound] = nextgroup;
 			subgroupsfound++;	
 		}
 		
-		set_group(loc,assignedgroup);
+		gsc_set_group(loc,assignedgroup);
 		
-        loc = next_forwards(&it);
+        loc = gsc_next_forwards(&it);
     }
 	
-    //free(currentgroups);
+    //GSC_FREE(currentgroups);
     d->n_groups += subgroupsfound - 1;
 	
 	if (maxentries_results < subgroupsfound) { 
-		memcpy(results,outgroups,sizeof(GroupNum)*maxentries_results);
+		memcpy(results,outgroups,sizeof(gsc_GroupNum)*maxentries_results);
 		fprintf(stderr,"Output vector size is not large enough to hold all created groups: "
-                " output list of GroupNums has been truncated.\n");
+                " output list of gsc_GroupNums has been truncated.\n");
 	} else {
-		memcpy(results,outgroups,sizeof(GroupNum)*subgroupsfound);
+		memcpy(results,outgroups,sizeof(gsc_GroupNum)*subgroupsfound);
 	}
 	return subgroupsfound;
 }
 
-GroupNum __split_by_quality__halfsibtemplate(GenoLocation loc, void* datastore, unsigned int maxgroups, unsigned int groupsfound, GroupNum* results, PedigreeID (*getparent)(GenoLocation)) {
-	PedigreeID* familyidentities = (PedigreeID*) datastore;
+static gsc_GroupNum gsc_helper_split_by_quality_halfsibtemplate(gsc_GenoLocation loc, void* datastore, unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum* results, gsc_PedigreeID (*getparent)(gsc_GenoLocation)) {
+	gsc_PedigreeID* familyidentities = (gsc_PedigreeID*) datastore;
 	
 	for (int j = 0; j < groupsfound; ++j) {
 		if (getparent(loc).id == familyidentities[j].id) {
@@ -2715,15 +2594,15 @@ GroupNum __split_by_quality__halfsibtemplate(GenoLocation loc, void* datastore, 
 	}
 	
 	familyidentities[groupsfound] = getparent(loc);
-	return NO_GROUP;	
+	return gsc_NO_GROUP;	
 }
 
-GroupNum __split_by_quality__halfsib1(GenoLocation loc, void* datastore, unsigned int maxgroups, unsigned int groupsfound, GroupNum* results) {
-	return __split_by_quality__halfsibtemplate(loc,datastore,maxgroups,groupsfound,results,get_first_parent);
+static gsc_GroupNum gsc_helper_split_by_quality_halfsib1(gsc_GenoLocation loc, void* datastore, unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum* results) {
+	return gsc_helper_split_by_quality_halfsibtemplate(loc,datastore,maxgroups,groupsfound,results,gsc_get_first_parent);
 }
 
-GroupNum __split_by_quality__halfsib2(GenoLocation loc, void* datastore, unsigned int maxgroups, unsigned int groupsfound, GroupNum* results) {
-	return __split_by_quality__halfsibtemplate(loc,datastore,maxgroups,groupsfound,results,get_second_parent);
+static gsc_GroupNum gsc_helper_split_by_quality_halfsib2(gsc_GenoLocation loc, void* datastore, unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum* results) {
+	return gsc_helper_split_by_quality_halfsibtemplate(loc,datastore,maxgroups,groupsfound,results,gsc_get_second_parent);
 }
 
 /** Split a group into families of half-siblings by shared first or second parent.
@@ -2741,7 +2620,9 @@ GroupNum __split_by_quality__halfsib2(GenoLocation loc, void* datastore, unsigne
  *
  * Stops executing if group is empty or has only one member.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{split_into_halfsib_families}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group to be split
  * @param parent 1 to group together genotypes that share the same first parent,
  * 2 group those with the same second parent. Raises an error
@@ -2750,41 +2631,41 @@ GroupNum __split_by_quality__halfsib2(GenoLocation loc, void* datastore, unsigne
  * created groups. 
  * @return the number of halfsib families identified/number of groups created.
  */
-unsigned int split_into_halfsib_families( SimData* d, const GroupNum group_id, const int parent,
-                                          unsigned int maxentries_results, GroupNum results[maxentries_results]) {
+unsigned int gsc_split_into_halfsib_families( gsc_SimData* d, const gsc_GroupNum group_id, const int parent,
+                                          unsigned int maxentries_results, gsc_GroupNum results[maxentries_results]) {
 	if (!(parent == 1 || parent == 2)) {
 		warning( "Value error: `parent` must be 1 or 2.");
         results = NULL;
 		return 0;
 	}
 	
-	//PedigreeID* familyidentities = get_malloc(sizeof(PedigreeID)*maxgroups);
-    int maxgroups = get_group_size(d, group_id); // sadinefficient we have to do this
-	PedigreeID familyidentities[maxgroups];
+	//gsc_PedigreeID* familyidentities = gsc_malloc_wrap(sizeof(gsc_PedigreeID)*maxgroups);
+    int maxgroups = gsc_get_group_size(d, group_id); // sadinefficient we have to do this
+	gsc_PedigreeID familyidentities[maxgroups];
 	
 	unsigned int gcount;
 	if (parent == 1) {
-        gcount = _split_by_somequality(d, group_id, (void*)familyidentities,__split_by_quality__halfsib1, maxentries_results, results);
+        gcount = gsc_scaffold_split_by_somequality(d, group_id, (void*)familyidentities,gsc_helper_split_by_quality_halfsib1, maxentries_results, results);
 	} else {
-        gcount = _split_by_somequality(d, group_id, (void*)familyidentities, __split_by_quality__halfsib2, maxentries_results, results);
+        gcount = gsc_scaffold_split_by_somequality(d, group_id, (void*)familyidentities, gsc_helper_split_by_quality_halfsib2, maxentries_results, results);
 	}	
-	//free(familyidentities);
+	//GSC_FREE(familyidentities);
 	return gcount;
 }
 
-GroupNum __split_by_quality__family(GenoLocation loc, void* datastore, unsigned int maxgroups, unsigned int groupsfound, GroupNum* results) {
-    PedigreeID** familyidentities = (PedigreeID**) datastore;
+static gsc_GroupNum gsc_helper_split_by_quality_family(gsc_GenoLocation loc, void* datastore, unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum* results) {
+    gsc_PedigreeID** familyidentities = (gsc_PedigreeID**) datastore;
 	
 	for (int j = 0; j < groupsfound; ++j) {
-		if (get_first_parent(loc).id == familyidentities[0][j].id &&
-              get_second_parent(loc).id == familyidentities[1][j].id) {
+		if (gsc_get_first_parent(loc).id == familyidentities[0][j].id &&
+              gsc_get_second_parent(loc).id == familyidentities[1][j].id) {
             return results[j];
 		}
 	}
 	
-	familyidentities[0][groupsfound] = get_first_parent(loc);
-	familyidentities[1][groupsfound] = get_second_parent(loc);
-	return NO_GROUP;
+	familyidentities[0][groupsfound] = gsc_get_first_parent(loc);
+	familyidentities[1][groupsfound] = gsc_get_second_parent(loc);
+	return gsc_NO_GROUP;
 }
 
 /** Split a group into families by their pedigrees.
@@ -2797,35 +2678,37 @@ GroupNum __split_by_quality__family(GenoLocation loc, void* datastore, unsigned 
  * Individuals with both parents unknown will be grouped together.
  *
  * This function will overwrite the location @a results with a vector of
- * GroupNums representing the identifiers of the family groups created.
+ * gsc_GroupNums representing the identifiers of the family groups created.
  * The return value is the number of groups located. The vector saved in
  * @a results will be allocated on the heap and must be freed by the calling
  * function.
  *
  * Stops executing if group is empty or has only one member.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{split_into_families}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group to be split
  * @param results Pointer to a location to save the identifiers of the newly created family groups. 
  * @return the number of families identified/number of family groups created.
  * Also serves as the length of the array in @a results
  */
-unsigned int split_into_families(SimData* d, const GroupNum group_id, unsigned int maxentries_results, GroupNum results[maxentries_results]) {
-	PedigreeID** familyidentities[2];
-    unsigned int maxgroups = get_group_size(d, group_id); // sadinefficient we have to do this
+unsigned int gsc_split_into_families(gsc_SimData* d, const gsc_GroupNum group_id, unsigned int maxentries_results, gsc_GroupNum results[maxentries_results]) {
+	gsc_PedigreeID** familyidentities[2];
+    unsigned int maxgroups = gsc_get_group_size(d, group_id); // sadinefficient we have to do this
     if (maxgroups < 2) {
         return 0;
     }
-	PedigreeID* p1identity[maxgroups];
-	PedigreeID* p2identity[maxgroups];
+	gsc_PedigreeID* p1identity[maxgroups];
+	gsc_PedigreeID* p2identity[maxgroups];
 	familyidentities[0] = p1identity;
 	familyidentities[1] = p2identity;
 	
-    return _split_by_somequality(d, group_id, (void*)familyidentities, __split_by_quality__family, maxentries_results, results);
+    return gsc_scaffold_split_by_somequality(d, group_id, (void*)familyidentities, gsc_helper_split_by_quality_family, maxentries_results, results);
 }
 
-GroupNum __split_by_quality__individuate(GenoLocation loc, void* datastore, unsigned int maxgroups, unsigned int groupsfound, GroupNum* results) {
-	return NO_GROUP;
+static gsc_GroupNum gsc_helper_split_by_quality_individuate(gsc_GenoLocation loc, void* datastore, unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum* results) {
+	return gsc_NO_GROUP;
 }
 
 /** Split a group into n one-member groups.
@@ -2835,23 +2718,25 @@ GroupNum __split_by_quality__individuate(GenoLocation loc, void* datastore, unsi
  * in the group to a new group of 1).
  *
  * This function will overwrite the location @a results with a vector of
- * GroupNums representing the identifiers of the groups created.
+ * gsc_GroupNums representing the identifiers of the groups created.
  * The return value is the number of groups located. The vector saved in
  * @a results will be allocated on the heap and must be freed by the calling
  * function.
  *
  * Stops executing if group is empty or has only one member.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{split_into_individuals}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group to be split
  * @param results Pointer to a location to save the identifiers of the newly created family groups.
  * @return the number of groups created (in this case, the same as the size of
  * the original group). Also serves as the length of the array in @a results
  */
-unsigned int split_into_individuals( SimData* d, const GroupNum group_id, unsigned int maxentries_results, GroupNum results[maxentries_results]) {
+unsigned int gsc_split_into_individuals( gsc_SimData* d, const gsc_GroupNum group_id, unsigned int maxentries_results, gsc_GroupNum results[maxentries_results]) {
 	// **individuate** (verb): to make individuals of.
 	// yeah sorry.
-    return _split_by_somequality(d, group_id, NULL, __split_by_quality__individuate, maxentries_results, results);
+    return gsc_scaffold_split_by_somequality(d, group_id, NULL, gsc_helper_split_by_quality_individuate, maxentries_results, results);
 }
 
 
@@ -2866,25 +2751,27 @@ unsigned int split_into_individuals( SimData* d, const GroupNum group_id, unsign
  * If the original group size was odd, the new group/the return value
  * will have the slightly smaller size.
  *
- * A more general approach to this task: split_evenly_into_n()
+ * A more general approach to this task: @ref gsc_split_evenly_into_n()
  *
- * An alternate approach to splitting a group in two: split_randomly_into_two()
+ * An alternate approach to splitting a group in two: @ref gsc_split_randomly_into_two()
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{split_evenly_into_two}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group to be split
  * @returns the group number of the new group to which half the members
  * of the old group have been allocated.
  */
-GroupNum split_evenly_into_two(SimData* d, const GroupNum group_id) {
+gsc_GroupNum gsc_split_evenly_into_two(gsc_SimData* d, const gsc_GroupNum group_id) {
 	// get the shuffle to be our even allocations
-    unsigned int size = get_group_size(d, group_id);
+    unsigned int size = gsc_get_group_size(d, group_id);
     if (size < 2) {
         if (size < 1) {
             warning("Group %d does not exist\n", group_id.num);
         } else {
             warning("Group %d has only one member so can't be split\n", group_id.num);
         }
-        return NO_GROUP;
+        return gsc_NO_GROUP;
     }
 
     unsigned int even_half = size / 2;
@@ -2894,15 +2781,15 @@ GroupNum split_evenly_into_two(SimData* d, const GroupNum group_id) {
 	}
     shuffle_up_to( allocations, size, even_half);
 
-    GroupNum new_group = get_new_group_num(d);
-    //int anyFound = FALSE;
+    gsc_GroupNum new_group = gsc_get_new_group_num(d);
+    //int anyFound = GSC_FALSE;
 	
-    RandomAccessIterator it = create_randomaccess_iter(d,group_id);
+    gsc_RandomAccessIterator it = gsc_create_randomaccess_iter(d,group_id);
     for (unsigned int i = 0; i < even_half; ++i) {
-        GenoLocation loc = next_get_nth(&it,allocations[i]);
-        if (IS_VALID_LOCATION(loc)) {
-            set_group(loc,new_group);
-            //anyFound = TRUE;
+        gsc_GenoLocation loc = gsc_next_get_nth(&it,allocations[i]);
+        if (gsc_IS_VALID_LOCATION(loc)) {
+            gsc_set_group(loc,new_group);
+            //anyFound = GSC_TRUE;
         }
     }
 
@@ -2910,7 +2797,7 @@ GroupNum split_evenly_into_two(SimData* d, const GroupNum group_id) {
         d->n_groups++;
         return new_group;
     //} else {
-    //    return NO_GROUP;
+    //    return gsc_NO_GROUP;
     //}
 }
 
@@ -2918,41 +2805,41 @@ GroupNum split_evenly_into_two(SimData* d, const GroupNum group_id) {
 /** Split by some allocator (generic function)
  *
  *  Allocator: you know how many groups you're splitting into from the beginning.
- *  @see _split_by_somequality
+ *  @see gsc_scaffold_split_by_somequality
  *
- * Takes a parameter @a someallocator that uses a GenoLocation, SimData, someallocator_data,
+ * Takes a parameter @a someallocator that uses a gsc_GenoLocation, gsc_SimData, someallocator_data,
  * the total number of groups you're splitting into, the current number of new groups
  * that have allocations (as a pointer so someallocator can modify it to hold the number
  * of subgroups that have been found, which will become the return value of this function),
  * and the list of group numbers of new groups. It should return
  * a group number (taken from some position in that final parameter) if the genotype
- * at that GenoLocation is to be added to one of the groups that already has allocations,
- * or return NO_GROUP if allocation fails. If allocation fails the genotype will remain in
+ * at that gsc_GenoLocation is to be added to one of the groups that already has allocations,
+ * or return gsc_NO_GROUP if allocation fails. If allocation fails the genotype will remain in
  * the original group.
  *
  * @return number of groups created. May be @a n_outgroups or less.
 */
-unsigned int _split_by_someallocation( SimData* d, const GroupNum group_id, void* someallocator_data,
-        GroupNum (*someallocator)(GenoLocation, SimData*, void*, unsigned int, unsigned int*, GroupNum*),
-        unsigned int n_outgroups, GroupNum outgroups[n_outgroups]) {
+unsigned int gsc_scaffold_split_by_someallocation( gsc_SimData* d, const gsc_GroupNum group_id, void* someallocator_data,
+        gsc_GroupNum (*someallocator)(gsc_GenoLocation, gsc_SimData*, void*, unsigned int, unsigned int*, gsc_GroupNum*),
+        unsigned int n_outgroups, gsc_GroupNum outgroups[n_outgroups]) {
 
     // get the n group numbers
-    get_n_new_group_nums(d, n_outgroups, outgroups);
+    gsc_get_n_new_group_nums(d, n_outgroups, outgroups);
 
     unsigned int subgroupsfound = 0;
     unsigned int allocationfailures = 0;
 
-    BidirectionalIterator it = create_bidirectional_iter(d,group_id);
-    GenoLocation loc = next_forwards(&it);
-    while (IS_VALID_LOCATION(loc)) {
-        GroupNum assignedgroup = someallocator(loc, d, someallocator_data, n_outgroups, &subgroupsfound, outgroups);
-        if (assignedgroup.num != NO_GROUP.num) {
-            set_group(loc,assignedgroup);
+    gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d,group_id);
+    gsc_GenoLocation loc = gsc_next_forwards(&it);
+    while (gsc_IS_VALID_LOCATION(loc)) {
+        gsc_GroupNum assignedgroup = someallocator(loc, d, someallocator_data, n_outgroups, &subgroupsfound, outgroups);
+        if (assignedgroup.num != gsc_NO_GROUP.num) {
+            gsc_set_group(loc,assignedgroup);
         } else {
             allocationfailures++;
         }
 
-        loc = next_forwards(&it);
+        loc = gsc_next_forwards(&it);
     }
 
     if (subgroupsfound > 1) {
@@ -2967,12 +2854,12 @@ unsigned int _split_by_someallocation( SimData* d, const GroupNum group_id, void
 }
 
 
-GroupNum __split_by_allocator__knowncounts(GenoLocation loc, SimData* d, void* datastore, unsigned int n_outgroups,
-                                           unsigned int* subgroupsfound, GroupNum* outgroups) {
+static gsc_GroupNum gsc_helper_split_by_allocator_knowncounts(gsc_GenoLocation loc, gsc_SimData* d, void* datastore, unsigned int n_outgroups,
+                                           unsigned int* subgroupsfound, gsc_GroupNum* outgroups) {
 	unsigned int* cumulative_counts = (unsigned int*) datastore;
     *subgroupsfound = n_outgroups;
 	unsigned int randpos = round(unif_rand() * (cumulative_counts[n_outgroups-1] - 1));
-	GroupNum chosengroup = NO_GROUP;
+	gsc_GroupNum chosengroup = gsc_NO_GROUP;
     unsigned int j = 0;
     for (; j < n_outgroups; ++j) {
 		if (randpos < cumulative_counts[j]) {
@@ -2993,9 +2880,11 @@ GroupNum __split_by_allocator__knowncounts(GenoLocation loc, SimData* d, void* d
  * Of the split groups produced, the first has the same group number as the original
  * group (parameter group_id).
  *
- * A more general approach to this task: split_by_specific_counts_into_n()
+ * A more general approach to this task: @ref gsc_split_into_buckets()
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{split_evenly_into_n}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group to be split
  * @param n the number of groups among which to randomly distribute group
  * members.
@@ -3005,13 +2894,13 @@ GroupNum __split_by_allocator__knowncounts(GenoLocation loc, SimData* d, void* d
  * n identifiers.
  * @return the number of groups created by this process. 
  */
-unsigned int split_evenly_into_n(SimData* d, const GroupNum group_id, const int n, GroupNum* results) {
+unsigned int gsc_split_evenly_into_n(gsc_SimData* d, const gsc_GroupNum group_id, const int n, gsc_GroupNum* results) {
     if (n <= 1) {
         warning( "Invalid n value: number of fractions into which to split group must be positive.\n");
 		return 0;
 	}
 
-    int size = get_group_size(d, group_id); // sadinefficient we have to do this.
+    int size = gsc_get_group_size(d, group_id); // sadinefficient we have to do this.
 
     // get the shuffle to be our even allocations
 	int each_size = size / n;
@@ -3028,10 +2917,10 @@ unsigned int split_evenly_into_n(SimData* d, const GroupNum group_id, const int 
 	}
 	
 	if (results == NULL) {
-		GroupNum outgroups[n];
-        return _split_by_someallocation(d, group_id, (void*) boxes, __split_by_allocator__knowncounts, n, outgroups);
+		gsc_GroupNum outgroups[n];
+        return gsc_scaffold_split_by_someallocation(d, group_id, (void*) boxes, gsc_helper_split_by_allocator_knowncounts, n, outgroups);
 	} else {
-        return _split_by_someallocation(d, group_id, (void*) boxes, __split_by_allocator__knowncounts, n, results);
+        return gsc_scaffold_split_by_someallocation(d, group_id, (void*) boxes, gsc_helper_split_by_allocator_knowncounts, n, results);
 	}
 }
 
@@ -3056,7 +2945,9 @@ unsigned int split_evenly_into_n(SimData* d, const GroupNum group_id, const int 
  * last, leaving later groups unfilled if there are not enough group members to
  * occupy all capacities.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{split_into_buckets}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group to be split
  * @param n the number of groups among which to randomly distribute group
  * members.
@@ -3069,14 +2960,14 @@ unsigned int split_evenly_into_n(SimData* d, const GroupNum group_id, const int 
  * n identifiers.
  * @return the number of groups created by this process. 
  */
-unsigned int split_by_specific_counts_into_n(SimData* d, const GroupNum group_id, const int n, const int* counts, GroupNum* results) {
+unsigned int gsc_split_into_buckets(gsc_SimData* d, const gsc_GroupNum group_id, const int n, const int* counts, gsc_GroupNum* results) {
     if (n <= 1) {
         warning( "Invalid n value: number of fractions into which to split group must be positive.\n");
         return 0;
     }
 
     int cumulative_counts[n];
-    cumulative_counts[n-1] = get_group_size(d, group_id);
+    cumulative_counts[n-1] = gsc_get_group_size(d, group_id);
     int sum = 0;
     for (int j = 0; j < n - 1; ++j) {
         sum += counts[j];
@@ -3087,10 +2978,10 @@ unsigned int split_by_specific_counts_into_n(SimData* d, const GroupNum group_id
     }
 
 	if (results == NULL) {
-		GroupNum outgroups[n];
-        return _split_by_someallocation(d, group_id, (void*) cumulative_counts, __split_by_allocator__knowncounts, n, outgroups);
+		gsc_GroupNum outgroups[n];
+        return gsc_scaffold_split_by_someallocation(d, group_id, (void*) cumulative_counts, gsc_helper_split_by_allocator_knowncounts, n, outgroups);
 	} else {
-        return _split_by_someallocation(d, group_id, (void*) cumulative_counts, __split_by_allocator__knowncounts, n, results);
+        return gsc_scaffold_split_by_someallocation(d, group_id, (void*) cumulative_counts, gsc_helper_split_by_allocator_knowncounts, n, results);
 	}
 }
 
@@ -3104,40 +2995,42 @@ unsigned int split_by_specific_counts_into_n(SimData* d, const GroupNum group_id
  *
  * This could be useful for allocating a sex to genotypes.
  *
- * A more general approach to this task: split_randomly_into_n()
+ * A more general approach to this task: @ref gsc_split_randomly_into_n()
  *
- * An alternate approach to splitting a group in two: split_evenly_into_two()
+ * An alternate approach to splitting a group in two: @ref gsc_split_evenly_into_two()
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{split_randomly_into_two}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group to be split
  * @returns the group number of the new group to which some members
  * of the old group may have been randomly allocated.
  */
-GroupNum split_randomly_into_two(SimData* d, const GroupNum group_id) {
-    GroupNum outGroup = get_new_group_num(d);
-	int anyFound = FALSE;
+gsc_GroupNum gsc_split_randomly_into_two(gsc_SimData* d, const gsc_GroupNum group_id) {
+    gsc_GroupNum outGroup = gsc_get_new_group_num(d);
+	int anyFound = GSC_FALSE;
 	
-    BidirectionalIterator it = create_bidirectional_iter(d, group_id);
-	GenoLocation loc = next_forwards(&it);
-    while (IS_VALID_LOCATION(loc)) {
-		anyFound = TRUE;
+    gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d, group_id);
+	gsc_GenoLocation loc = gsc_next_forwards(&it);
+    while (gsc_IS_VALID_LOCATION(loc)) {
+		anyFound = GSC_TRUE;
 		if ((unif_rand() > 0.5)) {
-			set_group(loc,outGroup);
+			gsc_set_group(loc,outGroup);
 		}
-		loc = next_forwards(&it);
+		loc = gsc_next_forwards(&it);
 	}
 
 	if (anyFound) {
         d->n_groups++;
 		return outGroup;
 	} else {
-		return NO_GROUP;
+		return gsc_NO_GROUP;
 	}
 }
 
 
-GroupNum __split_by_allocator__equalprob(GenoLocation loc, SimData* d, void* datastore, unsigned int n_outgroups,
-                                             unsigned int* subgroupsfound, GroupNum* outgroups) {
+static gsc_GroupNum gsc_helper_split_by_allocator_equalprob(gsc_GenoLocation loc, gsc_SimData* d, void* datastore, unsigned int n_outgroups,
+                                             unsigned int* subgroupsfound, gsc_GroupNum* outgroups) {
 	int randgroup = round(unif_rand() * (n_outgroups-1));
     if (randgroup < *subgroupsfound) {
         return outgroups[randgroup];
@@ -3157,9 +3050,11 @@ GroupNum __split_by_allocator__equalprob(GenoLocation loc, SimData* d, void* dat
  * each of n groups. The old group number (group_id) is included
  * as one of these n possible groups.
  *
- * To split by uneven probabilities instead: split_by_probabilities_into_n()
+ * To split by uneven probabilities instead: @ref gsc_split_by_probabilities()
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{split_randomly_into_n}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group to be split
  * @param n the number of groups among which to randomly distribute group
  * members.
@@ -3169,23 +3064,23 @@ GroupNum __split_by_allocator__equalprob(GenoLocation loc, SimData* d, void* dat
  * n identifiers.
  * @return the number of groups created by this process. 
  */
-unsigned int split_randomly_into_n(SimData* d, const GroupNum group_id, const int n, GroupNum* results) {
+unsigned int gsc_split_randomly_into_n(gsc_SimData* d, const gsc_GroupNum group_id, const int n, gsc_GroupNum* results) {
     if (n <= 1) {
         warning( "Invalid n value: number of fractions in which to split group must be positive.\n");
         return 0;
     }
 
 	if (results == NULL) {
-		GroupNum outgroups[n];
-        return _split_by_someallocation(d, group_id, NULL, __split_by_allocator__equalprob, n, outgroups);
+		gsc_GroupNum outgroups[n];
+        return gsc_scaffold_split_by_someallocation(d, group_id, NULL, gsc_helper_split_by_allocator_equalprob, n, outgroups);
 	} else {
-        return _split_by_someallocation(d, group_id, NULL, __split_by_allocator__equalprob, n, results);
+        return gsc_scaffold_split_by_someallocation(d, group_id, NULL, gsc_helper_split_by_allocator_equalprob, n, results);
 	}
 }
 
 
-GroupNum __split_by_allocator__unequalprobs(GenoLocation loc, SimData* d, void* datastore, unsigned int n_outgroups,
-                                            unsigned int* subgroupsfound, GroupNum* outgroups) {
+static gsc_GroupNum gsc_helper_split_by_allocator_unequalprob(gsc_GenoLocation loc, gsc_SimData* d, void* datastore, unsigned int n_outgroups,
+                                            unsigned int* subgroupsfound, gsc_GroupNum* outgroups) {
 	double* cumulative_probs = (double*) datastore;
     *subgroupsfound = n_outgroups;
     double randdraw = unif_rand();
@@ -3195,7 +3090,7 @@ GroupNum __split_by_allocator__unequalprobs(GenoLocation loc, SimData* d, void* 
 		}
 	}
     // This should not happen if cumulative probs are valid
-    return NO_GROUP;
+    return gsc_NO_GROUP;
 }
 
 /** Allocate each member of the group to
@@ -3215,7 +3110,9 @@ GroupNum __split_by_allocator__unequalprobs(GenoLocation loc, SimData* d, void* 
  * a warning is raised, and the group numbers for which the cumulative
  * sum of probs is greater than 1 have no chance of being allocated members.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{split_by_probabilities}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group to be split
  * @param n the number of groups among which to randomly distribute group
  * members.
@@ -3228,7 +3125,7 @@ GroupNum __split_by_allocator__unequalprobs(GenoLocation loc, SimData* d, void* 
  * n identifiers.
  * @return the number of groups created by this process. 
  */
-unsigned int split_by_probabilities_into_n(SimData* d, const GroupNum group_id, const int n, const double* probs, GroupNum* results) {
+unsigned int gsc_split_by_probabilities(gsc_SimData* d, const gsc_GroupNum group_id, const int n, const double* probs, gsc_GroupNum* results) {
     if (n <= 1) {
         warning( "Invalid n value: number of fractions in which to split group must be positive.\n");
         return 0;
@@ -3252,10 +3149,10 @@ unsigned int split_by_probabilities_into_n(SimData* d, const GroupNum group_id, 
 	}
 	
 	if (results == NULL) {
-        GroupNum outgroups[n];
-        return _split_by_someallocation(d, group_id, (void*) cumulative_probs, __split_by_allocator__unequalprobs, n, outgroups);
+        gsc_GroupNum outgroups[n];
+        return gsc_scaffold_split_by_someallocation(d, group_id, (void*) cumulative_probs, gsc_helper_split_by_allocator_unequalprob, n, outgroups);
 	} else {
-        return _split_by_someallocation(d, group_id, (void*) cumulative_probs, __split_by_allocator__unequalprobs, n, results);
+        return gsc_scaffold_split_by_someallocation(d, group_id, (void*) cumulative_probs, gsc_helper_split_by_allocator_unequalprob, n, results);
 	}
 }
 
@@ -3266,11 +3163,13 @@ unsigned int split_by_probabilities_into_n(SimData* d, const GroupNum group_id, 
  *  realigns @a d->n_groups with the true number of groups.
  *
  *  Frankly this should be deprecated at some point because you can now
- *  call @see get_existing_group_counts with the output vector for the counts
+ *  call @ref gsc_get_existing_group_counts with the output vector for the counts
  *  set to NULL and get exactly the same result. (in fact that's the current
  *  implementation of this function).
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{get_existing_groups}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param output Pointer to a location to save the vector of extant groups.
  * It must have at least space for d->n_groups group numbers. Else, if it is
  * NULL, then the group numbers of existing groups are not saved and the only
@@ -3279,8 +3178,8 @@ unsigned int split_by_probabilities_into_n(SimData* d, const GroupNum group_id, 
  * @returns The number of entries that have been placed in `output`.
  * That is, the number of existing groups.
  */
-int get_existing_groups( SimData* d, GroupNum* output) {
-    return get_existing_group_counts(d, output, NULL);
+int gsc_get_existing_groups( gsc_SimData* d, gsc_GroupNum* output) {
+    return gsc_get_existing_group_counts(d, output, NULL);
 }
 
 /** Identify group numbers that currently have members, and how many members they have
@@ -3288,7 +3187,9 @@ int get_existing_groups( SimData* d, GroupNum* output) {
  *  It saves the extant groups to the output vectors, and also
  *  realigns @a d->n_groups with the true number of groups.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{get_existing_group_counts}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param out_groups Pointer to a location to save the vector of extant groups.
  * It must have at least space for d->n_groups group numbers. Else, if it is
  * NULL, then the group numbers of existing groups are not saved.
@@ -3297,26 +3198,26 @@ int get_existing_groups( SimData* d, GroupNum* output) {
  * the counts of existing groups are not saved.
  * @returns The number of existing groups.
  */
-int get_existing_group_counts( SimData* d, GroupNum* out_groups, unsigned int* out_sizes) {
+int gsc_get_existing_group_counts( gsc_SimData* d, gsc_GroupNum* out_groups, unsigned int* out_sizes) {
     unsigned int bucketcapacity = 20;
-    unsigned int* buckets = get_malloc(sizeof(unsigned int)*bucketcapacity);
+    unsigned int* buckets = gsc_malloc_wrap(sizeof(unsigned int)*bucketcapacity);
     unsigned int filledbuckets = 0;
     memset(buckets,0,sizeof(unsigned int)*bucketcapacity);
 
-    BidirectionalIterator it = create_bidirectional_iter(d, NO_GROUP);
-    GenoLocation loc = next_forwards(&it);
-    while (IS_VALID_LOCATION(loc)) {
-        GroupNum g = get_group(loc);
+    gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d, gsc_NO_GROUP);
+    gsc_GenoLocation loc = gsc_next_forwards(&it);
+    while (gsc_IS_VALID_LOCATION(loc)) {
+        gsc_GroupNum g = gsc_get_group(loc);
         if (g.num >= bucketcapacity) {
             unsigned int newbucketcapacity = bucketcapacity * 2;
             while (g.num >= newbucketcapacity) {
                 newbucketcapacity *= 2;
             }
-            unsigned int* tmp = get_malloc(sizeof(unsigned int)*newbucketcapacity);
+            unsigned int* tmp = gsc_malloc_wrap(sizeof(unsigned int)*newbucketcapacity);
             memcpy(tmp,buckets,sizeof(unsigned int)*bucketcapacity);
             memset(tmp+bucketcapacity,0,sizeof(unsigned int)*(newbucketcapacity-bucketcapacity));
             bucketcapacity = newbucketcapacity;
-            free(buckets);
+            GSC_FREE(buckets);
             buckets = tmp;
         }
 
@@ -3325,13 +3226,13 @@ int get_existing_group_counts( SimData* d, GroupNum* out_groups, unsigned int* o
             ++filledbuckets;
         }
 
-        loc = next_forwards(&it);
+        loc = gsc_next_forwards(&it);
     }
 
     // Now save to output and sort.
     unsigned int capacity = filledbuckets;
     if (capacity > d->n_groups) {
-        fprintf(stderr,"Found more groups than expected - SimData.n_groups is outdated somewhere."
+        fprintf(stderr,"Found more groups than expected - gsc_SimData.n_groups is outdated somewhere."
                 " Trimming output of get_existing_group_ to avoid a crash: not all groups may be shown.\n");
         capacity = d->n_groups;
     }
@@ -3345,7 +3246,7 @@ int get_existing_group_counts( SimData* d, GroupNum* out_groups, unsigned int* o
             }*/
 
             if (out_groups != NULL) {
-                out_groups[g_index] = (GroupNum){.num=i};
+                out_groups[g_index] = (gsc_GroupNum){.num=i};
             }
             if (out_sizes != NULL) {
                 out_sizes[g_index] = buckets[i];
@@ -3354,11 +3255,11 @@ int get_existing_group_counts( SimData* d, GroupNum* out_groups, unsigned int* o
         }
     }
 
-    //qsort(*out_groups, g_index, sizeof(GroupNum), _ascending_GroupNum_comparer);
+    //qsort(*out_groups, g_index, sizeof(gsc_GroupNum), gsc_helper_ascending_gsc_GroupNum_comparer);
     /*for (int i = 0; i < g_index; ++i) {
         (*out_sizes)[i] = buckets[(*out_groups)[i].num];
     }*/
-    free(buckets);
+    GSC_FREE(buckets);
     d->n_groups = g_index;
 
     return g_index;
@@ -3367,35 +3268,35 @@ int get_existing_group_counts( SimData* d, GroupNum* out_groups, unsigned int* o
 
 /** Iterator to get the next currently-free group number.
  *
- * In the vein of @a get_new_group_num or @a get_n_new_group_nums, a function
+ * In the vein of @a gsc_get_new_group_num or @a gsc_get_n_new_group_nums, a function
  * that's effectively an iterator for unused group numbers. It's faster than
  * calling either of those multiple times as it can re-use its 'cursor' position
  * to not have to scan the array from the start every time, and it also gets
  * to reuse a set of existing groups collected only once.
  *
- * You will probably want to call @a get_existing_groups() before this
+ * You will probably want to call @a gsc_get_existing_groups() before this
  * one to get values for the parameters @a n_existing_groups and @a existing_groups.
  * This is a function for internal use, so there won't be much/any bounds or
  * error checking
  *
  * @param n_existing_groups Length of the existing_groups array (eg, return value of
- * @a get_existing_groups
- * @param existing_groups Pointer to an array of GroupNums active in simulation (eg, output
- * value of @a get_existing_groups).
+ * @a gsc_get_existing_groups
+ * @param existing_groups Pointer to an array of gsc_GroupNums active in simulation (eg, output
+ * value of @a gsc_get_existing_groups).
  * @param cursor Index in @a existing_groups that this function has currently checked up to. This
  * value will be updated in the calling function.
- * @param previous Last group number returned by this function, or NO_GROUP on first call.
+ * @param previous Last group number returned by this function, or gsc_NO_GROUP on first call.
  * @return the next sequential currently-unused (according to the memberships in @a existing_groups)
  * group number.
  */
-GroupNum get_next_free_group_num( const int n_existing_groups, const GroupNum* existing_groups, int* cursor,  GroupNum previous) {
-    if (existing_groups == NULL) return NO_GROUP;
+gsc_GroupNum gsc_get_next_free_group_num( const int n_existing_groups, const gsc_GroupNum* existing_groups, int* cursor,  gsc_GroupNum previous) {
+    if (existing_groups == NULL) return gsc_NO_GROUP;
 
-    if (*cursor == UNINITIALISED) {
+    if (*cursor == GSC_UNINIT) {
         *cursor = 0;
     }
 
-    GroupNum nextgroup = (GroupNum){.num=previous.num+1};
+    gsc_GroupNum nextgroup = (gsc_GroupNum){.num=previous.num+1};
     // a check here in case previous seems invalid. We need previous so we don't get stuck in a loop
     // of giving the same next 'free' number, but we know what a lower bound on its number should be
     // based on where the cursor is.
@@ -3418,21 +3319,21 @@ GroupNum get_next_free_group_num( const int n_existing_groups, const GroupNum* e
 /** Function to identify the next sequential integer that does not
  * identify a group that currently has member(s).
  *
- * This calls get_existing_groups() every time, so for better
+ * This calls gsc_get_existing_groups() every time, so for better
  * speed, functions that do repeated group creation, like
- * split_into_individuals(), are
- * recommended to use get_n_new_group_nums() (if they know the
+ * gsc_split_into_individuals(), are
+ * recommended to use gsc_get_n_new_group_nums() (if they know the
  * number of groups they need) or their own implementation, rather
  * than calling this function repeatedly.
  *
- * @param d the SimData struct on which to perform the operation
+ * @param d the gsc_SimData struct on which to perform the operation
  * @return the next sequential currently-unused group number.
  */
-GroupNum get_new_group_num( SimData* d) {
+gsc_GroupNum gsc_get_new_group_num( gsc_SimData* d) {
     // Make sure we get all existing groups
     int n_groups;
-    GroupNum existing_groups[d->n_groups];
-    n_groups = get_existing_groups(d, existing_groups);
+    gsc_GroupNum existing_groups[d->n_groups];
+    n_groups = gsc_get_existing_groups(d, existing_groups);
 
 	int i = 0;
 	int gn = 1;
@@ -3445,22 +3346,22 @@ GroupNum get_new_group_num( SimData* d) {
 		++i;
 		++gn;
 	}
-    return (GroupNum){.num=gn};
+    return (gsc_GroupNum){.num=gn};
 }
 
 
 /** Function to identify the label lookup index of a label identifier.
  *
- * @param d the SimData struct on which to perform the operation
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param label a label id
  * @return the index in d->label_ids, d->label_defaults, and the
- * ->labels table in AlleleMatrix where the data for this label
- * is stored, or -1 (UNINITIALISED)
+ * ->labels table in gsc_AlleleMatrix where the data for this label
+ * is stored, or -1 (GSC_UNINIT)
  * if the label with that id could not be found.
  */
-int get_index_of_label( const SimData* d, const LabelID label ) {
-    if (d->n_labels <= 0) { return UNINITIALISED; } // immediate fail
-    if (d->n_labels == 1) { return (d->label_ids[0].id == label.id) ? 0 : UNINITIALISED ; }
+int gsc_get_index_of_label( const gsc_SimData* d, const gsc_LabelID label ) {
+    if (d->n_labels <= 0) { return GSC_UNINIT; } // immediate fail
+    if (d->n_labels == 1) { return (d->label_ids[0].id == label.id) ? 0 : GSC_UNINIT ; }
 
     // If there's at least two labels then we binary search.
     int first = 0;
@@ -3480,20 +3381,20 @@ int get_index_of_label( const SimData* d, const LabelID label ) {
 
     }
 
-    return UNINITIALISED;
+    return GSC_UNINIT;
 }
 
 /** Function to identify the lookup index of a marker effect set identifier.
  *
- * @param d the SimData struct on which to perform the operation
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param eff_set_id a marker effect set id
  * @return the index in d->e where the data for this effect set
- * is stored, or -1 (UNINITIALISED)
+ * is stored, or -1 (GSC_UNINIT)
  * if the effect set with that id could not be found.
  */
-int get_index_of_eff_set( const SimData* d, const EffectID eff_set_id ) {
-    if (d->n_eff_sets <= 0) { return UNINITIALISED; } // immediate fail
-    if (d->n_eff_sets == 1) { return (d->eff_set_ids[0].id == eff_set_id.id) ? 0 : UNINITIALISED ; }
+int gsc_get_index_of_eff_set( const gsc_SimData* d, const gsc_EffectID eff_set_id ) {
+    if (d->n_eff_sets <= 0) { return GSC_UNINIT; } // immediate fail
+    if (d->n_eff_sets == 1) { return (d->eff_set_ids[0].id == eff_set_id.id) ? 0 : GSC_UNINIT ; }
 
     // If there's at least two labels then we binary search.
     int first = 0;
@@ -3513,19 +3414,19 @@ int get_index_of_eff_set( const SimData* d, const EffectID eff_set_id ) {
 
     }
 
-    return UNINITIALISED;
+    return GSC_UNINIT;
 }
 
 /** Function to identify the next sequential integer that is not
  *  already allocated to a label in the simulation.
  *
- * @param d the SimData struct on which to perform the operation
+ * @param d the gsc_SimData struct on which to perform the operation
  * @return the next sequential currently-unused label id, an integer
  * greater than 0.
  */
-LabelID get_new_label_id( const SimData* d ) {
+gsc_LabelID gsc_get_new_label_id( const gsc_SimData* d ) {
     // label_ids must be in sequential order
-    LabelID new = {.id=1};
+    gsc_LabelID new = {.id=1};
     int i = 0;
 
     while (i < d->n_labels) {
@@ -3543,13 +3444,13 @@ LabelID get_new_label_id( const SimData* d ) {
 /** Function to identify the next sequential integer that is not
  *  already allocated to a marker effect set ID in the simulation.
  *
- * @param d the SimData struct on which to perform the operation
+ * @param d the gsc_SimData struct on which to perform the operation
  * @return the next sequential currently-unused marker effect set id, an integer
  * greater than 0.
  */
-EffectID get_new_eff_set_id( const SimData* d ) {
+gsc_EffectID gsc_get_new_eff_set_id( const gsc_SimData* d ) {
     // label_ids must be in sequential order
-    EffectID new = { .id=1 };
+    gsc_EffectID new = { .id=1 };
     int i = 0;
 
     while (i < d->n_eff_sets) {
@@ -3567,16 +3468,16 @@ EffectID get_new_eff_set_id( const SimData* d ) {
 /** Function to identify the next n sequential integers that do not
  * identify a group that currently has member(s).
  *
- * @param d the SimData struct on which to perform the operation
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param n the number of group numbers to generate
  * @param result pointer to an array of length at least n where
  * the new group numbers generated can be saved.
  */
-void get_n_new_group_nums( SimData* d, const int n, GroupNum* result) {
+void gsc_get_n_new_group_nums( gsc_SimData* d, const int n, gsc_GroupNum* result) {
     // Make sure we get all existing groups
     int n_groups;
-    GroupNum existing_groups[d->n_groups];
-    n_groups = get_existing_groups(d, existing_groups);
+    gsc_GroupNum existing_groups[d->n_groups];
+    n_groups = gsc_get_existing_groups(d, existing_groups);
 
 	int existingi = 0;
 	int gn = 0;
@@ -3595,7 +3496,7 @@ void get_n_new_group_nums( SimData* d, const int n, GroupNum* result) {
 			++existingi;
 			++gn;
 		}
-        result[i] = (GroupNum){.num=gn};
+        result[i] = (gsc_GroupNum){.num=gn};
 	}
 }
 
@@ -3604,28 +3505,30 @@ void get_n_new_group_nums( SimData* d, const int n, GroupNum* result) {
 
 /** Function to count the number of genotypes that currently belong to
  * the specified group.
- * @see get_group_genes()
- * @see get_group_names()
- * @see get_group_ids()
- * @see get_group_indexes()
- * @see get_group_bvs()
- * @see get_group_parent_ids()
- * @see get_group_parent_names()
- * @see get_group_pedigrees()
+ * @see gsc_get_group_genes()
+ * @see gsc_get_group_names()
+ * @see gsc_get_group_ids()
+ * @see gsc_get_group_indexes()
+ * @see gsc_get_group_bvs()
+ * @see gsc_get_group_parent_ids()
+ * @see gsc_get_group_parent_names()
+ * @see gsc_get_group_pedigrees()
  *
- * This goes through and checks every genotype in the SimData, because
+ * This goes through and checks every genotype in the gsc_SimData, because
  * there is currently no centralised tracking of groups.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{get_group_size}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group whose members need to
  * be counted.
  * @returns the number of genotypes currently belonging to this group.
  */
-int get_group_size( const SimData* d, const GroupNum group_id) {
-    if (group_id.num == NO_GROUP.num) {
+int gsc_get_group_size( const gsc_SimData* d, const gsc_GroupNum group_id) {
+    if (group_id.num == gsc_NO_GROUP.num) {
         return 0; // it is not a group so it does not have a size
     }
-    const AlleleMatrix* m = d->m;
+    const gsc_AlleleMatrix* m = d->m;
 	int size = 0;
 	int i;
 	while (1) {
@@ -3645,19 +3548,21 @@ int get_group_size( const SimData* d, const GroupNum group_id) {
 
 /** Gets a shallow copy of the genes/alleles of each member of the group. Not
  * guaranteed to be null-terminated.
- * @see get_group_size()
- * @see get_group_names()
- * @see get_group_ids()
- * @see get_group_indexes()
- * @see get_group_bvs()
- * @see get_group_parent_ids()
- * @see get_group_parent_names()
- * @see get_group_pedigrees()
+ * @see gsc_get_group_size()
+ * @see gsc_get_group_names()
+ * @see gsc_get_group_ids()
+ * @see gsc_get_group_indexes()
+ * @see gsc_get_group_bvs()
+ * @see gsc_get_group_parent_ids()
+ * @see gsc_get_group_parent_names()
+ * @see gsc_get_group_pedigrees()
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{get_group_genes}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group we want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
+ * put in -1 (GSC_UNINIT). This enables fewer calls to gsc_get_group_size when using multiple
  * group-data-getter functions.
  * @param output a char** vector with length at least large enough to fit the whole group.
  * The function will fill this vector with pointers to the allele strings of each member
@@ -3666,10 +3571,10 @@ int get_group_size( const SimData* d, const GroupNum group_id) {
  * @returns The number of entries of `output` that have been filled. Equal to `group_size`
  * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-int get_group_genes( const SimData* d, const GroupNum group_id, int group_size, char** output) {
-    const AlleleMatrix* m = d->m;
-    if (group_size <= 0) { // group_size == UNINITIALISED
-        group_size = get_group_size( d, group_id );
+int gsc_get_group_genes( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, char** output) {
+    const gsc_AlleleMatrix* m = d->m;
+    if (group_size <= 0) { // group_size == GSC_UNINIT
+        group_size = gsc_get_group_size( d, group_id );
         if (group_size == 0) { return 0; }
 	}
 	int i, genes_i = 0;
@@ -3690,19 +3595,21 @@ int get_group_genes( const SimData* d, const GroupNum group_id, int group_size, 
 }
 
 /** Gets a shallow copy of the names of each member of the group.
- * @see get_group_size()
- * @see get_group_genes()
- * @see get_group_ids()
- * @see get_group_indexes()
- * @see get_group_bvs()
- * @see get_group_parent_ids()
- * @see get_group_parent_names()
- * @see get_group_pedigrees()
+ * @see gsc_get_group_size()
+ * @see gsc_get_group_genes()
+ * @see gsc_get_group_ids()
+ * @see gsc_get_group_indexes()
+ * @see gsc_get_group_bvs()
+ * @see gsc_get_group_parent_ids()
+ * @see gsc_get_group_parent_names()
+ * @see gsc_get_group_pedigrees()
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{get_group_names}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
+ * put in -1 (GSC_UNINIT). This enables fewer calls to gsc_get_group_size when using multiple
  * group-data-getter functions.
  * @param output a char** vector with length at least large enough to fit the whole group.
  * The function will fill this vector with pointers to the names of each member
@@ -3711,10 +3618,10 @@ int get_group_genes( const SimData* d, const GroupNum group_id, int group_size, 
  * @returns The number of entries of `output` that have been filled. Equal to `group_size`
  * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-int get_group_names( const SimData* d, const GroupNum group_id, int group_size, char** output) {
-    const AlleleMatrix* m = d->m;
-    if (group_size <= 0) { // group_size == UNINITIALISED
-        group_size = get_group_size( d, group_id );
+int gsc_get_group_names( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, char** output) {
+    const gsc_AlleleMatrix* m = d->m;
+    if (group_size <= 0) { // group_size == GSC_UNINIT
+        group_size = gsc_get_group_size( d, group_id );
         if (group_size == 0) { return 0; }
     }
 	int i, names_i = 0;
@@ -3735,29 +3642,31 @@ int get_group_names( const SimData* d, const GroupNum group_id, int group_size, 
 }
 
 /** Gets the ids of each member of the group.
- * @see get_group_size()
- * @see get_group_genes()
- * @see get_group_names()
- * @see get_group_indexes()
- * @see get_group_bvs()
- * @see get_group_parent_ids()
- * @see get_group_parent_names()
- * @see get_group_pedigrees()
+ * @see gsc_get_group_size()
+ * @see gsc_get_group_genes()
+ * @see gsc_get_group_names()
+ * @see gsc_get_group_indexes()
+ * @see gsc_get_group_bvs()
+ * @see gsc_get_group_parent_ids()
+ * @see gsc_get_group_parent_names()
+ * @see gsc_get_group_pedigrees()
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{get_group_ids}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
+ * put in -1 (GSC_UNINIT). This enables fewer calls to gsc_get_group_size when using multiple
  * group-data-getter functions.
  * @param output a vector with length at least large enough to fit the whole group.
  * The function will fill this vector with the ids of each member of the group.
  * @returns The number of entries of `output` that have been filled. Equal to `group_size`
  * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-int get_group_ids( const SimData* d, const GroupNum group_id, int group_size, PedigreeID *output) {
-    const AlleleMatrix* m = d->m;
-    if (group_size <= 0) { // group_size == UNINITIALISED
-        group_size = get_group_size( d, group_id );
+int gsc_get_group_ids( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, gsc_PedigreeID *output) {
+    const gsc_AlleleMatrix* m = d->m;
+    if (group_size <= 0) { // group_size == GSC_UNINIT
+        group_size = gsc_get_group_size( d, group_id );
         if (group_size == 0) { return 0; }
     }
 	int i, ids_i = 0;
@@ -3777,31 +3686,33 @@ int get_group_ids( const SimData* d, const GroupNum group_id, int group_size, Pe
 	}
 }
 
-/** Gets the indexes (0-based, from the start of the linked list in the SimData)
+/** Gets the indexes (0-based, from the start of the linked list in the gsc_SimData)
  * of each member of the group.
- * @see get_group_size()
- * @see get_group_genes()
- * @see get_group_names()
- * @see get_group_ids()
- * @see get_group_bvs()
- * @see get_group_parent_ids()
- * @see get_group_parent_names()
- * @see get_group_pedigrees()
+ * @see gsc_get_group_size()
+ * @see gsc_get_group_genes()
+ * @see gsc_get_group_names()
+ * @see gsc_get_group_ids()
+ * @see gsc_get_group_bvs()
+ * @see gsc_get_group_parent_ids()
+ * @see gsc_get_group_parent_names()
+ * @see gsc_get_group_pedigrees()
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{get_group_indexes}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
+ * put in -1 (GSC_UNINIT). This enables fewer calls to gsc_get_group_size when using multiple
  * group-data-getter functions.
  * @param output a vector with length at least large enough to fit the whole group.
  * The function will fill this vector with the indexes of each member of the group.
  * @returns The number of entries of `output` that have been filled. Equal to `group_size`
  * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-int get_group_indexes(const SimData* d, const GroupNum group_id, int group_size, unsigned int* output) {
-    const AlleleMatrix* m = d->m;
-    if (group_size <= 0) { // group_size == UNINITIALISED
-        group_size = get_group_size( d, group_id );
+int gsc_get_group_indexes(const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, unsigned int* output) {
+    const gsc_AlleleMatrix* m = d->m;
+    if (group_size <= 0) { // group_size == GSC_UNINIT
+        group_size = gsc_get_group_size( d, group_id );
         if (group_size == 0) { return 0; }
     }
 	int i, total_i = 0, ids_i = 0;
@@ -3822,78 +3733,81 @@ int get_group_indexes(const SimData* d, const GroupNum group_id, int group_size,
 }
 
 /** Gets the breeding values/breeding values/fitnesses of each member of the group
- * @see get_group_size()
- * @see get_group_genes()
- * @see get_group_names()
- * @see get_group_ids()
- * @see get_group_indexes()
- * @see get_group_parent_ids()
- * @see get_group_parent_names()
- * @see get_group_pedigrees()
+ * @see gsc_get_group_size()
+ * @see gsc_get_group_genes()
+ * @see gsc_get_group_names()
+ * @see gsc_get_group_ids()
+ * @see gsc_get_group_indexes()
+ * @see gsc_get_group_parent_ids()
+ * @see gsc_get_group_parent_names()
+ * @see gsc_get_group_pedigrees()
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{get_group_bvs}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param effID Identifier of the marker effect set to be used to calculate these breeding values
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
+ * put in -1 (GSC_UNINIT). This enables fewer calls to gsc_get_group_size when using multiple
  * group-data-getter functions.
  * @param output a vector with length at least large enough to fit the whole group.
  * The function will fill this vector with the breeding values of each member of the group.
  * @returns The number of entries of `output` that have been filled. Equal to `group_size`
  * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-int get_group_bvs( const SimData* d, const GroupNum group_id, const EffectID effID, int group_size, double* output) {
-    if (group_size <= 0) { // group_size == UNINITIALISED
-        group_size = get_group_size( d, group_id );
+int gsc_get_group_bvs( const gsc_SimData* d, const gsc_GroupNum group_id, const gsc_EffectID effID, int group_size, double* output) {
+    if (group_size <= 0) { // group_size == GSC_UNINIT
+        group_size = gsc_get_group_size( d, group_id );
         if (group_size == 0) { return 0; }
     }
 
-    DecimalMatrix dm_bvs = calculate_group_bvs(d, group_id, effID );
+    gsc_DecimalMatrix dm_bvs = gsc_calculate_group_bvs(d, group_id, effID );
 
 	for (int i = 0; i < dm_bvs.cols; ++i) {
         output[i] = dm_bvs.matrix[0][i];
 	}
 
-	delete_dmatrix(&dm_bvs);
+	gsc_delete_dmatrix(&dm_bvs);
 
     return group_size;
 }
 
 /** Gets the ids of either the first or second parent of each member
  * of the group.
- * @see get_group_size()
- * @see get_group_genes()
- * @see get_group_names()
- * @see get_group_ids()
- * @see get_group_indexes()
- * @see get_group_bvs()
- * @see get_group_parent_names()
- * @see get_group_pedigrees()
+ * @see gsc_get_group_size()
+ * @see gsc_get_group_genes()
+ * @see gsc_get_group_names()
+ * @see gsc_get_group_ids()
+ * @see gsc_get_group_indexes()
+ * @see gsc_get_group_bvs()
+ * @see gsc_get_group_parent_names()
+ * @see gsc_get_group_pedigrees()
  *
+ * @shortnamed{get_group_parent_ids}
  *
- * @param d the SimData struct on which to perform the operation
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
+ * put in -1 (GSC_UNINIT). This enables fewer calls to gsc_get_group_size when using multiple
  * group-data-getter functions.
  * @param whichParent 1 to get the first parent of each group member, 2 to get the second.
  * Raises an error and returns NULL if this parameter is not either of those values.
  * @param output a vector with length at least large enough to fit the whole group.
  * The function will fill this vector with the ids the chosen parent of each member of the group.
- * @returns UNINITIALISED if `parent`'s value is incorrect; otherwise the number of entries of `output`
+ * @returns GSC_UNINIT if `parent`'s value is incorrect; otherwise the number of entries of `output`
  * that have been filled. This is to `group_size`
  * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-int get_group_parent_ids( const SimData* d, const GroupNum group_id, int group_size, const int whichParent, PedigreeID* output) {
+int gsc_get_group_parent_ids( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, const int whichParent, gsc_PedigreeID* output) {
     if (!(whichParent == 1 || whichParent == 2)) {
 		warning( "Value error: `parent` must be 1 or 2.");
-        return UNINITIALISED;
+        return GSC_UNINIT;
 	}
     int parent = whichParent - 1;
 
-    const AlleleMatrix* m = d->m;
-    if (group_size <= 0) { // group_size == UNINITIALISED
-        group_size = get_group_size( d, group_id );
+    const gsc_AlleleMatrix* m = d->m;
+    if (group_size <= 0) { // group_size == GSC_UNINIT
+        group_size = gsc_get_group_size( d, group_id );
         if (group_size == 0) { return 0; }
     }
 	int i, ids_i = 0;
@@ -3915,19 +3829,21 @@ int get_group_parent_ids( const SimData* d, const GroupNum group_id, int group_s
 
 /** Gets the names of either the first or second parent of each member
  * of the group. Names may be NULL.
- * @see get_group_size()
- * @see get_group_genes()
- * @see get_group_names()
- * @see get_group_ids()
- * @see get_group_indexes()
- * @see get_group_bvs()
- * @see get_group_parent_ids()
- * @see get_group_pedigrees()
+ * @see gsc_get_group_size()
+ * @see gsc_get_group_genes()
+ * @see gsc_get_group_names()
+ * @see gsc_get_group_ids()
+ * @see gsc_get_group_indexes()
+ * @see gsc_get_group_bvs()
+ * @see gsc_get_group_parent_ids()
+ * @see gsc_get_group_pedigrees()
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{get_group_parent_names}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
+ * put in -1 (GSC_UNINIT). This enables fewer calls to gsc_get_group_size when using multiple
  * group-data-getter functions.
  * @param whichParent 1 to get the first parent of each group member, 2 to get the second.
  * Raises an error and returns NULL if this parameter is not either of those values.
@@ -3935,20 +3851,20 @@ int get_group_parent_ids( const SimData* d, const GroupNum group_id, int group_s
  * The function will fill this vector with pointers to the names of the chosen parent
  * of each member of the group. The vector's contents are only
  * shallow copies that should not be freed.
- * @returns UNINITIALISED if `parent`'s value is incorrect; otherwise the number of entries of `output`
+ * @returns GSC_UNINIT if `parent`'s value is incorrect; otherwise the number of entries of `output`
  * that have been filled. This is to `group_size`
  * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-int get_group_parent_names( const SimData* d, const GroupNum group_id, int group_size, const int whichParent, char** output) {
+int gsc_get_group_parent_names( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, const int whichParent, char** output) {
     if (!(whichParent == 1 || whichParent == 2)) {
         warning( "Value error: `parent` must be 1 or 2.");
-        return UNINITIALISED;
+        return GSC_UNINIT;
     }
     int parent = whichParent - 1;
 
-    const AlleleMatrix* m = d->m;
-    if (group_size <= 0) { // group_size == UNINITIALISED
-        group_size = get_group_size( d, group_id );
+    const gsc_AlleleMatrix* m = d->m;
+    if (group_size <= 0) { // group_size == GSC_UNINIT
+        group_size = gsc_get_group_size( d, group_id );
         if (group_size == 0) { return 0; }
     }
 
@@ -3956,8 +3872,8 @@ int get_group_parent_names( const SimData* d, const GroupNum group_id, int group
     while (1) {
         for (i = 0; i < m->n_genotypes; ++i) {
             if (m->groups[i].num == group_id.num) {
-                if (m->pedigrees[parent][i].id != NO_PEDIGREE.id) {
-                    output[ids_i] = get_name_of_id(d->m, m->pedigrees[parent][i]);
+                if (m->pedigrees[parent][i].id != gsc_NO_PEDIGREE.id) {
+                    output[ids_i] = gsc_get_name_of_id(d->m, m->pedigrees[parent][i]);
                 } else {
                     output[ids_i] = NULL;
                 }
@@ -3973,34 +3889,36 @@ int get_group_parent_names( const SimData* d, const GroupNum group_id, int group
     }
 }
 
-/** Gets the full pedigree string (as per save_group_full_pedigree() )
+/** Gets the full pedigree string (as per gsc_save_group_full_pedigree() )
  * of each member of the group.
  *
  * This function is not fast, or particularly memory-efficient. To avoid recursive
  * string-building/concatenation because that's pretty tricky in C, this just
- * calls save_group_full_pedigree() to a temporary file, then reads that file
+ * calls gsc_save_group_full_pedigree() to a temporary file, then reads that file
  * back in to make a list of strings. Contact the package maintainers if you'd
  * benefit from a faster version of this function, otherwise I probably won't bother
  * improving this.
  *
  * If you just want to have the full pedigrees for further analysis, consider
- * save_group_full_pedigree(). With the current implementation that one will
+ * @ref gsc_save_group_full_pedigree(). With the current implementation that one will
  * be faster than this anyway.
  *
- * @see get_group_size()
- * @see get_group_genes()
- * @see get_group_names()
- * @see get_group_ids()
- * @see get_group_indexes()
- * @see get_group_bvs()
- * @see get_group_parent_ids()
- * @see get_group_parent_names()
- * @see save_group_full_pedigree()
+ * @shortnamed{get_group_pedigrees}
  *
- * @param d the SimData struct on which to perform the operation
+ * @see gsc_get_group_size()
+ * @see gsc_get_group_genes()
+ * @see gsc_get_group_names()
+ * @see gsc_get_group_ids()
+ * @see gsc_get_group_indexes()
+ * @see gsc_get_group_bvs()
+ * @see gsc_get_group_parent_ids()
+ * @see gsc_get_group_parent_names()
+ * @see gsc_save_group_full_pedigree()
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the group you want data from
  * @param group_size if group_size has already been calculated, pass it too, otherwise
- * put in -1 (UNINITIALISED). This enables fewer calls to get_group_size when using multiple
+ * put in -1 (GSC_UNINIT). This enables fewer calls to gsc_get_group_size when using multiple
  * group-data-getter functions.
  * @param output a char** vector with length at least large enough to fit the whole group.
  * The function will fill this vector with pointers to strings containing the full pedigree
@@ -4008,27 +3926,27 @@ int get_group_parent_names( const SimData* d, const GroupNum group_id, int group
  * allocated on the heap, and so should be freed once finished using them. This is because,
  * unlike other data-getter functions, full pedigree data is not stored in the simulation
  * but must be generated specifically to answer this function call.
- * @returns UNINITIALISED if there are no genotypes in the group or if reading/writing
+ * @returns GSC_UNINIT if there are no genotypes in the group or if reading/writing
  * to the temporary file failed; 0 otherwise.
- * @returns UNINITIALISED if reading/writing to the temporary file failed;
+ * @returns GSC_UNINIT if reading/writing to the temporary file failed;
  * otherwise the number of entries of `output` that have been filled. This is to `group_size`
  * if group size was set; equal to the actual size of the group if `group_size` was -1.
  */
-int get_group_pedigrees( const SimData* d, const GroupNum group_id, int group_size, char** output) {
+int gsc_get_group_pedigrees( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, char** output) {
 	char* fname = "gS_gpptmp";
 	FILE* fp = fopen(fname, "w");
-	save_group_full_pedigree(fp, d, group_id);
+	gsc_save_group_full_pedigree(fp, d, group_id);
 	fclose(fp);
 
 	FILE* fp2;
 	if ((fp2 = fopen(fname, "r")) == NULL) {
 		warning( "Failed to use temporary file.\n");
-        return UNINITIALISED;
+        return GSC_UNINIT;
 	}
 
 	// Create the list that we will return
-    if (group_size <= 0) { // group_size == UNINITIALISED
-        group_size = get_group_size( d, group_id );
+    if (group_size <= 0) { // group_size == GSC_UNINIT
+        group_size = gsc_get_group_size( d, group_id );
         if (group_size == 0) { return 0; }
     }
 
@@ -4052,7 +3970,7 @@ int get_group_pedigrees( const SimData* d, const GroupNum group_id, int group_si
 		// a not-very-size-efficient, fgets-based line getter
 		size = 50;
 		index = 0;
-        output[i] = get_malloc(sizeof(char) * size);
+        output[i] = gsc_malloc_wrap(sizeof(char) * size);
 		while ((nextc = fgetc(fp)) != '\n' && nextc != EOF) {
             output[i][index] = nextc;
 			++index;
@@ -4061,7 +3979,7 @@ int get_group_pedigrees( const SimData* d, const GroupNum group_id, int group_si
 				size *= 2;
                 char* temp = realloc(output[i], sizeof(char) * size);
 				if (temp == NULL) {
-                    free(output[i]);
+                    GSC_FREE(output[i]);
 					warning( "Memory allocation of size %u failed.\n", size);
                     output[i] = NULL;
 				} else {
@@ -4086,17 +4004,17 @@ int get_group_pedigrees( const SimData* d, const GroupNum group_id, int group_si
  *
  * @param r the number of rows/first index for the new matrix.
  * @param c the number of columns/second index for the new matrix.
- * @returns a DecimalMatrix with r rows, c cols, and a matrix of
+ * @returns a gsc_DecimalMatrix with r rows, c cols, and a matrix of
  * the correct size, with all values zeroed.
  */
-DecimalMatrix generate_zero_dmatrix(const int r, const int c) {
-	DecimalMatrix zeros;
+gsc_DecimalMatrix gsc_generate_zero_dmatrix(const int r, const int c) {
+	gsc_DecimalMatrix zeros;
 	zeros.rows = r;
 	zeros.cols = c;
 
-	zeros.matrix = malloc(sizeof(double*) * r);
+	zeros.matrix = gsc_malloc_wrap(sizeof(double*) * r);
 	for (int i = 0; i < r; ++i) {
-		zeros.matrix[i] = malloc(sizeof(double) * c);
+		zeros.matrix[i] = gsc_malloc_wrap(sizeof(double) * c);
 		for (int j = 0; j < c; ++j) {
 			zeros.matrix[i][j] = 0.0;
 		}
@@ -4104,22 +4022,22 @@ DecimalMatrix generate_zero_dmatrix(const int r, const int c) {
 	return zeros;
 }
 
-/** Multiply a DecimalMatrix to a vector, and add that product to the first column
- * of a provided DecimalMatrix.
+/** Multiply a gsc_DecimalMatrix to a vector, and add that product to the first column
+ * of a provided gsc_DecimalMatrix.
  *
  * Performs the fused multiply-add operation: `result + a * b` and saves it to `result`.
  *
  * Assumes that the vector `b` has the same number of entries as `a` has columns. That
  * is, assumes the dimensions are valid for multiplication.
  *
- * @param result pointer to the DecimalMatrix to whose first row the product a*b
+ * @param result pointer to the gsc_DecimalMatrix to whose first row the product a*b
  * will be added.
- * @param a pointer to the DecimalMatrix. Multiply this to b.
+ * @param a pointer to the gsc_DecimalMatrix. Multiply this to b.
  * @param b a vector of doubles, assumed to be the same length as `a` has columns.
  * Multiplied to a.
  * @returns 0 on success, nonzero on failure.
  */
-int add_matrixvector_product_to_dmatrix(DecimalMatrix* result, const DecimalMatrix* a, const double* b) {
+int gsc_add_matrixvector_product_to_dmatrix(gsc_DecimalMatrix* result, const gsc_DecimalMatrix* a, const double* b) {
     /*if (a->cols != b->rows) {
 		error( "Dimensions invalid for matrix multiplication.");
 	}*/
@@ -4146,8 +4064,8 @@ int add_matrixvector_product_to_dmatrix(DecimalMatrix* result, const DecimalMatr
 
 }
 
-/** Multiply two sets of a DecimalMatrix and vector, and add both products to
- * the first column of a provided DecimalMatrix.
+/** Multiply two sets of a gsc_DecimalMatrix and vector, and add both products to
+ * the first column of a provided gsc_DecimalMatrix.
  *
  * Performs the double fused multiply-add operation:
  * `result + amat * avec + bmat * bvec`
@@ -4159,18 +4077,18 @@ int add_matrixvector_product_to_dmatrix(DecimalMatrix* result, const DecimalMatr
  * Assumes that the vectors have the same number of entries as their matrices have
  * columns. That is, assumes the dimensions are valid for multiplication.
  *
- * @param result pointer to the DecimalMatrix to whose first row both products
+ * @param result pointer to the gsc_DecimalMatrix to whose first row both products
  * will be added.
- * @param amat pointer to the first DecimalMatrix. Multiply this to avec.
+ * @param amat pointer to the first gsc_DecimalMatrix. Multiply this to avec.
  * @param avec a vector of doubles, assumed to be the same length as `amat` has columns.
  * Multiplied to `amat`.
- * @param bmat pointer to the second DecimalMatrix. Multiply this to bvec.
+ * @param bmat pointer to the second gsc_DecimalMatrix. Multiply this to bvec.
  * @param bvec a second vector of doubles, assumed to be the same length as
  * `bmat` has columns. Multiplied to `bmat`.
  * @returns 0 on success, nonzero on failure.
  */
-int add_doublematrixvector_product_to_dmatrix(DecimalMatrix* result, const DecimalMatrix* amat, const double* avec,
-                                              const DecimalMatrix* bmat, const double* bvec) {
+int gsc_add_doublematrixvector_product_to_dmatrix(gsc_DecimalMatrix* result, const gsc_DecimalMatrix* amat, const double* avec,
+                                              const gsc_DecimalMatrix* bmat, const double* bvec) {
 
 	if (result->cols != amat->rows) { //these dimensions make it so result is one heap array, using only first row.
         warning( "Dimensions invalid for adding to result: %d does not fit in %d\n", amat->rows, result->cols);
@@ -4202,19 +4120,21 @@ int add_doublematrixvector_product_to_dmatrix(DecimalMatrix* result, const Decim
 }
 
 
-/** Deletes a DecimalMatrix and frees its memory. m will now refer
+/** Deletes a gsc_DecimalMatrix and frees its memory. m will now refer
  * to an empty matrix, with every pointer set to null and dimensions set to 0.
+ *
+ * @shortnamed{delete_dmatrix}
  *
  * @param m pointer to the matrix whose data is to be cleared and memory freed.
  */
-void delete_dmatrix(DecimalMatrix* m) {
+void gsc_delete_dmatrix(gsc_DecimalMatrix* m) {
 	if (m->matrix != NULL) {
 		for (int i = 0; i < m->rows; i++) {
 			if (m->matrix[i] != NULL) {
-				free(m->matrix[i]);
+				GSC_FREE(m->matrix[i]);
 			}
 		}
-		free(m->matrix);
+		GSC_FREE(m->matrix);
 		m->matrix = NULL;
 	}
 	m->cols = 0;
@@ -4229,14 +4149,16 @@ void delete_dmatrix(DecimalMatrix* m) {
  *  This includes all of their details. Persistent ids (used to track
  *  pedigree) will not be re-used.
  *
- * Uses a call to condense_allele_matrix() to ensure that the SimData
+ * Uses a call to gsc_condense_allele_matrix() to ensure that the gsc_SimData
  * remains valid after deletion.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{delete_group}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param group_id the group number of the subset of data to be cleared
  */
-void delete_group(SimData* d, const GroupNum group_id) {
-	AlleleMatrix* m = d->m;
+void gsc_delete_group(gsc_SimData* d, const gsc_GroupNum group_id) {
+	gsc_AlleleMatrix* m = d->m;
 	int i, deleted, total_deleted = 0;
 	while (1) {
 
@@ -4244,17 +4166,17 @@ void delete_group(SimData* d, const GroupNum group_id) {
             if (m->groups[i].num == group_id.num) {
 				// delete data
 				if (m->names[i] != NULL) {
-					free(m->names[i]);
+					GSC_FREE(m->names[i]);
 					m->names[i] = NULL;
 				}
 				if (m->alleles[i] != NULL) {
-					free(m->alleles[i]);
+					GSC_FREE(m->alleles[i]);
 					m->alleles[i] = NULL;
 				}
-                m->ids[i] = NO_PEDIGREE;
-                m->pedigrees[0][i] = NO_PEDIGREE;
-                m->pedigrees[1][i] = NO_PEDIGREE;
-                m->groups[i] = NO_GROUP;
+                m->ids[i] = gsc_NO_PEDIGREE;
+                m->pedigrees[0][i] = gsc_NO_PEDIGREE;
+                m->pedigrees[1][i] = gsc_NO_PEDIGREE;
+                m->groups[i] = gsc_NO_GROUP;
 				++deleted;
 			}
 		}
@@ -4262,7 +4184,7 @@ void delete_group(SimData* d, const GroupNum group_id) {
 		total_deleted += deleted;
 
 		if (m->next == NULL) {
-			condense_allele_matrix( d );
+			gsc_condense_allele_matrix( d );
 			Rprintf("%d genotypes were deleted\n", total_deleted);
             d->n_groups--;
 			return;
@@ -4273,57 +4195,61 @@ void delete_group(SimData* d, const GroupNum group_id) {
 }
 
 /** Deletes a particular set of marker effects from memory
+*
+ * @shortnamed{delte_eff_set}
  *
- * @param d the SimData struct on which to perform the operation
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param whichIndex the index of the label to be destroyed (0 or greater)
  */
-void delete_eff_set(SimData* d, EffectID whichID) {
-    int whichIndex = get_index_of_eff_set(d, whichID);
+void gsc_delete_eff_set(gsc_SimData* d, gsc_EffectID whichID) {
+    int whichIndex = gsc_get_index_of_eff_set(d, whichID);
     if (whichIndex < 0 || whichIndex >= d->n_eff_sets) {
         warning( "Nonexistent effect set %d\n", whichID.id);
         return;
     }
 
     if (d->n_eff_sets == 1) {
-        delete_effect_matrix(d->e);
+        gsc_delete_effect_matrix(d->e);
         d->n_eff_sets = 0;
-        free(d->e);
-        free(d->eff_set_ids);
+        GSC_FREE(d->e);
+        GSC_FREE(d->eff_set_ids);
         d->e = NULL;
         d->eff_set_ids = NULL;
     } else {
-        delete_effect_matrix(d->e + whichIndex);
+        gsc_delete_effect_matrix(d->e + whichIndex);
         d->n_eff_sets--;
 
-        EffectMatrix* newE = get_malloc(sizeof(EffectMatrix)*d->n_eff_sets);
-        memcpy(newE, d->e, sizeof(EffectMatrix)*whichIndex);
-        memcpy(newE + whichIndex, d->e + whichIndex + 1, sizeof(EffectMatrix)*(d->n_eff_sets - whichIndex));
-        free(d->e);
+        gsc_EffectMatrix* newE = gsc_malloc_wrap(sizeof(gsc_EffectMatrix)*d->n_eff_sets);
+        memcpy(newE, d->e, sizeof(gsc_EffectMatrix)*whichIndex);
+        memcpy(newE + whichIndex, d->e + whichIndex + 1, sizeof(gsc_EffectMatrix)*(d->n_eff_sets - whichIndex));
+        GSC_FREE(d->e);
         d->e = newE;
 
-        EffectID* newIDs = get_malloc(sizeof(EffectID)*d->n_eff_sets);
-        memcpy(newIDs, d->eff_set_ids, sizeof(EffectID)*whichIndex);
-        memcpy(newIDs + whichIndex, d->eff_set_ids + whichIndex + 1, sizeof(EffectID)*(d->n_eff_sets - whichIndex));
-        free(d->eff_set_ids);
+        gsc_EffectID* newIDs = gsc_malloc_wrap(sizeof(gsc_EffectID)*d->n_eff_sets);
+        memcpy(newIDs, d->eff_set_ids, sizeof(gsc_EffectID)*whichIndex);
+        memcpy(newIDs + whichIndex, d->eff_set_ids + whichIndex + 1, sizeof(gsc_EffectID)*(d->n_eff_sets - whichIndex));
+        GSC_FREE(d->eff_set_ids);
         d->eff_set_ids = newIDs;
     }
 }
 
 /** Clears memory of this label from the simulation and all its genotypes.
  *
- * @param d the SimData struct on which to perform the operation
+ * @shortnamed{delete_label}
+ *
+ * @param d the gsc_SimData struct on which to perform the operation
  * @param whichLabel the label id of the label to be destroyed
  */
-void delete_label(SimData* d, const LabelID whichLabel) {
+void gsc_delete_label(gsc_SimData* d, const gsc_LabelID whichLabel) {
     int labelIndex;
-    if (whichLabel.id == NOT_A_LABEL.id || (labelIndex = get_index_of_label(d, whichLabel)) < 0) {
+    if (whichLabel.id == gsc_NOT_A_LABEL.id || (labelIndex = gsc_get_index_of_label(d, whichLabel)) < 0) {
         warning( "Nonexistent label %d\n", whichLabel.id);
         return;
     }
 
     if (d->n_labels > 1) {
-        // Reduce the list of labels in the SimData
-        LabelID* new_label_ids = get_malloc(sizeof(LabelID) * (d->n_labels - 1));
+        // Reduce the list of labels in the gsc_SimData
+        gsc_LabelID* new_label_ids = gsc_malloc_wrap(sizeof(gsc_LabelID) * (d->n_labels - 1));
         int i = 0;
         for (; i < labelIndex; ++i) {
             new_label_ids[i] = d->label_ids[i];
@@ -4331,10 +4257,10 @@ void delete_label(SimData* d, const LabelID whichLabel) {
         for (i = labelIndex + 1; i < d->n_labels; ++i) {
             new_label_ids[i-1] = d->label_ids[i];
         }
-        free(d->label_ids);
+        GSC_FREE(d->label_ids);
         d->label_ids = new_label_ids;
 
-        int* new_label_defaults = get_malloc(sizeof(int) * (d->n_labels - 1));
+        int* new_label_defaults = gsc_malloc_wrap(sizeof(int) * (d->n_labels - 1));
         i = 0;
         for (; i < labelIndex; ++i) {
             new_label_defaults[i] = d->label_defaults[i];
@@ -4342,17 +4268,17 @@ void delete_label(SimData* d, const LabelID whichLabel) {
         for (i = labelIndex + 1; i < d->n_labels; ++i) {
             new_label_defaults[i-1] = d->label_defaults[i];
         }
-        free(d->label_defaults);
+        GSC_FREE(d->label_defaults);
         d->label_defaults = new_label_defaults;
         d->n_labels --;
 
 
-        // Remove the label from the AlleleMatrix linked list
-        AlleleMatrix* m = d->m;
+        // Remove the label from the gsc_AlleleMatrix linked list
+        gsc_AlleleMatrix* m = d->m;
         do {
-            free(m->labels[labelIndex]);
+            GSC_FREE(m->labels[labelIndex]);
 
-            int** new_label_lookups = get_malloc(sizeof(int*) * (m->n_labels - 1));
+            int** new_label_lookups = gsc_malloc_wrap(sizeof(int*) * (m->n_labels - 1));
             int i = 0;
             for (; i < labelIndex; ++i) {
                 new_label_lookups[i] = m->labels[i];
@@ -4361,7 +4287,7 @@ void delete_label(SimData* d, const LabelID whichLabel) {
                 new_label_lookups[i-1] = m->labels[i];
             }
 
-            free(m->labels);
+            GSC_FREE(m->labels);
             m->labels = new_label_lookups;
             m->n_labels --;
 
@@ -4371,63 +4297,65 @@ void delete_label(SimData* d, const LabelID whichLabel) {
     } else { // d->n_labels == 1 and labelIndex == 0
         // Delete 'em all
         d->n_labels = 0;
-        free(d->label_ids);
+        GSC_FREE(d->label_ids);
         d->label_ids = NULL;
-        free(d->label_defaults);
+        GSC_FREE(d->label_defaults);
         d->label_defaults = NULL;
 
-        AlleleMatrix* m = d->m;
+        gsc_AlleleMatrix* m = d->m;
         do {
 
-            free(m->labels[0]);
-            free(m->labels);
+            GSC_FREE(m->labels[0]);
+            GSC_FREE(m->labels);
             m->labels = NULL;
 
         } while ((m = m->next) != NULL);
     }
 }
 
-/** Deletes a GeneticMap object and frees its memory.
+/** Deletes a gsc_GeneticMap object and frees its memory.
  *
  *  m will now refer
  * to an empty matrix, with every pointer set to null and dimensions set to 0.
  *
+ * @shortnamed{delete_genmap}
+ *
  * @param m pointer to the matrix whose data is to be cleared and memory freed.
  */
-void delete_genmap(GeneticMap* m) {
+void gsc_delete_genmap(gsc_GeneticMap* m) {
 	m->n_chr = 0;
 	if (m->chr_ends != NULL) {
-		free(m->chr_ends);
+		GSC_FREE(m->chr_ends);
 	}
 	m->chr_ends = NULL;
 	if (m->chr_lengths != NULL) {
-		free(m->chr_lengths);
+		GSC_FREE(m->chr_lengths);
 	}
 	m->chr_lengths = NULL;
 	if (m->positions != NULL) {
-		free(m->positions);
+		GSC_FREE(m->positions);
 	}
 	m->positions = NULL;
 }
 
-/** Delete the AlleleMatrix linked list from m onwards and frees its memory.
+/** Delete the gsc_AlleleMatrix linked list from m onwards and frees its memory.
  *
- * Freeing its memory includes freeing the AlleleMatrix, which was allocated on the heap
- * by @see create_empty_allelematrix(). All matrices further along in the linked list chain
+ * Freeing its memory includes freeing the gsc_AlleleMatrix, which was allocated on the heap
+ * by @ref gsc_create_empty_allelematrix(). All matrices further along in the linked list chain
  * (eg pointed to by m->next or a chain of ->next pointers) will be similarly deleted.
  *
  * @param m pointer to the matrix whose data is to be cleared and memory freed.
  */
-void delete_allele_matrix(AlleleMatrix* m) {
+void gsc_delete_allele_matrix(gsc_AlleleMatrix* m) {
 	if (m == NULL) {
 		return;
 	}
-	AlleleMatrix* next;
+	gsc_AlleleMatrix* next;
 	do {
 		/* free the big data matrix */
         for (int i = 0; i < m->n_genotypes; i++) {
             if (m->alleles[i] != NULL) {
-                free(m->alleles[i]);
+                GSC_FREE(m->alleles[i]);
             }
 
         }
@@ -4435,43 +4363,45 @@ void delete_allele_matrix(AlleleMatrix* m) {
 		// free names
         for (int i = 0; i < m->n_genotypes; i++) {
             if (m->names[i] != NULL) {
-                free(m->names[i]);
+                GSC_FREE(m->names[i]);
             }
         }
 
         // free labels
         for (int i = 0; i < m->n_labels; ++i) {
             if (m->labels[i] != NULL) {
-                free(m->labels[i]);
+                GSC_FREE(m->labels[i]);
             }
         }
-        free(m->labels);
+        GSC_FREE(m->labels);
 
 		next = m->next;
-		free(m);
+		GSC_FREE(m);
 	} while ((m = next) != NULL);
 }
 
-/** Deletes an EffectMatrix object and frees its memory.
+/** Deletes an gsc_EffectMatrix object and frees its memory.
  *
  * m will now refer
  * to an empty matrix, with every pointer set to null and dimensions set to 0.
  *
  * @param m pointer to the matrix whose data is to be cleared and memory freed.
  */
-void delete_effect_matrix(EffectMatrix* m) {
-	delete_dmatrix(&(m->effects));
+void gsc_delete_effect_matrix(gsc_EffectMatrix* m) {
+	gsc_delete_dmatrix(&(m->effects));
 	if (m->effect_names != NULL) {
-		free(m->effect_names);
+		GSC_FREE(m->effect_names);
 	}
 	m->effect_names = NULL;
 }
 
-/** Deletes a SimData object and frees its memory.
+/** Deletes a gsc_SimData object and frees its memory.
+ *
+ * @shortnamed{delete_simdata}
  *
  * @param m pointer to the struct whose data is to be cleared and memory freed.
  */
-void delete_simdata(SimData* m) {
+void gsc_delete_simdata(gsc_SimData* m) {
 	if (m == NULL) {
 		return;
 	}
@@ -4479,56 +4409,58 @@ void delete_simdata(SimData* m) {
 	if (m->markers != NULL) {
 		for (int i = 0; i < m->n_markers; i++) {
 			if (m->markers[i] != NULL) {
-				free(m->markers[i]);
+				GSC_FREE(m->markers[i]);
 			}
 		}
-		free(m->markers);
+		GSC_FREE(m->markers);
 		m->markers = NULL;
 	}
 	//m->n_markers = 0;
 
 	// free genetic map and effects
-	delete_genmap(&(m->map));
+	gsc_delete_genmap(&(m->map));
     if (m->n_eff_sets > 0) {
-        free(m->eff_set_ids);
+        GSC_FREE(m->eff_set_ids);
         for (int i = 0; i < m->n_eff_sets; ++i) {
-            delete_effect_matrix(&(m->e[i]));
+            gsc_delete_effect_matrix(&(m->e[i]));
         }
-        free(m->e);
+        GSC_FREE(m->e);
     }
 
 
 	// free tables of alleles across generations
-	delete_allele_matrix(m->m);
+	gsc_delete_allele_matrix(m->m);
 
     // Free label defaults
     if (m->n_labels > 0) {
         if (m->label_ids != NULL) {
-            free(m->label_ids);
+            GSC_FREE(m->label_ids);
         }
         if (m->label_defaults != NULL) {
-            free(m->label_defaults);
+            GSC_FREE(m->label_defaults);
         }
     }
 
 	//m->current_id = 0;
-	free(m);
+	GSC_FREE(m);
 }
 
-/** Delete a MarkerBlocks struct.
+/** Delete a gsc_MarkerBlocks struct.
  *
- * Deletes a MarkerBlocks object and frees its associated memory. b will now refer
+ * Deletes a gsc_MarkerBlocks object and frees its associated memory. b will now refer
  * to an empty struct, with every pointer set to null and number of markers set to 0.
+ *
+ * @shortnamed{delete_markerblocks}
  *
  * @param b pointer to the struct whose data is to be cleared and memory freed.
  */
-void delete_markerblocks(MarkerBlocks* b) {
+void gsc_delete_markerblocks(gsc_MarkerBlocks* b) {
 	for (int i = 0; i < b->num_blocks; ++i) {
-		free(b->markers_in_block[i]);
+		GSC_FREE(b->markers_in_block[i]);
 	}
-	free(b->markers_in_block);
+	GSC_FREE(b->markers_in_block);
 	b->markers_in_block = NULL;
-	free(b->num_markers_in_block);
+	GSC_FREE(b->num_markers_in_block);
 	b->num_markers_in_block = NULL;
 	b->num_blocks = 0;
 
@@ -4536,53 +4468,244 @@ void delete_markerblocks(MarkerBlocks* b) {
 }
 
 
-/** Deletes a BidirectionalIterator object.
+/** Deletes a gsc_BidirectionalIterator object.
  *
- *  A BidirectionalIterator has no heap memory to free, so calling
+ *  A gsc_BidirectionalIterator has no heap memory to free, so calling
  *  this function is mostly unnecessary. The function will set all
  *  values in the struct to uninitialised/null values, and will set
  *  the iterator to think it is both at the start and end of its
  *  sequence, so that any next_* functions will not attempt to
  *  search for group member locations.
  *
+ * @shortnamed{delete_bidirectional_iter}
+ *
  * @param it pointer to the struct whose data is to be cleared.
  */
-void delete_bidirectional_iter(BidirectionalIterator* it) {
+void gsc_delete_bidirectional_iter(gsc_BidirectionalIterator* it) {
     it->d = NULL;
-    //it->group = NO_GROUP;
-    it->localPos = UNINITIALISED;
+    //it->group = gsc_NO_GROUP;
+    it->localPos = GSC_UNINIT;
     it->cachedAM = NULL;
-    it->cachedAMIndex = UNINITIALISED;
-    it->atEnd = TRUE;
-    it->atStart = TRUE;
+    it->cachedAMIndex = GSC_UNINIT;
+    it->atEnd = GSC_TRUE;
+    it->atStart = GSC_TRUE;
 }
 
-/** Deletes a RandomAccessIterator object and frees its memory.
+/** Deletes a gsc_RandomAccessIterator object and frees its memory.
  *
  *  All values in the struct will be set to uninitialised/null values,
  *  except for groupSize, which will be set to 0 to so that any
  *  next_* functions called on the iterator will not attempt to
  *  search for group member locations.
  *
+ * @shortnamed{delete_randomaccess_iter}
+ *
  * @param it pointer to the struct whose data is to be cleared and memory freed.
  */
-void delete_randomaccess_iter(RandomAccessIterator* it) {
+void gsc_delete_randomaccess_iter(gsc_RandomAccessIterator* it) {
     it->d = NULL;
-    //it->group = NO_GROUP;
+    //it->group = gsc_NO_GROUP;
     if (it->cacheSize > 0) {
-        free(it->cache);
+        GSC_FREE(it->cache);
     }
     it->cache = NULL;
     it->cacheSize = 0;
-    it->largestCached = UNINITIALISED;
+    it->largestCached = GSC_UNINIT;
     it->groupSize = 0;
 }
 
-/*-------------------------------SimData loaders-----------------------------*/
+/*-------------------------------gsc_SimData loaders-----------------------------*/
 
-/** Populates a SimData combination with marker allele data.
- * @see load_transposed_encoded_genes_to_simdata()
- * Assumes it is starting from a clean/empty SimData.
+
+/** Takes a gsc_SimData object, and sorts its markers, the rows of its parent gen
+ * gsc_AlleleMatrix (because they are ordered by the markers), and its genetic map
+ * so that the markers are ordered by chromosome number then position.
+ *
+ * Markers that do not have a position in d->map.positions are deleted from
+ * all those three lists. This is done by malloc-ing new memory, copying
+ * data over in the new sorted order, and freeing the old memory.
+ *
+ * Note: only the starting generation in the gsc_AlleleMatrix list is reordered, and
+ * all additional gsc_AlleleMatrix objects are deleted.
+ *
+ * @param d pointer to the gsc_SimData to have its markers, genetic map, and allele
+ * matrix sorted. The gsc_SimData pointed to by d will be modified by this function.
+ * @param actual_n_markers If previously calculated, include the number of
+ * markers in `d->markers` that have a position loaded into `d->map.positions`.
+ * If this has not been calculated yet, make the value -1 (GSC_UNINIT) and
+ * this function will
+ * calculate it. The value is calculated as the number of positions in
+ * `d->map.positions` that have a chromosome number of 0.
+*/
+static void gsc_get_sorted_markers(gsc_SimData* d, int actual_n_markers) {
+    if (actual_n_markers <= 0) {
+        return;
+    }
+
+	gsc_MarkerPosition* sortable[d->n_markers];
+	for (int i = 0; i < d->n_markers; i++) {
+		sortable[i] = &(d->map.positions[i]);
+	}
+
+	// if this was not pre-calculated do it now.
+    if (actual_n_markers < 0) { // actual_n_markers == GSC_UNINIT
+		actual_n_markers = d->n_markers;
+		for (int i = 0; i < d->n_markers; i++) {
+			if (d->map.positions[i].chromosome == 0) {
+				actual_n_markers -= 1;
+			}
+		}
+	}
+
+	/* Sort the pointers */
+	qsort(sortable, d->n_markers, sizeof(sortable[0]), gsc_helper_simdata_pos_compare);
+	int location_in_old;
+
+	R_CheckUserInterrupt();
+
+	if (d->markers != NULL) {
+		char** new_markers = gsc_malloc_wrap(sizeof(char*) * actual_n_markers);
+		for (int i = 0; i < actual_n_markers; ++i) {
+			location_in_old = sortable[i] - d->map.positions;
+			new_markers[i] = d->markers[location_in_old]; // shallow copy
+		}
+
+		GSC_FREE(d->markers);
+		d->markers = new_markers;
+	}
+
+	char* temp;
+    if (d->m != NULL) {
+		//temp = gsc_malloc_wrap(sizeof(char) * ((actual_n_markers * 2)));
+		gsc_AlleleMatrix* am = d->m;
+
+		do {
+			for (int i = 0; i < am->n_genotypes; ++i) {
+				R_CheckUserInterrupt();
+
+				//strncpy(temp, am->alleles[i], sizeof(char) * ((am->n_markers * 2)));
+				temp = gsc_malloc_wrap(sizeof(char) * ((actual_n_markers * 2)));
+
+				for (int j = 0; j < actual_n_markers; ++j) {
+					location_in_old = sortable[j] - d->map.positions;
+					temp[2*j] = am->alleles[i][2*location_in_old];
+					temp[2*j + 1] = am->alleles[i][2*location_in_old + 1];
+
+				}
+				GSC_FREE(am->alleles[i]);
+				am->alleles[i] = temp;
+			}
+			am->n_markers = actual_n_markers;
+		} while ((am = am->next) != NULL);
+		//GSC_FREE(temp);
+	}
+
+    for (int k = 0; k < d->n_eff_sets; ++k) {
+		// Don't need to update row names, just matrix.
+        gsc_DecimalMatrix new_eff = gsc_generate_zero_dmatrix(d->e[k].effects.rows, actual_n_markers);
+		for (int i = 0; i < actual_n_markers; ++i) {
+			R_CheckUserInterrupt();
+			location_in_old = sortable[i] - d->map.positions;
+            for (int j = 0; j < d->e[k].effects.rows; ++j) {
+                new_eff.matrix[j][i] = d->e[k].effects.matrix[j][location_in_old];
+			}
+		}
+
+        gsc_delete_dmatrix(&(d->e[k].effects));
+
+        d->e[k].effects = new_eff;
+	}
+
+	if (d->map.positions != NULL) {
+		gsc_MarkerPosition* new_map = gsc_malloc_wrap(sizeof(gsc_MarkerPosition) * actual_n_markers);
+		for (int i = 0; i < actual_n_markers; ++i) {
+			R_CheckUserInterrupt();
+			location_in_old = sortable[i] - d->map.positions;
+			new_map[i].chromosome = d->map.positions[location_in_old].chromosome;
+			new_map[i].position = d->map.positions[location_in_old].position;
+		}
+
+		gsc_delete_genmap(&(d->map));
+		d->map.positions = new_map;
+	}
+	d->n_markers = actual_n_markers;
+
+}
+
+/** Updates the chr_ends, n_chr and chr_lengths fields in gsc_SimData.map.
+ *
+ * This should only be run on a gsc_SimData that has already been ordered.
+ * @see sort_markers()
+ *
+ * The function loops over all gsc_MarkerPosition in gsc_SimData.map.positions
+ * twice, for flexible and minimal memory usage rather than maximum speed.
+ *
+ * Chromosome lengths are intialised to 0 for chromosomes that contain
+ * no markers, and to a flat (meaningless) value of 1 for chromosomes that
+ * contain exactly one marker.
+ *
+ * @param d pointer to the gsc_SimData object for which the fields under `map`
+ * need to be initialised or updated.
+ */
+static void gsc_get_chromosome_locations(gsc_SimData *d) {
+	// count the chromosomes
+	int highest_chr_found = 0;
+
+	for (int i = 0; i < d->n_markers; i++) {
+		if (d->map.positions[i].chromosome > highest_chr_found) {
+			highest_chr_found = d->map.positions[i].chromosome;
+		}
+	}
+	d->map.n_chr = highest_chr_found;
+
+	if (d->map.chr_ends != NULL) {
+		GSC_FREE(d->map.chr_ends);
+	}
+	if (d->map.chr_lengths != NULL) {
+		GSC_FREE(d->map.chr_lengths);
+	}
+
+	// identify the start/end points of all chromosomes
+	d->map.chr_ends = gsc_malloc_wrap(sizeof(int) * (highest_chr_found + 1));
+	d->map.chr_lengths = gsc_malloc_wrap(sizeof(float) * (highest_chr_found));
+
+	highest_chr_found = 0;
+	for (int i = 0; i < d->n_markers; i++) {
+		R_CheckUserInterrupt();
+		if (d->map.positions[i].chromosome == highest_chr_found + 1) {
+			highest_chr_found = d->map.positions[i].chromosome;
+			d->map.chr_ends[highest_chr_found - 1] = i;
+		} else if (d->map.positions[i].chromosome > highest_chr_found) {
+			// deal with chromosomes that have no markers
+			for (int j = highest_chr_found; j < d->map.positions[i].chromosome; j++) {
+				d->map.chr_ends[j] = i;
+			}
+
+			highest_chr_found = d->map.positions[i].chromosome;
+		}
+	}
+	// and add on the end index
+	d->map.chr_ends[d->map.n_chr] = d->n_markers;
+
+	// calculate lengths
+	for (int i = 0; i < d->map.n_chr; i++) {
+		if (d->map.chr_ends[i+1] - 1 > d->map.chr_ends[i]) { //more than 1 marker in chr
+			d->map.chr_lengths[i] = d->map.positions[d->map.chr_ends[i+1] - 1].position
+					- d->map.positions[d->map.chr_ends[i]].position;
+
+		} else if (d->map.chr_ends[i+1] - 1 == d->map.chr_ends[i]) { // exactly 1 marker in chr
+			d->map.chr_lengths[i] = 1; //pretty much arbitrary, won't affect crossing anyway
+		} else { // no markers tracked at this chr
+			d->map.chr_lengths[i] = 0;
+		}
+	}
+
+    ////srand(time(NULL)); //seed the random generator so we're ready to start crossing.
+}
+
+
+/** Populates a gsc_SimData combination with marker allele data.
+ * @see gsc_load_genotypes_encoded_and_transposed()
  *
  * Given a file with the following format:
  *
@@ -4597,24 +4720,27 @@ void delete_randomaccess_iter(RandomAccessIterator* it) {
  * Where [line] is a code for a line, [marker] is a code for a marker, and
  * [SNP pair] is eg TT, TA.
  *
- * Note: this function should be called first when populating a SimData object -
- * it clears everything in the SimData. This is because all the data in SimData
- * is based on what markers exist in the loaded marker allele file.
- *
  * An output message stating the number of genotypes and number of markers loaded
  * is printed to stdout.
  *
- * @param d pointer to SimData to be populated
+ * @shortnamed{load_genotypes_transposed}
+ *
+ * @param d pointer to gsc_SimData to be populated. If d is not empty, this 
+ * function passes over to @ref gsc_load_more_genotypes_transposed to do the work.
  * @param filename string containing name/path of file containing SNP marker
  * allele data.
  * @returns the group number of the loaded genotypes. All genotypes are loaded into
  * the same group.
 */
-GroupNum load_transposed_genes_to_simdata(SimData* d, const char* filename) {
-	struct TableSize t = get_file_dimensions(filename, '\t');
+gsc_GroupNum gsc_load_genotypes_transposed(gsc_SimData* d, const char* filename) {
+	if (d->m != NULL) {
+		return gsc_load_more_genotypes_transposed(d, filename);
+	}
+	
+	struct gsc_TableSize t = gsc_get_file_dimensions(filename, '\t');
     char cell[4] = "\t%s";
     if (t.num_columns == 1) {
-        t = get_file_dimensions(filename, ' ');
+        t = gsc_get_file_dimensions(filename, ' ');
         cell[0] = ' ';
     }
     if (t.num_columns == 1) {
@@ -4622,7 +4748,7 @@ GroupNum load_transposed_genes_to_simdata(SimData* d, const char* filename) {
     }
 
 	FILE* fp;
-    const GroupNum gp = {.num=1};
+    const gsc_GroupNum gp = {.num=1};
 	if ((fp = fopen(filename, "r")) == NULL) {
 		error( "Failed to open file %s.\n", filename);
 	}
@@ -4636,22 +4762,22 @@ GroupNum load_transposed_genes_to_simdata(SimData* d, const char* filename) {
 	// now we want to read the header columns.
 	// There are num_columns-1 of these because of the 'name' entry
 	// this will also create our unique ids
-	AlleleMatrix* current_am;
+	gsc_AlleleMatrix* current_am;
 	int n_to_go = t.num_columns - 1;
 	if (n_to_go < CONTIG_WIDTH) {
-        current_am = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, n_to_go);
+        current_am = gsc_create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, n_to_go);
 		d->m = current_am;
 		n_to_go = 0;
 	} else {
-        current_am = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, CONTIG_WIDTH);
+        current_am = gsc_create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 		d->m = current_am;
 		n_to_go -= CONTIG_WIDTH;
 		while (n_to_go) {
 			if (n_to_go < CONTIG_WIDTH) {
-                current_am->next = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, n_to_go);
+                current_am->next = gsc_create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, n_to_go);
 				n_to_go = 0;
 			} else {
-                current_am->next = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, CONTIG_WIDTH);
+                current_am->next = gsc_create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 				current_am = current_am->next;
 				n_to_go -= CONTIG_WIDTH;
 			}
@@ -4671,10 +4797,10 @@ GroupNum load_transposed_genes_to_simdata(SimData* d, const char* filename) {
 
 		if (current_am == NULL) {
 			warning( "Something went wrong during setup\n");
-			// will occur if there's some bug in create_empty_allelematrix again
+			// will occur if there's some bug in gsc_create_empty_allelematrix again
 		}
 
-		current_am->names[i_am] = get_malloc(sizeof(char) * strlen(word) + 1);
+		current_am->names[i_am] = gsc_malloc_wrap(sizeof(char) * strlen(word) + 1);
 		strcpy(current_am->names[i_am], word);
 
 	}
@@ -4683,11 +4809,11 @@ GroupNum load_transposed_genes_to_simdata(SimData* d, const char* filename) {
 	fscanf(fp, "%*[^\n]\n");
 
 	// set the ids for the genotypes we loaded
-	set_ids(d, 0, t.num_columns - 2);
+	gsc_set_ids(d, 0, t.num_columns - 2);
 
 	// get space to put marker names and data we gathered
 	d->n_markers = t.num_rows - 1;
-	d->markers = get_malloc(sizeof(char*) * (t.num_rows-1));
+	d->markers = gsc_malloc_wrap(sizeof(char*) * (t.num_rows-1));
 	//memset(d->markers, '\0', sizeof(char*) * (t.num_rows-1));
 
 	// now read the rest of the table.
@@ -4700,11 +4826,11 @@ GroupNum load_transposed_genes_to_simdata(SimData* d, const char* filename) {
 		// get the row name, store in markers
 		fscanf(fp, "%s", word);
         int wordlen = strlen(word) + 1;
-        d->markers[j] = get_malloc(sizeof(char) * wordlen);
+        d->markers[j] = gsc_malloc_wrap(sizeof(char) * wordlen);
         strncpy(d->markers[j], word, wordlen);
 
 		current_am = d->m;
-		//d->m->alleles[j] = get_malloc(sizeof(char) * d->m[0].n_genotypes * 2);
+		//d->m->alleles[j] = gsc_malloc_wrap(sizeof(char) * d->m[0].n_genotypes * 2);
 		for (int i = 0, i_am = 0; i < (t.num_columns - 1); ++i, ++i_am) {
 			// looping through the remaining columns in this row.
 			fscanf(fp, cell, word2);
@@ -4732,9 +4858,9 @@ GroupNum load_transposed_genes_to_simdata(SimData* d, const char* filename) {
 	return gp;
 }
 
-/** Populates a SimData combination with marker allele data.
- * @see load_transposed_genes_to_simdata()
- * Assumes it is starting from a clean/empty SimData.
+/** Populates a gsc_SimData combination with marker allele data.
+ * @see gsc_load_genotypes_transposed()
+ * Assumes it is starting from a clean/empty gsc_SimData.
  *
  * Given a file with the following format:
  *
@@ -4755,24 +4881,26 @@ GroupNum load_transposed_genes_to_simdata(SimData* d, const char* filename) {
  * A => AA    ; C => CC    ; G => GG    ; T => TT   ;
  * R => AG    ; Y => CT    ; S => CG    ; W => AT   ; K => GT   ; M => AC
  *
- * Note: this function should be called first when populating a SimData object -
- * it clears everything in the SimData. This is because all the data in SimData
+ * Note: this function should be called first when populating a gsc_SimData object -
+ * it clears everything in the gsc_SimData. This is because all the data in gsc_SimData
  * is based on what markers exist in the loaded marker allele file.
  *
  * An output message stating the number of genotypes and number of markers loaded
  * is printed to stdout.
  *
- * @param d pointer to SimData to be populated
+ * @shortnamed{load_genotypes_encoded_and_transposed}
+ *
+ * @param d pointer to gsc_SimData to be populated
  * @param filename string containing name/path of file containing SNP marker
  * allele data.
  * @returns the group number of the loaded genotypes. All genotypes are loaded into
  * the same group.
 */
-GroupNum load_transposed_encoded_genes_to_simdata(SimData* d, const char* filename) {
-	struct TableSize t = get_file_dimensions(filename, '\t');
+gsc_GroupNum gsc_load_genotypes_encoded_and_transposed(gsc_SimData* d, const char* filename) {
+	struct gsc_TableSize t = gsc_get_file_dimensions(filename, '\t');
     char cell[4] = "\t%s";
     if (t.num_columns == 1) {
-        t = get_file_dimensions(filename, ' ');
+        t = gsc_get_file_dimensions(filename, ' ');
         cell[0] = ' ';
     }
     if (t.num_columns == 1) {
@@ -4780,7 +4908,7 @@ GroupNum load_transposed_encoded_genes_to_simdata(SimData* d, const char* filena
     }
 
 	FILE* fp;
-    const GroupNum gp = {.num=1};
+    const gsc_GroupNum gp = {.num=1};
 	if ((fp = fopen(filename, "r")) == NULL) {
 		error( "Failed to open file %s.\n", filename);
 	}
@@ -4794,22 +4922,22 @@ GroupNum load_transposed_encoded_genes_to_simdata(SimData* d, const char* filena
 	// now we want to read the header columns.
 	// There are num_columns-1 of these because of the 'name' entry
 	// this will also create our unique ids
-	AlleleMatrix* current_am;
+	gsc_AlleleMatrix* current_am;
 	int n_to_go = t.num_columns - 1;
 	if (n_to_go < CONTIG_WIDTH) {
-        current_am = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, n_to_go);
+        current_am = gsc_create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, n_to_go);
 		d->m = current_am;
 		n_to_go = 0;
 	} else {
-        current_am = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, CONTIG_WIDTH);
+        current_am = gsc_create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 		d->m = current_am;
 		n_to_go -= CONTIG_WIDTH;
 		while (n_to_go) {
 			if (n_to_go < CONTIG_WIDTH) {
-                current_am->next = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, n_to_go);
+                current_am->next = gsc_create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, n_to_go);
 				n_to_go = 0;
 			} else {
-                current_am->next = create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, CONTIG_WIDTH);
+                current_am->next = gsc_create_empty_allelematrix(t.num_rows - 1, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 				current_am = current_am->next;
 				n_to_go -= CONTIG_WIDTH;
 			}
@@ -4828,7 +4956,7 @@ GroupNum load_transposed_encoded_genes_to_simdata(SimData* d, const char* filena
 			current_am = current_am->next;
 		}
 
-		current_am->names[i_am] = get_malloc(sizeof(char) * strlen(word) + 1);
+		current_am->names[i_am] = gsc_malloc_wrap(sizeof(char) * strlen(word) + 1);
 		strcpy(current_am->names[i_am], word);
 	}
 
@@ -4836,11 +4964,11 @@ GroupNum load_transposed_encoded_genes_to_simdata(SimData* d, const char* filena
 	fscanf(fp, "%*[^\n]\n");
 
 	// set the ids for the genotypes we loaded
-	set_ids(d, 0, t.num_columns - 2);
+	gsc_set_ids(d, 0, t.num_columns - 2);
 
 	// get space to put marker names and data we gathered
 	d->n_markers = t.num_rows - 1;
-	d->markers = get_malloc(sizeof(char*) * (t.num_rows-1));
+	d->markers = gsc_malloc_wrap(sizeof(char*) * (t.num_rows-1));
 	//memset(d->markers, '\0', sizeof(char*) * (t.num_rows-1));
 
 	// now read the rest of the table.
@@ -4855,11 +4983,11 @@ GroupNum load_transposed_encoded_genes_to_simdata(SimData* d, const char* filena
 		// get the row name, store in markers
 		fscanf(fp, "%s", word);
         int wordlen = strlen(word) + 1;
-        d->markers[j] = get_malloc(sizeof(char) * wordlen);
+        d->markers[j] = gsc_malloc_wrap(sizeof(char) * wordlen);
         strncpy(d->markers[j], word, wordlen);
 
 		current_am = d->m;
-		//d->m->alleles[j] = get_malloc(sizeof(char) * d->m[0].n_genotypes * 2);
+		//d->m->alleles[j] = gsc_malloc_wrap(sizeof(char) * d->m[0].n_genotypes * 2);
 		for (int i = 0, i_am = 0; i < (t.num_columns - 1); ++i, ++i_am) {
 			// looping through the remaining columns in this row.
 			fscanf(fp, cell, &c);
@@ -4908,8 +5036,8 @@ GroupNum load_transposed_encoded_genes_to_simdata(SimData* d, const char* filena
 	return gp;
 }
 
-/** Appends genotype data from a file to an existing SimData
- * @see load_transposed_genes_to_simdata()
+/** Appends genotype data from a file to an existing gsc_SimData
+ * @see gsc_load_genotypes_transposed()
  *
  * Given a file with the following format:
  *
@@ -4924,24 +5052,26 @@ GroupNum load_transposed_encoded_genes_to_simdata(SimData* d, const char* filena
  * Where [line] is a code for a line, [marker] is a code for a marker, and
  * [SNP pair] is eg TT, TA.
  *
- * If a given marker does not exist in the SimData's set of markers, it is ignored.
- * for the purposes of loading. No markers can be added to a SimData after the creation
+ * If a given marker does not exist in the gsc_SimData's set of markers, it is ignored.
+ * for the purposes of loading. No markers can be added to a gsc_SimData after the creation
  * step.
  *
  * An output message stating the number of genotypes and number of markers loaded
  * is printed to stdout.
  *
- * @param d pointer to SimData to be populated
+ * @shortnamed{load_genotypes_transposed}
+ *
+ * @param d pointer to gsc_SimData to be populated
  * @param filename string containing name/path of file containing SNP marker
  * allele data.
  * @returns the group number of the loaded genotypes. All genotypes are loaded into
  * the same group.
 */
-GroupNum load_more_transposed_genes_to_simdata(SimData* d, const char* filename) {
-	struct TableSize t = get_file_dimensions(filename, '\t');
+gsc_GroupNum gsc_load_more_genotypes_transposed(gsc_SimData* d, const char* filename) {
+	struct gsc_TableSize t = gsc_get_file_dimensions(filename, '\t');
     char cell[4] = "\t%s";
     if (t.num_columns == 1) {
-        t = get_file_dimensions(filename, ' ');
+        t = gsc_get_file_dimensions(filename, ' ');
         cell[0] = ' ';
     }
     if (t.num_columns == 1) {
@@ -4949,7 +5079,7 @@ GroupNum load_more_transposed_genes_to_simdata(SimData* d, const char* filename)
     }
 
 	FILE* fp;
-    GroupNum gp = get_new_group_num(d);
+    gsc_GroupNum gp = gsc_get_new_group_num(d);
 	if ((fp = fopen(filename, "r")) == NULL) {
 		error( "Failed to open file %s.\n", filename);
 	}
@@ -4965,7 +5095,7 @@ GroupNum load_more_transposed_genes_to_simdata(SimData* d, const char* filename)
 	// this will also create our unique ids
 
 	// find the end of the AM chain so far
-	AlleleMatrix* last_am = d->m;
+	gsc_AlleleMatrix* last_am = d->m;
 	int last_n_genotypes = last_am->n_genotypes;
 	while (last_am->next != NULL) {
 		last_am = last_am->next;
@@ -4973,22 +5103,22 @@ GroupNum load_more_transposed_genes_to_simdata(SimData* d, const char* filename)
 	}
 
 	// Create new AMs that will be populated from the file.
-	AlleleMatrix* current_am;
+	gsc_AlleleMatrix* current_am;
 	int n_to_go = t.num_columns - 1;
 	if (n_to_go < CONTIG_WIDTH) {
-        current_am = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
+        current_am = gsc_create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 		last_am->next = current_am;
 		n_to_go = 0;
 	} else {
-        current_am = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
+        current_am = gsc_create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 		last_am->next = current_am;
 		n_to_go -= CONTIG_WIDTH;
 		while (n_to_go) {
 			if (n_to_go <= CONTIG_WIDTH) {
-                current_am->next = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
+                current_am->next = gsc_create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, n_to_go);
 				n_to_go = 0;
 			} else {
-                current_am->next = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
+                current_am->next = gsc_create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 				current_am = current_am->next;
 				n_to_go -= CONTIG_WIDTH;
 			}
@@ -4997,7 +5127,7 @@ GroupNum load_more_transposed_genes_to_simdata(SimData* d, const char* filename)
 	}
 
 	// set the ids for the genotypes we loaded
-	set_ids(d, last_n_genotypes, last_n_genotypes + t.num_columns - 2);
+	gsc_set_ids(d, last_n_genotypes, last_n_genotypes + t.num_columns - 2);
 
 	// load in the genotypes' names from the header
 	for (int i = 0, i_am = 0; i < (t.num_columns-1); ++i, ++i_am) {
@@ -5009,7 +5139,7 @@ GroupNum load_more_transposed_genes_to_simdata(SimData* d, const char* filename)
 			current_am = current_am->next;
 		}
 
-		current_am->names[i_am] = get_malloc(sizeof(char) * strlen(word) + 1);
+		current_am->names[i_am] = gsc_malloc_wrap(sizeof(char) * strlen(word) + 1);
 		strcpy(current_am->names[i_am], word);
 	}
 
@@ -5027,7 +5157,7 @@ GroupNum load_more_transposed_genes_to_simdata(SimData* d, const char* filename)
 
 		// get the row name, store in markers
 		fscanf(fp, "%s", word);
-        markeri = get_from_unordered_str_list(word, d->n_markers, (const char**) d->markers);
+        markeri = gsc_get_from_unordered_str_list(word, d->n_markers, (const char**) d->markers);
 
 		current_am = last_am->next;
 
@@ -5055,7 +5185,7 @@ GroupNum load_more_transposed_genes_to_simdata(SimData* d, const char* filename)
 			warning( "Could not find the marker %s\n", word);
 		}
 	}
-	condense_allele_matrix(d);
+	gsc_condense_allele_matrix(d);
 
 	Rprintf("%d genotypes were loaded.\n", t.num_columns - 1);
 	fclose(fp);
@@ -5063,12 +5193,12 @@ GroupNum load_more_transposed_genes_to_simdata(SimData* d, const char* filename)
 	return gp;
 }
 
-/** Populates a SimData combination with data from a genetic map. Map positions must be in cM.
+/** Populates a gsc_SimData combination with data from a genetic map. Map positions must be in cM.
  *
- * Note: this function should be called second when populating a SimData object,
+ * Note: this function should be called second when populating a gsc_SimData object,
  * after populating it with marker allele data. This is because this function
  * loads the genmap data corresponding to markers used in the allele file, then
- * deletes markers in SimData that do not have positions for ease of simulation.
+ * deletes markers in gsc_SimData that do not have positions for ease of simulation.
  *
  * The file's format should be:
  *
@@ -5083,10 +5213,12 @@ GroupNum load_more_transposed_genes_to_simdata(SimData* d, const char* filename)
  * The function assumes the maximum line length is 99 characters.
  * It also assumes that there is only one mapping per marker in the file.
  *
- * @param d pointer to SimData to be populated
+ * @shortnamed{load_genmap}
+ *
+ * @param d pointer to gsc_SimData to be populated
  * @param filename string name/path of file containing genetic map data.
 */
-void load_genmap_to_simdata(SimData* d, const char* filename) {
+void gsc_load_genmap(gsc_SimData* d, const char* filename) {
 	// open our file.
 	FILE* fp;
 	if ((fp = fopen(filename, "r")) == NULL) {
@@ -5105,17 +5237,17 @@ void load_genmap_to_simdata(SimData* d, const char* filename) {
 	int positions_loaded = 0;
 
 	if (d->map.positions != NULL) {
-		delete_genmap(&(d->map));
+		gsc_delete_genmap(&(d->map));
 	}
 
-	d->map.positions = calloc(sizeof(MarkerPosition) * d->n_markers, sizeof(MarkerPosition));
+	d->map.positions = calloc(sizeof(gsc_MarkerPosition) * d->n_markers, sizeof(gsc_MarkerPosition));
 
 	// loop through rows of the file (until we've got all our positions)
 	while (fgets(buffer, bufferlen, fp) != NULL && (positions_loaded < d->n_markers)) {
 		R_CheckUserInterrupt();
 		sscanf(buffer, "%s %d %f\n", marker_name, &chr, &pos);
 
-        if ((location = get_from_unordered_str_list( marker_name, d->n_markers, (const char**) d->markers)) >= 0) {
+        if ((location = gsc_get_from_unordered_str_list( marker_name, d->n_markers, (const char**) d->markers)) >= 0) {
 			// the marker is in our list, so save its position
 			d->map.positions[location].chromosome = chr;
 			d->map.positions[location].position = pos;
@@ -5137,198 +5269,12 @@ void load_genmap_to_simdata(SimData* d, const char* filename) {
 
 	//Order the markers and positions, eliminating markers with no positions
 	if (n_nopos > 0) {
-		get_sorted_markers(d, d->n_markers - n_nopos);
-		get_chromosome_locations(d);
+		gsc_get_sorted_markers(d, d->n_markers - n_nopos);
+		gsc_get_chromosome_locations(d);
 	}
 }
 
-/** Takes a SimData object, and sorts its markers, the rows of its parent gen
- * AlleleMatrix (because they are ordered by the markers), and its genetic map
- * so that the markers are ordered by chromosome number then position.
- *
- * Markers that do not have a position in d->map.positions are deleted from
- * all those three lists. This is done by malloc-ing new memory, copying
- * data over in the new sorted order, and freeing the old memory.
- *
- * Note: only the starting generation in the AlleleMatrix list is reordered, and
- * all additional AlleleMatrix objects are deleted.
- *
- * @param d pointer to the SimData to have its markers, genetic map, and allele
- * matrix sorted. The SimData pointed to by d will be modified by this function.
- * @param actual_n_markers If previously calculated, include the number of
- * markers in `d->markers` that have a position loaded into `d->map.positions`.
- * If this has not been calculated yet, make the value -1 (UNINITIALISED) and
- * this function will
- * calculate it. The value is calculated as the number of positions in
- * `d->map.positions` that have a chromosome number of 0.
-*/
-void get_sorted_markers(SimData* d, int actual_n_markers) {
-    if (actual_n_markers <= 0) {
-        return;
-    }
-
-	MarkerPosition* sortable[d->n_markers];
-	for (int i = 0; i < d->n_markers; i++) {
-		sortable[i] = &(d->map.positions[i]);
-	}
-
-	// if this was not pre-calculated do it now.
-    if (actual_n_markers < 0) { // actual_n_markers == UNINITIALISED
-		actual_n_markers = d->n_markers;
-		for (int i = 0; i < d->n_markers; i++) {
-			if (d->map.positions[i].chromosome == 0) {
-				actual_n_markers -= 1;
-			}
-		}
-	}
-
-	/* Sort the pointers */
-	qsort(sortable, d->n_markers, sizeof(sortable[0]), _simdata_pos_compare);
-	int location_in_old;
-
-	R_CheckUserInterrupt();
-
-	if (d->markers != NULL) {
-		char** new_markers = get_malloc(sizeof(char*) * actual_n_markers);
-		for (int i = 0; i < actual_n_markers; ++i) {
-			location_in_old = sortable[i] - d->map.positions;
-			new_markers[i] = d->markers[location_in_old]; // shallow copy
-		}
-
-		free(d->markers);
-		d->markers = new_markers;
-	}
-
-	char* temp;
-    if (d->m != NULL) {
-		//temp = get_malloc(sizeof(char) * ((actual_n_markers * 2)));
-		AlleleMatrix* am = d->m;
-
-		do {
-			for (int i = 0; i < am->n_genotypes; ++i) {
-				R_CheckUserInterrupt();
-
-				//strncpy(temp, am->alleles[i], sizeof(char) * ((am->n_markers * 2)));
-				temp = get_malloc(sizeof(char) * ((actual_n_markers * 2)));
-
-				for (int j = 0; j < actual_n_markers; ++j) {
-					location_in_old = sortable[j] - d->map.positions;
-					temp[2*j] = am->alleles[i][2*location_in_old];
-					temp[2*j + 1] = am->alleles[i][2*location_in_old + 1];
-
-				}
-				free(am->alleles[i]);
-				am->alleles[i] = temp;
-			}
-			am->n_markers = actual_n_markers;
-		} while ((am = am->next) != NULL);
-		//free(temp);
-	}
-
-    for (int k = 0; k < d->n_eff_sets; ++k) {
-		// Don't need to update row names, just matrix.
-        DecimalMatrix new_eff = generate_zero_dmatrix(d->e[k].effects.rows, actual_n_markers);
-		for (int i = 0; i < actual_n_markers; ++i) {
-			R_CheckUserInterrupt();
-			location_in_old = sortable[i] - d->map.positions;
-            for (int j = 0; j < d->e[k].effects.rows; ++j) {
-                new_eff.matrix[j][i] = d->e[k].effects.matrix[j][location_in_old];
-			}
-		}
-
-        delete_dmatrix(&(d->e[k].effects));
-
-        d->e[k].effects = new_eff;
-	}
-
-	if (d->map.positions != NULL) {
-		MarkerPosition* new_map = get_malloc(sizeof(MarkerPosition) * actual_n_markers);
-		for (int i = 0; i < actual_n_markers; ++i) {
-			R_CheckUserInterrupt();
-			location_in_old = sortable[i] - d->map.positions;
-			new_map[i].chromosome = d->map.positions[location_in_old].chromosome;
-			new_map[i].position = d->map.positions[location_in_old].position;
-		}
-
-		delete_genmap(&(d->map));
-		d->map.positions = new_map;
-	}
-	d->n_markers = actual_n_markers;
-
-}
-
-/** Updates the chr_ends, n_chr and chr_lengths fields in SimData.map.
- *
- * This should only be run on a SimData that has already been ordered.
- * @see sort_markers()
- *
- * The function loops over all MarkerPosition in SimData.map.positions
- * twice, for flexible and minimal memory usage rather than maximum speed.
- *
- * Chromosome lengths are intialised to 0 for chromosomes that contain
- * no markers, and to a flat (meaningless) value of 1 for chromosomes that
- * contain exactly one marker.
- *
- * @param d pointer to the SimData object for which the fields under `map`
- * need to be initialised or updated.
- */
-void get_chromosome_locations(SimData *d) {
-	// count the chromosomes
-	int highest_chr_found = 0;
-
-	for (int i = 0; i < d->n_markers; i++) {
-		if (d->map.positions[i].chromosome > highest_chr_found) {
-			highest_chr_found = d->map.positions[i].chromosome;
-		}
-	}
-	d->map.n_chr = highest_chr_found;
-
-	if (d->map.chr_ends != NULL) {
-		free(d->map.chr_ends);
-	}
-	if (d->map.chr_lengths != NULL) {
-		free(d->map.chr_lengths);
-	}
-
-	// identify the start/end points of all chromosomes
-	d->map.chr_ends = get_malloc(sizeof(int) * (highest_chr_found + 1));
-	d->map.chr_lengths = get_malloc(sizeof(float) * (highest_chr_found));
-
-	highest_chr_found = 0;
-	for (int i = 0; i < d->n_markers; i++) {
-		R_CheckUserInterrupt();
-		if (d->map.positions[i].chromosome == highest_chr_found + 1) {
-			highest_chr_found = d->map.positions[i].chromosome;
-			d->map.chr_ends[highest_chr_found - 1] = i;
-		} else if (d->map.positions[i].chromosome > highest_chr_found) {
-			// deal with chromosomes that have no markers
-			for (int j = highest_chr_found; j < d->map.positions[i].chromosome; j++) {
-				d->map.chr_ends[j] = i;
-			}
-
-			highest_chr_found = d->map.positions[i].chromosome;
-		}
-	}
-	// and add on the end index
-	d->map.chr_ends[d->map.n_chr] = d->n_markers;
-
-	// calculate lengths
-	for (int i = 0; i < d->map.n_chr; i++) {
-		if (d->map.chr_ends[i+1] - 1 > d->map.chr_ends[i]) { //more than 1 marker in chr
-			d->map.chr_lengths[i] = d->map.positions[d->map.chr_ends[i+1] - 1].position
-					- d->map.positions[d->map.chr_ends[i]].position;
-
-		} else if (d->map.chr_ends[i+1] - 1 == d->map.chr_ends[i]) { // exactly 1 marker in chr
-			d->map.chr_lengths[i] = 1; //pretty much arbitrary, won't affect crossing anyway
-		} else { // no markers tracked at this chr
-			d->map.chr_lengths[i] = 0;
-		}
-	}
-
-    ////srand(time(NULL)); //seed the random generator so we're ready to start crossing.
-}
-
-/** Populates a SimData combination with effect values. The SimData must already
+/** Populates a gsc_SimData combination with effect values. The gsc_SimData must already
  * have its allele data and map data loaded (so that it has an ordered `markers`
  * list and no markers that will not be used for simulation.
  *
@@ -5347,17 +5293,19 @@ void get_chromosome_locations(SimData *d) {
  * It also assumes that the array ref_alleles is the same
  * length as m's marker_names vector.
  *
- * @param d pointer to SimData to be populated.
+ * @shortnamed{load_effects}
+ *
+ * @param d pointer to gsc_SimData to be populated.
  * @param filename string name/path of file containing effect values.
  * @param label optional name to have the effects known as
  * @returns the ID of the set of marker effects just loaded is stored.
 */
-EffectID load_effects_to_simdata(SimData* d, const char* filename) {
+gsc_EffectID gsc_load_effects(gsc_SimData* d, const char* filename) {
 	// open our file.
 	FILE* fp;
 	if ((fp = fopen(filename, "r")) == NULL) {
 		warning( "Failed to open file %s.\n", filename);
-        return NOT_AN_EFFECT_SET;
+        return gsc_NOT_AN_EFFECT_SET;
 	}
 
 	int bufferlen = 100; // assume no line is over 100 characters long
@@ -5370,12 +5318,12 @@ EffectID load_effects_to_simdata(SimData* d, const char* filename) {
 	int n_loaded = 0;
 	int n_allele = 0; // count the different alleles we're tracking
     int MAX_SYMBOLS = 10;
-    char* alleles_loaded = get_malloc(sizeof(char)*(MAX_SYMBOLS+1));
+    char* alleles_loaded = gsc_malloc_wrap(sizeof(char)*(MAX_SYMBOLS+1));
     memset(alleles_loaded, '\0', sizeof(char)*(MAX_SYMBOLS+1));
-    double** effects_loaded = get_malloc(sizeof(double*)*(MAX_SYMBOLS+1));
+    double** effects_loaded = gsc_malloc_wrap(sizeof(double*)*(MAX_SYMBOLS+1));
     //memset(effects_loaded, 0, sizeof(double*)*MAX_SYMBOLS);
     for (int i = 0; i < MAX_SYMBOLS; ++i) {
-        effects_loaded[i] = get_malloc(sizeof(double) * d->n_markers);
+        effects_loaded[i] = gsc_malloc_wrap(sizeof(double) * d->n_markers);
         memset(effects_loaded[i], 0, sizeof(double) * d->n_markers);
     }
 
@@ -5386,7 +5334,7 @@ EffectID load_effects_to_simdata(SimData* d, const char* filename) {
 		//fgets(buffer, bufferlen, fp);
 		sscanf(buffer, "%s %c %lf\n", marker_name, &allele, &effect);
 
-        if ((location = get_from_unordered_str_list(  marker_name, d->n_markers, (const char**) d->markers)) >= 0) {
+        if ((location = gsc_get_from_unordered_str_list(  marker_name, d->n_markers, (const char**) d->markers)) >= 0) {
 			// if the marker exists (at index `location`) find the allele index
 			int symbol_index;
 			char* symbol_location = strchr(alleles_loaded, allele);
@@ -5395,15 +5343,15 @@ EffectID load_effects_to_simdata(SimData* d, const char* filename) {
 				++n_allele;
 				alleles_loaded[symbol_index] = allele;
                 if (n_allele >= MAX_SYMBOLS) {
-                    char* temp1 = get_malloc(sizeof(char)*(MAX_SYMBOLS*2 + 1));
+                    char* temp1 = gsc_malloc_wrap(sizeof(char)*(MAX_SYMBOLS*2 + 1));
                     memcpy(temp1, alleles_loaded, sizeof(char)*MAX_SYMBOLS);
                     memset(temp1 + MAX_SYMBOLS, '\0', sizeof(char)*(MAX_SYMBOLS+1));
-                    double** temp2 = get_malloc(sizeof(double*)*(MAX_SYMBOLS*2 +1));
+                    double** temp2 = gsc_malloc_wrap(sizeof(double*)*(MAX_SYMBOLS*2 +1));
                     memcpy(temp2, effects_loaded, sizeof(double*)*MAX_SYMBOLS);
                     memset(effects_loaded+MAX_SYMBOLS, 0, sizeof(double*)*MAX_SYMBOLS);
                     MAX_SYMBOLS *= 2;
-                    free(alleles_loaded);
-                    free(effects_loaded);
+                    GSC_FREE(alleles_loaded);
+                    GSC_FREE(effects_loaded);
                     alleles_loaded = temp1;
                     effects_loaded = temp2;
                 }
@@ -5414,7 +5362,7 @@ EffectID load_effects_to_simdata(SimData* d, const char* filename) {
 			// now the marker is in our list and the allele value is valid
 			// so save the effect value in effects_loaded.
             /*if (effects_loaded[symbol_index] == 0) { // 0 = NULL
-                effects_loaded[symbol_index] = get_malloc(sizeof(double) * d->n_markers);
+                effects_loaded[symbol_index] = gsc_malloc_wrap(sizeof(double) * d->n_markers);
                 //memset((effects_loaded + symbol_index), 0, sizeof(double) * d->n_markers);
             }*/
 			effects_loaded[symbol_index][location] = effect;
@@ -5422,31 +5370,31 @@ EffectID load_effects_to_simdata(SimData* d, const char* filename) {
 		}
 	}
 
-    // Save to SimData
+    // Save to gsc_SimData
     int index = 0;
     if (d->n_eff_sets > 0) {
         index = d->n_eff_sets;
 
-        EffectID* newIDs = get_malloc(sizeof(EffectID)*(index+1));
-        memcpy(newIDs,d->eff_set_ids,sizeof(EffectID)*index);
-        free(d->eff_set_ids);
+        gsc_EffectID* newIDs = gsc_malloc_wrap(sizeof(gsc_EffectID)*(index+1));
+        memcpy(newIDs,d->eff_set_ids,sizeof(gsc_EffectID)*index);
+        GSC_FREE(d->eff_set_ids);
         d->eff_set_ids = newIDs;
 
-        EffectMatrix* newE = get_malloc(sizeof(EffectMatrix)*(index+1));
-        memcpy(newE,d->e,sizeof(EffectMatrix)*index);
-        free(d->e);
+        gsc_EffectMatrix* newE = gsc_malloc_wrap(sizeof(gsc_EffectMatrix)*(index+1));
+        memcpy(newE,d->e,sizeof(gsc_EffectMatrix)*index);
+        GSC_FREE(d->e);
         d->e = newE;
 
     } else {
-        d->eff_set_ids = get_malloc(sizeof(EffectID)*1);
-        d->e = get_malloc(sizeof(EffectMatrix)*1);
+        d->eff_set_ids = gsc_malloc_wrap(sizeof(gsc_EffectID)*1);
+        d->e = gsc_malloc_wrap(sizeof(gsc_EffectMatrix)*1);
     }
-    d->eff_set_ids[index] = get_new_eff_set_id(d);
+    d->eff_set_ids[index] = gsc_get_new_eff_set_id(d);
     d->n_eff_sets++;
-    d->e[index].effects.matrix = get_malloc(sizeof(double*) * n_allele);
+    d->e[index].effects.matrix = gsc_malloc_wrap(sizeof(double*) * n_allele);
     d->e[index].effects.rows = n_allele;
     d->e[index].effects.cols = d->n_markers;
-    d->e[index].effect_names = get_malloc(sizeof(char) * (n_allele + 1));
+    d->e[index].effect_names = gsc_malloc_wrap(sizeof(char) * (n_allele + 1));
 
 	// loop again to save values now we have enough memory.
 	for (int i = 0; i < n_allele; i++) {
@@ -5462,37 +5410,39 @@ EffectID load_effects_to_simdata(SimData* d, const char* filename) {
     return d->eff_set_ids[index];
 }
 
-/** Populates a SimData combination from scratch with marker allele data, a genetic map, and
+/** Populates a gsc_SimData combination from scratch with marker allele data, a genetic map, and
  * effect values.
  *
- * Note: this function shows the order that files need to be loaded into SimData,
+ * Note: this function shows the order that files need to be loaded into gsc_SimData,
  * i.e. Allele data first (so we know what markers we care about), then genetic
  * map data (so we know what markers we can use in simulation, and rearrange them
  * to be ordered), then effects data (to be saved in the correct order according
  * to newly ordered markers).
  *
- * @param d pointer to SimData to be populated
+ * @shortnamed{load_all_data}
+ *
+ * @param d pointer to gsc_SimData to be populated
  * @param data_file string containing name/path of file containing SNP marker
  * allele data.
  * @param map_file string name/path of file containing genetic map data.
  * @param effect_file string name/path of file containing effect values (optional).
  * @returns group number of the founding group, and effect set id of the loaded effect file.
 */
-struct GroupAndEffectSet load_all_simdata(SimData* d, const char* data_file, const char* map_file, const char* effect_file) {
-    clear_simdata(d); // make this empty.
-    GroupNum gp = load_transposed_genes_to_simdata(d, data_file);
+struct gsc_GroupAndEffectSet gsc_load_all_data(gsc_SimData* d, const char* data_file, const char* map_file, const char* effect_file) {
+    gsc_clear_simdata(d); // make this empty.
+    gsc_GroupNum gp = gsc_load_genotypes_transposed(d, data_file);
 
-	load_genmap_to_simdata(d, map_file);
+	gsc_load_genmap(d, map_file);
 
-    EffectID effId = NOT_AN_EFFECT_SET;
+    gsc_EffectID effId = gsc_NOT_AN_EFFECT_SET;
 	if (effect_file != NULL) {
-        effId = load_effects_to_simdata(d, effect_file);
+        effId = gsc_load_effects(d, effect_file);
 	}
 
-	get_sorted_markers(d, d->n_markers);
-	get_chromosome_locations(d);
+	gsc_get_sorted_markers(d, d->n_markers);
+	gsc_get_chromosome_locations(d);
 
-    return (struct GroupAndEffectSet){.group=gp,.effectSet=effId};
+    return (struct gsc_GroupAndEffectSet){.group=gp,.effectSet=effId};
 }
 
 
@@ -5500,8 +5450,8 @@ struct GroupAndEffectSet load_all_simdata(SimData* d, const char* data_file, con
 
 /** Identify markers in the genotype of `offspring` where recombination from its parents
  * occured. This function is a little lower-level (see the kinds of parameters required) and
- * so a wrapper like calculate_recombinations_from_file is suggested for end users.
- * @see calculate_recombinations_from_file()
+ * so a wrapper like gsc_calculate_recombinations_from_file is suggested for end users.
+ * @see gsc_calculate_recombinations_from_file()
  *
  * The function reads start to end along each chromosome. At each marker, it checks if
  * the alleles the offspring has could only have come from one parent/there is known parentage
@@ -5513,26 +5463,26 @@ struct GroupAndEffectSet load_all_simdata(SimData* d, const char* data_file, con
  * this library. A sample usage is performing a cross then multiple generations of selfing,
  * then comparing the final inbred to the original two lines of the cross.
  *
- * @param d pointer to the SimData struct whose genetic map matches the provided genotypes.
+ * @param d pointer to the gsc_SimData struct whose genetic map matches the provided genotypes.
  * @param parent1 a character vector containing one parent's alleles at each marker in the
- * SimData.
+ * gsc_SimData.
  * @param p1num an integer that will be used to identify areas of the genome that come
  * from the first parent in the returned vector.
  * @param parent2 a character vector containing the other parent's alleles at each marker in the
- * SimData.
+ * gsc_SimData.
  * @param p2num an integer that will be used to identify areas of the genome that come
  * from the second parent in the returned vector.
  * @param offspring a character vector containing the alleles at each marker in the
- * SimData of the genotype whose likely recombinations we want to identify.
+ * gsc_SimData of the genotype whose likely recombinations we want to identify.
  * @param certain a boolean. If TRUE, markers where the parent of origin cannot be identified
  * will be set to 0, if FALSE, the value will be set to the id of the parent that provided
  * the most recently identified allele in that chromosome.
  * @returns a heap vector of length `d->n_markers` containing the id of the parent of origin
  * at each marker in the `offspring` genotype.
 */
-int* calculate_min_recombinations_fw1(SimData* d, char* parent1, unsigned int p1num, char* parent2,
+int* gsc_calculate_min_recombinations_fw1(gsc_SimData* d, char* parent1, unsigned int p1num, char* parent2,
 		unsigned int p2num, char* offspring, int certain) {
-	int* origins = malloc(sizeof(int) * d->n_markers);
+	int* origins = gsc_malloc_wrap(sizeof(int) * d->n_markers);
 	int p1match, p2match;
 	int previous = 0;
 
@@ -5542,8 +5492,8 @@ int* calculate_min_recombinations_fw1(SimData* d, char* parent1, unsigned int p1
 
 		previous = 0;
 		for (int i = d->map.chr_ends[chr - 1]; i < d->map.chr_ends[chr]; ++i) {
-			p1match = has_same_alleles(parent1, offspring, i);
-			p2match = has_same_alleles(parent2, offspring, i);
+			p1match = gsc_has_same_alleles(parent1, offspring, i);
+			p2match = gsc_has_same_alleles(parent2, offspring, i);
 			if (p1match && !p2match) {
 				origins[i] = p1num;
 				previous = p1num;
@@ -5565,8 +5515,8 @@ int* calculate_min_recombinations_fw1(SimData* d, char* parent1, unsigned int p1
 /** Identify markers in the genotype of `offspring` where recombination from its parents
  * occured, as judged by the marker itself and a short window around it.
  * This function is a little lower-level (see the kinds of parameters required) and
- * so a wrapper like calculate_recombinations_from_file is suggested for end users.
- * @see calculate_recombinations_from_file()
+ * so a wrapper like gsc_calculate_recombinations_from_file is suggested for end users.
+ * @see gsc_calculate_recombinations_from_file()
  *
  * The function reads start to end along each chromosome. At each marker, it checks if
  * the alleles the offspring has in the window centered at that marker could have come
@@ -5581,17 +5531,17 @@ int* calculate_min_recombinations_fw1(SimData* d, char* parent1, unsigned int p1
  *
  * Behaviour when the window size is not an odd integer has not been tested.
  *
- * @param d pointer to the SimData struct whose genetic map matches the provided genotypes.
+ * @param d pointer to the gsc_SimData struct whose genetic map matches the provided genotypes.
  * @param parent1 a character vector containing one parent's alleles at each marker in the
- * SimData.
+ * gsc_SimData.
  * @param p1num an integer that will be used to identify areas of the genome that come
  * from the first parent in the returned vector.
  * @param parent2 a character vector containing the other parent's alleles at each marker in the
- * SimData.
+ * gsc_SimData.
  * @param p2num an integer that will be used to identify areas of the genome that come
  * from the second parent in the returned vector.
  * @param offspring a character vector containing the alleles at each marker in the
- * SimData of the genotype whose likely recombinations we want to identify.
+ * gsc_SimData of the genotype whose likely recombinations we want to identify.
  * @param window_size an odd integer representing the number of markers to check for known parentage
  * around each marker
  * @param certain a boolean. If TRUE, markers where the parent of origin cannot be identified
@@ -5600,9 +5550,9 @@ int* calculate_min_recombinations_fw1(SimData* d, char* parent1, unsigned int p1
  * @returns a heap vector of length `d->n_markers` containing the id of the parent of origin
  * at each marker in the `offspring` genotype.
 */
-int* calculate_min_recombinations_fwn(SimData* d, char* parent1, unsigned int p1num, char* parent2,
+int* gsc_calculate_min_recombinations_fwn(gsc_SimData* d, char* parent1, unsigned int p1num, char* parent2,
 		unsigned int p2num, char* offspring, int window_size, int certain) {
-	int* origins = malloc(sizeof(int) * d->n_markers);
+	int* origins = gsc_malloc_wrap(sizeof(int) * d->n_markers);
 	int p1match, p2match;
 	int previous = 0, window_range = (window_size - 1)/2, i;
 	int lookable_bounds[2];
@@ -5620,8 +5570,8 @@ int* calculate_min_recombinations_fwn(SimData* d, char* parent1, unsigned int p1
 		}
 		for (; i < lookable_bounds[1]; ++i) {
 
-			p1match = has_same_alleles_window(parent1, offspring, i, window_size);
-			p2match = has_same_alleles_window(parent2, offspring, i, window_size);
+			p1match = gsc_has_same_alleles_window(parent1, offspring, i, window_size);
+			p2match = gsc_has_same_alleles_window(parent2, offspring, i, window_size);
 			if (p1match && !p2match) {
 				origins[i] = p1num;
 				previous = p1num;
@@ -5642,21 +5592,6 @@ int* calculate_min_recombinations_fwn(SimData* d, char* parent1, unsigned int p1
 	}
 	return origins;
 }
-
-/* static inline int has_same_alleles(char* p1, char* p2, int i) {
-	return (p1[i<<1] == p2[i<<1] || p1[(i<<1) + 1] == p2[i] || p1[i] == p2[(i<<1) + 1]);
-}
-
-// w is window length, i is start value
-static inline int has_same_alleles_window(char* g1, char* g2, int start, int w) {
-	int same = TRUE;
-	int i;
-	for (int j = 0; j < w; ++j) {
-		i = start + j;
-		same = same && (g1[i<<1] == g2[i<<1] || g1[(i<<1) + 1] == g2[i] || g1[i] == g2[(i<<1) + 1]);
-	}
-	return same;
-} */
 
 /** Provides guesses as to the location of recombination events that led to the
  * creation of certain genotypes from certain other genotypes.
@@ -5684,7 +5619,7 @@ static inline int has_same_alleles_window(char* g1, char* g2, int start, int w) 
  * this library. A sample usage is performing a cross then multiple generations of selfing,
  * then comparing the final inbred to the original two lines of the cross.
  *
- * @param d pointer to the SimData struct containing the genotypes and map under consideration.
+ * @param d pointer to the gsc_SimData struct containing the genotypes and map under consideration.
  * @param input_file string containing the name of the file with the pairs of parents
  * and offsprings of which to calculate recombinations
  * @param output_file string containing the filename to which to save the results.
@@ -5694,9 +5629,9 @@ static inline int has_same_alleles_window(char* g1, char* g2, int start, int w) 
  * to fill locations where parentage is unknown with the most recent known parent
  * @returns 0 on success.
  */
-int calculate_recombinations_from_file(SimData* d, const char* input_file, const char* output_file,
+int gsc_calculate_recombinations_from_file(gsc_SimData* d, const char* input_file, const char* output_file,
 		int window_len, int certain) {
-	struct TableSize t = get_file_dimensions(input_file, '\t');
+	struct gsc_TableSize t = gsc_get_file_dimensions(input_file, '\t');
 	//open file
 	FILE* fp;
 	if ((fp = fopen(input_file, "r")) == NULL) {
@@ -5720,27 +5655,27 @@ int calculate_recombinations_from_file(SimData* d, const char* input_file, const
 	for (int i = 0; i < t.num_rows; ++i) {
 		// load the four grandparents
 		fscanf(fp, "%s %s %s \n", buffer[0], buffer[1], buffer[2]);
-		combin_i[0] = get_index_of_name(d->m, buffer[0]);
-		combin_i[1] = get_index_of_name(d->m, buffer[1]);
-		combin_i[2] = get_index_of_name(d->m, buffer[2]);
-		combin_genes[0] = get_genes_of_index(d->m, combin_i[0]);
-		combin_genes[1] = get_genes_of_index(d->m, combin_i[1]);
-		combin_genes[2] = get_genes_of_index(d->m, combin_i[2]);
+		combin_i[0] = gsc_get_index_of_name(d->m, buffer[0]);
+		combin_i[1] = gsc_get_index_of_name(d->m, buffer[1]);
+		combin_i[2] = gsc_get_index_of_name(d->m, buffer[2]);
+		combin_genes[0] = gsc_get_genes_of_index(d->m, combin_i[0]);
+		combin_genes[1] = gsc_get_genes_of_index(d->m, combin_i[1]);
+		combin_genes[2] = gsc_get_genes_of_index(d->m, combin_i[2]);
 
 		if (window_len == 1) {
-			r = calculate_min_recombinations_fw1(d, combin_genes[1],
-                    get_id_of_index(d->m, combin_i[1]).id, combin_genes[2],
-                    get_id_of_index(d->m, combin_i[2]).id, combin_genes[0], certain);
+			r = gsc_calculate_min_recombinations_fw1(d, combin_genes[1],
+                    gsc_get_id_of_index(d->m, combin_i[1]).id, combin_genes[2],
+                    gsc_get_id_of_index(d->m, combin_i[2]).id, combin_genes[0], certain);
 		} else {
-			r = calculate_min_recombinations_fwn(d, combin_genes[1],
-                    get_id_of_index(d->m, combin_i[1]).id, combin_genes[2],
-                    get_id_of_index(d->m, combin_i[2]).id, combin_genes[0], window_len, certain);
+			r = gsc_calculate_min_recombinations_fwn(d, combin_genes[1],
+                    gsc_get_id_of_index(d->m, combin_i[1]).id, combin_genes[2],
+                    gsc_get_id_of_index(d->m, combin_i[2]).id, combin_genes[0], window_len, certain);
 		}
 		fprintf(fpo, "\n%s", buffer[0]);
 		for (int j = 0; j < d->n_markers; ++j) {
 			fprintf(fpo, "\t%d", r[j]);
 		}
-		free(r);
+		GSC_FREE(r);
 	}
 
 	fclose(fp);
@@ -5766,16 +5701,18 @@ int calculate_recombinations_from_file(SimData* d, const char* input_file, const
  * of the parent's alleles to start with. When crossover events occur it starts reading
  * the other column.
  *
- * @param d pointer to the SimData object containing map positions for the markers
+ * @shortnamed{generate_gamete}
+ *
+ * @param d pointer to the gsc_SimData object containing map positions for the markers
  * that make up the rows of `parent_table`. sort_markers() and locate_chromosomes()
  * should have been called previously.
  * @param parent_genome the char* containing the parent's genome as a character string
  * made up of sequential pairs of alleles for each marker in d->markers.
  * @param output the char* to which to save the gamete. It saves the alleles every second
- * character, starting at 0, so that calling generate_gamete(..., offspring_genome) &
- * generate_gamete(..., offspring_genome + 1) can be used to generate both halves of its genome.
+ * character, starting at 0, so that calling gsc_generate_gamete(..., offspring_genome) &
+ * gsc_generate_gamete(..., offspring_genome + 1) can be used to generate both halves of its genome.
 */
-void generate_gamete(SimData* d, const char* parent_genome, char* output) {
+void gsc_generate_gamete(gsc_SimData* d, const char* parent_genome, char* output) {
 	// assumes rand is already seeded
 	if (parent_genome == NULL) {
 		warning( "Could not generate this gamete\n");
@@ -5796,7 +5733,7 @@ void generate_gamete(SimData* d, const char* parent_genome, char* output) {
 		if (num_crossovers <= 100) {
 			p_crossover_where = crossover_where; // point at the start of array
 		} else {
-			p_crossover_where = get_malloc(sizeof(float) * num_crossovers);
+			p_crossover_where = gsc_malloc_wrap(sizeof(float) * num_crossovers);
 		}
 
 		// TASK 3: choose points where those crossovers occur
@@ -5810,7 +5747,7 @@ void generate_gamete(SimData* d, const char* parent_genome, char* output) {
 		// sort the crossover points
 		if (num_crossovers > 1) {
 			qsort(p_crossover_where, num_crossovers, sizeof(float),
-					_ascending_float_comparer);
+					gsc_helper_ascending_float_comparer);
 		}
 
 		// pick a parent genome half at random
@@ -5831,109 +5768,7 @@ void generate_gamete(SimData* d, const char* parent_genome, char* output) {
 		}
 
 		if (num_crossovers > 100) {
-			free(p_crossover_where);
-		}
-
-	}
-	return;
-}
-
-/** Get the alleles of the outcome of crossing two genotypes
- *
- * Gametes are generated at the same time but are independent.
- *
- * @see generate_gamete(), on which this is based.
- *
- * @param d pointer to the SimData object that includes genetic map data
- * needed to simulate meiosis and the value of n_markers
- * @param parent1_genome a 2x(n_markers) array of characters containing the
- * alleles of the first parent
- * @param parent2_genome a 2x(n_markers) array of characters containing the
- * alleles of the second parent.
- * @param output a 2x(n_marker) array of chars which will be overwritten
- * with the offspring genome.
-*/
-void generate_cross(SimData* d, const char* parent1_genome, const char* parent2_genome, char* output) {
-	// assumes rand is already seeded
-	if (parent1_genome == NULL || parent2_genome == NULL) {
-		warning( "Could not generate this cross\n");
-		return;
-	}
-
-	int num_crossovers[2], up_to_crossover[2], which[2];
-	float* p_crossover_where[2];
-	float crossover_where[2][50];
-
-	// treat each chromosome separately.
-	for (int chr = 1; chr <= d->map.n_chr; ++chr) {
-		// use Poisson distribution to choose the number of crossovers in this chromosome
-        num_crossovers[0] = Rf_rpois(d->map.chr_lengths[chr - 1] / 100);
-        num_crossovers[1] = Rf_rpois(d->map.chr_lengths[chr - 1] / 100);
-
-		// in the rare case where it could be >100, get enough space
-		// to be able to store the crossover positions we're about to create
-		if (num_crossovers[0] <= 50) {
-			p_crossover_where[0] = crossover_where[0]; // point to start of array
-		} else {
-			p_crossover_where[0] = get_malloc(sizeof(float) * num_crossovers[0]);
-		}
-		if (num_crossovers[1] <= 50) {
-			p_crossover_where[1] = crossover_where[0]; // point to start of array
-		} else {
-			p_crossover_where[1] = get_malloc(sizeof(float) * num_crossovers[1]);
-		}
-
-		// TASK 3: choose points where those crossovers occur
-		// by randomly generating a point along the length of the chromosome
-		for (int i = 0; i < num_crossovers[0]; ++i) {
-			p_crossover_where[0][i] = unif_rand()
-				* d->map.chr_lengths[chr - 1]
-				+ d->map.positions[d->map.chr_ends[chr - 1]].position;
-		}
-		for (int i = 0; i < num_crossovers[1]; ++i) {
-			p_crossover_where[1][i] = unif_rand()
-				* d->map.chr_lengths[chr - 1]
-				+ d->map.positions[d->map.chr_ends[chr - 1]].position;
-		}
-
-		// sort the crossover points
-		if (num_crossovers[0] > 1) {
-			qsort(p_crossover_where[0], num_crossovers[0], sizeof(float),
-					_ascending_float_comparer);
-		}
-		if (num_crossovers[1] > 1) {
-			qsort(p_crossover_where[1], num_crossovers[1], sizeof(float),
-					_ascending_float_comparer);
-		}
-
-		// pick a parent genome half at random
-        which[0] = (unif_rand() > 0.5); which[1] = (unif_rand() > 0.5);
-
-		// TASK 4: Figure out the gamete that those numbers produce.
-		up_to_crossover[0] = 0; up_to_crossover[1] = 0; // which crossovers we've dealt with
-		for (int i = d->map.chr_ends[chr - 1]; i < d->map.chr_ends[chr]; ++i) {
-			// loop through every marker for this chromosome
-			if (up_to_crossover[0] < num_crossovers[0] &&
-					d->map.positions[i].position > p_crossover_where[0][up_to_crossover[0]]) {
-				// between last loop and this one we crossed over.
-				// invert which and update up_to_crossover;
-				which[0] = 1 - which[0];
-				up_to_crossover[0] += 1;
-			}
-			if (up_to_crossover[1] < num_crossovers[1] &&
-					d->map.positions[i].position > p_crossover_where[1][up_to_crossover[1]]) {
-				which[1] = 1 - which[1];
-				up_to_crossover[1] += 1;
-			}
-			output[2*i] = parent1_genome[2*i + which[0]];
-			output[2*i + 1] = parent2_genome[2*i + which[1]];
-		}
-
-		if (num_crossovers[0] > 50) {
-			free(p_crossover_where[0]);
-		}
-		if (num_crossovers[1] > 50) {
-			free(p_crossover_where[1]);
+			GSC_FREE(p_crossover_where);
 		}
 
 	}
@@ -5946,16 +5781,18 @@ void generate_cross(SimData* d, const char* parent1_genome, const char* parent2_
  * One gamete is generated, then doubled. The output will be perfectly
  * homozygous.
  *
- * @see generate_gamete(), on which this is based.
+ * @see gsc_generate_gamete(), on which this is based.
  *
- * @param d pointer to the SimData object that includes genetic map data
+ * @shortnamed{generate_doubled_haploid}
+ *
+ * @param d pointer to the gsc_SimData object that includes genetic map data
  * needed to simulate meiosis and the value of n_markers
  * @param parent_genome a 2x(n_markers) array of characters containing the
  * alleles of the first parent
  * @param output a 2x(n_marker) array of chars which will be overwritten
  * with the offspring genome.
 */
-void generate_doubled_haploid(SimData* d, const char* parent_genome, char* output) {
+void gsc_generate_doubled_haploid(gsc_SimData* d, const char* parent_genome, char* output) {
 	// assumes rand is already seeded
 	if (parent_genome == NULL) {
 		warning( "Could not make this doubled haploid\n");
@@ -5976,7 +5813,7 @@ void generate_doubled_haploid(SimData* d, const char* parent_genome, char* outpu
 		if (num_crossovers <= 100) {
 			p_crossover_where = crossover_where; // point at the start of array
 		} else {
-			p_crossover_where = get_malloc(sizeof(float) * num_crossovers);
+			p_crossover_where = gsc_malloc_wrap(sizeof(float) * num_crossovers);
 		}
 
 		// TASK 3: choose points where those crossovers occur
@@ -5990,7 +5827,7 @@ void generate_doubled_haploid(SimData* d, const char* parent_genome, char* outpu
 		// sort the crossover points
 		if (num_crossovers > 1) {
 			qsort(p_crossover_where, num_crossovers, sizeof(float),
-					_ascending_float_comparer);
+					gsc_helper_ascending_float_comparer);
 		}
 
 		// pick a parent genome half at random
@@ -6012,7 +5849,7 @@ void generate_doubled_haploid(SimData* d, const char* parent_genome, char* outpu
 		}
 
 		if (num_crossovers > 100) {
-			free(p_crossover_where);
+			GSC_FREE(p_crossover_where);
 		}
 
 	}
@@ -6021,15 +5858,17 @@ void generate_doubled_haploid(SimData* d, const char* parent_genome, char* outpu
 
 
 /** Get an identical copy of a given genotype.
+*
+ * @shortnamed{generate_clone}
  *
- * @param d pointer to the SimData object that includes genetic map data
+ * @param d pointer to the gsc_SimData object that includes genetic map data
  * needed to simulate meiosis and the value of n_markers
  * @param parent_genome a 2x(n_markers) array of characters containing the
  * alleles of the first parent
  * @param output a 2x(n_marker) array of chars which will be overwritten
  * with the offspring genome.
 */
-void generate_clone(SimData* d, const char* parent_genome, char* output) {
+void gsc_generate_clone(gsc_SimData* d, const char* parent_genome, char* output) {
     for (int j = 0; j < d->n_markers; ++j) {
         output[2*j] = parent_genome[2*j];
         output[2*j + 1] = parent_genome[2*j + 1];
@@ -6038,8 +5877,8 @@ void generate_clone(SimData* d, const char* parent_genome, char* output) {
 }
 
 
-/** Opens file for writing save-as-you-go pedigrees in accordance with GenOptions */
-FILE* _genoptions_setup_save_pedigrees(const GenOptions g) {
+/** Opens file for writing save-as-you-go pedigrees in accordance with gsc_GenOptions */
+static FILE* gsc_helper_genoptions_save_pedigrees_setup(const gsc_GenOptions g) {
 	FILE* fp = NULL;
 	if (g.will_save_pedigree_to_file) { 					
         char tmpname_p[NAME_LENGTH];
@@ -6054,16 +5893,16 @@ FILE* _genoptions_setup_save_pedigrees(const GenOptions g) {
 	}
 	return fp;
 }
-/** Opens file for writing save-as-you-go breeding values in accordance with GenOptions.
+/** Opens file for writing save-as-you-go breeding values in accordance with gsc_GenOptions.
  *
  * @param effIndexp a location to save the index of the chosen effect set. 
- * It will be set to UNINITIALISED if the effect set ID in @a g was invalid.
+ * It will be set to GSC_UNINIT if the effect set ID in @a g was invalid.
  */
-FILE* _genoptions_setup_save_bvs(const SimData* d, const GenOptions g, int* effIndexp) {
+static FILE* gsc_helper_genoptions_save_bvs_setup(const gsc_SimData* d, const gsc_GenOptions g, int* effIndexp) {
 	FILE* fe = NULL;
-    if (g.will_save_bvs_to_file.id != NOT_AN_EFFECT_SET.id) {
-        *effIndexp = get_index_of_eff_set(d,g.will_save_bvs_to_file);
-        if (*effIndexp != UNINITIALISED) {
+    if (g.will_save_bvs_to_file.id != gsc_NOT_AN_EFFECT_SET.id) {
+        *effIndexp = gsc_get_index_of_eff_set(d,g.will_save_bvs_to_file);
+        if (*effIndexp != GSC_UNINIT) {
             char tmpname_b[NAME_LENGTH];
             if (g.filename_prefix != NULL) {
                 strncpy(tmpname_b, g.filename_prefix, 
@@ -6077,8 +5916,8 @@ FILE* _genoptions_setup_save_bvs(const SimData* d, const GenOptions g, int* effI
     }
 	return fe;
 }
-/** Opens file for writing save-as-you-go genotypes in accordance with GenOptions */
-FILE* _genoptions_setup_save_genotypes(const SimData* d, const GenOptions g) {
+/** Opens file for writing save-as-you-go genotypes in accordance with gsc_GenOptions */
+static FILE* gsc_helper_genoptions_save_genotypes_setup(const gsc_SimData* d, const gsc_GenOptions g) {
 	FILE* fg = NULL;
 	if (g.will_save_alleles_to_file) {
         char tmpname_g[NAME_LENGTH];
@@ -6090,49 +5929,49 @@ FILE* _genoptions_setup_save_genotypes(const SimData* d, const GenOptions g) {
         }
 		strcat(tmpname_g, "-genotype.txt");
 		fg = fopen(tmpname_g, "w");
-        save_names_header(fg,d->n_markers,(const char**)d->markers);
+        gsc_save_names_header(fg,d->n_markers,(const char**)d->markers);
 	}
 	return fg;
 }
 /** save-as-you-go (pedigrees)
  *
- * Saves pedigrees in AlleleMatrix @a tosave to a file. Performs 
+ * Saves pedigrees in gsc_AlleleMatrix @a tosave to a file. Performs 
  * null-checks on file pointer @a fp, and fails silently if checks do. 
  */
-void _genoptions_save_pedigrees(FILE* fp, SimData* d, AlleleMatrix* tosave) {
+static void gsc_helper_genoptions_save_pedigrees(FILE* fp, gsc_SimData* d, gsc_AlleleMatrix* tosave) {
 	if (fp) {
-        save_AM_pedigree( fp, tosave, d);
+        gsc_save_allelematrix_full_pedigree( fp, tosave, d);
 	}
 }
 /** save-as-you-go (breeding values)
  * 
- * Calculates and saves breeding values of genotypes in an AlleleMatrix 
+ * Calculates and saves breeding values of genotypes in an gsc_AlleleMatrix 
  * to a file. Performs null-checks on file pointer and @a effIndex, 
  * and fails silently if checks do. 
  */
-void _genoptions_save_bvs(FILE* fe, EffectMatrix* effMatrices, int effIndex, AlleleMatrix* tosave) {
-	if (fe && effIndex != UNINITIALISED) {
-        DecimalMatrix eff = calculate_bvs( tosave, effMatrices + effIndex );
-        save_manual_bvs( fe, &eff, tosave->ids, (const char**) tosave->names);
-		delete_dmatrix( &eff);
+static void gsc_helper_genoptions_save_bvs(FILE* fe, gsc_EffectMatrix* effMatrices, int effIndex, gsc_AlleleMatrix* tosave) {
+	if (fe && effIndex != GSC_UNINIT) {
+        gsc_DecimalMatrix eff = gsc_calculate_bvs( tosave, effMatrices + effIndex );
+        gsc_save_manual_bvs( fe, &eff, tosave->ids, (const char**) tosave->names);
+		gsc_delete_dmatrix( &eff);
 	}
 }
 /** save-as-you-go (genotypes/alleles)
  *
- * Saves genotypes in an AlleleMatrix to a file. Performs null-checks 
+ * Saves genotypes in an gsc_AlleleMatrix to a file. Performs null-checks 
  * on file pointer and fails silently if checks do. 
  */
-void _genoptions_save_genotypes(FILE* fg, AlleleMatrix* tosave) {
+static void gsc_helper_genoptions_save_genotypes(FILE* fg, gsc_AlleleMatrix* tosave) {
 	if (fg) {
-		save_allele_matrix( fg, tosave );
+		gsc_save_allele_matrix( fg, tosave );
 	}
 }
-/** Apply GenOptions naming scheme and PedigreeID allocation to a single 
- * AlleleMatrix.
+/** Apply gsc_GenOptions naming scheme and gsc_PedigreeID allocation to a single 
+ * gsc_AlleleMatrix.
  */
-void _genoptions_give_names_and_ids(AlleleMatrix* am, SimData* d, const GenOptions g) {
+static void gsc_helper_genoptions_give_names_and_ids(gsc_AlleleMatrix* am, gsc_SimData* d, const gsc_GenOptions g) {
 	if (g.will_name_offspring) {
-		set_names(am, g.offspring_name_prefix, d->current_id.id, 0);
+		gsc_set_names(am, g.offspring_name_prefix, d->current_id.id, 0);
 	}
 	if (g.will_allocate_ids) {
         for (int j = 0; j < am->n_genotypes; ++j) {
@@ -6143,13 +5982,13 @@ void _genoptions_give_names_and_ids(AlleleMatrix* am, SimData* d, const GenOptio
 }
 /** Make new genotypes (generic function)
  *
- * Applies all settings from GenOptions @a g. 
+ * Applies all settings from gsc_GenOptions @a g. 
  *
  * Takes two parameter functions: @a parentChooser and @a offspringGenerator, described below.
  * 
  * @a parentChooser should function as a 'generator' of parents 
  * for the new genotypes. Every time the function is called, it 
- * should return a truthy value and save the GenoLocations of its 
+ * should return a truthy value and save the gsc_GenoLocations of its 
  * chosen parents in its final parameter, or return a falsy value 
  * if there are no more offspring to be created. It has access to 
  * three informational parameters to help it choose parents: 
@@ -6158,53 +5997,53 @@ void _genoptions_give_names_and_ids(AlleleMatrix* am, SimData* d, const GenOptio
  * a counter representing the number of times @a parentChooser 
  * has been called by this function prior to the current call. This 
  * generic function trusts that @a parentChooser will not return a 
- * truthy value if setting the parent choice GenoLocations to invalid
+ * truthy value if setting the parent choice gsc_GenoLocations to invalid
  * values (of a type that cannot be handled by the corresponding 
  * @a offspringGenerator).
  *
  * @a offspringGenerator should make the call that generates alleles
- * for a new genotype and saves them to a given GenoLocation. (It may 
+ * for a new genotype and saves them to a given gsc_GenoLocation. (It may 
  * also make any other necessary specific modifications to other data
  * about the new genotype). It will be called @a g.family_size times
  * for each truthy return value of @a parentChooser. As parameters,
- * it receives a pointer to the SimData, and @a datastore as passed 
+ * it receives a pointer to the gsc_SimData, and @a datastore as passed 
  * by the calling function and potentially modified by @a parentChooser,
- * the GenoLocations of up to two parents, as set by @a parentChooser, 
+ * the gsc_GenoLocations of up to two parents, as set by @a parentChooser, 
  * and the location to which it is to save the new genotype.
  *
- * @return group number of new group created, or NO_GROUP if no group 
+ * @return group number of new group created, or gsc_NO_GROUP if no group 
  * was created or the new group was empty.
  */
-GroupNum _make_new_genotypes(SimData* d, const GenOptions g, 
+gsc_GroupNum gsc_scaffold_make_new_genotypes(gsc_SimData* d, const gsc_GenOptions g, 
 		void* parentIterator, void* datastore, 
-		int (*parentChooser)(void*, void*, unsigned int*, GenoLocation[static 2]), 
-		void (*offspringGenerator)(SimData*, void*, GenoLocation[static 2], GenoLocation) ) {
+		int (*parentChooser)(void*, void*, unsigned int*, gsc_GenoLocation[static 2]), 
+		void (*offspringGenerator)(gsc_SimData*, void*, gsc_GenoLocation[static 2], gsc_GenoLocation) ) {
 	if (g.family_size < 1 || d == NULL || 
 		parentChooser == NULL || offspringGenerator == NULL) {
-		return NO_GROUP;
+		return gsc_NO_GROUP;
 	}
 	
 	// create the buffer we'll use to save the output crosses before they're printed.
-	AlleleMatrix* offspring = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
+	gsc_AlleleMatrix* offspring = gsc_create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 	unsigned int fullness = 0;
 	unsigned int counter = 0;
-    GenoLocation parents[2] = { INVALID_GENO_LOCATION, INVALID_GENO_LOCATION };
+    gsc_GenoLocation parents[2] = { gsc_INVALID_GENO_LOCATION, gsc_INVALID_GENO_LOCATION };
 
-	AlleleMatrix* last = NULL;
-    GroupNum output_group = NO_GROUP;
+	gsc_AlleleMatrix* last = NULL;
+    gsc_GroupNum output_group = gsc_NO_GROUP;
 	if (g.will_save_to_simdata) {
 		last = d->m; // for saving to simdata
 		while (last->next != NULL) {
 			last = last->next;
 		}
-		output_group = get_new_group_num( d );
+		output_group = gsc_get_new_group_num( d );
 	}
 
 	// open the output files, if applicable
-	FILE* fp = _genoptions_setup_save_pedigrees(g);
-	int effIndex = UNINITIALISED;
-	FILE* fe = _genoptions_setup_save_bvs(d,g,&effIndex);
-	FILE* fg = _genoptions_setup_save_genotypes(d,g);
+	FILE* fp = gsc_helper_genoptions_save_pedigrees_setup(g);
+	int effIndex = GSC_UNINIT;
+	FILE* fe = gsc_helper_genoptions_save_bvs_setup(d,g,&effIndex);
+	FILE* fg = gsc_helper_genoptions_save_genotypes_setup(d,g);
 	
 	GetRNGstate();
 	// loop through each combination
@@ -6216,36 +6055,36 @@ GroupNum _make_new_genotypes(SimData* d, const GenOptions g,
 			// when offspring buffer is full, save these outcomes to the file.
 			if (fullness >= CONTIG_WIDTH) {
                 offspring->n_genotypes = CONTIG_WIDTH;
-				_genoptions_give_names_and_ids(offspring, d, g);
-				_genoptions_save_pedigrees(fp, d, offspring);
-                _genoptions_save_bvs(fe, d->e, effIndex, offspring);
-				_genoptions_save_genotypes(fg, offspring);
+				gsc_helper_genoptions_give_names_and_ids(offspring, d, g);
+				gsc_helper_genoptions_save_pedigrees(fp, d, offspring);
+                gsc_helper_genoptions_save_bvs(fe, d->e, effIndex, offspring);
+				gsc_helper_genoptions_save_genotypes(fg, offspring);
 				
 				if (g.will_save_to_simdata) {
                     last->next = offspring;
 					last = last->next;
-                    offspring = create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
+                    offspring = gsc_create_empty_allelematrix(d->n_markers, d->n_labels, d->label_defaults, CONTIG_WIDTH);
 				}
 				fullness = 0; //reset the count and start refilling the matrix
 			}
 			
 			// do the cross.
-            GenoLocation offspringPos = { .localAM=offspring, .localPos=fullness };
+            gsc_GenoLocation offspringPos = { .localAM=offspring, .localPos=fullness };
             offspringGenerator(d, datastore, parents, offspringPos);
 			offspring->groups[fullness] = output_group;
 			if (g.will_track_pedigree) {
-				offspring->pedigrees[0][fullness] = get_id(parents[0]);
-				offspring->pedigrees[1][fullness] = get_id(parents[1]);
+				offspring->pedigrees[0][fullness] = gsc_get_id(parents[0]);
+				offspring->pedigrees[1][fullness] = gsc_get_id(parents[1]);
 			}
 		}
 	}
 	PutRNGstate();
 
     offspring->n_genotypes = fullness;
-	_genoptions_give_names_and_ids(offspring, d, g);
-	_genoptions_save_pedigrees(fp, d, offspring);
-    _genoptions_save_bvs(fe, d->e, effIndex, offspring);
-	_genoptions_save_genotypes(fg, offspring);
+	gsc_helper_genoptions_give_names_and_ids(offspring, d, g);
+	gsc_helper_genoptions_save_pedigrees(fp, d, offspring);
+    gsc_helper_genoptions_save_bvs(fe, d->e, effIndex, offspring);
+	gsc_helper_genoptions_save_genotypes(fg, offspring);
 	
 	if (fp) fclose(fp);
 	if (fe) fclose(fe);
@@ -6254,25 +6093,25 @@ GroupNum _make_new_genotypes(SimData* d, const GenOptions g,
 	if (counter > 0 && g.will_save_to_simdata) {
         last->next = offspring;
         d->n_groups++;
-		condense_allele_matrix( d );
+		gsc_condense_allele_matrix( d );
 		return output_group;
 	} else {
-        delete_allele_matrix( offspring );
-        return NO_GROUP;
+        gsc_delete_allele_matrix( offspring );
+        return gsc_NO_GROUP;
 	}
 }
 
-/** parentChooser function parameter for cross_random_individuals.
+/** parentChooser function parameter for gsc_make_random_crosses.
  *
- * @see _make_new_genotypes
- * @see cross_random_individuals
+ * @see gsc_scaffold_make_new_genotypes
+ * @see gsc_make_random_crosses
  *
  * Chooses parents randomly without overruning parent usage caps 
  * and without permitting selfing. Guarantees @a parents contains 
- * two valid GenoLocations at the time it returns a truthy value.
+ * two valid gsc_GenoLocations at the time it returns a truthy value.
  */
-int __parentChooser_cross_randomly(void* parentIterator, void* datastore, unsigned int* counter, GenoLocation parents[static 2]) {
-	RandomAccessIterator* it = (RandomAccessIterator*) parentIterator;
+static int gsc_helper_parentchooser_cross_randomly(void* parentIterator, void* datastore, unsigned int* counter, gsc_GenoLocation parents[static 2]) {
+	gsc_RandomAccessIterator* it = (gsc_RandomAccessIterator*) parentIterator;
 	unsigned int* datastoreint = (unsigned int*) datastore;
 	unsigned int n_crosses = datastoreint[0];
 	unsigned int cap = datastoreint[1];
@@ -6282,8 +6121,8 @@ int __parentChooser_cross_randomly(void* parentIterator, void* datastore, unsign
 	
     if (*counter < n_crosses && (cap == 0 || (*counter) < cap * nparents)) {
 		// get parents, randomly. Must not be identical or already been used too many times.
-		parentixs[0] = _specialised_random_draw(it[0].d, nparents, cap, parent_uses, UNINITIALISED);
-		parentixs[1] = _specialised_random_draw(it[0].d, nparents, cap, parent_uses, parentixs[0]);
+		parentixs[0] = gsc_randomdraw_replacementrules(it[0].d, nparents, cap, parent_uses, GSC_UNINIT);
+		parentixs[1] = gsc_randomdraw_replacementrules(it[0].d, nparents, cap, parent_uses, parentixs[0]);
 		
 		if (cap > 0) { 
 			parent_uses[parentixs[0]] += 1; 
@@ -6291,27 +6130,27 @@ int __parentChooser_cross_randomly(void* parentIterator, void* datastore, unsign
 		}
 		
 		// Neither of these should fail, if nparents is good. 
-		parents[0] = next_get_nth(parentIterator, parentixs[0]);
-		parents[1] = next_get_nth(parentIterator, parentixs[1]);
-		// This will cut short _make_new_genotypes execution if either parent is invalid.
-		return IS_VALID_LOCATION(parents[0]) && IS_VALID_LOCATION(parents[1]);
+		parents[0] = gsc_next_get_nth(parentIterator, parentixs[0]);
+		parents[1] = gsc_next_get_nth(parentIterator, parentixs[1]);
+		// This will cut short gsc_scaffold_make_new_genotypes execution if either parent is invalid.
+		return gsc_IS_VALID_LOCATION(parents[0]) && gsc_IS_VALID_LOCATION(parents[1]);
 	} else {
-		return FALSE;
+		return GSC_FALSE;
 	}
 }
 
-/** offspringGenerator function parameter for cross_random_individuals.
+/** offspringGenerator function parameter for gsc_make_random_crosses.
  *
- * @see _make_new_genotypes
- * @see cross_random_individuals
+ * @see gsc_scaffold_make_new_genotypes
+ * @see gsc_make_random_crosses
  *
  * Generates new alleles from two separate parents. Does not check 
  * they are valid parents.
  */
-void __make_offspring_cross(SimData* d, void* datastore, GenoLocation parents[static 2], GenoLocation putHere) {
+static void gsc_helper_make_offspring_cross(gsc_SimData* d, void* datastore, gsc_GenoLocation parents[static 2], gsc_GenoLocation putHere) {
 	// (silly name)
-	generate_gamete(d, get_alleles(parents[0]), (get_alleles(putHere)  ));
-	generate_gamete(d, get_alleles(parents[1]), (get_alleles(putHere)+1));
+	gsc_generate_gamete(d, gsc_get_alleles(parents[0]), (gsc_get_alleles(putHere)  ));
+	gsc_generate_gamete(d, gsc_get_alleles(parents[1]), (gsc_get_alleles(putHere)+1));
 }
 
 /** Check input parameters of random crossing functions. (helper function)
@@ -6319,8 +6158,8 @@ void __make_offspring_cross(SimData* d, void* datastore, GenoLocation parents[st
  * @return 0 if the parameters fail these checks, number of members of 
  * @a from_group otherwise.
  */
-int _random_cross_checks(SimData* d, const GroupNum from_group, const int n_crosses, const int cap) {
-	int g_size = get_group_size( d, from_group); // might be a better way to do this using the iterator.
+static int gsc_helper_random_cross_checks(gsc_SimData* d, const gsc_GroupNum from_group, const int n_crosses, const int cap) {
+	int g_size = gsc_get_group_size( d, from_group); // might be a better way to do this using the iterator.
     if (g_size < 1) {
         warning("Group %d does not exist.\n", from_group.num);
         return 0;
@@ -6348,47 +6187,49 @@ int _random_cross_checks(SimData* d, const GroupNum from_group, const int n_cros
  * The group must have at least two members. Selfing is not considered a form of 
  * random crossing. The resulting genotypes are allocated to a new group.
  *
- * Preferences in GenOptions are applied to this cross. The family_size parameter
- * in GenOptions allows you to repeat each particular randomly-chosen cross a
+ * Preferences in gsc_GenOptions are applied to this cross. The family_size parameter
+ * in gsc_GenOptions allows you to repeat each particular randomly-chosen cross a
  * certain number of times.
  *
  * Parents are drawn uniformly from the group when picking which crosses to make.
  *
- * @param d pointer to the SimData object that contains the genetic map and
+ * @shortnamed{make_random_crosses}
+ *
+ * @param d pointer to the gsc_SimData object that contains the genetic map and
  * genotypes of the parent group.
  * @param from_group group number from which to draw the parents.
  * @param cap If set, the maximum number of times each member of from_group can be
  * used as the parent of a cross. Set to 0 for no restriction on the number of offspring
  * produced by a given member of from_group
  * @param n_crosses number of random pairs of parents to cross.
- * @param g options for the genotypes created. @see GenOptions
+ * @param g options for the genotypes created. @see gsc_GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
 */
-GroupNum cross_random_individuals(SimData* d, const GroupNum from_group, const int n_crosses, const int cap, const GenOptions g) {
-    int g_size = _random_cross_checks(d, from_group, n_crosses*2, cap);
+gsc_GroupNum gsc_make_random_crosses(gsc_SimData* d, const gsc_GroupNum from_group, const int n_crosses, const int cap, const gsc_GenOptions g) {
+    int g_size = gsc_helper_random_cross_checks(d, from_group, n_crosses*2, cap);
 	if (g_size == 0) {
-		return NO_GROUP;
+		return gsc_NO_GROUP;
     } else if (g_size == 1) {
         warning("Group %d must contain multiple individuals to be able to perform random crossing\n", from_group.num);
-        return NO_GROUP;
+        return gsc_NO_GROUP;
     }
 	
     unsigned int* datastore = NULL; // cap = 0 means unlimited uses. Otherwise we need to track number of times each is used.
     if (cap > 0) {
-        datastore = get_malloc(sizeof(unsigned int)*(g_size+3));
+        datastore = gsc_malloc_wrap(sizeof(unsigned int)*(g_size+3));
         memset(datastore + 3,0,sizeof(unsigned int)*g_size);
     } else {
-		datastore = get_malloc(sizeof(unsigned int)*3);
+		datastore = gsc_malloc_wrap(sizeof(unsigned int)*3);
 	}
 	datastore[0] = n_crosses;
 	datastore[1] = cap;
 	datastore[2] = g_size;
 
-	RandomAccessIterator parentit = create_randomaccess_iter( d, from_group);
+	gsc_RandomAccessIterator parentit = gsc_create_randomaccess_iter( d, from_group);
 	
-    GroupNum offspring = _make_new_genotypes(d, g, (void*) &parentit, (void*) datastore, __parentChooser_cross_randomly, __make_offspring_cross );
+    gsc_GroupNum offspring = gsc_scaffold_make_new_genotypes(d, g, (void*) &parentit, (void*) datastore, gsc_helper_parentchooser_cross_randomly, gsc_helper_make_offspring_cross );
 		
-	free(datastore);
+	GSC_FREE(datastore);
 	return offspring;
 }
 
@@ -6403,7 +6244,7 @@ GroupNum cross_random_individuals(SimData* d, const GroupNum from_group, const i
  * and the number will fulfil @a member_uses[{number}] < @a cap, which can be used 
  * for selection without replacement or with only a certain number of replacements.
  *
- * @param d SimData, only used as the source of the random number generator (in genomicSimulationC version). 
+ * @param d gsc_SimData, only used as the source of the random number generator (in genomicSimulationC version). 
  * @param max upper bound (non-inclusive) of the range to draw from.
  * @param cap maximum number of uses (as tracked by @a member_uses) of each number 
  * in the range. If, for a given number "num" in the range, @a member_uses["num"] is 
@@ -6411,12 +6252,12 @@ GroupNum cross_random_individuals(SimData* d, const GroupNum from_group, const i
  * @param member_uses array of length @a max. See @a cap.
  * @param noCollision this integer cannot be the return value.
  * @return Random integer from the range 0 (inclusive) to @a max (exclusive) that fulfils 
- * the @a cap and @a noCollision conditions, or UNINITIALISED if input parameters made it 
+ * the @a cap and @a noCollision conditions, or GSC_UNINIT if input parameters made it 
  * impossible to draw any number.
  */
-unsigned int _specialised_random_draw(SimData* d, unsigned int max, unsigned int cap, unsigned int* member_uses, unsigned int noCollision) {
+unsigned int gsc_randomdraw_replacementrules(gsc_SimData* d, unsigned int max, unsigned int cap, unsigned int* member_uses, unsigned int noCollision) {
     if (max < 1 || (max == 1 && noCollision == 0)) {
-		return UNINITIALISED;
+		return GSC_UNINIT;
 	}
 	unsigned int parentix = 0;
 	if (cap > 0) {  // n uses of each parent is capped at a number cap.
@@ -6431,20 +6272,20 @@ unsigned int _specialised_random_draw(SimData* d, unsigned int max, unsigned int
 	return parentix;
 }
 
-/** parentChooser function parameter for cross_randomly_between.
+/** parentChooser function parameter for gsc_make_random_crosses_between.
  *
- * @see _make_new_genotypes
- * @see cross_randomly_between
+ * @see gsc_scaffold_make_new_genotypes
+ * @see gsc_make_random_crosses_between
  *
  * Chooses parents randomly without overruning parent usage caps 
  * and without permitting selfing. First and second parent come 
  * from different groups and may have different usage caps.
  * Guarantees @a parents contains 
- * two valid GenoLocations at the time it returns a truthy value.
+ * two valid gsc_GenoLocations at the time it returns a truthy value.
  */
-int __parentChooser_cross_randomly_between(void* parentIterator, void* datastore, unsigned int* counter, GenoLocation parents[static 2]) {
+static int gsc_helper_parentchooser_cross_randomly_between(void* parentIterator, void* datastore, unsigned int* counter, gsc_GenoLocation parents[static 2]) {
 	// caller function should guarantee that nparents is not 1. How would you make a nonselfed cross then?
-	RandomAccessIterator* it = (RandomAccessIterator*) parentIterator;
+	gsc_RandomAccessIterator* it = (gsc_RandomAccessIterator*) parentIterator;
 	unsigned int* datastoreint = (unsigned int*) datastore;
 	unsigned int n_crosses = datastoreint[0];
 	unsigned int* caps = datastoreint + 1; // caps[0], caps[1]
@@ -6455,8 +6296,8 @@ int __parentChooser_cross_randomly_between(void* parentIterator, void* datastore
     if (*counter < n_crosses && (caps[0] == 0 || (*counter) < caps[0] * nparents[0])
                              && (caps[1] == 0 || (*counter) < caps[1] * nparents[1])) {
 		// get parents, randomly. Must not be identical or already been used too many times.
-		parentixs[0] = _specialised_random_draw(it[0].d, nparents[0], caps[0], parent_uses, UNINITIALISED);
-		parentixs[1] = _specialised_random_draw(it[1].d, nparents[1], caps[1],  parent_uses + caps[0]*nparents[0], UNINITIALISED);
+		parentixs[0] = gsc_randomdraw_replacementrules(it[0].d, nparents[0], caps[0], parent_uses, GSC_UNINIT);
+		parentixs[1] = gsc_randomdraw_replacementrules(it[1].d, nparents[1], caps[1],  parent_uses + caps[0]*nparents[0], GSC_UNINIT);
 			
 		if (caps[0] > 0) { 
 			parent_uses[parentixs[0]] += 1; 
@@ -6465,12 +6306,12 @@ int __parentChooser_cross_randomly_between(void* parentIterator, void* datastore
 			parent_uses[caps[0]*nparents[0] + parentixs[1]] += 1;
 		}
 
-		parents[0] = next_get_nth(it+0, parentixs[0]);
-		parents[1] = next_get_nth(it+1, parentixs[1]);		
+		parents[0] = gsc_next_get_nth(it+0, parentixs[0]);
+		parents[1] = gsc_next_get_nth(it+1, parentixs[1]);		
 
-		return IS_VALID_LOCATION(parents[0]) && IS_VALID_LOCATION(parents[1]);
+		return gsc_IS_VALID_LOCATION(parents[0]) && gsc_IS_VALID_LOCATION(parents[1]);
 	}
-	return FALSE;
+	return GSC_FALSE;
 }
 
 /** Performs random crosses where the first parent comes from one group and the second from
@@ -6479,17 +6320,19 @@ int __parentChooser_cross_randomly_between(void* parentIterator, void* datastore
  * The group must have at least two members.
  * The resulting genotypes are allocated to a new group. 
  *
- * Preferences in GenOptions are applied to this cross. The family_size parameter
- * in GenOptions allows you to repeat each particular randomly-chosen cross a
+ * Preferences in gsc_GenOptions are applied to this cross. The family_size parameter
+ * in gsc_GenOptions allows you to repeat each particular randomly-chosen cross a
  * certain number of times.
  *
  * Parents are drawn uniformly from the group when picking which crosses to make.
  *
  * Parameters set_parent_gp1 and set_parent_gp2 are deprecated and removed!
- * Use split_from_group and combine_groups to temporarily move an individual to their own
+ * Use gsc_make_group_from and gsc_combine_groups to temporarily move an individual to their own
  * group if you wish to cross randomly from a group to an individual. 
  *
- * @param d pointer to the SimData object that contains the genetic map and
+ * @shortnamed{make_random_crosses_between}
+ *
+ * @param d pointer to the gsc_SimData object that contains the genetic map and
  * genotypes of the parent group.
  * @param group1 group number from which to draw the first parent.
  * @param group2 group number from which to draw the second parent.
@@ -6500,24 +6343,24 @@ int __parentChooser_cross_randomly_between(void* parentIterator, void* datastore
  * @param cap2 If set, the maximum number of times each member of group2 can be
  * used as the parent of a cross. Set to 0 for no restriction on the number of offspring
  * produced by a given member of group2
- * @param g options for the genotypes created. @see GenOptions
+ * @param g options for the genotypes created. @see gsc_GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
 */
-GroupNum cross_randomly_between(SimData*d, const GroupNum group1, const GroupNum group2, const int n_crosses, const int cap1, const int cap2, const GenOptions g) {
-    int group1_size = _random_cross_checks(d, group1, n_crosses, cap1);
-    int group2_size = _random_cross_checks(d, group2, n_crosses, cap2);
+gsc_GroupNum gsc_make_random_crosses_between(gsc_SimData*d, const gsc_GroupNum group1, const gsc_GroupNum group2, const int n_crosses, const int cap1, const int cap2, const gsc_GenOptions g) {
+    int group1_size = gsc_helper_random_cross_checks(d, group1, n_crosses, cap1);
+    int group2_size = gsc_helper_random_cross_checks(d, group2, n_crosses, cap2);
 	if (group1_size == 0 || group2_size == 0) {
-		return NO_GROUP;
+		return gsc_NO_GROUP;
 	}
 	
 	unsigned int* datastore = NULL;
 	int hascap1 = cap1 > 0 ? 1 : 0;
 	int hascap2 = cap2 > 0 ? 1 : 0;
 	if (hascap1 || hascap2) {
-        datastore = get_malloc(sizeof(unsigned int)*(hascap1*group1_size + hascap2*group2_size + 5));
+        datastore = gsc_malloc_wrap(sizeof(unsigned int)*(hascap1*group1_size + hascap2*group2_size + 5));
         memset(datastore + 5,0,sizeof(unsigned int)*(hascap1*group1_size + hascap2*group2_size));
     } else {
-		datastore = get_malloc(sizeof(unsigned int)*5);
+		datastore = gsc_malloc_wrap(sizeof(unsigned int)*5);
 	}
 	datastore[0] = n_crosses;
 	datastore[1] = cap1;
@@ -6525,40 +6368,40 @@ GroupNum cross_randomly_between(SimData*d, const GroupNum group1, const GroupNum
 	datastore[3] = group1_size;
 	datastore[4] = group2_size;
 	
-	RandomAccessIterator parentit[2] = { create_randomaccess_iter( d, group1 ),
-										 create_randomaccess_iter( d, group2 ),
+	gsc_RandomAccessIterator parentit[2] = { gsc_create_randomaccess_iter( d, group1 ),
+										 gsc_create_randomaccess_iter( d, group2 ),
 										};
 	
-    GroupNum offspring = _make_new_genotypes(d, g, (void*) parentit, (void*) datastore, __parentChooser_cross_randomly_between, __make_offspring_cross );
+    gsc_GroupNum offspring = gsc_scaffold_make_new_genotypes(d, g, (void*) parentit, (void*) datastore, gsc_helper_parentchooser_cross_randomly_between, gsc_helper_make_offspring_cross );
 	
-	free(datastore);
+	GSC_FREE(datastore);
 	return offspring;
 	
 }
 
-/** parentChooser function parameter for cross_these_combinations.
+/** parentChooser function parameter for gsc_make_targeted_crosses.
  *
- * @see _make_new_genotypes
- * @see cross_these_combinations
+ * @see gsc_scaffold_make_new_genotypes
+ * @see gsc_make_targeted_crosses
  *
  * Locates the next pair of parents in the provided sequence of combinations. 
  * Guarantees @a parents contains 
- * two valid GenoLocations at the time it returns a truthy value.
+ * two valid gsc_GenoLocations at the time it returns a truthy value.
  */
-int __parentChooser_cross_combos(void* parentIterator, void* datastore, unsigned int* counter, GenoLocation parents[static 2]) {
-	RandomAccessIterator* it = (RandomAccessIterator*) parentIterator;
+static int gsc_helper_parentchooser_cross_targeted(void* parentIterator, void* datastore, unsigned int* counter, gsc_GenoLocation parents[static 2]) {
+	gsc_RandomAccessIterator* it = (gsc_RandomAccessIterator*) parentIterator;
     int ncrosses = **((int**) datastore);
     if (*counter >= ncrosses) {
-        return FALSE;
+        return GSC_FALSE;
     }
 
     int** crosses = ((int**) datastore)+1;
 	
-	parents[0] = next_get_nth(it, crosses[0][*counter]);
-	parents[1] = next_get_nth(it, crosses[1][*counter]);
+	parents[0] = gsc_next_get_nth(it, crosses[0][*counter]);
+	parents[1] = gsc_next_get_nth(it, crosses[1][*counter]);
 
-	// This will cut short _make_new_genotypes execution if either parent is invalid.
-	return IS_VALID_LOCATION(parents[0]) && IS_VALID_LOCATION(parents[1]);
+	// This will cut short gsc_scaffold_make_new_genotypes execution if either parent is invalid.
+	return gsc_IS_VALID_LOCATION(parents[0]) && gsc_IS_VALID_LOCATION(parents[1]);
 }
 
 /** Performs the crosses of pairs of parents whose indexes are provided in an
@@ -6566,8 +6409,8 @@ int __parentChooser_cross_combos(void* parentIterator, void* datastore, unsigned
  *
  * The resulting genotypes are allocated to a new group.
  *
- * Preferences in GenOptions are applied to this cross. The family_size parameter
- * in GenOptions allows you to repeat each particular cross a
+ * Preferences in gsc_GenOptions are applied to this cross. The family_size parameter
+ * in gsc_GenOptions allows you to repeat each particular cross a
  * certain number of times.
  *
  * Previously had a parameter combinations[2][n_combinations] instead of firstParents
@@ -6575,52 +6418,54 @@ int __parentChooser_cross_combos(void* parentIterator, void* datastore, unsigned
  * function: now there is no need to create a 2-wide int* to hold the two separate parent
  * vectors if they already exist.
  *
- * @param d pointer to the SimData object that includes genetic map data and
+ * @shortnamed{make_targeted_crosses}
+ *
+ * @param d pointer to the gsc_SimData object that includes genetic map data and
  * allele data needed to simulate crossing.
  * @param n_combinations the number of pairs of ids to cross/the length of `combinations`
  * @param firstParents a vector of indexes of parents to be the first parent of each cross
  * @param secondParents a vector of indexes of parents to be the second parent of each cross.
  * firstParents[0] is crossed to secondParents[0], firstParents[1] is crossed to 
  * secondParents[1], and so forth.
- * @param g options for the genotypes created. @see GenOptions
+ * @param g options for the genotypes created. @see gsc_GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
  */
-GroupNum cross_these_combinations(SimData* d, const int n_combinations, const int firstParents[n_combinations], const int secondParents[n_combinations], const GenOptions g) {
+gsc_GroupNum gsc_make_targeted_crosses(gsc_SimData* d, const int n_combinations, const int firstParents[n_combinations], const int secondParents[n_combinations], const gsc_GenOptions g) {
 	if (n_combinations < 1) {
         warning("Invalid n_combinations value provided: n_combinations must be greater than 0.\n");
-        return NO_GROUP;
+        return gsc_NO_GROUP;
 	}
 	
     const int* parents[3] = { &n_combinations, firstParents, secondParents } ;
-	RandomAccessIterator parentit = create_randomaccess_iter( d, NO_GROUP );
+	gsc_RandomAccessIterator parentit = gsc_create_randomaccess_iter( d, gsc_NO_GROUP );
 	
-    GroupNum offspring = _make_new_genotypes(d, g, (void*) &parentit, (void*) parents, __parentChooser_cross_combos, __make_offspring_cross );
+    gsc_GroupNum offspring = gsc_scaffold_make_new_genotypes(d, g, (void*) &parentit, (void*) parents, gsc_helper_parentchooser_cross_targeted, gsc_helper_make_offspring_cross );
 	
 	return offspring;
 }
 
-/** parentChooser function parameter for self_n_times.
+/** parentChooser function parameter for gsc_self_n_times.
  *
- * @see _make_new_genotypes
- * @see self_n_times
- * @see make_doubled_haploids
+ * @see gsc_scaffold_make_new_genotypes
+ * @see gsc_self_n_times
+ * @see gsc_make_doubled_haploids
  *
  * Locates the next group member. Guarantees @a parents contains 
- * two valid GenoLocations (which are the same) at the time it returns a truthy value.
+ * two valid gsc_GenoLocations (which are the same) at the time it returns a truthy value.
  */
-int __parentChooser_selfing(void* parentIterator, void* datastore, unsigned int* counter, GenoLocation parents[static 2]) {
-	BidirectionalIterator* it = (BidirectionalIterator*) parentIterator;
+static int gsc_helper_parentchooser_selfing(void* parentIterator, void* datastore, unsigned int* counter, gsc_GenoLocation parents[static 2]) {
+	gsc_BidirectionalIterator* it = (gsc_BidirectionalIterator*) parentIterator;
 	
-	parents[0] = next_forwards(it);
+	parents[0] = gsc_next_forwards(it);
 	parents[1] = parents[0];
 
-	return IS_VALID_LOCATION(parents[0]);
+	return gsc_IS_VALID_LOCATION(parents[0]);
 }
 
-/** offspringGenerator function parameter for self_n_times.
+/** offspringGenerator function parameter for gsc_self_n_times.
  *
- * @see _make_new_genotypes
- * @see self_n_times
+ * @see gsc_scaffold_make_new_genotypes
+ * @see gsc_self_n_times
  *
  * Datastore should be a pointer to an unsigned int containing 
  * the number of generations to self for.
@@ -6628,24 +6473,24 @@ int __parentChooser_selfing(void* parentIterator, void* datastore, unsigned int*
  * Generates new alleles by selfing from one parent. Only 
  * looks at the first parent and does not check it is valid.
  */
-void __make_offspring_self_n_times(SimData* d, void* datastore, GenoLocation parents[static 2], GenoLocation putHere) {
+static void gsc_helper_make_offspring_self_n_times(gsc_SimData* d, void* datastore, gsc_GenoLocation parents[static 2], gsc_GenoLocation putHere) {
 	unsigned int n = *((unsigned int*) datastore);
 	
 	// error checking parents are the same is not done.
 	// error checking n >= 1 is not done.
 	
-	char* tmpparent = get_alleles(parents[0]);
+	char* tmpparent = gsc_get_alleles(parents[0]);
 	char tmpchild[d->n_markers<<1];
-	char* output = get_alleles(putHere);
+	char* output = gsc_get_alleles(putHere);
 	int n_oddness = n % 2; 
 	for (int i = 0; i < n; ++i) {
 		if (i % 2 == n_oddness) {
-			generate_gamete(d, tmpparent, tmpchild);
-			generate_gamete(d, tmpparent, tmpchild+1);
+			gsc_generate_gamete(d, tmpparent, tmpchild);
+			gsc_generate_gamete(d, tmpparent, tmpchild+1);
 			tmpparent = tmpchild;
 		} else {
-			generate_gamete(d, tmpparent, output);
-			generate_gamete(d, tmpparent, output+1);
+			gsc_generate_gamete(d, tmpparent, output);
+			gsc_generate_gamete(d, tmpparent, output+1);
 			tmpparent = output;
 		}
 	}
@@ -6657,182 +6502,190 @@ void __make_offspring_self_n_times(SimData* d, void* datastore, GenoLocation par
  *
  * Only the genotype after all n generations is saved. Intermediate steps will be lost.
  *
- * Preferences in GenOptions are applied to this operation. The family_size parameter
- * in GenOptions allows you to generate multiple selfed offspring from each member
+ * Preferences in gsc_GenOptions are applied to this operation. The family_size parameter
+ * in gsc_GenOptions allows you to generate multiple selfed offspring from each member
  * of the group. These multiple selfed offspring all originate from independent
  * processes of selfing the parent with itself then selfing that intermediate offspring
  * with itself for the remaining n-1 generations.
  *
- * @param d pointer to the SimData object that contains the genetic map and
+ * @shortnamed{self_n_times}
+ *
+ * @param d pointer to the gsc_SimData object that contains the genetic map and
  * genotypes of the parent group.
  * @param n number of generations of selfing simulation to carry out.
  * @param group the genotypes on which to perform these n generations of selfing.
- * @param g options for the genotypes created. @see GenOptions
+ * @param g options for the genotypes created. @see gsc_GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
 */
-GroupNum self_n_times(SimData* d, const unsigned int n, const GroupNum group, const GenOptions g) {
-	/*int group_size = get_group_size( d, group);
+gsc_GroupNum gsc_self_n_times(gsc_SimData* d, const unsigned int n, const gsc_GroupNum group, const gsc_GenOptions g) {
+	/*int group_size = gsc_get_group_size( d, group);
 	if (group_size < 1) {
         warning("Group %d does not exist.\n", group.num);
-        return NO_GROUP;
+        return gsc_NO_GROUP;
 	}*/
 	if (n < 1) {
         warning("Invalid n value provided: Number of generations must be greater than 0.\n");
-        return NO_GROUP;
+        return gsc_NO_GROUP;
 	}
 	
-	BidirectionalIterator parentit = create_bidirectional_iter( d, group );
+	gsc_BidirectionalIterator parentit = gsc_create_bidirectional_iter( d, group );
 	
-    return _make_new_genotypes(d, g, (void*) &parentit, (void*) &n, __parentChooser_selfing, __make_offspring_self_n_times );
+    return gsc_scaffold_make_new_genotypes(d, g, (void*) &parentit, (void*) &n, gsc_helper_parentchooser_selfing, gsc_helper_make_offspring_self_n_times );
 }
 
-/** offspringGenerator function parameter for make_doubled_haploids.
+/** offspringGenerator function parameter for gsc_make_doubled_haploids.
  *
- * @see _make_new_genotypes
- * @see make_doubled_haploids
+ * @see gsc_scaffold_make_new_genotypes
+ * @see gsc_make_doubled_haploids
  *
  * Generates new alleles by making a doubled haploid. Only 
  * looks at the first parent and does not check it is valid.
  */
-void __make_offspring_doubled_haploids(SimData* d, void* datastore, GenoLocation parents[static 2], GenoLocation putHere) {
-	generate_doubled_haploid(d, get_alleles(parents[0]), get_alleles(putHere));
+static void gsc_helper_make_offspring_doubled_haploids(gsc_SimData* d, void* datastore, gsc_GenoLocation parents[static 2], gsc_GenoLocation putHere) {
+	gsc_generate_doubled_haploid(d, gsc_get_alleles(parents[0]), gsc_get_alleles(putHere));
 }
 
 /** Creates a doubled haploid from each member of a group.
  *
  * The resulting genotypes are allocated to a new group.
  *
- * Preferences in GenOptions are applied to this operation. The family_size parameter
- * in GenOptions allows you to generate multiple doubled haploid offspring from each member
+ * Preferences in gsc_GenOptions are applied to this operation. The family_size parameter
+ * in gsc_GenOptions allows you to generate multiple doubled haploid offspring from each member
  * of the group. These multiple offspring all originate from independent
  * processes of generating a gamete then doubling its alleles.
  *
- * @param d pointer to the SimData object that contains the genetic map and
+ * @shortnamed{make_doubled_haploids}
+ *
+ * @param d pointer to the gsc_SimData object that contains the genetic map and
  * genotypes of the parent group.
  * @param group the genotypes on which to perform the operation.
- * @param g options for the genotypes created. @see GenOptions
+ * @param g options for the genotypes created. @see gsc_GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
 */
-GroupNum make_doubled_haploids(SimData* d, const GroupNum group, const GenOptions g) {
-	/*int group_size = get_group_size( d, group);
+gsc_GroupNum gsc_make_doubled_haploids(gsc_SimData* d, const gsc_GroupNum group, const gsc_GenOptions g) {
+	/*int group_size = gsc_get_group_size( d, group);
 	if (group_size < 1) {
         warning("Group %d does not exist.\n", group.num);
-        return NO_GROUP;
+        return gsc_NO_GROUP;
 	}*/
 	
-	BidirectionalIterator parentit = create_bidirectional_iter( d, group );
+	gsc_BidirectionalIterator parentit = gsc_create_bidirectional_iter( d, group );
 	
-    return _make_new_genotypes(d, g, (void*) &parentit, NULL, __parentChooser_selfing, __make_offspring_doubled_haploids );
+    return gsc_scaffold_make_new_genotypes(d, g, (void*) &parentit, NULL, gsc_helper_parentchooser_selfing, gsc_helper_make_offspring_doubled_haploids );
 }
 
-/** parentChooser function parameter for make_clones.
+/** parentChooser function parameter for gsc_make_clones.
  *
- * @see _make_new_genotypes
- * @see make_clones
+ * @see gsc_scaffold_make_new_genotypes
+ * @see gsc_make_clones
  *
- * Very similar to @see __parentChooser_selfing, but also accesses the datastore
+ * Very similar to @ref gsc_helper_parentchooser_selfing, but also accesses the datastore
  * to see if it needs to inherit the name from its parent.
  *
  * Locates the next group member. Guarantees @a parents contains 
- * two valid GenoLocations (which are the same) at the time it returns a truthy value.
+ * two valid gsc_GenoLocations (which are the same) at the time it returns a truthy value.
  */
-int __parentChooser_cloning(void* parentIterator, void* datastore, unsigned int* counter, GenoLocation parents[static 2]) {
-	BidirectionalIterator* it = (BidirectionalIterator*) parentIterator;
+static int gsc_helper_parentchooser_cloning(void* parentIterator, void* datastore, unsigned int* counter, gsc_GenoLocation parents[static 2]) {
+	gsc_BidirectionalIterator* it = (gsc_BidirectionalIterator*) parentIterator;
 	
-	parents[0] = next_forwards(it);
+	parents[0] = gsc_next_forwards(it);
 	parents[1] = parents[0];
 
-    if (IS_VALID_LOCATION(parents[0])) {
+    if (gsc_IS_VALID_LOCATION(parents[0])) {
 		char inherit_names = *( ((char**) datastore)[0] );
 		if (inherit_names) {
-            ((char**) datastore)[1] = get_name(parents[0]);
+            ((char**) datastore)[1] = gsc_get_name(parents[0]);
 		}
-		return TRUE;
+		return GSC_TRUE;
 	} else {
-		return FALSE;
+		return GSC_FALSE;
 	}
 }
 
-/** offspringGenerator function parameter for make_clones.
+/** offspringGenerator function parameter for gsc_make_clones.
  *
- * @see _make_new_genotypes
- * @see make_clones
+ * @see gsc_scaffold_make_new_genotypes
+ * @see gsc_make_clones
  *
  * Generates new alleles by making a clone of its parent. Only 
  * looks at the first parent and does not check it is valid.
  */
-void __make_offspring_clones(SimData* d, void* datastore, GenoLocation parents[static 2], GenoLocation putHere) {
+static void gsc_helper_make_offspring_clones(gsc_SimData* d, void* datastore, gsc_GenoLocation parents[static 2], gsc_GenoLocation putHere) {
 	char inherit_names = *( ((char**) datastore)[0] );
 	if (inherit_names) {
-        char* tmpname = get_malloc(sizeof(char)*(strlen(((char**) datastore)[1]) + 1));
+        char* tmpname = gsc_malloc_wrap(sizeof(char)*(strlen(((char**) datastore)[1]) + 1));
         strcpy(tmpname, ((char**) datastore)[1]);
-        set_name(putHere,tmpname);
+        gsc_set_name(putHere,tmpname);
 	}
 	
-    generate_clone(d, get_alleles(parents[0]), get_alleles(putHere));
+    gsc_generate_clone(d, gsc_get_alleles(parents[0]), gsc_get_alleles(putHere));
 }
 
 /** Creates an identical copy of each member of a group.
  *
  * The resulting genotypes are allocated to a new group.
  *
- * Preferences in GenOptions are applied to this operation. The family_size parameter
- * in GenOptions allows you to generate multiple cloned offspring from each member
+ * Preferences in gsc_GenOptions are applied to this operation. The family_size parameter
+ * in gsc_GenOptions allows you to generate multiple cloned offspring from each member
  * of the group.
  *
- * If pedigree tracking and ID allocation are active in GenOptions, clones are given
+ * If pedigree tracking and ID allocation are active in gsc_GenOptions, clones are given
  * individual IDs and are children of their single progenitor parent. If the inherit_names
- * parameter is 1/truthy, it overrides whatever naming settings are present in GenOptions
+ * parameter is 1/truthy, it overrides whatever naming settings are present in gsc_GenOptions
  * in favour of giving each clone the exact name of the individual it was cloned from.
  *
- * Clones currently keep the default value for every label.
+ * Clones currently keep the default value for every custom label.
  *
- * @param d pointer to the SimData object that contains the genetic map and
+ * @shortnamed{make_clones}
+ *
+ * @param d pointer to the gsc_SimData object that contains the genetic map and
  * genotypes of the parent group.
  * @param group the genotypes on which to perform the operation.
- * @param g options for the genotypes created. @see GenOptions
+ * @param g options for the genotypes created. @see gsc_GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
 */
-GroupNum make_clones(SimData* d, const GroupNum group, const int inherit_names, GenOptions g) {
-    /*int group_size = get_group_size( d, group);
+gsc_GroupNum gsc_make_clones(gsc_SimData* d, const gsc_GroupNum group, const int inherit_names, gsc_GenOptions g) {
+    /*int group_size = gsc_get_group_size( d, group);
     if (group_size < 1) {
         warning("Group %d does not exist.\n", group.num);
-        return NO_GROUP;
+        return gsc_NO_GROUP;
     }*/
 	
 	char do_inherit_names = inherit_names;
 	char* nameinherit[2] = {&do_inherit_names, NULL };
 
-    BidirectionalIterator parentit = create_bidirectional_iter( d, group );
+    gsc_BidirectionalIterator parentit = gsc_create_bidirectional_iter( d, group );
 	
-    return _make_new_genotypes(d, g, (void*) &parentit, (void*) nameinherit, __parentChooser_cloning, __make_offspring_clones );
+    return gsc_scaffold_make_new_genotypes(d, g, (void*) &parentit, (void*) nameinherit, gsc_helper_parentchooser_cloning, gsc_helper_make_offspring_clones );
 }
 
 
 /** Perform crosses between all pairs of parents
  * in the group `from_group` and allocates the resulting offspring to a new group.
  *
- * If the group has n members, there will be n * (n-1) / 2 offspring produced.
+ * If the group has n members, there will be $n * (n-1) / 2$ offspring produced.
  *
- * Preferences in GenOptions are applied to this cross.
+ * Preferences in gsc_GenOptions are applied to this cross.
  *
- * @param d pointer to the SimData object containing or markers and parent alleles
+ * @shortnamed{make_all_unidirectional_crosses}
+ *
+ * @param d pointer to the gsc_SimData object containing or markers and parent alleles
  * @param from_group group number from which to do all these crosses.
- * @param g options for the AlleleMatrix created. @see GenOptions
+ * @param g options for the gsc_AlleleMatrix created. @see gsc_GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
  */
-GroupNum make_all_unidirectional_crosses(SimData* d, const GroupNum from_group, const GenOptions g) {
-	int group_size = get_group_size( d, from_group );
+gsc_GroupNum gsc_make_all_unidirectional_crosses(gsc_SimData* d, const gsc_GroupNum from_group, const gsc_GenOptions g) {
+	int group_size = gsc_get_group_size( d, from_group );
 	if (group_size < 2) {
 		if (group_size == 1) {
             warning("Group %d does not have enough members to perform crosses\n", from_group.num);
 		} else {
             warning("Group %d does not exist.\n", from_group.num);
 		}
-        return NO_GROUP;
+        return gsc_NO_GROUP;
 	}
     unsigned int group_indexes[group_size];
-    get_group_indexes( d, from_group, group_size, group_indexes );
+    gsc_get_group_indexes( d, from_group, group_size, group_indexes );
 
 	// number of crosses = number of entries in upper triangle of matrix
 	//    = half of (n entries in matrix - length of diagonal)
@@ -6850,58 +6703,60 @@ GroupNum make_all_unidirectional_crosses(SimData* d, const GroupNum from_group, 
 		}
 	}
 
-    return cross_these_combinations(d, n_crosses, combinations[0], combinations[1], g);
+    return gsc_make_targeted_crosses(d, n_crosses, combinations[0], combinations[1], g);
 
 }
 
 /** Find the top m percent of a group and perform random crosses between those
  * top individuals. The resulting offspring are allocated to a new group.
  *
- * Preferences in GenOptions are applied to this cross.
+ * Preferences in gsc_GenOptions are applied to this cross.
  *
- * @param d pointer to the SimData object containing or markers and parent alleles
+ * @shortnamed{make_n_crosses_from_top_m_percent}
+ *
+ * @param d pointer to the gsc_SimData object containing or markers and parent alleles
  * @param n number of random crosses to make.
  * @param m percentage (as a decimal, i.e. 0.2 for 20percent). Take the best [this portion]
  * of the group for performing the random crosses.
  * @param group group number from which to identify top parents and do crosses
  * @param effID Identifier of the set of marker effects to be used to calculate the breeding values
  * with which to rank top parents
- * @param g options for the AlleleMatrix created. @see GenOptions
+ * @param g options for the gsc_AlleleMatrix created. @see gsc_GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
  */
-GroupNum make_n_crosses_from_top_m_percent(SimData* d, const int n, const int m, const GroupNum group, const EffectID effID, const GenOptions g) {
-    const int effIndex = get_index_of_eff_set(d, effID);
+gsc_GroupNum gsc_make_n_crosses_from_top_m_percent(gsc_SimData* d, const int n, const int m, const gsc_GroupNum group, const gsc_EffectID effID, const gsc_GenOptions g) {
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
     if (n < 1) {
         warning("Invalid n value provided: Number of crosses must be greater than 0.\n");
-        return NO_GROUP;
+        return gsc_NO_GROUP;
     }
     if (effIndex >= d->n_eff_sets) {
         warning("Invalid effIndex value provided: We don't have that many marker effect sets loaded.\n");
-        return NO_GROUP;
+        return gsc_NO_GROUP;
     }
     if (m < 1 || m > 100) {
         warning("Invalid m value provided: Percent to select must be between 1 and 100.\n");
-        return NO_GROUP;
+        return gsc_NO_GROUP;
     }
 
 	// move the top m% to a new group
-	int group_size = get_group_size(d, group);
+	int group_size = gsc_get_group_size(d, group);
     if (group_size < 1) {
         warning("Group %d does not exist.\n", group.num);
-        return NO_GROUP;
+        return gsc_NO_GROUP;
     }
 
     int n_top_group = group_size * m / 100;
 	Rprintf("There are %d lines in the top %d%%\n", n_top_group, m);
 
-    GroupNum topgroup = split_by_bv(d, group, effID, n_top_group, FALSE);
+    gsc_GroupNum topgroup = gsc_split_by_bv(d, group, effID, n_top_group, GSC_FALSE);
 
 	// do the random crosses
-    GroupNum gp = cross_random_individuals(d, topgroup, 0, n, g);
+    gsc_GroupNum gp = gsc_make_random_crosses(d, topgroup, 0, n, g);
 
 	// unconvert from a group
-    GroupNum to_combine[] = {group, topgroup};
-	combine_groups(d, 2, to_combine);
+    gsc_GroupNum to_combine[] = {group, topgroup};
+	gsc_combine_groups(d, 2, to_combine);
 
 	return gp;
 }
@@ -6919,18 +6774,20 @@ GroupNum make_n_crosses_from_top_m_percent(SimData* d, const int n, const int m,
  *
  * where each row represents a separate cross to carry out.
  *
- * Preferences in GenOptions are applied to this cross.
+ * Preferences in gsc_GenOptions are applied to this cross.
  *
- * @param d pointer to the SimData object containing or markers and parent alleles
+ * @shortnamed{make_crosses_from_file}
+ *
+ * @param d pointer to the gsc_SimData object containing or markers and parent alleles
  * @param input_file file instructing which crosses to perform
- * @param g options for the AlleleMatrix created. @see GenOptions
+ * @param g options for the gsc_AlleleMatrix created. @see gsc_GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
  */
-GroupNum make_crosses_from_file(SimData* d, const char* input_file, const GenOptions g) {
-	struct TableSize t = get_file_dimensions(input_file, '\t');
+gsc_GroupNum gsc_make_crosses_from_file(gsc_SimData* d, const char* input_file, const gsc_GenOptions g) {
+	struct gsc_TableSize t = gsc_get_file_dimensions(input_file, '\t');
 	if (t.num_rows < 1) {
 		warning( "No crosses exist in that file\n");
-        return NO_GROUP;
+        return gsc_NO_GROUP;
 	}
 
 	//open file
@@ -6945,12 +6802,12 @@ GroupNum make_crosses_from_file(SimData* d, const char* input_file, const GenOpt
 	for (int i = 0; i < t.num_rows; ++i) {
 		// load the four grandparents
 		fscanf(fp, "%s %s \n", buffer[0], buffer[1]);
-		combinations[0][i] = get_index_of_name(d->m, buffer[0]);
-		combinations[1][i] = get_index_of_name(d->m, buffer[1]);
+		combinations[0][i] = gsc_get_index_of_name(d->m, buffer[0]);
+		combinations[1][i] = gsc_get_index_of_name(d->m, buffer[1]);
 	}
 
 	fclose(fp);
-    return cross_these_combinations(d, t.num_rows, combinations[0], combinations[1], g);
+    return gsc_make_targeted_crosses(d, t.num_rows, combinations[0], combinations[1], g);
 }
 
 /** Perform crosses between previously-generated offspring of pairs of parents
@@ -6972,18 +6829,20 @@ GroupNum make_crosses_from_file(SimData* d, const char* input_file, const GenOpt
  * with pedigree tracking options turned on. Messages will be printed
  * to stderr if such offspring cannot be found.
  *
- * Preferences in GenOptions are applied to this cross.
+ * Preferences in gsc_GenOptions are applied to this cross.
  *
- * @param d pointer to the SimData object containing or markers and parent alleles
+ * @shortnamed{make_double_crosses_from_file}
+ *
+ * @param d pointer to the gsc_SimData object containing or markers and parent alleles
  * @param input_file file instructing which crosses to perform
- * @param g options for the AlleleMatrix created. @see GenOptions
+ * @param g options for the gsc_AlleleMatrix created. @see gsc_GenOptions
  * @returns the group number of the group to which the produced offspring were allocated.
  */
-GroupNum make_double_crosses_from_file(SimData* d, const char* input_file, const GenOptions g) {
-	struct TableSize t = get_file_dimensions(input_file, '\t');
+gsc_GroupNum gsc_make_double_crosses_from_file(gsc_SimData* d, const char* input_file, const gsc_GenOptions g) {
+	struct gsc_TableSize t = gsc_get_file_dimensions(input_file, '\t');
 	if (t.num_rows < 1) {
 		warning( "No crosses exist in that file\n");
-        return NO_GROUP;
+        return gsc_NO_GROUP;
 	}
 
 	//open file
@@ -6995,34 +6854,34 @@ GroupNum make_double_crosses_from_file(SimData* d, const char* input_file, const
 	int combinations[2][t.num_rows];
 	char buffer[4][50];
     const char* to_buffer[] = {buffer[0], buffer[1], buffer[2], buffer[3]};
-    PedigreeID g0_id[4];
+    gsc_PedigreeID g0_id[4];
 	int f1_i[2];
 	// for each row in file
 	for (int i = 0; i < t.num_rows; ++i) {
 		// load the four grandparents
 		fscanf(fp, "%s %s %s %s \n", buffer[0], buffer[1], buffer[2], buffer[3]);
-		get_ids_of_names(d->m, 4, to_buffer, g0_id);
-        if (g0_id[0].id == NO_PEDIGREE.id || g0_id[1].id == NO_PEDIGREE.id || g0_id[2].id == NO_PEDIGREE.id || g0_id[3].id == NO_PEDIGREE.id) {
+		gsc_get_ids_of_names(d->m, 4, to_buffer, g0_id);
+        if (g0_id[0].id == gsc_NO_PEDIGREE.id || g0_id[1].id == gsc_NO_PEDIGREE.id || g0_id[2].id == gsc_NO_PEDIGREE.id || g0_id[3].id == gsc_NO_PEDIGREE.id) {
 			warning( "Could not go ahead with the line %d cross - g0 names not in records\n", i);
-            combinations[0][i] = UNINITIALISED;
-            combinations[1][i] = UNINITIALISED;
+            combinations[0][i] = GSC_UNINIT;
+            combinations[1][i] = GSC_UNINIT;
 			continue;
 		}
 
 		// identify two parents
-		f1_i[0] = get_index_of_child(d->m, g0_id[0], g0_id[1]);
-		f1_i[1] = get_index_of_child(d->m, g0_id[2], g0_id[3]);
+		f1_i[0] = gsc_get_index_of_child(d->m, g0_id[0], g0_id[1]);
+		f1_i[1] = gsc_get_index_of_child(d->m, g0_id[2], g0_id[3]);
 		if (f1_i[0] < 0 || f1_i[1] < 0) {
 			// try different permutations of the four grandparents.
-            f1_i[0] = get_index_of_child(d->m, g0_id[0], g0_id[2]);
-            f1_i[1] = get_index_of_child(d->m, g0_id[1], g0_id[3]);
+            f1_i[0] = gsc_get_index_of_child(d->m, g0_id[0], g0_id[2]);
+            f1_i[1] = gsc_get_index_of_child(d->m, g0_id[1], g0_id[3]);
 			if (f1_i[0] < 0 || f1_i[1] < 0) {
-				f1_i[0] = get_index_of_child(d->m, g0_id[0], g0_id[3]);
-				f1_i[1] = get_index_of_child(d->m, g0_id[1], g0_id[2]);
+				f1_i[0] = gsc_get_index_of_child(d->m, g0_id[0], g0_id[3]);
+				f1_i[1] = gsc_get_index_of_child(d->m, g0_id[1], g0_id[2]);
 				if (f1_i[0] < 0 || f1_i[1] < 0) {
 					warning( "Could not go ahead with the line %d cross - f1 children do not exist for this quartet\n", i);
-                    combinations[0][i] = UNINITIALISED;
-                    combinations[1][i] = UNINITIALISED;
+                    combinations[0][i] = GSC_UNINIT;
+                    combinations[1][i] = GSC_UNINIT;
 					continue;
 				}
 			}
@@ -7035,7 +6894,7 @@ GroupNum make_double_crosses_from_file(SimData* d, const char* input_file, const
 	}
 
 	fclose(fp);
-    return cross_these_combinations(d, t.num_rows, combinations[0], combinations[1], g);
+    return gsc_make_targeted_crosses(d, t.num_rows, combinations[0], combinations[1], g);
 
 }
 
@@ -7045,7 +6904,9 @@ GroupNum make_double_crosses_from_file(SimData* d, const char* input_file, const
 /** Takes the `top_n` individuals in the group with the best breeding values/fitnesses
  * and puts them in a new group. The new group number is returned.
  *
- * @param d pointer to the SimData object to which the groups and individuals belong.
+ * @shortnamed{split_by_bv}
+ *
+ * @param d pointer to the gsc_SimData object to which the groups and individuals belong.
  * It must have a marker effect file loaded to successfully run this function.
  * @param group group number from which to split the top individuals.
  * @param effID Identifier of the set of marker effects to use to calculate BV.
@@ -7054,24 +6915,24 @@ GroupNum make_double_crosses_from_file(SimData* d, const char* input_file, const
  * will be selected, if false the `top_n` with the highest breeding value are.
  * @returns the group number of the newly-created split-off group
  */
-GroupNum split_by_bv(SimData* d, const GroupNum group, const EffectID effID, const int top_n, const int lowIsBest) {
-    const int effIndex = get_index_of_eff_set(d, effID);
+gsc_GroupNum gsc_split_by_bv(gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID, const int top_n, const int lowIsBest) {
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex >= d->n_eff_sets || d->e[effIndex].effects.rows < 1 || d->m == NULL) {
         error( "Either effect matrix or allele matrix does not exist\n");
     }
 
-    unsigned int group_size = get_group_size( d, group );
+    unsigned int group_size = gsc_get_group_size( d, group );
     unsigned int group_contents[group_size];
-    get_group_indexes( d, group, group_size, group_contents );
+    gsc_get_group_indexes( d, group, group_size, group_contents );
 	
 	if (group_size <= top_n) {
 		// well we'll just have to move em all
-        GroupNum migration = split_from_group(d, group_size, group_contents);
+        gsc_GroupNum migration = gsc_make_group_from(d, group_size, group_contents);
 		return migration;
 	}
 	
 	// This should be ordered the same as the indexes
-    DecimalMatrix fits = calculate_group_bvs( d, group, effID ); // 1 by group_size matrix
+    gsc_DecimalMatrix fits = gsc_calculate_group_bvs( d, group, effID ); // 1 by group_size matrix
 	
 	// get an array of pointers to those fitnesses
 	double* p_fits[fits.cols];
@@ -7081,9 +6942,9 @@ GroupNum split_by_bv(SimData* d, const GroupNum group, const EffectID effID, con
 
 	// sort descending
 	if (lowIsBest) {
-		qsort(p_fits, fits.cols, sizeof(double*), _ascending_double_comparer);
+		qsort(p_fits, fits.cols, sizeof(double*), gsc_helper_ascending_double_comparer);
 	} else {
-		qsort(p_fits, fits.cols, sizeof(double*), _descending_double_comparer);
+		qsort(p_fits, fits.cols, sizeof(double*), gsc_helper_descending_double_comparer);
 	}
 
 	// save the indexes of the best n
@@ -7091,14 +6952,14 @@ GroupNum split_by_bv(SimData* d, const GroupNum group, const EffectID effID, con
 	for (int i = 0; i < top_n; i++) {
 		top_individuals[i] = group_contents[p_fits[i] - fits.matrix[0]];
 	}
-	delete_dmatrix(&fits);
+	gsc_delete_dmatrix(&fits);
 
 	// send those n to a new group
-	return split_from_group(d, top_n, top_individuals);
+	return gsc_make_group_from(d, top_n, top_individuals);
 }
 
-/** Calculates the fitness metric/breeding value for each genotype in the AlleleMatrix
-* in a certain group, and returns the results in a DecimalMatrix.
+/** Calculates the fitness metric/breeding value for each genotype in the gsc_AlleleMatrix
+* in a certain group, and returns the results in a gsc_DecimalMatrix.
 *
 * The breeding value is calculated for each genotype by taking the sum of (number of
 * copies of this allele at this marker times this allele's effect at this marker)
@@ -7108,51 +6969,53 @@ GroupNum split_by_bv(SimData* d, const GroupNum group, const EffectID effID, con
 *
 * The function exits with error code 1 if no marker effect file is loaded.
 *
-* @param d pointer to the SimData object to which the groups and individuals belong.
+ * @shortnamed{calculate_group_bvs}
+*
+* @param d pointer to the gsc_SimData object to which the groups and individuals belong.
 * It must have a marker effect file loaded to successfully run this function.
 * @param group calculate breeding values for each genotype in the group with this group number.
 * @param effID Identifier of the marker effect set to be used to calculate these breeding values
-* @returns A DecimalMatrix containing the score for each individual in the group.
+* @returns A gsc_DecimalMatrix containing the score for each individual in the group.
 */
-DecimalMatrix calculate_group_bvs(const SimData* d, const GroupNum group, const EffectID effID) {
+gsc_DecimalMatrix gsc_calculate_group_bvs(const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID) {
 	// check that both of the items to be multiplied exist.
-    const int effIndex = get_index_of_eff_set(d, effID);
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex >= d->n_eff_sets || d->e[effIndex].effects.rows < 1 || d->m == NULL) {
 		error( "Either effect matrix or allele matrix does not exist\n");
 	}
-    EffectMatrix e = d->e[effIndex];
+    gsc_EffectMatrix e = d->e[effIndex];
 
-    int group_size = get_group_size( d, group );
-	DecimalMatrix sum = generate_zero_dmatrix(1, group_size);
+    int group_size = gsc_get_group_size( d, group );
+	gsc_DecimalMatrix sum = gsc_generate_zero_dmatrix(1, group_size);
     if (group_size < 1) {
         warning("Group %d does not exist.\n", group.num);
         return sum;
     }
-	DecimalMatrix counts = generate_zero_dmatrix(group_size, d->n_markers);
-	DecimalMatrix counts2 = generate_zero_dmatrix(group_size, d->n_markers);
+	gsc_DecimalMatrix counts = gsc_generate_zero_dmatrix(group_size, d->n_markers);
+	gsc_DecimalMatrix counts2 = gsc_generate_zero_dmatrix(group_size, d->n_markers);
 
     int i = 0; // highest allele index
 
     for (; i < e.effects.rows - 1; i += 2) {
 		// get the allele counts in counts
-        calculate_group_doublecount_matrix_of_allele(d, group, e.effect_names[i], &counts, e.effect_names[i+1], &counts2);
+        gsc_calculate_group_count_matrix_pair(d, group, e.effect_names[i], &counts, e.effect_names[i+1], &counts2);
 
 		// multiply counts with effects and add to bv sum
-        add_doublematrixvector_product_to_dmatrix(&sum, &counts, e.effects.matrix[i], &counts2, e.effects.matrix[i+1]);
+        gsc_add_doublematrixvector_product_to_dmatrix(&sum, &counts, e.effects.matrix[i], &counts2, e.effects.matrix[i+1]);
 	}
     if (i < e.effects.rows) { // deal with the last odd-numbered allele
-        calculate_group_count_matrix_of_allele(d, group, e.effect_names[i], &counts);
-        add_matrixvector_product_to_dmatrix(&sum, &counts, e.effects.matrix[i]);
+        gsc_calculate_group_count_matrix(d, group, e.effect_names[i], &counts);
+        gsc_add_matrixvector_product_to_dmatrix(&sum, &counts, e.effects.matrix[i]);
 	}
 
-	delete_dmatrix(&counts);
-	delete_dmatrix(&counts2);
+	gsc_delete_dmatrix(&counts);
+	gsc_delete_dmatrix(&counts2);
 
 	return sum;
 }
 
-/** Calculates the fitness metric/breeding value for each genotype in the AlleleMatrix,
- * and returns the results in a DecimalMatrix struct.
+/** Calculates the fitness metric/breeding value for each genotype in the gsc_AlleleMatrix,
+ * and returns the results in a gsc_DecimalMatrix struct.
  *
  * The breeding value is calculated for each genotype by taking the sum of (number of
  * copies of this allele at this marker times this allele's effect at this marker)
@@ -7162,58 +7025,62 @@ DecimalMatrix calculate_group_bvs(const SimData* d, const GroupNum group, const 
  *
  * The function exits with error code 1 if no marker effect file is loaded.
  *
- * @param m pointer to the AlleleMatrix object to which the genotypes belong.
- * @param e pointer to the EffectMatrix that effect values have been loaded into.
- * @returns A DecimalMatrix containing the score for each individual in the group.
+ * @shortnamed{calculate_bvs}
+ *
+ * @param m pointer to the gsc_AlleleMatrix object to which the genotypes belong.
+ * @param e pointer to the gsc_EffectMatrix that effect values have been loaded into.
+ * @returns A gsc_DecimalMatrix containing the score for each individual in the group.
  */
-DecimalMatrix calculate_bvs( const AlleleMatrix* m, const EffectMatrix* e) {
+gsc_DecimalMatrix gsc_calculate_bvs( const gsc_AlleleMatrix* m, const gsc_EffectMatrix* e) {
 	// check that both of the items to be multiplied exist.
     if (e->effects.rows < 1 || m == NULL) {
 		error( "Either effect matrix or allele matrix does not exist\n");
 	}
 
-	DecimalMatrix sum = generate_zero_dmatrix(1, m->n_genotypes);
-	DecimalMatrix counts = generate_zero_dmatrix(m->n_genotypes, m->n_markers);
-	DecimalMatrix counts2 = generate_zero_dmatrix(m->n_genotypes, m->n_markers);
+	gsc_DecimalMatrix sum = gsc_generate_zero_dmatrix(1, m->n_genotypes);
+	gsc_DecimalMatrix counts = gsc_generate_zero_dmatrix(m->n_genotypes, m->n_markers);
+	gsc_DecimalMatrix counts2 = gsc_generate_zero_dmatrix(m->n_genotypes, m->n_markers);
 
     int i = 0; // highest allele index
 
 	for (; i < e->effects.rows - 1; i += 2) {
 		// get the allele counts in counts
-		calculate_doublecount_matrix_of_allele(m, e->effect_names[i], &counts, e->effect_names[i+1], &counts2);
+		gsc_calculate_count_matrix_pair(m, e->effect_names[i], &counts, e->effect_names[i+1], &counts2);
 
 		// multiply counts with effects and add to bv sum
-		add_doublematrixvector_product_to_dmatrix(&sum, &counts, e->effects.matrix[i], &counts2, e->effects.matrix[i+1]);
+		gsc_add_doublematrixvector_product_to_dmatrix(&sum, &counts, e->effects.matrix[i], &counts2, e->effects.matrix[i+1]);
 	}
 	if (i < e->effects.rows) { // deal with the last odd-numbered allele
-		calculate_count_matrix_of_allele(m, e->effect_names[i], &counts);
-		add_matrixvector_product_to_dmatrix(&sum, &counts, e->effects.matrix[i]);
+		gsc_calculate_count_matrix(m, e->effect_names[i], &counts);
+		gsc_add_matrixvector_product_to_dmatrix(&sum, &counts, e->effects.matrix[i]);
 	}
 
-	delete_dmatrix(&counts);
-	delete_dmatrix(&counts2);
+	gsc_delete_dmatrix(&counts);
+	gsc_delete_dmatrix(&counts2);
 
 	return sum;
 }
 
 /** Calculates the number of times at each marker that a particular allele appears
  * for each genotype in a group.
- * Returns the result in a pre-created DecimalMatrix. Useful for multiplying to
+ * Returns the result in a pre-created gsc_DecimalMatrix. Useful for multiplying to
  * effect matrix to calculate breeding values.
  *
- * @param d pointer to the SimData.
+ * @shortnamed{calculate_group_count_matrix}
+ *
+ * @param d pointer to the gsc_SimData.
  * @param group group number for which to calculate counts of the allele, or 0
  * to count alleles for all genotypes in the simulation
  * @param allele the single-character allele to be counting.
- * @param counts pointer to the DecimalMatrix into which to put the number
+ * @param counts pointer to the gsc_DecimalMatrix into which to put the number
  * of `allele` occurences at each row/marker for each column/genotype in the group.
  * @returns 0 on success, nonzero on failure.
  * */
-int calculate_group_count_matrix_of_allele( const SimData* d, const GroupNum group, const char allele, DecimalMatrix* counts) {
-    if (group.num == NO_GROUP.num) {
-        return UNINITIALISED; // @@
+int gsc_calculate_group_count_matrix( const gsc_SimData* d, const gsc_GroupNum group, const char allele, gsc_DecimalMatrix* counts) {
+    if (group.num == gsc_NO_GROUP.num) {
+        return GSC_UNINIT; // @@
     } else {
-        int groupSize = get_group_size(d, group);
+        int groupSize = gsc_get_group_size(d, group);
         if (counts->rows < groupSize || counts->cols < d->n_markers) {
             fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
                     d->n_markers, groupSize, counts->rows, counts->cols);
@@ -7221,7 +7088,7 @@ int calculate_group_count_matrix_of_allele( const SimData* d, const GroupNum gro
         }
 
         char* genes[groupSize];
-        get_group_genes(d, group, groupSize, genes);
+        gsc_get_group_genes(d, group, groupSize, genes);
 
         for (int i = 0; i < groupSize; ++i) {
             R_CheckUserInterrupt();
@@ -7240,29 +7107,31 @@ int calculate_group_count_matrix_of_allele( const SimData* d, const GroupNum gro
 
 /** Calculates the number of times at each marker that two particular alleles appear
  * for each genotype in a group.
- * Returns the result in two pre-created DecimalMatrix. Useful for multiplying to
+ * Returns the result in two pre-created gsc_DecimalMatrix. Useful for multiplying to
  * effect matrix to calculate breeding values.
  *
- * This function is the same as calculate_group_count_matrix_of_allele(), but for
+ * This function is the same as gsc_calculate_group_count_matrix(), but for
  * two alleles at a time, for the purpose of loop unrolling in breeding value
  * calculations.
  *
- * @param d pointer to the SimData.
+ * @shortnamed{calculate_group_count_matrix_pair}
+ *
+ * @param d pointer to the gsc_SimData.
  * @param group group number for which to calculate counts of the allele, or 0 to
  * count alleles for all genotypes in the simulation
  * @param allele the first single-character allele to be counting.
- * @param counts pointer to the DecimalMatrix into which to put the number
+ * @param counts pointer to the gsc_DecimalMatrix into which to put the number
  * of `allele` occurences at each row/marker for each column/genotype in the group.
  * @param allele2 the second single-character allele to be counting.
- * @param counts2 pointer to the DecimalMatrix into which to put the number
+ * @param counts2 pointer to the gsc_DecimalMatrix into which to put the number
  * of `allele2` occurences at each row/marker for each column/genotype in the group.
  * @returns 0 on success, nonzero on failure.
  * */
-int calculate_group_doublecount_matrix_of_allele( const SimData* d, const GroupNum group, const char allele, DecimalMatrix* counts, const char allele2, DecimalMatrix* counts2) {
-    if (group.num == NO_GROUP.num) {
-        return UNINITIALISED; //@@
+int gsc_calculate_group_count_matrix_pair( const gsc_SimData* d, const gsc_GroupNum group, const char allele, gsc_DecimalMatrix* counts, const char allele2, gsc_DecimalMatrix* counts2) {
+    if (group.num == gsc_NO_GROUP.num) {
+        return GSC_UNINIT; //@@
     } else {
-        int groupSize = get_group_size(d, group);
+        int groupSize = gsc_get_group_size(d, group);
         if (counts->rows < groupSize || counts->cols < d->n_markers) {
             fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
                     d->n_markers, groupSize, counts->rows, counts->cols);
@@ -7275,7 +7144,7 @@ int calculate_group_doublecount_matrix_of_allele( const SimData* d, const GroupN
         }
 
         char* genes[groupSize];
-        get_group_genes(d, group, groupSize, genes);
+        gsc_get_group_genes(d, group, groupSize, genes);
 
         for (int i = 0; i < groupSize; ++i) {
             R_CheckUserInterrupt();
@@ -7299,18 +7168,20 @@ int calculate_group_doublecount_matrix_of_allele( const SimData* d, const GroupN
 }
 
 /** Calculates the number of times at each marker that a particular allele appears
- * for each genotype in a particular AlleleMatrix (does not go through the linked list).
- * Returns the result in a pre-created DecimalMatrix. Useful for multiplying to
+ * for each genotype in a particular gsc_AlleleMatrix (does not go through the linked list).
+ * Returns the result in a pre-created gsc_DecimalMatrix. Useful for multiplying to
  * effect matrix to calculate breeding values.
  *
- * @param m pointer to the AlleleMatrix that contains the genotypes to count alleles.
+ * @shortnamed{calculate_count_matrix}
+ *
+ * @param m pointer to the gsc_AlleleMatrix that contains the genotypes to count alleles.
  * @param allele the single-character allele to be counting.
- * @param counts pointer to the DecimalMatrix into which to put the number
- * of `allele` occurences at each row/marker for each column/genotype in the AlleleMatrix.
+ * @param counts pointer to the gsc_DecimalMatrix into which to put the number
+ * of `allele` occurences at each row/marker for each column/genotype in the gsc_AlleleMatrix.
  * @returns 0 on success, nonzero on failure.
  * */
-int calculate_count_matrix_of_allele( const AlleleMatrix* m, const char allele, DecimalMatrix* counts) {
-	//DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, m->n_genotypes);
+int gsc_calculate_count_matrix( const gsc_AlleleMatrix* m, const char allele, gsc_DecimalMatrix* counts) {
+	//gsc_DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, m->n_genotypes);
     if (counts->rows < m->n_genotypes || counts->cols < m->n_markers) {
         fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
                 m->n_markers, m->n_genotypes, counts->rows, counts->cols);
@@ -7334,24 +7205,26 @@ int calculate_count_matrix_of_allele( const AlleleMatrix* m, const char allele, 
 }
 
 /** Calculates the number of times at each marker that two particular alleles appear
- * for each genotype in an AlleleMatrix (does not go through the linked list).
- * Returns the result in two pre-created DecimalMatrix. Useful for multiplying to
+ * for each genotype in an gsc_AlleleMatrix (does not go through the linked list).
+ * Returns the result in two pre-created gsc_DecimalMatrix. Useful for multiplying to
  * effect matrix to calculate breeding values.
  *
- * This function is the same as calculate_count_matrix_of_allele(), but for
+ * This function is the same as gsc_calculate_count_matrix(), but for
  * two alleles at a time, for the purpose of loop unrolling in breeding value
  * calculations.
  *
- * @param m pointer to the AlleleMatrix that contains the genotypes to count alleles.
+ * @shortnamed{calculate_count_matrix_pair}
+ *
+ * @param m pointer to the gsc_AlleleMatrix that contains the genotypes to count alleles.
  * @param allele the first single-character allele to be counting.
- * @param counts pointer to the DecimalMatrix into which to put the number
+ * @param counts pointer to the gsc_DecimalMatrix into which to put the number
  * of `allele` occurences at each row/marker for each column/genotype in the group.
  * @param allele2 the second single-character allele to be counting.
- * @param counts2 pointer to the DecimalMatrix into which to put the number
+ * @param counts2 pointer to the gsc_DecimalMatrix into which to put the number
  * of `allele2` occurences at each row/marker for each column/genotype in the group.
  * @returns 0 on success, nonzero on failure.
  * */
-int calculate_doublecount_matrix_of_allele( const AlleleMatrix* m, const char allele, DecimalMatrix* counts, const char allele2, DecimalMatrix* counts2) {
+int gsc_calculate_count_matrix_pair( const gsc_AlleleMatrix* m, const char allele, gsc_DecimalMatrix* counts, const char allele2, gsc_DecimalMatrix* counts2) {
 	if (counts->rows < m->n_genotypes || counts->cols < m->n_markers) {
         fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
                 m->n_markers, m->n_genotypes, counts->rows, counts->cols);
@@ -7384,23 +7257,25 @@ int calculate_doublecount_matrix_of_allele( const AlleleMatrix* m, const char al
 }
 
 /** Calculates the number of times at each marker that a particular allele appears
- * for each genotype in the linked list starting at the given AlleleMatrix.
- * Returns the result as a DecimalMatrix. Useful for multiplying to
+ * for each genotype in the linked list starting at the given gsc_AlleleMatrix.
+ * Returns the result as a gsc_DecimalMatrix. Useful for multiplying to
  * effect matrix to calculate breeding values.
  *
- * @param m pointer to the AlleleMatrix that contains the genotypes to count alleles.
+ * @shortnamed{calculate_full_count_matrix}
+ *
+ * @param m pointer to the gsc_AlleleMatrix that contains the genotypes to count alleles.
  * @param allele the single-character allele to be counting.
- * @returns DecimalMatrix containing counts for every genotype in the AlleleMatrix
+ * @returns gsc_DecimalMatrix containing counts for every genotype in the gsc_AlleleMatrix
  * linked list.
  * */
-DecimalMatrix calculate_full_count_matrix_of_allele( const AlleleMatrix* m, const char allele) {
-    const AlleleMatrix* currentm = m;
+gsc_DecimalMatrix gsc_calculate_full_count_matrix( const gsc_AlleleMatrix* m, const char allele) {
+    const gsc_AlleleMatrix* currentm = m;
 	int size = 0;
 	do {
 		size += currentm->n_genotypes;
 	} while ((currentm = currentm->next) != NULL);
 
-	DecimalMatrix counts = generate_zero_dmatrix(size, m->n_markers);
+	gsc_DecimalMatrix counts = gsc_generate_zero_dmatrix(size, m->n_markers);
 
 	currentm = m;
 	int currenti = 0;
@@ -7434,16 +7309,18 @@ DecimalMatrix calculate_full_count_matrix_of_allele( const AlleleMatrix* m, cons
  * Empty blocks have blocks.num_markers_in_block[index] equal to 0 and contain a null pointer
  * at blocks.markers_in_block[index].
  *
- * Remember to call the MarkerBlocks destructor delete_markerblocks() on the returned
+ * Remember to call the gsc_MarkerBlocks destructor gsc_delete_markerblocks() on the returned
  * struct.
  *
- * @param d pointer to the SimData object to which the groups and individuals belong.
+ * @shortnamed{create_evenlength_blocks_each_chr}
+ *
+ * @param d pointer to the gsc_SimData object to which the groups and individuals belong.
  * It must have a marker effect file loaded to successfully run this function.
  * @param n number of blocks into which to split each chromosome.
  * @returns a struct containing the markers identified as belonging to each block.
  */
-MarkerBlocks create_n_blocks_by_chr(const SimData* d, const int n) {
-	MarkerBlocks blocks;
+gsc_MarkerBlocks gsc_create_evenlength_blocks_each_chr(const gsc_SimData* d, const int n) {
+	gsc_MarkerBlocks blocks;
     if (n < 1) {
         warning("Invalid n value: number of blocks must be positive.\n");
     }
@@ -7457,8 +7334,8 @@ MarkerBlocks create_n_blocks_by_chr(const SimData* d, const int n) {
 	}
 
 	blocks.num_blocks = n * chrs_with_contents;
-	blocks.num_markers_in_block = get_malloc(sizeof(int) * blocks.num_blocks);
-	blocks.markers_in_block = get_malloc(sizeof(int*) * blocks.num_blocks);
+	blocks.num_markers_in_block = gsc_malloc_wrap(sizeof(int) * blocks.num_blocks);
+	blocks.markers_in_block = gsc_malloc_wrap(sizeof(int*) * blocks.num_blocks);
 	for (int i = 0; i < blocks.num_blocks; ++i) {
 		blocks.num_markers_in_block[i] = 0;
 		blocks.markers_in_block[i] = NULL;
@@ -7483,7 +7360,7 @@ MarkerBlocks create_n_blocks_by_chr(const SimData* d, const int n) {
 			// are we up to the next block yet?
 			if (blocks_this_chr < n && d->map.positions[i].position > bend) {
 				// save the previous block now.
-				blocks.markers_in_block[b] = get_malloc(sizeof(int) * blocks.num_markers_in_block[b]);
+				blocks.markers_in_block[b] = gsc_malloc_wrap(sizeof(int) * blocks.num_markers_in_block[b]);
 				for (int m = 0; m < blocks.num_markers_in_block[b]; ++m) {
 					blocks.markers_in_block[b][m] = mfirst + m;
 				}
@@ -7508,7 +7385,7 @@ MarkerBlocks create_n_blocks_by_chr(const SimData* d, const int n) {
 		}
 
 		// save the last block of this chr
-		blocks.markers_in_block[b] = get_malloc(sizeof(int) * blocks.num_markers_in_block[b]);
+		blocks.markers_in_block[b] = gsc_malloc_wrap(sizeof(int) * blocks.num_markers_in_block[b]);
 		for (int m = 0; m < blocks.num_markers_in_block[b]; ++m) {
 			blocks.markers_in_block[b][m] = mfirst + m;
 		}
@@ -7532,19 +7409,21 @@ MarkerBlocks create_n_blocks_by_chr(const SimData* d, const int n) {
  *
  * ...
  *
- * @param d pointer to the SimData object to which the groups and individuals belong.
+ * @shortnamed{load_blocks}
+ *
+ * @param d pointer to the gsc_SimData object to which the groups and individuals belong.
  * It must have a marker effect file loaded to successfully run this function.
  * @param block_file string containing filename of the file with blocks
  * @returns a struct containing the markers identified as belonging to each block
  * according to their definitions in the file.
  */
-MarkerBlocks read_block_file(const SimData* d, const char* block_file) {
-	struct TableSize ts = get_file_dimensions(block_file, '\t');
+gsc_MarkerBlocks gsc_load_blocks(const gsc_SimData* d, const char* block_file) {
+	struct gsc_TableSize ts = gsc_get_file_dimensions(block_file, '\t');
 
-	MarkerBlocks blocks;
+	gsc_MarkerBlocks blocks;
 	blocks.num_blocks = ts.num_rows - 1;
-	blocks.num_markers_in_block = get_malloc(sizeof(int) * blocks.num_blocks);
-	blocks.markers_in_block = get_malloc(sizeof(int*) * blocks.num_blocks);
+	blocks.num_markers_in_block = gsc_malloc_wrap(sizeof(int) * blocks.num_blocks);
+	blocks.markers_in_block = gsc_malloc_wrap(sizeof(int*) * blocks.num_blocks);
 
 	FILE* infile;
 	if ((infile = fopen(block_file, "r")) == NULL) {
@@ -7577,7 +7456,7 @@ MarkerBlocks read_block_file(const SimData* d, const char* block_file) {
 				markername[ni] = '\0';
 
 				// identify the index of this marker and save it in the temporary marker buffer `markerbuffer`
-                int markerindex = get_from_unordered_str_list(markername, d->n_markers, (const char**) d->markers);
+                int markerindex = gsc_get_from_unordered_str_list(markername, d->n_markers, (const char**) d->markers);
 				if (markerindex >= 0) {
 					++(blocks.num_markers_in_block[bi]);
 					markerbuffer[mi] = markerindex;
@@ -7592,7 +7471,7 @@ MarkerBlocks read_block_file(const SimData* d, const char* block_file) {
 		}
 
 		// copy the markers belonging to this block into the struct
-		blocks.markers_in_block[bi] = get_malloc(sizeof(int) * mi);
+		blocks.markers_in_block[bi] = gsc_malloc_wrap(sizeof(int) * mi);
 		for (int i = 0; i < mi; ++i) {
 			blocks.markers_in_block[bi][i] = markerbuffer[i];
 		}
@@ -7622,7 +7501,9 @@ MarkerBlocks read_block_file(const SimData* d, const char* block_file) {
  * [genotype 2 name]_1 ...
  *
  *
- * @param d pointer to the SimData object to which the groups and individuals belong.
+ * @shortnamed{calculate_group_local_bvs}
+ *
+ * @param d pointer to the gsc_SimData object to which the groups and individuals belong.
  * It must have a marker effect file loaded to successfully run this function.
  * @param b struct containing the blocks to use
  * @param effID Identifier of the marker effect set to be used to calculate these breeding values
@@ -7630,13 +7511,13 @@ MarkerBlocks read_block_file(const SimData* d, const char* block_file) {
  * block effects/local BVs will be saved.
  * @param group group number from which to split the top individuals.
  */
-void calculate_group_local_bvs(const SimData* d, const MarkerBlocks b, const EffectID effID, const char* output_file, const GroupNum group) {
-    const int effIndex = get_index_of_eff_set(d, effID);
+void gsc_calculate_group_local_bvs(const gsc_SimData* d, const gsc_MarkerBlocks b, const gsc_EffectID effID, const char* output_file, const gsc_GroupNum group) {
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex >= d->n_eff_sets) {
         warning("We don't have that many marker effect sets loaded.\n");
         return;
     }
-    EffectMatrix e = d->e[effIndex];
+    gsc_EffectMatrix e = d->e[effIndex];
 
 	FILE* outfile;
 	if ((outfile = fopen(output_file, "w")) == NULL) {
@@ -7646,12 +7527,12 @@ void calculate_group_local_bvs(const SimData* d, const MarkerBlocks b, const Eff
 	int bufferlen = 100;
 	char buffer[bufferlen];
 
-	int gsize = get_group_size(d, group);
+	int gsize = gsc_get_group_size(d, group);
     char* ggenos[gsize]; char* gnames[gsize];
-    get_group_genes(d, group, gsize, ggenos);
-    get_group_names(d, group, gsize, gnames);
-    PedigreeID gids[gsize];
-    get_group_ids(d,group,gsize,gids);
+    gsc_get_group_genes(d, group, gsize, ggenos);
+    gsc_get_group_names(d, group, gsize, gnames);
+    gsc_PedigreeID gids[gsize];
+    gsc_get_group_ids(d,group,gsize,gids);
 
 	double beffect;
 
@@ -7718,7 +7599,7 @@ void calculate_group_local_bvs(const SimData* d, const MarkerBlocks b, const Eff
  * calculate the local BV for the first allele at each marker in the block, and
  * the local BV for the second allele at each marker in the block, then save
  * the result to a file. This gives block effects for each haplotype of each
- * individual currently saved to the SimData.
+ * individual currently saved to the gsc_SimData.
  *
  * The output file will have format:
  *
@@ -7731,20 +7612,22 @@ void calculate_group_local_bvs(const SimData* d, const MarkerBlocks b, const Eff
  * [genotype 2 name]_1 ...
  *
  *
- * @param d pointer to the SimData object to which individuals belong.
+ * @shortnamed{calculate_local_bvs}
+ *
+ * @param d pointer to the gsc_SimData object to which individuals belong.
  * It must have a marker effect file loaded to successfully run this function.
  * @param b struct containing the blocks to use
  * @param effID Identifier of the marker effect set to be used to calculate these breeding values
  * @param output_file string containing the filename of the file to which output
  * block effects/local BV will be saved.
  */
-void calculate_local_bvs(const SimData* d, const MarkerBlocks b, const EffectID effID, const char* output_file) {
-    const int effIndex = get_index_of_eff_set(d, effID);
+void gsc_calculate_local_bvs(const gsc_SimData* d, const gsc_MarkerBlocks b, const gsc_EffectID effID, const char* output_file) {
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex >= d->n_eff_sets) {
         warning("We don't have that many marker effect sets loaded.\n");
         return;
     }
-    EffectMatrix e = d->e[effIndex];
+    gsc_EffectMatrix e = d->e[effIndex];
 
 	FILE* outfile;
 	if ((outfile = fopen(output_file, "w")) == NULL) {
@@ -7755,7 +7638,7 @@ void calculate_local_bvs(const SimData* d, const MarkerBlocks b, const EffectID 
 	char buffer[bufferlen];
 
 	int gsize = 0;
-	AlleleMatrix* m = d->m;
+	gsc_AlleleMatrix* m = d->m;
 	do {
 		gsize += m->n_genotypes;
 	} while ((m = m->next) != NULL);
@@ -7827,27 +7710,29 @@ void calculate_local_bvs(const SimData* d, const MarkerBlocks b, const EffectID 
 
 /** Takes a look at the currently-loaded effect values and creates a string
  * containing the allele with the highest effect value for each marker as ordered
- * in the SimData. Returns this as a null-terminated heap array of characters of
+ * in the gsc_SimData. Returns this as a null-terminated heap array of characters of
  * length d->n_markers + one null byte.
  *
  * The return value should be freed when usage is finished!
  *
- * The SimData must be initialised with marker effects for this function to succeed.
+ * The gsc_SimData must be initialised with marker effects for this function to succeed.
  *
- * @param d pointer to the SimData containing markers and marker effects.
+ * @shortnamed{calculate_optimal_haplotype}
+ *
+ * @param d pointer to the gsc_SimData containing markers and marker effects.
  * @param effID Identifier of the marker effect set to be used to calculate these breeding values
  * @returns a heap array filled with a null-terminated string containing the highest
  * scoring allele at each marker.
  */
-char* calculate_optimal_alleles(const SimData* d, const EffectID effID) {
-    const int effIndex = get_index_of_eff_set(d, effID);
+char* gsc_calculate_optimal_haplotype(const gsc_SimData* d, const gsc_EffectID effID) {
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex >= d->n_eff_sets) {
         warning("We don't have that many marker effect sets loaded.\n");
 		return NULL;
 	}
-    EffectMatrix e = d->e[effIndex];
+    gsc_EffectMatrix e = d->e[effIndex];
 
-	char* optimal = get_malloc(sizeof(char)* (d->n_markers + 1));
+	char* optimal = gsc_malloc_wrap(sizeof(char)* (d->n_markers + 1));
 
 	for (int i = 0; i < d->n_markers; ++i) {
         char best_allele = e.effect_names[0];
@@ -7870,28 +7755,30 @@ char* calculate_optimal_alleles(const SimData* d, const EffectID effID) {
  *
  * The return value should be freed when usage is finished!
  *
- * The SimData must be initialised with marker effects for this function to succeed.
+ * The gsc_SimData must be initialised with marker effects for this function to succeed.
  *
- * @param d pointer to the SimData containing markers and marker effects.
+ * @shortnamed{calculate_optimal_possible_haplotype}
+ *
+ * @param d pointer to the gsc_SimData containing markers and marker effects.
  * @param group group number to look at the available alleles in
  * @param effID Identifier of the marker effect set to be used to calculate these breeding values
  * @returns a heap array filled with a null-terminated string containing the highest
  * scoring allele at each marker.
  */
-char* calculate_optimal_available_alleles(const SimData* d, const GroupNum group, const EffectID effID) {
-    const int effIndex = get_index_of_eff_set(d, effID);
+char* gsc_calculate_optimal_possible_haplotype(const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID) {
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex >= d->n_eff_sets) {
         warning("We don't have that many marker effect sets loaded.\n");
         return NULL;
     }
-    EffectMatrix e = d->e[effIndex];
+    gsc_EffectMatrix e = d->e[effIndex];
     // assumes no alleles in the matrix are spaces.
 
-    int gsize = get_group_size(d, group);
+    int gsize = gsc_get_group_size(d, group);
     char* ggenes[gsize];
-    get_group_genes(d, group, gsize, ggenes);
+    gsc_get_group_genes(d, group, gsize, ggenes);
 
-    char* optimal = get_malloc(sizeof(char)* (d->n_markers + 1));
+    char* optimal = gsc_malloc_wrap(sizeof(char)* (d->n_markers + 1));
 
     // for each locus
     for (int j = 0; j < d->n_markers; ++j) {
@@ -7944,19 +7831,21 @@ char* calculate_optimal_available_alleles(const SimData* d, const GroupNum group
 /** Takes a look at the currently-loaded effect values and returns the highest possible
  * breeding value any (diploid) genotype could have using those effect values.
  *
- * The SimData must be initialised with marker effects for this function to succeed.
+ * The gsc_SimData must be initialised with marker effects for this function to succeed.
  *
- * @param d pointer to the SimData containing markers and marker effects.
+ * @shortnamed{calculate_optimal_bv}
+ *
+ * @param d pointer to the gsc_SimData containing markers and marker effects.
  * @param effID Identifier of the marker effect set to be used to calculate these breeding values
  * @returns the fitness metric/breeding value of the best/ideal genotype.
  */
-double calculate_optimum_bv(const SimData* d, const EffectID effID) {
-    const int effIndex = get_index_of_eff_set(d, effID);
+double gsc_calculate_optimal_bv(const gsc_SimData* d, const gsc_EffectID effID) {
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex >= d->n_eff_sets) {
         warning("We don't have that many marker effect sets loaded.\n");
         return 0;
     }
-    EffectMatrix e = d->e[effIndex];
+    gsc_EffectMatrix e = d->e[effIndex];
 
 	double best_gebv = 0;
 
@@ -7980,29 +7869,31 @@ double calculate_optimum_bv(const SimData* d, const EffectID effID) {
  *  created from the alleles present in a given group.
  *
  *  The highest value genotype is completely homozygous with the same alleles as
- *  the haplotype from calculate_optimal_available_alleles(), because of the additive
+ *  the haplotype from gsc_calculate_optimal_possible_haplotype(), because of the additive
  *  model of trait effects.
  *
- * The SimData must be initialised with marker effects for this function to succeed.
+ * The gsc_SimData must be initialised with marker effects for this function to succeed.
  *
- * @param d pointer to the SimData containing markers and marker effects.
+ * @shortnamed{calculate_optimal_possible_bv}
+ *
+ * @param d pointer to the gsc_SimData containing markers and marker effects.
  * @param  group number to look at the available alleles in
  * @param effID Identifier of the marker effect set to be used to calculate these breeding values
  * @returns the fitness metric/breeding value of the best genotype
  */
-double calculate_optimal_available_bv(const SimData* d, const GroupNum group, const EffectID effID) {
-    const int effIndex = get_index_of_eff_set(d, effID);
+double gsc_calculate_optimal_possible_bv(const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID) {
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex >= d->n_eff_sets) {
         warning("We don't have that many marker effect sets loaded.\n");
         return 0;
     }
-    EffectMatrix e = d->e[effIndex];
+    gsc_EffectMatrix e = d->e[effIndex];
 
     // assumes no alleles in the matrix are spaces.
 
-    int gsize = get_group_size(d, group);
+    int gsize = gsc_get_group_size(d, group);
     char* ggenes[gsize];
-    get_group_genes(d, group, gsize, ggenes);
+    gsc_get_group_genes(d, group, gsize, ggenes);
 
     double total_score = 0;
     char best_allele;
@@ -8056,19 +7947,21 @@ double calculate_optimal_available_bv(const SimData* d, const GroupNum group, co
 /** Takes a look at the currently-loaded effect values and returns the lowest possible
  * breeding value any (diploid) genotype could score using those effect values.
  *
- * The SimData must be initialised with marker effects for this function to succeed.
+ * The gsc_SimData must be initialised with marker effects for this function to succeed.
  *
- * @param d pointer to the SimData containing markers and marker effects.
+ * @shortnamed{calculate_minimal_bv}
+ *
+ * @param d pointer to the gsc_SimData containing markers and marker effects.
  * @param effID Identifier of the marker effect set to be used to calculate these breeding values
  * @returns the fitness metric/breeding value of the worst genotype.
  */
-double calculate_minimum_bv(const SimData* d, const EffectID effID) {
-    const int effIndex = get_index_of_eff_set(d, effID);
+double gsc_calculate_minimal_bv(const gsc_SimData* d, const gsc_EffectID effID) {
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex >= d->n_eff_sets) {
         warning("We don't have that many marker effect sets loaded.\n");
         return 0;
     }
-    EffectMatrix e = d->e[effIndex];
+    gsc_EffectMatrix e = d->e[effIndex];
 
 	double worst_gebv = 0;
 	double worst_score;
@@ -8091,17 +7984,6 @@ double calculate_minimum_bv(const SimData* d, const EffectID effID) {
 
 /*--------------------------------Printing-----------------------------------*/
 
-/** Prints the setup data (everything except the actual genotypes) stored inside
- * a SimData to a file. Column separators are tabs.
- *
- * This function is deprecated. It will be replaced with a file format that
- * genomicSimulation can save and reload to preserve its state.
-*/
-void save_simdata(FILE* f, const SimData* m) {
-    warning( "Function save_simdata is deprecated.");
-    return;
-}
-
 /** Prints the markers contained in a set of blocks to a file. Column separators are tabs.
  *
  * The printing format is:
@@ -8119,11 +8001,13 @@ void save_simdata(FILE* f, const SimData* m) {
  * numbers and positions are not actually specified, just replaced with 0. Only the last
  * column is meaningful.
  *
+ * @shortnamed{save_marker_blocks}
+ *
  * @param f file pointer opened for writing to put the output
- * @param d pointer to the SimData whose data we print
- * @param b MarkerBlocks struct containing the groupings of markers to print.
+ * @param d pointer to the gsc_SimData whose data we print
+ * @param b gsc_MarkerBlocks struct containing the groupings of markers to print.
 */
-void save_marker_blocks(FILE* f, const SimData* d, const MarkerBlocks b) {
+void gsc_save_marker_blocks(FILE* f, const gsc_SimData* d, const gsc_MarkerBlocks b) {
 	const char header[] = "Chrom\tPos\tName\tClass\tMarkers\n";
 	fwrite(header, sizeof(char)*strlen(header), 1, f);
 
@@ -8154,11 +8038,13 @@ void save_marker_blocks(FILE* f, const SimData* d, const MarkerBlocks b) {
  * Used, for example, for printing marker names as a header
  * in a genotype output file.
  *
+ * @shortnamed{save_names_header}
+ *
  * @param f file pointer opened for writing to put the output
  * @param n number of names to print
  * @param names list of names to print
 */
-void save_names_header(FILE* f, unsigned int n, const char* names[n]) {
+void gsc_save_names_header(FILE* f, unsigned int n, const char* names[n]) {
     if (names == NULL) return;
     for (int i = 0; i < n; ++i) {
         fwrite("\t", sizeof(char), 1, f);
@@ -8180,10 +8066,12 @@ void save_names_header(FILE* f, unsigned int n, const char* names[n]) {
  *
  * ID will be printed if the genotype does not have a name saved
  *
+ * @shortnamed{save_allele_matrix}
+ *
  * @param f file pointer opened for writing to put the output
- * @param m pointer to the AlleleMatrix whose data we print
+ * @param m pointer to the gsc_AlleleMatrix whose data we print
 */
-void save_allele_matrix(FILE* f, const AlleleMatrix* m) {
+void gsc_save_allele_matrix(FILE* f, const gsc_AlleleMatrix* m) {
 	do {
 		for (int i = 0; i < m->n_genotypes; ++i) {
 			// print the name or ID of the individual.
@@ -8223,13 +8111,15 @@ void save_allele_matrix(FILE* f, const AlleleMatrix* m) {
  *
  * ID will be printed if the genotype does not have a name saved
  *
+ * @shortnamed{save_transposed_allele_matrix}
+ *
  * @param f file pointer opened for writing to put the output
- * @param m pointer to the AlleleMatrix whose data we print
+ * @param m pointer to the gsc_AlleleMatrix whose data we print
  * @param markers array of strings that correspond to names of the markers.
 */
-void save_transposed_allele_matrix(FILE* f, const AlleleMatrix* m, const char** markers) {
+void gsc_save_transposed_allele_matrix(FILE* f, const gsc_AlleleMatrix* m, const char** markers) {
 	// Count number of genotypes in the AM
-    const AlleleMatrix* currentm = m; // current matrix
+    const gsc_AlleleMatrix* currentm = m; // current matrix
 	int tn_genotypes = 0;
 	do {
 		tn_genotypes += currentm->n_genotypes;
@@ -8292,23 +8182,25 @@ void save_transposed_allele_matrix(FILE* f, const AlleleMatrix* m, const char** 
  *
  * ID will be printed if the genotype does not have a name saved
  *
+ * @shortnamed{save_group_genotype}
+ *
  * @param f file pointer opened for writing to put the output
- * @param d pointer to the SimData containing the genotypes of the group and
+ * @param d pointer to the gsc_SimData containing the genotypes of the group and
  * the marker names.
  * @param group_id group number of the group of individuals whose genotypes to print.
 */
-void save_group_alleles(FILE* f, SimData* d, GroupNum group_id) {
+void gsc_save_group_genotypes(FILE* f, gsc_SimData* d, gsc_GroupNum group_id) {
 	/* Get the stuff we'll be printing. */
-	int group_size = get_group_size( d, group_id);
+	int group_size = gsc_get_group_size( d, group_id);
     if (group_size < 1) {
         warning("Group %d does not exist: no data saved.\n", group_id.num);
         return;
     }
     char* alleles[group_size]; char* names[group_size];
-    PedigreeID ids[group_size];
-    get_group_genes( d, group_id, group_size, alleles );
-    get_group_names( d, group_id, group_size, names );
-    get_group_ids( d, group_id, group_size, ids );
+    gsc_PedigreeID ids[group_size];
+    gsc_get_group_genes( d, group_id, group_size, alleles );
+    gsc_get_group_names( d, group_id, group_size, names );
+    gsc_get_group_ids( d, group_id, group_size, ids );
 
 	/* Print header */
 	//fwrite(&group_id, sizeof(int), 1, f);
@@ -8360,23 +8252,25 @@ void save_group_alleles(FILE* f, SimData* d, GroupNum group_id) {
  *
  * ID will be printed if the genotype does not have a name saved
  *
+ * @shortnamed{save_transposed_group_genotype}
+ *
  * @param f file pointer opened for writing to put the output
- * @param d pointer to the SimData containing the genotypes of the group and
+ * @param d pointer to the gsc_SimData containing the genotypes of the group and
  * the marker names.
  * @param group_id group number of the group of individuals whose genotypes to print.
 */
-void save_transposed_group_alleles(FILE* f, const SimData* d, const GroupNum group_id) {
+void gsc_save_transposed_group_genotypes(FILE* f, const gsc_SimData* d, const gsc_GroupNum group_id) {
 	/* Get the stuff we'll be printing. */
-	int group_size = get_group_size( d, group_id);
+	int group_size = gsc_get_group_size( d, group_id);
     if (group_size < 1) {
         warning("Group %d does not exist: no data saved.\n", group_id.num);
         return;
     }
     char* alleles[group_size]; char* names[group_size];
-    PedigreeID ids[group_size];
-    get_group_genes( d, group_id, group_size, alleles );
-    get_group_names( d, group_id, group_size, names );
-    get_group_ids( d, group_id, group_size, ids );
+    gsc_PedigreeID ids[group_size];
+    gsc_get_group_genes( d, group_id, group_size, alleles );
+    gsc_get_group_names( d, group_id, group_size, names );
+    gsc_get_group_ids( d, group_id, group_size, ids );
 
 	/* Print header */
     fprintf(f, "%d", group_id.num);
@@ -8411,535 +8305,9 @@ void save_transposed_group_alleles(FILE* f, const SimData* d, const GroupNum gro
 
 }
 
-/** Print the parents of each genotype in a group to a file. The following
- * tab-separated format is used:
- *
- * [group member name]	[parent 1 name]	[parent 2 name]
- *
- * [group member name]	[parent 1 name]	[parent 2 name]
- *
- * ...
- *
- * The parents are identified by the two ids saved in the genotype's
- * pedigrees field in the AlleleMatrix struct.
- *
- * If a group member or parent has no name, the name will be
- * replaced in the output file with its session-unique id. If the parent
- * id of an individual is 0 (which means the parent is unknown) no
- * name or id is printed for that parent.
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the SimData containing the group members.
- * @param group group number of the group of individuals to print the
- * immediate parents of.
- */
-void save_group_one_step_pedigree(FILE* f, const SimData* d, const GroupNum group) {
-	int group_size = get_group_size( d, group);
-    if (group_size < 1) {
-        warning("Group %d does not exist: no data saved.\n", group.num);
-        return;
-    }
-
-    PedigreeID group_contents[group_size];
-    get_group_ids( d, group, group_size, group_contents );
-    char* group_names[group_size];
-    get_group_names( d, group, group_size, group_names );
-    PedigreeID parent1s[group_size];
-    PedigreeID parent2s[group_size];
-    get_group_parent_ids(d, group, group_size, 1, parent1s );
-    get_group_parent_ids(d, group, group_size, 2, parent2s );
-	char* name;
-
-	for (int i = 0; i < group_size; i++) {
-		/*Group member name*/
-		if (group_names[i] != NULL) {
-			fwrite(group_names[i], sizeof(char), strlen(group_names[i]), f);
-		} else {
-			//fwrite(group_contents + i, sizeof(int), 1, f);
-            fprintf(f, "%d", group_contents[i].id);
-		}
-		fwrite("\t", sizeof(char), 1, f);
-
-        // Prints both parents, even if they're the same one.
-        /* Parent 1 */
-        if (parent1s[i].id != NO_PEDIGREE.id) {
-            name = get_name_of_id( d->m, parent1s[i]);
-            if (name != NULL) {
-                fwrite(name, sizeof(char), strlen(name), f);
-            } else {
-                fprintf(f, "%d", parent1s[i].id);
-            }
-        }
-        fwrite("\t", sizeof(char), 1, f);
-
-        /* Parent 2 */
-        if (parent2s[i].id != NO_PEDIGREE.id) {
-            name = get_name_of_id( d->m, parent2s[i]);
-            if (name != NULL) {
-                fwrite(name, sizeof(char), strlen(name), f);
-            } else {
-                fprintf(f, "%d", parent2s[i].id);
-            }
-        }
-
-		fwrite("\n", sizeof(char), 1, f);
-	}
-	fflush(f);
-}
-
-/** Print the parents of each genotype in the SimData to a file. The following
- * tab-separated format is used:
- *
- * [genotype name]	[parent 1 name]	[parent 2 name]
- *
- * [genotype name]	[parent 1 name]	[parent 2 name]
- *
- * ...
- *
- * The parents are identified by the two ids saved in the genotype's
- * pedigrees field in the AlleleMatrix struct.
- *
- * If a group member or parent has no name, the name will be
- * replaced in the output file with its session-unique id. If the parent
- * id is 0 (which means the parent is unknown) no
- * name or id is printed for that parent.
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the SimData containing the genotypes and their pedigrees
- */
-void save_one_step_pedigree(FILE* f, const SimData* d) {
-	char* name;
-	AlleleMatrix* m = d->m;
-
-	do {
-		for (int i = 0; i < m->n_genotypes; ++i) {
-			/*Group member name*/
-			if (m->names[i] != NULL) {
-				fwrite(m->names[i], sizeof(char), strlen(m->names[i]), f);
-			} else {
-                fprintf(f, "%d", m->ids[i].id);
-			}
-			fwrite("\t", sizeof(char), 1, f);
-
-
-            /* Parent 1 */
-            if (m->pedigrees[0][i].id != NO_PEDIGREE.id) {
-                name = get_name_of_id( d->m, m->pedigrees[0][i] );
-                if (name != NULL) {
-                    fwrite(name, sizeof(char), strlen(name), f);
-                } else {
-                    fprintf(f, "%d", m->pedigrees[0][i].id);
-                }
-            }
-            fwrite("\t", sizeof(char), 1, f);
-
-            /* Parent 2 */
-            if (m->pedigrees[1][i].id != NO_PEDIGREE.id) {
-                name = get_name_of_id( d->m, m->pedigrees[1][i]);
-                if (name != NULL) {
-                    fwrite(name, sizeof(char), strlen(name), f);
-                } else {
-                    fprintf(f, "%d", m->pedigrees[1][i].id);
-                }
-            }
-
-			fwrite("\n", sizeof(char), 1, f);
-		}
-	} while ((m = m->next) != NULL);
-	fflush(f);
-}
-
-/** Print the full known pedigree of each genotype in a group to a file. The following
- * tab-separated format is used:
- *
- * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
- *
- * [id]	[name]=([parent pedigree])
- *
- * ...
- *
- * Note that this pedigree is recursively constructed, so if a genotype's
- * parents are known, [parent pedigree] is replaced with a string of format
- * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of
- * a genotype are the same individual (i.e. it was produced by selfing, the
- * comma and second parent pedigree are ommitted, as in the second line sample
- * in the format above.
- *
- * The parents of a genotype are identified by the two ids saved in the
- * genotype's pedigrees field in the AlleleMatrix struct.
- *
- * If a group member or parent has no name, the name will be
- * replaced in the output file with its session-unique id. If the parent
- * id of an individual is 0, the individual is printed without brackets or
- * parent pedigrees and recursion stops here.
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the SimData containing the group members.
- * @param group group number of the group of individuals to print the
- * pedigree of.
- */
-void save_group_full_pedigree(FILE* f, const SimData* d, const GroupNum group) {
-	int group_size = get_group_size( d, group);
-    if (group_size < 1) {
-        warning("Group %d does not exist: no data saved.\n", group.num);
-        return;
-    }
-
-    PedigreeID group_contents[group_size];
-    get_group_ids( d, group, group_size, group_contents );
-    char* group_names[group_size];
-    get_group_names( d, group, group_size, group_names );
-	const char newline[] = "\n";
-    PedigreeID parent1s[group_size];
-    PedigreeID parent2s[group_size];
-    get_group_parent_ids(d, group, group_size, 1, parent1s );
-    get_group_parent_ids(d, group, group_size, 2, parent2s );
-
-	for (int i = 0; i < group_size; i++) {
-		/*Group member name*/
-        fprintf(f, "%d\t", group_contents[i].id);
-		if (group_names[i] != NULL) {
-			fwrite(group_names[i], sizeof(char), strlen(group_names[i]), f);
-		}
-
-        if (parent1s[i].id != NO_PEDIGREE.id || parent2s[i].id != NO_PEDIGREE.id) {
-            save_parents_of(f, d->m, parent1s[i], parent2s[i]);
-		}
-		fwrite(newline, sizeof(char), 1, f);
-	}
-	fflush(f);
-}
-
-/** Print the full known pedigree of each genotype in the SimData
- * to a file. The following
- * tab-separated format is used:
- *
- * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
- *
- * [id]	[name]=([parent pedigree])
- *
- * ...
- *
- * Note that this pedigree is recursively constructed, so if a genotype's
- * parents are known, [parent pedigree] is replaced with a string of format
- * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of
- * a genotype are the same individual (i.e. it was produced by selfing, the
- * comma and second parent pedigree are ommitted, as in the second line sample
- * in the format above.
- *
- * The parents of a genotype are identified by the two ids saved in the
- * genotype's pedigrees field in the AlleleMatrix struct.
- *
- * If a group member or parent has no name, the name will be
- * replaced in the output file with its session-unique id. If the parent
- * id of an individual is 0, the individual is printed without brackets or
- * parent pedigrees and recursion stops here.
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the SimData containing all genotypes to print.
- */
-void save_full_pedigree(FILE* f, const SimData* d) {
-	const char newline[] = "\n";
-
-	AlleleMatrix* m = d->m;
-
-	do {
-		for (int i = 0; i < m->n_genotypes; ++i) {
-			/*Group member name*/
-            fprintf(f, "%d\t", m->ids[i].id);
-			if (m->names[i] != NULL) {
-				fwrite(m->names[i], sizeof(char), strlen(m->names[i]), f);
-			}
-
-            if (m->pedigrees[0][i].id != NO_PEDIGREE.id || m->pedigrees[1][i].id != NO_PEDIGREE.id) {
-				save_parents_of(f, d->m, m->pedigrees[0][i], m->pedigrees[1][i]);
-			}
-			fwrite(newline, sizeof(char), 1, f);
-		}
-	} while ((m = m->next) != NULL);
-	fflush(f);
-}
-
-/** Print the full known pedigree of each genotype in a single AlleleMatrix
- * to a file. The following
- * tab-separated format is used:
- *
- * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
- *
- * [id]	[name]=([parent pedigree])
- *
- * ...
- *
- * Note that this pedigree is recursively constructed, so if a genotype's
- * parents are known, [parent pedigree] is replaced with a string of format
- * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of
- * a genotype are the same individual (i.e. it was produced by selfing, the
- * comma and second parent pedigree are ommitted, as in the second line sample
- * in the format above.
- *
- * The parents of a genotype are identified by the two ids saved in the
- * genotype's pedigrees field in the AlleleMatrix struct.
- *
- * If a group member or parent has no name, the name will be
- * replaced in the output file with its session-unique id. If the parent
- * id of an individual is 0, the individual is printed without brackets or
- * parent pedigrees and recursion stops here.
- *
- * Note this does not follow through the linked list of AlleleMatrix.
- *
- * @param f file pointer opened for writing to put the output
- * @param m pointer to the AlleleMatrix containing the genotypes to print
- * @param parents pointer to an AlleleMatrix that heads the linked list
- * containing the parents and other ancestry of the given genotypes.
- */
-void save_AM_pedigree(FILE* f, const AlleleMatrix* m, const SimData* parents) {
-	const char newline[] = "\n";
-
-	for (int i = 0; i < m->n_genotypes; ++i) {
-		/*Group member name*/
-        fprintf(f, "%d\t", m->ids[i].id);
-		if (m->names[i] != NULL) {
-			fwrite(m->names[i], sizeof(char), strlen(m->names[i]), f);
-		}
-
-        if (m->pedigrees[0][i].id != NO_PEDIGREE.id || m->pedigrees[1][i].id != NO_PEDIGREE.id) {
-            save_parents_of(f, parents->m, m->pedigrees[0][i], m->pedigrees[1][i]);
-        }
-		fwrite(newline, sizeof(char), 1, f);
-	}
-	fflush(f);
-}
-
-/** Recursively save the parents of a particular id to a file.
- *
- * It saves using the following format:
- *
- * - no characters are saved if the parents of the id are unknown/0
- *
- * - if the id has one parent, repeated twice (it was produced by selfing),
- * print "=(parentname)", where parentname is the name of the parent or its
- * id if it does not have one, followed by whatever is printed by a call
- * to this function on the parent's id.
- *
- * - if the id has two separate parents, print "=(parent1name,parent2name)",
- * where parent1name and parent2name are the name2 of the two parents or their
- * ids if they does not have names, each name immediately followed by whatever
- * is printed by a call to this function on the corresponding parent's id.
- *
- * @param f file pointer opened for writing to put the output
- * @param m pointer to an AlleleMatrix that heads the linked list
- * containing the parents and other ancestry of the given id.
- * @param p1 the session-unique id of the first parent to be saved.
- * @param p2 the session-unique id of the second parent to be saved.
- */
-void save_parents_of(FILE* f, const AlleleMatrix* m, PedigreeID p1, PedigreeID p2) {
-    PedigreeID pedigree[2];
-
-	// open brackets
-	fwrite("=(", sizeof(char), 2, f);
-	char* name;
-
-	// enables us to print only the known parent if one is unknown
-    if (p1.id == NO_PEDIGREE.id || p2.id == NO_PEDIGREE.id) {
-        p1.id = (p1.id >= p2.id) ? p1.id : p2.id; //max of the two
-        p2.id = p1.id;
-	}
-
-    if (p1.id == p2.id) {
-        if (p1.id != NO_PEDIGREE.id) { //print nothing if both are unknown.
-			// Selfed parent
-            name = get_name_of_id( m, p1);
-			if (name != NULL) {
-				fwrite(name, sizeof(char), strlen(name), f);
-            } else if (p1.id != NO_PEDIGREE.id) {
-                fprintf(f, "%d", p1.id);
-				//fwrite(pedigree, sizeof(int), 1, f);
-			}
-
-            if (get_parents_of_id(m, p1, pedigree) == 0) {
-				save_parents_of(f, m, pedigree[0], pedigree[1]);
-			}
-		}
-	} else {
-		// Parent 1
-		name = get_name_of_id( m, p1);
-		if (name != NULL) {
-			fwrite(name, sizeof(char), strlen(name), f);
-        } else if (p1.id != NO_PEDIGREE.id) {
-            fprintf(f, "%d", p1.id);
-			//fwrite(pedigree, sizeof(int), 1, f);
-		}
-		if (get_parents_of_id(m, p1, pedigree) == 0) {
-			save_parents_of(f, m, pedigree[0], pedigree[1]);
-		}
-
-		// separator
-		fwrite(",", sizeof(char), 1, f);
-
-		// Parent 2
-		name = get_name_of_id( m, p2);
-		if (name != NULL) {
-			fwrite(name, sizeof(char), strlen(name), f);
-        } else if (p2.id != NO_PEDIGREE.id) {
-            fprintf(f, "%d", p2.id);
-			//fwrite(pedigree + 1, sizeof(int), 1, f);
-		}
-
-		if (get_parents_of_id(m, p2, pedigree) == 0) {
-			save_parents_of(f, m, pedigree[0], pedigree[1]);
-		}
-
-	}
-
-	// close brackets
-	fwrite(")", sizeof(char), 1, f);
-}
-
-/** Print the breeding value of each genotype in a group to a file. The following
- * tab-separated format is used:
- *
- * [group member id]	[group member name]	[BV]
- *
- * [group member id]	[group member name]	[BV]
- *
- * ...
- *
- * The SimData must have loaded marker effects for this function to succeed.
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the SimData containing the group members.
- * @param group group number of the group of individuals to print the
- * breeding values of.
- * @param effID Identifier of the marker effect set to be used to calculate these breeding values
- */
-void save_group_bvs(FILE* f, const SimData* d, const GroupNum group, const EffectID effID) {
-    const int effIndex = get_index_of_eff_set(d, effID);
-    if (effIndex >= d->n_eff_sets) {
-        warning("We don't have that many marker effect sets loaded.\n");
-        return;
-    }
-
-	int group_size = get_group_size( d, group);
-    if (group_size < 1) {
-        warning("Group %d does not exist: no data saved.\n", group.num);
-        return;
-    }
-    PedigreeID group_contents[group_size];
-    get_group_ids( d, group, group_size, group_contents );
-    char* group_names[group_size];
-    get_group_names( d, group, group_size, group_names );
-    DecimalMatrix effects = calculate_group_bvs(d, group, effID);
-	const char newline[] = "\n";
-	const char tab[] = "\t";
-
-	for (int i = 0; i < group_size; ++i) {
-		/*Group member name*/
-		//fwrite(group_contents + i, sizeof(int), 1, f);
-        fprintf(f, "%d", group_contents[i].id);
-		fwrite(tab, sizeof(char), 1, f);
-		if (group_names[i] != NULL) {
-			fwrite(group_names[i], sizeof(char), strlen(group_names[i]), f);
-		}
-		fwrite(tab, sizeof(char), 1, f);
-		//fwrite(effects.matrix[0], sizeof(float), 1, f);
-		fprintf(f, "%f", effects.matrix[0][i]);
-		fwrite(newline, sizeof(char), 1, f);
-	}
-
-	delete_dmatrix(&effects);
-	fflush(f);
-}
-
-/** Print the breeding value of each genotype in the SimData to a file. The following
- * tab-separated format is used:
- *
- * [id]	[name]	[BV]
- *
- * [id]	[name]	[BV]
- *
- * ...
- *
- * The SimData must have loaded marker effects for this function to succeed.
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the SimData containing the group members.
- * @param effID Identifier of the marker effect set to be used to calculate these breeding values
- */
-void save_bvs(FILE* f, const SimData* d, const EffectID effID) {
-    const int effIndex = get_index_of_eff_set(d, effID);
-    if (effIndex >= d->n_eff_sets) {
-        warning("We don't have that many marker effect sets loaded.\n");
-        return;
-    }
-
-	AlleleMatrix* am = d->m;
-	const char newline[] = "\n";
-	const char tab[] = "\t";
-	DecimalMatrix effects;
-
-	do {
-        effects = calculate_bvs(am, d->e + effIndex);
-		for (int i = 0; i < effects.cols; ++i) {
-			/*Group member name*/
-			//fwrite(group_contents + i, sizeof(int), 1, f);
-            fprintf(f, "%d", am->ids[i].id);
-			fwrite(tab, sizeof(char), 1, f);
-			if (am->names[i] != NULL) {
-				fwrite(am->names[i], sizeof(char), strlen(am->names[i]), f);
-			}
-			fwrite(tab, sizeof(char), 1, f);
-			//fwrite(effects.matrix[0], sizeof(float), 1, f);
-			fprintf(f, "%f", effects.matrix[0][i]);
-			fwrite(newline, sizeof(char), 1, f);
-		}
-		delete_dmatrix(&effects);
-	} while ((am = am->next) != NULL);
-	fflush(f);
-}
-
-/** Print the provided breeding values of each provided name and id to a file,
- * with the same format as a regular call to `save_bvs` or `save_group_bvs`.
- * The following tab-separated format is used:
- *
- * [id]	[name]	[BV]
- *
- * [id]	[name]	[BV]
- *
- * ...
- *
- * The function assumes the array of ids, array of names, and columns of the
- * DecimalMatrix are ordered the same, so a single index produces the corresponding
- * value from each. It is used by as-you-go savers within crossing functions. For
- * general use consider `save_bvs` or `save_group_bvs` instead.
- *
- * @param f file pointer opened for writing to put the output
- * @param e pointer to the DecimalMatrix containing the BVs in the first row.
- * @param ids array of ids to print alongside the BVs.
- * @param names array of names to print alongside the BVs.
- */
-void save_manual_bvs(FILE* f, const DecimalMatrix* e, const PedigreeID* ids, const char** names) {
-	char sep[] = "\t";
-	char newline[] = "\n";
-
-	for (int i = 0; i < e->cols; ++i) {
-		//fwrite(ids + i, sizeof(int), 1, f);
-        fprintf(f, "%d", ids[i].id);
-		fwrite(sep, sizeof(char), 1, f);
-		if (names != NULL && names[i] != NULL) {
-			fwrite(names[i], sizeof(char), strlen(names[i]), f);
-		}
-		fwrite(sep, sizeof(char), 1, f);
-		//fwrite(e->matrix[i], sizeof(double), 1, f);
-		fprintf(f, "%f", e->matrix[0][i]);
-
-		//print the newline
-		fwrite(newline, sizeof(char), 1, f);
-	}
-	fflush(f);
-}
 
 /** Print the number of copies of a particular allele at each marker of each genotype
- * in the SimData to a file. The following tab-separated format is used:
+ * in the gsc_SimData to a file. The following tab-separated format is used:
  *
  * 		[id]OR[name]	[id]OR[name] ...
  *
@@ -8951,14 +8319,16 @@ void save_manual_bvs(FILE* f, const DecimalMatrix* e, const PedigreeID* ids, con
  *
  * ID will be printed if the genotype does not have a name saved.
  *
+ * @shortnamed{save_count_matrix}
+ *
  * @param f file pointer opened for writing to put the output
- * @param d pointer to the SimData containing the group members.
+ * @param d pointer to the gsc_SimData containing the group members.
  * @param allele the allele character to count
  */
-void save_count_matrix(FILE* f, const SimData* d, const char allele) {
-	DecimalMatrix counts = calculate_full_count_matrix_of_allele(d->m, allele);
+void gsc_save_count_matrix(FILE* f, const gsc_SimData* d, const char allele) {
+	gsc_DecimalMatrix counts = gsc_calculate_full_count_matrix(d->m, allele);
 
-	AlleleMatrix* currentm = d->m;
+	gsc_AlleleMatrix* currentm = d->m;
 	// print the header
 	for (int i = 0, currenti = 0; i < counts.rows; ++i, ++currenti) {
 		if (currenti >= currentm->n_genotypes) {
@@ -8992,7 +8362,7 @@ void save_count_matrix(FILE* f, const SimData* d, const char allele) {
 		}
 	}
 
-	delete_dmatrix(&counts);
+	gsc_delete_dmatrix(&counts);
 	fflush(f);
 }
 
@@ -9009,25 +8379,27 @@ void save_count_matrix(FILE* f, const SimData* d, const char allele) {
  *
  * ID will be printed if the genotype does not have a name saved.
  *
+ * @shortnamed{save_group_count_matrix}
+ *
  * @param f file pointer opened for writing to put the output
- * @param d pointer to the SimData containing the group members.
+ * @param d pointer to the gsc_SimData containing the group members.
  * @param group group number of the group of individuals to print the
  * allele count of.
  * @param allele the allele character to count
  */
-void save_count_matrix_of_group(FILE* f, const SimData* d, const char allele, const GroupNum group) {
-	unsigned int group_size = get_group_size( d, group);
+void gsc_save_group_count_matrix(FILE* f, const gsc_SimData* d, const char allele, const gsc_GroupNum group) {
+	unsigned int group_size = gsc_get_group_size( d, group);
     if (group_size < 1) {
         warning("Group %d does not exist: no data saved.\n", group.num);
         return;
     }
 
     char* group_names[group_size];
-    get_group_names( d, group, group_size, group_names );
-    PedigreeID group_ids[group_size];
-    get_group_ids(d,group,group_size, group_ids);
-	DecimalMatrix counts = generate_zero_dmatrix(group_size,d->n_markers);
-	calculate_group_count_matrix_of_allele(d,group,allele,&counts);
+    gsc_get_group_names( d, group, group_size, group_names );
+    gsc_PedigreeID group_ids[group_size];
+    gsc_get_group_ids(d,group,group_size, group_ids);
+	gsc_DecimalMatrix counts = gsc_generate_zero_dmatrix(group_size,d->n_markers);
+	gsc_calculate_group_count_matrix(d,group,allele,&counts);
 
     fprintf(f, "%d", group.num);
 	// print the header
@@ -9059,7 +8431,546 @@ void save_count_matrix_of_group(FILE* f, const SimData* d, const char allele, co
 		}
 	}
 
-	delete_dmatrix(&counts);
+	gsc_delete_dmatrix(&counts);
+	fflush(f);
+}
+
+/** Print the parents of each genotype in the gsc_SimData to a file. The following
+ * tab-separated format is used:
+ *
+ * [genotype name]	[parent 1 name]	[parent 2 name]
+ *
+ * [genotype name]	[parent 1 name]	[parent 2 name]
+ *
+ * ...
+ *
+ * The parents are identified by the two ids saved in the genotype's
+ * pedigrees field in the gsc_AlleleMatrix struct.
+ *
+ * If a group member or parent has no name, the name will be
+ * replaced in the output file with its session-unique id. If the parent
+ * id is 0 (which means the parent is unknown) no
+ * name or id is printed for that parent.
+ *
+ * @shortnamed{save_one_step_pedigree}
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the gsc_SimData containing the genotypes and their pedigrees
+ */
+void gsc_save_one_step_pedigree(FILE* f, const gsc_SimData* d) {
+	char* name;
+	gsc_AlleleMatrix* m = d->m;
+
+	do {
+		for (int i = 0; i < m->n_genotypes; ++i) {
+			/*Group member name*/
+			if (m->names[i] != NULL) {
+				fwrite(m->names[i], sizeof(char), strlen(m->names[i]), f);
+			} else {
+                fprintf(f, "%d", m->ids[i].id);
+			}
+			fwrite("\t", sizeof(char), 1, f);
+
+
+            /* Parent 1 */
+            if (m->pedigrees[0][i].id != gsc_NO_PEDIGREE.id) {
+                name = gsc_get_name_of_id( d->m, m->pedigrees[0][i] );
+                if (name != NULL) {
+                    fwrite(name, sizeof(char), strlen(name), f);
+                } else {
+                    fprintf(f, "%d", m->pedigrees[0][i].id);
+                }
+            }
+            fwrite("\t", sizeof(char), 1, f);
+
+            /* Parent 2 */
+            if (m->pedigrees[1][i].id != gsc_NO_PEDIGREE.id) {
+                name = gsc_get_name_of_id( d->m, m->pedigrees[1][i]);
+                if (name != NULL) {
+                    fwrite(name, sizeof(char), strlen(name), f);
+                } else {
+                    fprintf(f, "%d", m->pedigrees[1][i].id);
+                }
+            }
+
+			fwrite("\n", sizeof(char), 1, f);
+		}
+	} while ((m = m->next) != NULL);
+	fflush(f);
+}
+
+/** Print the parents of each genotype in a group to a file. The following
+ * tab-separated format is used:
+ *
+ * [group member name]	[parent 1 name]	[parent 2 name]
+ *
+ * [group member name]	[parent 1 name]	[parent 2 name]
+ *
+ * ...
+ *
+ * The parents are identified by the two ids saved in the genotype's
+ * pedigrees field in the gsc_AlleleMatrix struct.
+ *
+ * If a group member or parent has no name, the name will be
+ * replaced in the output file with its session-unique id. If the parent
+ * id of an individual is 0 (which means the parent is unknown) no
+ * name or id is printed for that parent.
+ *
+ * @shortnamed{save_group_one_step_pedigree}
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the gsc_SimData containing the group members.
+ * @param group group number of the group of individuals to print the
+ * immediate parents of.
+ */
+void gsc_save_group_one_step_pedigree(FILE* f, const gsc_SimData* d, const gsc_GroupNum group) {
+	int group_size = gsc_get_group_size( d, group);
+    if (group_size < 1) {
+        warning("Group %d does not exist: no data saved.\n", group.num);
+        return;
+    }
+
+    gsc_PedigreeID group_contents[group_size];
+    gsc_get_group_ids( d, group, group_size, group_contents );
+    char* group_names[group_size];
+    gsc_get_group_names( d, group, group_size, group_names );
+    gsc_PedigreeID parent1s[group_size];
+    gsc_PedigreeID parent2s[group_size];
+    gsc_get_group_parent_ids(d, group, group_size, 1, parent1s );
+    gsc_get_group_parent_ids(d, group, group_size, 2, parent2s );
+	char* name;
+
+	for (int i = 0; i < group_size; i++) {
+		/*Group member name*/
+		if (group_names[i] != NULL) {
+			fwrite(group_names[i], sizeof(char), strlen(group_names[i]), f);
+		} else {
+			//fwrite(group_contents + i, sizeof(int), 1, f);
+            fprintf(f, "%d", group_contents[i].id);
+		}
+		fwrite("\t", sizeof(char), 1, f);
+
+        // Prints both parents, even if they're the same one.
+        /* Parent 1 */
+        if (parent1s[i].id != gsc_NO_PEDIGREE.id) {
+            name = gsc_get_name_of_id( d->m, parent1s[i]);
+            if (name != NULL) {
+                fwrite(name, sizeof(char), strlen(name), f);
+            } else {
+                fprintf(f, "%d", parent1s[i].id);
+            }
+        }
+        fwrite("\t", sizeof(char), 1, f);
+
+        /* Parent 2 */
+        if (parent2s[i].id != gsc_NO_PEDIGREE.id) {
+            name = gsc_get_name_of_id( d->m, parent2s[i]);
+            if (name != NULL) {
+                fwrite(name, sizeof(char), strlen(name), f);
+            } else {
+                fprintf(f, "%d", parent2s[i].id);
+            }
+        }
+
+		fwrite("\n", sizeof(char), 1, f);
+	}
+	fflush(f);
+}
+
+/** Print the full known pedigree of each genotype in the gsc_SimData
+ * to a file. The following
+ * tab-separated format is used:
+ *
+ * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
+ *
+ * [id]	[name]=([parent pedigree])
+ *
+ * ...
+ *
+ * Note that this pedigree is recursively constructed, so if a genotype's
+ * parents are known, [parent pedigree] is replaced with a string of format
+ * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of
+ * a genotype are the same individual (i.e. it was produced by selfing, the
+ * comma and second parent pedigree are ommitted, as in the second line sample
+ * in the format above.
+ *
+ * The parents of a genotype are identified by the two ids saved in the
+ * genotype's pedigrees field in the gsc_AlleleMatrix struct.
+ *
+ * If a group member or parent has no name, the name will be
+ * replaced in the output file with its session-unique id. If the parent
+ * id of an individual is 0, the individual is printed without brackets or
+ * parent pedigrees and recursion stops here.
+ *
+ * @shortnamed{save_full_pedigree}
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the gsc_SimData containing all genotypes to print.
+ */
+void gsc_save_full_pedigree(FILE* f, const gsc_SimData* d) {
+	const char newline[] = "\n";
+
+	gsc_AlleleMatrix* m = d->m;
+
+	do {
+		for (int i = 0; i < m->n_genotypes; ++i) {
+			/*Group member name*/
+            fprintf(f, "%d\t", m->ids[i].id);
+			if (m->names[i] != NULL) {
+				fwrite(m->names[i], sizeof(char), strlen(m->names[i]), f);
+			}
+
+            if (m->pedigrees[0][i].id != gsc_NO_PEDIGREE.id || m->pedigrees[1][i].id != gsc_NO_PEDIGREE.id) {
+				gsc_save_parents_of(f, d->m, m->pedigrees[0][i], m->pedigrees[1][i]);
+			}
+			fwrite(newline, sizeof(char), 1, f);
+		}
+	} while ((m = m->next) != NULL);
+	fflush(f);
+}
+
+/** Print the full known pedigree of each genotype in a group to a file. The following
+ * tab-separated format is used:
+ *
+ * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
+ *
+ * [id]	[name]=([parent pedigree])
+ *
+ * ...
+ *
+ * Note that this pedigree is recursively constructed, so if a genotype's
+ * parents are known, [parent pedigree] is replaced with a string of format
+ * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of
+ * a genotype are the same individual (i.e. it was produced by selfing, the
+ * comma and second parent pedigree are ommitted, as in the second line sample
+ * in the format above.
+ *
+ * The parents of a genotype are identified by the two ids saved in the
+ * genotype's pedigrees field in the gsc_AlleleMatrix struct.
+ *
+ * If a group member or parent has no name, the name will be
+ * replaced in the output file with its session-unique id. If the parent
+ * id of an individual is 0, the individual is printed without brackets or
+ * parent pedigrees and recursion stops here.
+ *
+ * @shortnamed{save_group_full_pedigree}
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the gsc_SimData containing the group members.
+ * @param group group number of the group of individuals to print the
+ * pedigree of.
+ */
+void gsc_save_group_full_pedigree(FILE* f, const gsc_SimData* d, const gsc_GroupNum group) {
+	int group_size = gsc_get_group_size( d, group);
+    if (group_size < 1) {
+        warning("Group %d does not exist: no data saved.\n", group.num);
+        return;
+    }
+
+    gsc_PedigreeID group_contents[group_size];
+    gsc_get_group_ids( d, group, group_size, group_contents );
+    char* group_names[group_size];
+    gsc_get_group_names( d, group, group_size, group_names );
+	const char newline[] = "\n";
+    gsc_PedigreeID parent1s[group_size];
+    gsc_PedigreeID parent2s[group_size];
+    gsc_get_group_parent_ids(d, group, group_size, 1, parent1s );
+    gsc_get_group_parent_ids(d, group, group_size, 2, parent2s );
+
+	for (int i = 0; i < group_size; i++) {
+		/*Group member name*/
+        fprintf(f, "%d\t", group_contents[i].id);
+		if (group_names[i] != NULL) {
+			fwrite(group_names[i], sizeof(char), strlen(group_names[i]), f);
+		}
+
+        if (parent1s[i].id != gsc_NO_PEDIGREE.id || parent2s[i].id != gsc_NO_PEDIGREE.id) {
+            gsc_save_parents_of(f, d->m, parent1s[i], parent2s[i]);
+		}
+		fwrite(newline, sizeof(char), 1, f);
+	}
+	fflush(f);
+}
+
+/** Print the full known pedigree of each genotype in a single gsc_AlleleMatrix
+ * to a file. The following
+ * tab-separated format is used:
+ *
+ * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
+ *
+ * [id]	[name]=([parent pedigree])
+ *
+ * ...
+ *
+ * Note that this pedigree is recursively constructed, so if a genotype's
+ * parents are known, [parent pedigree] is replaced with a string of format
+ * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of
+ * a genotype are the same individual (i.e. it was produced by selfing, the
+ * comma and second parent pedigree are ommitted, as in the second line sample
+ * in the format above.
+ *
+ * The parents of a genotype are identified by the two ids saved in the
+ * genotype's pedigrees field in the gsc_AlleleMatrix struct.
+ *
+ * If a group member or parent has no name, the name will be
+ * replaced in the output file with its session-unique id. If the parent
+ * id of an individual is 0, the individual is printed without brackets or
+ * parent pedigrees and recursion stops here.
+ *
+ * Note this does not follow through the linked list of gsc_AlleleMatrix.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param m pointer to the gsc_AlleleMatrix containing the genotypes to print
+ * @param parents pointer to an gsc_AlleleMatrix that heads the linked list
+ * containing the parents and other ancestry of the given genotypes.
+ */
+void gsc_save_allelematrix_full_pedigree(FILE* f, const gsc_AlleleMatrix* m, const gsc_SimData* parents) {
+	const char newline[] = "\n";
+
+	for (int i = 0; i < m->n_genotypes; ++i) {
+		/*Group member name*/
+        fprintf(f, "%d\t", m->ids[i].id);
+		if (m->names[i] != NULL) {
+			fwrite(m->names[i], sizeof(char), strlen(m->names[i]), f);
+		}
+
+        if (m->pedigrees[0][i].id != gsc_NO_PEDIGREE.id || m->pedigrees[1][i].id != gsc_NO_PEDIGREE.id) {
+            gsc_save_parents_of(f, parents->m, m->pedigrees[0][i], m->pedigrees[1][i]);
+        }
+		fwrite(newline, sizeof(char), 1, f);
+	}
+	fflush(f);
+}
+
+/** Recursively save the parents of a particular id to a file.
+ *
+ * It saves using the following format:
+ *
+ * - no characters are saved if the parents of the id are unknown/0
+ *
+ * - if the id has one parent, repeated twice (it was produced by selfing),
+ * print "=(parentname)", where parentname is the name of the parent or its
+ * id if it does not have one, followed by whatever is printed by a call
+ * to this function on the parent's id.
+ *
+ * - if the id has two separate parents, print "=(parent1name,parent2name)",
+ * where parent1name and parent2name are the name2 of the two parents or their
+ * ids if they does not have names, each name immediately followed by whatever
+ * is printed by a call to this function on the corresponding parent's id.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param m pointer to an gsc_AlleleMatrix that heads the linked list
+ * containing the parents and other ancestry of the given id.
+ * @param p1 the session-unique id of the first parent to be saved.
+ * @param p2 the session-unique id of the second parent to be saved.
+ */
+void gsc_save_parents_of(FILE* f, const gsc_AlleleMatrix* m, gsc_PedigreeID p1, gsc_PedigreeID p2) {
+    gsc_PedigreeID pedigree[2];
+
+	// open brackets
+	fwrite("=(", sizeof(char), 2, f);
+	char* name;
+
+	// enables us to print only the known parent if one is unknown
+    if (p1.id == gsc_NO_PEDIGREE.id || p2.id == gsc_NO_PEDIGREE.id) {
+        p1.id = (p1.id >= p2.id) ? p1.id : p2.id; //max of the two
+        p2.id = p1.id;
+	}
+
+    if (p1.id == p2.id) {
+        if (p1.id != gsc_NO_PEDIGREE.id) { //print nothing if both are unknown.
+			// Selfed parent
+            name = gsc_get_name_of_id( m, p1);
+			if (name != NULL) {
+				fwrite(name, sizeof(char), strlen(name), f);
+            } else if (p1.id != gsc_NO_PEDIGREE.id) {
+                fprintf(f, "%d", p1.id);
+				//fwrite(pedigree, sizeof(int), 1, f);
+			}
+
+            if (gsc_get_parents_of_id(m, p1, pedigree) == 0) {
+				gsc_save_parents_of(f, m, pedigree[0], pedigree[1]);
+			}
+		}
+	} else {
+		// Parent 1
+		name = gsc_get_name_of_id( m, p1);
+		if (name != NULL) {
+			fwrite(name, sizeof(char), strlen(name), f);
+        } else if (p1.id != gsc_NO_PEDIGREE.id) {
+            fprintf(f, "%d", p1.id);
+			//fwrite(pedigree, sizeof(int), 1, f);
+		}
+		if (gsc_get_parents_of_id(m, p1, pedigree) == 0) {
+			gsc_save_parents_of(f, m, pedigree[0], pedigree[1]);
+		}
+
+		// separator
+		fwrite(",", sizeof(char), 1, f);
+
+		// Parent 2
+		name = gsc_get_name_of_id( m, p2);
+		if (name != NULL) {
+			fwrite(name, sizeof(char), strlen(name), f);
+        } else if (p2.id != gsc_NO_PEDIGREE.id) {
+            fprintf(f, "%d", p2.id);
+			//fwrite(pedigree + 1, sizeof(int), 1, f);
+		}
+
+		if (gsc_get_parents_of_id(m, p2, pedigree) == 0) {
+			gsc_save_parents_of(f, m, pedigree[0], pedigree[1]);
+		}
+
+	}
+
+	// close brackets
+	fwrite(")", sizeof(char), 1, f);
+}
+
+/** Print the breeding value of each genotype in the gsc_SimData to a file. The following
+ * tab-separated format is used:
+ *
+ * [id]	[name]	[BV]
+ *
+ * [id]	[name]	[BV]
+ *
+ * ...
+ *
+ * The gsc_SimData must have loaded marker effects for this function to succeed.
+ *
+ * @shortnamed{save_bvs}
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the gsc_SimData containing the group members.
+ * @param effID Identifier of the marker effect set to be used to calculate these breeding values
+ */
+void gsc_save_bvs(FILE* f, const gsc_SimData* d, const gsc_EffectID effID) {
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
+    if (effIndex >= d->n_eff_sets) {
+        warning("We don't have that many marker effect sets loaded.\n");
+        return;
+    }
+
+	gsc_AlleleMatrix* am = d->m;
+	const char newline[] = "\n";
+	const char tab[] = "\t";
+	gsc_DecimalMatrix effects;
+
+	do {
+        effects = gsc_calculate_bvs(am, d->e + effIndex);
+		for (int i = 0; i < effects.cols; ++i) {
+			/*Group member name*/
+			//fwrite(group_contents + i, sizeof(int), 1, f);
+            fprintf(f, "%d", am->ids[i].id);
+			fwrite(tab, sizeof(char), 1, f);
+			if (am->names[i] != NULL) {
+				fwrite(am->names[i], sizeof(char), strlen(am->names[i]), f);
+			}
+			fwrite(tab, sizeof(char), 1, f);
+			//fwrite(effects.matrix[0], sizeof(float), 1, f);
+			fprintf(f, "%f", effects.matrix[0][i]);
+			fwrite(newline, sizeof(char), 1, f);
+		}
+		gsc_delete_dmatrix(&effects);
+	} while ((am = am->next) != NULL);
+	fflush(f);
+}
+
+/** Print the breeding value of each genotype in a group to a file. The following
+ * tab-separated format is used:
+ *
+ * [group member id]	[group member name]	[BV]
+ *
+ * [group member id]	[group member name]	[BV]
+ *
+ * ...
+ *
+ * The gsc_SimData must have loaded marker effects for this function to succeed.
+ *
+ * @shortnamed{save_group_bvs}
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param d pointer to the gsc_SimData containing the group members.
+ * @param group group number of the group of individuals to print the
+ * breeding values of.
+ * @param effID Identifier of the marker effect set to be used to calculate these breeding values
+ */
+void gsc_save_group_bvs(FILE* f, const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID) {
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
+    if (effIndex >= d->n_eff_sets) {
+        warning("We don't have that many marker effect sets loaded.\n");
+        return;
+    }
+
+	int group_size = gsc_get_group_size( d, group);
+    if (group_size < 1) {
+        warning("Group %d does not exist: no data saved.\n", group.num);
+        return;
+    }
+    gsc_PedigreeID group_contents[group_size];
+    gsc_get_group_ids( d, group, group_size, group_contents );
+    char* group_names[group_size];
+    gsc_get_group_names( d, group, group_size, group_names );
+    gsc_DecimalMatrix effects = gsc_calculate_group_bvs(d, group, effID);
+	const char newline[] = "\n";
+	const char tab[] = "\t";
+
+	for (int i = 0; i < group_size; ++i) {
+		/*Group member name*/
+		//fwrite(group_contents + i, sizeof(int), 1, f);
+        fprintf(f, "%d", group_contents[i].id);
+		fwrite(tab, sizeof(char), 1, f);
+		if (group_names[i] != NULL) {
+			fwrite(group_names[i], sizeof(char), strlen(group_names[i]), f);
+		}
+		fwrite(tab, sizeof(char), 1, f);
+		//fwrite(effects.matrix[0], sizeof(float), 1, f);
+		fprintf(f, "%f", effects.matrix[0][i]);
+		fwrite(newline, sizeof(char), 1, f);
+	}
+
+	gsc_delete_dmatrix(&effects);
+	fflush(f);
+}
+
+/** Print the provided breeding values of each provided name and id to a file,
+ * with the same format as a regular call to `gsc_save_bvs` or `gsc_save_group_bvs`.
+ * The following tab-separated format is used:
+ *
+ * [id]	[name]	[BV]
+ *
+ * [id]	[name]	[BV]
+ *
+ * ...
+ *
+ * The function assumes the array of ids, array of names, and columns of the
+ * gsc_DecimalMatrix are ordered the same, so a single index produces the corresponding
+ * value from each. It is used by as-you-go savers within crossing functions. For
+ * general use consider `gsc_save_bvs` or `gsc_save_group_bvs` instead.
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param e pointer to the gsc_DecimalMatrix containing the BVs in the first row.
+ * @param ids array of ids to print alongside the BVs.
+ * @param names array of names to print alongside the BVs.
+ */
+void gsc_save_manual_bvs(FILE* f, const gsc_DecimalMatrix* e, const gsc_PedigreeID* ids, const char** names) {
+	char sep[] = "\t";
+	char newline[] = "\n";
+
+	for (int i = 0; i < e->cols; ++i) {
+		//fwrite(ids + i, sizeof(int), 1, f);
+        fprintf(f, "%d", ids[i].id);
+		fwrite(sep, sizeof(char), 1, f);
+		if (names != NULL && names[i] != NULL) {
+			fwrite(names[i], sizeof(char), strlen(names[i]), f);
+		}
+		fwrite(sep, sizeof(char), 1, f);
+		//fwrite(e->matrix[i], sizeof(double), 1, f);
+		fprintf(f, "%f", e->matrix[0][i]);
+
+		//print the newline
+		fwrite(newline, sizeof(char), 1, f);
+	}
 	fflush(f);
 }
 

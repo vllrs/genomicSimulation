@@ -3,8 +3,7 @@
 \docType{package}
 \name{genomicSimulation}
 \alias{genomicSimulation}
-\title{genomicSimulation: Crossing and genomic selection simulation tool}
+\title{genomicSimulation: Stochastic simulation of breeding programs}
 \description{
-Functions to simulate breeding programs on SNP marker genomes, and 
-functions to calculate or perform selection based on GEBVs from provided effect values.
+Functions to simulate breeding programs on (user-provided) sets of genetic markers.
 }

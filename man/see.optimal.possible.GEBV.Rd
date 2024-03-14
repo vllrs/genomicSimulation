@@ -2,6 +2,7 @@
 % Please edit documentation in R/sim-calculators.R
 \name{see.optimal.possible.GEBV}
 \alias{see.optimal.possible.GEBV}
+\alias{see.optimal.possible.gebv}
 \title{Get the ultimate/highest-possible GEBV given the pool of alleles available in
 the current group.}
 \usage{
@@ -30,7 +31,7 @@ An error is raised if no effect values have been loaded.
 Other data access functions: 
 \code{\link{see.group.data}()},
 \code{\link{see.group.gene.data}()},
-\code{\link{see.minimum.GEBV}()},
+\code{\link{see.minimal.GEBV}()},
 \code{\link{see.optimal.GEBV}()},
 \code{\link{see.optimal.haplotype}()},
 \code{\link{see.optimal.possible.haplotype}()}

@@ -94,13 +94,13 @@ independently descended from the original genotype.
 }
 \seealso{
 Other crossing functions: 
-\code{\link{cross.all.pairs}()},
-\code{\link{cross.combinations.file}()},
-\code{\link{cross.combinations}()},
-\code{\link{cross.dc.combinations.file}()},
-\code{\link{cross.randomly.between}()},
-\code{\link{cross.randomly}()},
+\code{\link{make.all.unidirectional.crosses}()},
 \code{\link{make.clones}()},
-\code{\link{make.doubled.haploids}()}
+\code{\link{make.crosses.from.file}()},
+\code{\link{make.double.crosses.from.file}()},
+\code{\link{make.doubled.haploids}()},
+\code{\link{make.random.crosses.between}()},
+\code{\link{make.random.crosses}()},
+\code{\link{make.targeted.crosses}()}
 }
 \concept{crossing functions}

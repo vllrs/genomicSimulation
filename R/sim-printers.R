@@ -1,5 +1,10 @@
 #' Save the details of the genome that the SimData uses.
 #'
+#' **DEFUNCT**
+#' > This function was never correctly implemented. 
+#' An implementation may return at some future date.
+#' Original documentation below.
+#'
 #' \code{save.genome.model} saves the SNP names, their linkage map positions, 
 #' and the effect values for calculating GEBVs (if applicable) to a file.
 #'
@@ -14,11 +19,14 @@
 #' be written
 #' @return 0 on success. On failure an error will be raised.
 #'
+#' @rdname genomicSimulation-defunct
 #' @family saving functions
+#' @keywords internal
 #' @export
 save.genome.model <- function(filename) {
-	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_simdata, sim.data$p, filename))
+  .Defunct("save.genotypes",msg="Defunct. This function was never correctly implemented. An implementation may return at some future date")
+  #if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  #return(.Call(SXP_save_simdata, sim.data$p, filename))
 }
 
 #' Save genotypes/lines currently tracked by the simulation.
@@ -72,7 +80,7 @@ save.genotypes <- function(filename, group=NULL, type="R") {
 #' @export
 save.allele.counts <- function(filename, group=NULL, allele) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_counts, sim.data$p, filename, group, allele))
+	return(.Call(SXP_save_allele_counts, sim.data$p, filename, group, allele))
 }
 
 #' Save the pedigrees of genotypes currently saved to the SimData
@@ -144,6 +152,7 @@ save.pedigrees <- function(filename, group=NULL, type="R") {
 #'
 #' @family saving functions
 #' @export
+#' @aliases save.gebvs
 save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_save_GEBVs, sim.data$p, filename, group, eff.set))
@@ -152,7 +161,7 @@ save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 #' Save the local GEBVs of each block in each selected line's haplotypes to a file, using
 #' blocks taken from a file.
 #'
-#' \code{save.local.GEBVs.by.file} calculates GEBVs for each block of markers listed in 
+#' \code{save.local.GEBVs.blocks.from.file} calculates GEBVs for each block of markers listed in 
 #' `block.file` for the maternal and paternal halves of its genotype. The results
 #' are saved to a file. The output file is formatted with the blocks as unlabelled columns
 #' and two rows for each genotype, named [line name]_1 and [line name]_2. The entries
@@ -172,15 +181,33 @@ save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 #'
 #' @family saving functions
 #' @export
-save.local.GEBVs.by.file <- function(filename, block.file, group=NULL, eff.set=1L) {
+#' @aliases save.local.gebvs.blocks.from.file
+save.local.GEBVs.blocks.from.file <- function(filename, block.file, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_file_block_effects, sim.data$p, filename, block.file, group, eff.set))
+	return(.Call(SXP_save_local_GEBVs_blocks_from_file, sim.data$p, filename, block.file, group, eff.set))
+}
+
+#' OLD NAME | Save the local GEBVs of each block in each selected line's 
+#' haplotypes to a file, using blocks taken from a file.
+#' 
+#' ! This is the old name for \code{save.local.GEBVs.blocks.from.file}. From genomicSimulation v0.2.5,
+#' \code{save.local.GEBVs.blocks.from.file} is the recommended name over \code{save.local.GEBVs.by.file}. 
+#' \code{save.local.GEBVs.by.file} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{save.local.GEBVs.blocks.from.file}
+#' 
+#' @keywords internal 
+#' @export
+#' @aliases save.local.gebvs.by.file
+save.local.GEBVs.by.file <- function(filename, block.file, group=NULL, eff.set=1L) {
+  return(save.local.GEBVs.blocks.from.file(filename,block.file,group,eff.set))
 }
 
 #' Save the local GEBVs of each block in each selected line's haplotypes to a file,
 #' using blocks created by slicing chromosomes into segments. 
 #'
-#' \code{save.local.GEBVs.by.chr} calculates GEBVs for each block of markers created by
+#' \code{save.local.GEBVs.blocks.from.chrsplit} calculates GEBVs for each block of markers created by
 #' splitting each chromosome into `n.blocks.per.chr` same-length blocks for the maternal
 #' and paternal halves of its genotype. The results are saved to a file. The output file 
 #' is formatted with the blocks as unlabelled columns and two rows for each genotype, named 
@@ -198,7 +225,25 @@ save.local.GEBVs.by.file <- function(filename, block.file, group=NULL, eff.set=1
 #'
 #' @family saving functions
 #' @export
-save.local.GEBVs.by.chr <- function(filename, n.blocks.per.chr, group=NULL, eff.set=1L) {
+#' @aliases save.local.gebvs.blocks.from.chrsplit
+save.local.GEBVs.blocks.from.chrsplit <- function(filename, n.blocks.per.chr, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_chrsplit_block_effects, sim.data$p, filename, n.blocks.per.chr, group, eff.set))
+	return(.Call(SXP_save_local_GEBVs_blocks_from_chrsplit, sim.data$p, filename, n.blocks.per.chr, group, eff.set))
+}
+
+#' OLD NAME | Save the local GEBVs of each block in each selected line's haplotypes to a file,
+#' using blocks created by slicing chromosomes into segments. 
+#' 
+#' ! This is the old name for \code{save.local.GEBVs.blocks.from.chrsplit}. From genomicSimulation v0.2.5,
+#' \code{save.local.GEBVs.blocks.from.chrsplit} is the recommended name over \code{save.local.GEBVs.by.chr}. 
+#' \code{save.local.GEBVs.by.chr} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{save.local.GEBVs.blocks.from.chrsplit}
+#' 
+#' @keywords internal 
+#' @export
+#' @aliases save.local.gebvs.by.chr
+save.local.GEBVs.by.chr <- function(filename, n.blocks.per.chr, group=NULL, eff.set=1L) {
+  return(save.local.GEBVs.blocks.from.chrsplit(filename,n.blocks.per.chr,group,eff.set))
 }

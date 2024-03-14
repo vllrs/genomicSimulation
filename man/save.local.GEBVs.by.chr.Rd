@@ -2,41 +2,19 @@
 % Please edit documentation in R/sim-printers.R
 \name{save.local.GEBVs.by.chr}
 \alias{save.local.GEBVs.by.chr}
-\title{Save the local GEBVs of each block in each selected line's haplotypes to a file,
+\alias{save.local.gebvs.by.chr}
+\title{OLD NAME | Save the local GEBVs of each block in each selected line's haplotypes to a file,
 using blocks created by slicing chromosomes into segments.}
 \usage{
 save.local.GEBVs.by.chr(filename, n.blocks.per.chr, group = NULL, eff.set = 1L)
 }
-\arguments{
-\item{filename}{A string containing a filename to which the output will
-be written}
-
-\item{n.blocks.per.chr}{An integer containing the number of blocks each chromosome
-will be divided into.}
-
-\item{group}{Save only lines that belong to this group.}
-
-\item{eff.set}{identifier for the set of marker effects with which to calculate 
-local GEBVs.}
-}
-\value{
-0 on success. On failure an error will be raised.
-}
 \description{
-\code{save.local.GEBVs.by.chr} calculates GEBVs for each block of markers created by
-splitting each chromosome into `n.blocks.per.chr` same-length blocks for the maternal
-and paternal halves of its genotype. The results are saved to a file. The output file 
-is formatted with the blocks as unlabelled columns and two rows for each genotype, named 
-[line name]_1 and [line name]_2. The entries in this matrix are the calculated local 
-GEBVs/block effects.
+! This is the old name for \code{save.local.GEBVs.blocks.from.chrsplit}. From genomicSimulation v0.2.5,
+\code{save.local.GEBVs.blocks.from.chrsplit} is the recommended name over \code{save.local.GEBVs.by.chr}. 
+\code{save.local.GEBVs.by.chr} may become deprecated in future, when the package reaches 
+stability.
 }
 \seealso{
-Other saving functions: 
-\code{\link{save.GEBVs}()},
-\code{\link{save.allele.counts}()},
-\code{\link{save.genome.model}()},
-\code{\link{save.genotypes}()},
-\code{\link{save.local.GEBVs.by.file}()},
-\code{\link{save.pedigrees}()}
+\link{save.local.GEBVs.blocks.from.chrsplit}
 }
-\concept{saving functions}
+\keyword{internal}

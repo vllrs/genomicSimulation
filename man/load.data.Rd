@@ -31,7 +31,7 @@ and GEBV calculators.
 \seealso{
 Other loader functions: 
 \code{\link{clear.simdata}()},
-\code{\link{load.different.effects}()},
+\code{\link{load.more.effects}()},
 \code{\link{load.more.genotypes}()}
 }
 \concept{loader functions}

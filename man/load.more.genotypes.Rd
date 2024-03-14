@@ -22,6 +22,6 @@ already tracked by the SimData are saved.
 Other loader functions: 
 \code{\link{clear.simdata}()},
 \code{\link{load.data}()},
-\code{\link{load.different.effects}()}
+\code{\link{load.more.effects}()}
 }
 \concept{loader functions}

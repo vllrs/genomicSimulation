@@ -2,7 +2,7 @@
 % Please edit documentation in R/sim-group-utils.R
 \name{select.by.gebv}
 \alias{select.by.gebv}
-\title{Perform selection on a group by true GEBV.}
+\title{OLD NAME | Perform selection on a group by true GEBV.}
 \usage{
 select.by.gebv(
   from.group,
@@ -12,59 +12,13 @@ select.by.gebv(
   eff.set = 1L
 )
 }
-\arguments{
-\item{from.group}{an integer: the group number of the group perform selection on.}
-
-\item{low.score.best}{If FALSE, then the highest GEBVs are selected. If TRUE,
-then the lower ones are selected.}
-
-\item{percentage}{If this is a number and number and threshold are NULL, then 
-the [percentage]\% with the best GEBVs will be selected into the new group. Note that
-this is a whole-number percentage, i.e. for 5\%, set percentage=5 not 0.05.}
-
-\item{number}{If this is an integer and percentage and threshold are NULL, then
-the [number] with the best GEBVs will be selected into the new group.}
-
-\item{eff.set}{identifier for the set of marker effects to use to calculate the
-GEBVs.}
-}
-\value{
-the group number of the new group, containing the genotypes that were 
-positively selected.
-}
 \description{
-\code{select.by.gebv} calculates the GEBVs of all members of a group, sorts them
-in either ascending or descending order, and then selects the best few. The number
-selected can be an exact number (select the best 5) or a percentage (take the best
-2\%). Exactly one of percentage and number parameters must be defined for the
-function to run.
+! This is the old name for \code{break.group.by.GEBV}. From genomicSimulation v0.2.5,
+\code{break.group.by.GEBV} is the recommended name over \code{select.by.gebv}. 
+\code{select.by.gebv} may become deprecated in future, when the package reaches 
+stability.
 }
-\section{Custom selection}{
-
-For more complex selection than by true/unmasked GEBV, use the function
-\code{\link{see.group.data}}, use R scripting to identify which to select,
-and split them into a new group using \code{\link{make.group}}.
-}
-
 \seealso{
-Other grouping functions: 
-\code{\link{break.group.evenly}()},
-\code{\link{break.group.into.buckets}()},
-\code{\link{break.group.into.families}()},
-\code{\link{break.group.into.halfsib.families}()},
-\code{\link{break.group.into.individuals}()},
-\code{\link{break.group.randomly}()},
-\code{\link{break.group.with.probabilities}()},
-\code{\link{change.label.default}()},
-\code{\link{combine.groups}()},
-\code{\link{delete.effect.set}()},
-\code{\link{delete.group}()},
-\code{\link{delete.label}()},
-\code{\link{make.group.from.label.range}()},
-\code{\link{make.group.from.label}()},
-\code{\link{make.group}()},
-\code{\link{see.existing.groups}()},
-\code{\link{see.group.data}()},
-\code{\link{see.group.gene.data}()}
+\link{break.group.by.GEBV}
 }
-\concept{grouping functions}
+\keyword{internal}

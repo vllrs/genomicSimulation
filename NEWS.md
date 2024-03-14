@@ -4,6 +4,22 @@
 
 ## Improvements 
 
+- Increased function naming consistency between R and C versions of the package. However, this means some R functions have changed names. Old function names still work (they directly call the new function name), but sometime in the future the old names may be removed. (Old name) -> (new recommended name) pairs for the R package are as follows:
+	- see.minimum.GEBV ->            see.minimal.GEBV
+	- select.by.gebv ->              break.group.by.GEBV
+	- make.group.from.label ->       break.group.by.label.value
+	- make.group.from.label.range -> break.group.by.label.range
+	- make.label ->                  create.new.label
+	- load.different.effects ->      load.more.effects
+	- cross.randomly ->              make.random.crosses
+	- cross.randomly.between ->      make.random.crosses.between
+	- cross.combinations ->          make.targeted.crosses
+	- cross.combinations.file ->     make.crosses.from.file
+	- cross.dc.combinations.file ->  make.double.crosses.from.file
+	- cross.all.pairs ->             make.all.unidirectional.crosses
+	- save.local.GEBVs.by.file ->    save.local.GEBVs.blocks.from.file
+	- save.local.GEBVs.by.chr ->     save.local.GEBVs.blocks.from.chrsplit
+- genomicSimulation now calls R_Calloc/R_Free for memory allocation rather than stdlib's malloc/free. 
 - Under-the-hood improvements to crossing functions and to the internal tidying function.
 - Same script and same random seed will produce different genotypes post-v0.2.4.003, because gametes are now generated successively (first one, then the other) rather than simultaneously.
 

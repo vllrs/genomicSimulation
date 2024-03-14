@@ -51,6 +51,9 @@ as inputs (eg \code{\link{make.group}}).
 
 \seealso{
 Other grouping functions: 
+\code{\link{break.group.by.GEBV}()},
+\code{\link{break.group.by.label.range}()},
+\code{\link{break.group.by.label.value}()},
 \code{\link{break.group.evenly}()},
 \code{\link{break.group.into.buckets}()},
 \code{\link{break.group.into.families}()},
@@ -63,16 +66,13 @@ Other grouping functions:
 \code{\link{delete.effect.set}()},
 \code{\link{delete.group}()},
 \code{\link{delete.label}()},
-\code{\link{make.group.from.label.range}()},
-\code{\link{make.group.from.label}()},
 \code{\link{make.group}()},
 \code{\link{see.existing.groups}()},
-\code{\link{see.group.gene.data}()},
-\code{\link{select.by.gebv}()}
+\code{\link{see.group.gene.data}()}
 
 Other data access functions: 
 \code{\link{see.group.gene.data}()},
-\code{\link{see.minimum.GEBV}()},
+\code{\link{see.minimal.GEBV}()},
 \code{\link{see.optimal.GEBV}()},
 \code{\link{see.optimal.haplotype}()},
 \code{\link{see.optimal.possible.GEBV}()},

@@ -1,5 +1,5 @@
 Package: genomicSimulation
-Version: 0.2.4.004
+Version: 0.2.4.005
 Title: Simulate Selection And Crossing On SNP Markers
 Authors@R: c(person("Kira", "Villiers", role = c("aut", "cre"), email="kirav@protonmail.com"))
 Description: Fast functions to simulate breeding programs on SNP markers. 
@@ -7,11 +7,11 @@ Description: Fast functions to simulate breeding programs on SNP markers.
  Simulates crossovers and tracks phase in meiosis. Offers a selection of 
  pre-made selection methods as well as an interface to develop custom selection
  functions in R. 
-License: GPL (>= 2)
+License: MIT + file LICENSE
 URL: https://github.com/vllrs/genomicSimulation
 Encoding: UTF-8
 RoxygenNote: 7.2.3
 VignetteBuilder: knitr, rmarkdown
-Suggests: knitr, rmarkdown, reshape2, ggplot2, testthat (>= 3.0.0)
+Suggests: reshape2, ggplot2, testthat (>= 3.0.0)
 Config/testthat/edition: 3
 NeedsCompilation: yes

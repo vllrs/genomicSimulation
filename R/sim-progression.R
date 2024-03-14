@@ -1,6 +1,6 @@
 #' Performs random crosses between members of a group.
 #'
-#' \code{cross.randomly} returns the group number of the group
+#' \code{make.random.crosses} returns the group number of the group
 #' that the new genotypes were loaded into. Selfing is not permitted.
 #'
 #' For random crossing, the n.crosses parameter represents the number of 
@@ -61,19 +61,36 @@
 #'
 #' @family crossing functions
 #' @export
-cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+make.random.crosses <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, 
+		give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_cross_randomly, sim.data$p, group, n.crosses, cap, give.names, 
+	return(.Call(SXP_make_random_crosses, sim.data$p, group, n.crosses, cap, give.names, 
 	             name.prefix, offspring, track.pedigree, give.ids, file.prefix, 
 	             save.pedigree, save.gebv, save.genotype, retain))
 }
 
+#' OLD NAME | Performs random crosses between members of a group.
+#' 
+#' ! This is the old name for \code{make.random.crosses}. From genomicSimulation v0.2.5,
+#' \code{make.random.crosses} is the recommended name over \code{cross.randomly}. 
+#' \code{cross.randomly} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{make.random.crosses}
+#' 
+#' @keywords internal 
+#' @export
+cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		save.gebv=FALSE, save.genotype=FALSE) {
+  return(make.random.crosses(group=group,n.crosses=n.crosses,cap=cap,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
+}
 
 #' Performs random crosses between two groups.
 #'
-#' \code{cross.randomly.between} performs crosses where the first parent comes 
+#' \code{make.random.crosses.between} performs crosses where the first parent comes 
 #' from one group and the second from another. It returns the group number of the group
 #' that the new genotypes were loaded into.
 #'
@@ -102,28 +119,46 @@ cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, 
 #' @param cap2 If nonzero, this is the maximum number of times each member of 
 #' group2 can be used as the (second) parent of a cross.
 #' Set to 0 for no restriction on the number of offspring per parent.
-#' @inheritParams cross.randomly
+#' @inheritParams make.random.crosses
 #' @return The group number of the new crosses produced, or 0 if they could not be
 #' produced due to an invalid parent group number being provided.
 #'
 #' @family crossing functions
 #' @export
-cross.randomly.between <- function(group1, group2, cap1=0, cap2=0, 
+make.random.crosses.between <- function(group1, group2, cap1=0, cap2=0, 
 		n.crosses=5, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
   
-	return(.Call(SXP_cross_randomly_btwn, sim.data$p, as.integer(group1), 
+	return(.Call(SXP_make_random_crosses_between, sim.data$p, as.integer(group1), 
 	             as.integer(group2), cap1, cap2,
 				 n.crosses, give.names, name.prefix, offspring, track.pedigree, give.ids, 
 				 file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
+#' OLD NAME | Performs random crosses between two groups.
+#' 
+#' ! This is the old name for \code{make.random.crosses.between}. From genomicSimulation v0.2.5,
+#' \code{make.random.crosses.between} is the recommended name over \code{cross.randomly.between}. 
+#' \code{cross.randomly.between} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{make.random.crosses.between}
+#' 
+#' @keywords internal 
+#' @export
+cross.randomly.between <- function(group1, group2, cap1=0, cap2=0, 
+		n.crosses=5, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		save.gebv=FALSE, save.genotype=FALSE) {
+  return(make.random.crosses.between(group1=group1,group2=group2,cap1=cap1,cap2=cap2,n.crosses=n.crosses,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
+}
+
 
 #' Performs defined crosses as passed in as R vectors.
 #'
-#' \code{cross.combinations} returns the group number of the group
+#' \code{make.targeted.crosses} returns the group number of the group
 #' that the new genotypes were loaded into. 
 #'
 #' The offspring parameter represents the number of times each cross in the file
@@ -139,25 +174,43 @@ cross.randomly.between <- function(group1, group2, cap1=0, cap2=0,
 #' be carried out. Can be a vector of names or of indexes.
 #' @param second.parents a vector identifying the second parent in each cross to 
 #' be carried out. Can be a vector of names or of indexes.
-#' @inheritParams cross.randomly
+#' @inheritParams make.random.crosses
 #' @param offspring The number of times each combination in the file is crossed.
 #' @return The group number of the new crosses produced
 #'
 #' @family crossing functions
 #' @export
-cross.combinations <- function(first.parents, second.parents,
+make.targeted.crosses <- function(first.parents, second.parents,
 		offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_cross_Rcombinations, sim.data$p, first.parents, second.parents,
+	return(.Call(SXP_make_targeted_crosses, sim.data$p, first.parents, second.parents,
 				 give.names, name.prefix, offspring, track.pedigree, give.ids, 
 				 file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
+#' OLD NAME | Performs defined crosses as passed in as R vectors.
+#' 
+#' ! This is the old name for \code{make.targeted.crosses}. From genomicSimulation v0.2.5,
+#' \code{make.targeted.crosses} is the recommended name over \code{cross.combinations}. 
+#' \code{cross.combinations} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{make.targeted.crosses}
+#' 
+#' @keywords internal 
+#' @export
+cross.combinations <- function(first.parents, second.parents,
+		offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		save.gebv=FALSE, save.genotype=FALSE) {
+  return(make.targeted.crosses(first.parents=first.parents,second.parents=second.parents,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
+}
+
 #' Performs defined crosses as laid out in a file.
 #'
-#' \code{cross.combinations.file} returns the group number of the group
+#' \code{make.crosses.from.file} returns the group number of the group
 #' that the new genotypes were loaded into. 
 #'
 #' The offspring parameter represents the number of times each cross in the file
@@ -169,24 +222,41 @@ cross.combinations <- function(first.parents, second.parents,
 #' @param cross.file a string containing a filename. The file should be available
 #' to read and contain a tab-separated pair of names on each line. Each line
 #' represents a cross to make.
-#' @inheritParams cross.randomly
+#' @inheritParams make.random.crosses
 #' @param offspring The number of times each combination in the file is crossed.
 #' @return The group number of the new crosses produced
 #'
 #' @family crossing functions
 #' @export
-cross.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+make.crosses.from.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_cross_combinations, sim.data$p, cross.file, give.names, name.prefix, offspring, 
+	return(.Call(SXP_make_crosses_from_file, sim.data$p, cross.file, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+}
+
+#' OLD NAME | Performs defined crosses as laid out in a file.
+#' 
+#' ! This is the old name for \code{make.crosses.from.file}. From genomicSimulation v0.2.5,
+#' \code{make.crosses.from.file} is the recommended name over \code{cross.combinations.file}. 
+#' \code{cross.combinations.file} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{make.crosses.from.file}
+#' 
+#' @keywords internal 
+#' @export
+cross.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		save.gebv=FALSE, save.genotype=FALSE) {
+  return(make.crosses.from.file(cross.file=cross.file,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
 
 #' Performs defined crosses between children of known parents as 
 #' laid out in a file.
 #'
-#' \code{cross.dc.combinations.file} returns the group number of the group
+#' \code{make.double.crosses.from.file} returns the group number of the group
 #' that the new genotypes were loaded into. 
 #'
 #' The function is designed for use in a situation where you wish to cross
@@ -199,43 +269,79 @@ cross.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.n
 #' @param cross.file a string containing a filename. The file should be available
 #' to read and contain a tab-separated quartet of names on each line. Each line
 #' represents a cross to make.
-#' @inheritParams cross.randomly
+#' @inheritParams make.random.crosses
 #' @param offspring The number of times each combination in the file is crossed.
 #' @return The group number of the new crosses produced
 #'
 #' @family crossing functions
 #' @export
-cross.dc.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+make.double.crosses.from.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_dcross_combinations, sim.data$p, cross.file, give.names, name.prefix, offspring, 
+	return(.Call(SXP_make_double_crosses_from_file, sim.data$p, cross.file, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+}
+
+#' OLD NAME | Performs defined crosses between children of known parents as 
+#' laid out in a file.
+#' 
+#' ! This is the old name for \code{make.double.crosses.from.file}. From genomicSimulation v0.2.5,
+#' \code{make.double.crosses.from.file} is the recommended name over \code{cross.dc.combinations.file}. 
+#' \code{cross.dc.combinations.file} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{make.double.crosses.from.file}
+#' 
+#' @keywords internal 
+#' @export
+cross.dc.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		save.gebv=FALSE, save.genotype=FALSE) {
+  return(make.double.crosses.from.file(cross.file=cross.file,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
 
 #' Performs crosses between every line and every other line in a group
 #' in one direction
 #'
-#' \code{cross.all.pairs} returns the group number of the group
+#' \code{make.all.unidirectional.crosses} returns the group number of the group
 #' that the new genotypes were loaded into.
 #'
 #' The function performs one cross between each pair of genotypes in the
 #' group. Order of parents is not considered because in the simulation method
 #' this has no effect.
 #'
-#' @inheritParams cross.randomly
+#' @inheritParams make.random.crosses
 #' @param offspring The number of times each combination of group members is crossed.
 #' @return The group number of the new crosses produced, or 0 if they could not be
 #' produced due to an invalid parent group number being provided.
 #'
 #' @family crossing functions
 #' @export
-cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+make.all.unidirectional.crosses <- function(group, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_cross_unidirectional, sim.data$p, group, give.names, name.prefix,
+	return(.Call(SXP_make_all_unidirectional_crosses, sim.data$p, group, give.names, name.prefix,
 	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+}
+
+#' OLD NAME | Performs crosses between every line and every other line in a group
+#' in one direction
+#' 
+#' ! This is the old name for \code{make.all.unidirectional.crosses}. From genomicSimulation v0.2.5,
+#' \code{make.all.unidirectional.crosses} is the recommended name over \code{cross.all.pairs}. 
+#' \code{cross.all.pairs} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{make.all.unidirectional.crosses}
+#' 
+#' @keywords internal 
+#' @export
+cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		save.gebv=FALSE, save.genotype=FALSE) {
+  return(make.all.unidirectional.crosses(group=group,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
 
 #' Performs n selfing steps on the lines in a group
@@ -252,7 +358,7 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 #' independently descended from the original genotype.
 #'
 #' @param n An integer representing the number of steps of selfing to perform.
-#' @inheritParams cross.randomly
+#' @inheritParams make.random.crosses
 #' @param offspring This many offspring of each group member will be produced at the 
 #' first selfing step. After that step, exactly one selfed offspring from each
 #' parent will be progressed, no matter this value.
@@ -265,7 +371,7 @@ self.n.times <- function(group, n, offspring=1, retain=TRUE, give.names=FALSE, n
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_selfing, sim.data$p, group, n, give.names, name.prefix, offspring, 
+	return(.Call(SXP_self_n_times, sim.data$p, group, n, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }			
 			
@@ -282,7 +388,7 @@ self.n.times <- function(group, n, offspring=1, retain=TRUE, give.names=FALSE, n
 #' independently produced from the original genotype (i.e. a different gamete
 #' to duplicate is generated for each of them)
 #'
-#' @inheritParams cross.randomly
+#' @inheritParams make.random.crosses
 #' @param offspring The number of doubled haploids to make from each group member.
 #' @return The group number of the new genotypes produced, or 0 if none could be
 #' produced due to an invalid parent group number being provided.
@@ -293,7 +399,7 @@ make.doubled.haploids <- function(group, offspring=1, retain=TRUE,
 		give.names=FALSE, name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, 
 		file.prefix=NULL, save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_doubled, sim.data$p, group, give.names, name.prefix, offspring, 
+	return(.Call(SXP_make_doubled_haploids, sim.data$p, group, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -315,7 +421,7 @@ make.doubled.haploids <- function(group, offspring=1, retain=TRUE,
 #' of the setting of give.names. If inherit.names is false, then clones are either named 
 #' or left nameless according to the usual give.names/name.prefix settings.
 #'
-#' @inheritParams cross.randomly
+#' @inheritParams make.random.crosses
 #' @param offspring The number of clones to make from each group member.
 #' @param inherit.names Boolean, whether to give each clone the same name as the group
 #' member from which it was created. Overrides give.names.
@@ -328,7 +434,7 @@ make.clones <- function(group, offspring=1, retain=TRUE, inherit.names=TRUE,
 		give.names=FALSE, name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, 
 		file.prefix=NULL, save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_clone, sim.data$p, group, inherit.names, give.names, 
+	return(.Call(SXP_make_clones, sim.data$p, group, inherit.names, give.names, 
 				 name.prefix, offspring, track.pedigree, give.ids, file.prefix, save.pedigree,
 				 save.gebv, save.genotype, retain))
 }

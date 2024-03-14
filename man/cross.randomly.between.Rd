@@ -2,7 +2,7 @@
 % Please edit documentation in R/sim-progression.R
 \name{cross.randomly.between}
 \alias{cross.randomly.between}
-\title{Performs random crosses between two groups.}
+\title{OLD NAME | Performs random crosses between two groups.}
 \usage{
 cross.randomly.between(
   group1,
@@ -22,105 +22,13 @@ cross.randomly.between(
   save.genotype = FALSE
 )
 }
-\arguments{
-\item{group1}{The group number from which to draw the first parent of the random 
-crosses.}
-
-\item{group2}{The group number from which to draw the second parent of the random 
-crosses.}
-
-\item{cap1}{If nonzero, this is the maximum number of times each member of 
-group1 can be used as the (first) parent of a cross.
-Set to 0 for no restriction on the number of offspring per parent.}
-
-\item{cap2}{If nonzero, this is the maximum number of times each member of 
-group2 can be used as the (second) parent of a cross.
-Set to 0 for no restriction on the number of offspring per parent.}
-
-\item{n.crosses}{The function will pick this many random pairs of parents
-to cross.}
-
-\item{offspring}{The number of times to cross each randomly-chosen pair.}
-
-\item{retain}{A boolean, repesenting whether to save the generated
-genotypes to memory or discard them. You may wish to discard them
-but save to file if you are generating too many crosses to save into
-memory.}
-
-\item{give.names}{A boolean representing whether or not to produce names
-for the new genotypes generated. The names produced would have format [name.prefix][id]}
-
-\item{name.prefix}{A string. If give.names is TRUE, the id is concatenated to 
-this to produce the name of each new genotype.}
-
-\item{track.pedigree}{A boolean representing whether or not to save the ids
-of the parents of each new genotype to the new genotype's pedigree. If this is 
-false, the new genotype's pedigree is unknown.}
-
-\item{give.ids}{A boolean representing whether or not to allocate each new 
-genotype an id. If this is FALSE, the new genotype is 'invisible' to pedigree trackers and
-even if the pedigree of its offspring is supposedly tracked, the pedigree trackers
-will not be able to identify the progenitors of its offspring. Furthermore, if it is
-false and names are generated using give.names, all names generated in the same group will
-be the same. Probably you'd only have this FALSE if you were discarding the results or worried
-about id overflow.}
-
-\item{file.prefix}{A string representing the prefix of files produced if save.pedigree=TRUE, 
-save.gebv=TRUE, or save.genotype=TRUE.}
-
-\item{save.pedigree}{A boolean. If TRUE, saves the pedigree in recursive format of each
-generated genotype to the file with filename "[file.prefix]-pedigree". This is a text file. 
-Generated genotypes are saved progressively (up to 1000 at a time), so if the 
-full result of a crosser function call will not fit in memory, this setting can allow
-you to still get results.}
-
-\item{save.gebv}{A boolean. If TRUE, saves the GEBVs of each generated genotype to the
-file with filename "[file.prefix]-eff". This is a tab-separated text file. 
-Valuse for generated genotypes are calculated and saved progressively (up to 1000 at a 
-time), so if the full result of a crosser function call will not fit in memory, this 
-setting can allow you to still get results.}
-
-\item{save.genotype}{A boolean. If TRUE, saves the SNP/line matrix in regular format
-(generated genotypes as rows, SNPs as columns) to the file with filename 
-"[file.prefix]-genome". This is a tab-separated text file. 
-Generated genotypes are saved progressively (up to 1000 at a time), so if the 
-full result of a crosser function call will not fit in memory, this setting can allow
-you to still get results.}
-}
-\value{
-The group number of the new crosses produced, or 0 if they could not be
-produced due to an invalid parent group number being provided.
-}
 \description{
-\code{cross.randomly.between} performs crosses where the first parent comes 
-from one group and the second from another. It returns the group number of the group
-that the new genotypes were loaded into.
-}
-\details{
-For random crossing, the n.crosses parameter represents the number of 
-random crosses to perform. Each cross will be repeated a number of times
-determined by the offspring parameter. Each member of a group becomes 
-a parent with equal probability.
-
-If the user only wants one parent to be randomly chosen, the flag `set.parent1`
-can be set to TRUE, in which case `group1` will instead be interpreted as the 
-index of an individual genotype, to which members of the other group will be crossed.
-(and similarly the second parent can be set using `set.parent2`. A reminder 
-that parent order affects nothing but pedigree printing, so pick whichever.)
-
-Parameters set.parent1 and set.parent2 are deprecated and removed!
-Use make.group and combine.groups to temporarily move an individual to their own group
-if you wish to cross randomly from a group to an individual.
+! This is the old name for \code{make.random.crosses.between}. From genomicSimulation v0.2.5,
+\code{make.random.crosses.between} is the recommended name over \code{cross.randomly.between}. 
+\code{cross.randomly.between} may become deprecated in future, when the package reaches 
+stability.
 }
 \seealso{
-Other crossing functions: 
-\code{\link{cross.all.pairs}()},
-\code{\link{cross.combinations.file}()},
-\code{\link{cross.combinations}()},
-\code{\link{cross.dc.combinations.file}()},
-\code{\link{cross.randomly}()},
-\code{\link{make.clones}()},
-\code{\link{make.doubled.haploids}()},
-\code{\link{self.n.times}()}
+\link{make.random.crosses.between}
 }
-\concept{crossing functions}
+\keyword{internal}

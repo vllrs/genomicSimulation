@@ -1,7 +1,7 @@
 test_that("make.group moves the correct genotypes to a new group", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   g <- init$groupNum
-  g2 <- cross.randomly(g, n.crosses=5, offspring=1, give.names=TRUE, name.prefix="cr")
+  g2 <- make.random.crosses(g, n.crosses=5, offspring=1, give.names=TRUE, name.prefix="cr")
   
   #setup worked as expected
   expect_identical(see.group.data(g, "XIndexes"), c(0L, 1L, 2L, 3L, 4L, 5L))
@@ -35,8 +35,8 @@ test_that("labels can be used to split groups", {
   
   #Label should be:
   # -1; 1; 5; 1; 2; 3
-  g1 <- make.group.from.label(1L, -1)
-  g2 <- make.group.from.label.range(1L, 3, 10)
+  g1 <- break.group.by.label.value(1L, -1)
+  g2 <- break.group.by.label.range(1L, 3, 10)
   
   expect_identical(see.group.data(g1, "Names"), c("G01"))
   expect_identical(see.group.data(g2, "Names"), c("G03", "G06"))
@@ -79,9 +79,9 @@ test_that("break.group.into.families runs successfully", {
   g <- init$groupNum
   
   #setup
-  g2 <- cross.combinations(0L,1L, give.names=T, name.prefix="two") #two7
-  g3 <- cross.combinations(0L,4L, offspring=4, give.names=T, name.prefix="three") #three8, three9, three10, three11
-  g4 <- cross.combinations(3L,6L, offspring=3, give.names=T, name.prefix="four") #four12, four13, four14
+  g2 <- make.targeted.crosses(0L,1L, give.names=T, name.prefix="two") #two7
+  g3 <- make.targeted.crosses(0L,4L, offspring=4, give.names=T, name.prefix="three") #three8, three9, three10, three11
+  g4 <- make.targeted.crosses(3L,6L, offspring=3, give.names=T, name.prefix="four") #four12, four13, four14
   gcom <- combine.groups(c(g2,g3,g4))
   
   #setup works as expected
@@ -104,9 +104,9 @@ test_that("break.group.into.halfsib.families runs successfully", {
   g <- init$groupNum
   
   #setup
-  g2 <- cross.combinations(0L,1L, give.names=T, name.prefix="two") #two7
-  g3 <- cross.combinations(0L,4L, offspring=4, give.names=T, name.prefix="three") #three8, three9, three10, three11
-  g4 <- cross.combinations(3L,6L, offspring=3, give.names=T, name.prefix="four") #four12, four13, four14
+  g2 <- make.targeted.crosses(0L,1L, give.names=T, name.prefix="two") #two7
+  g3 <- make.targeted.crosses(0L,4L, offspring=4, give.names=T, name.prefix="three") #three8, three9, three10, three11
+  g4 <- make.targeted.crosses(3L,6L, offspring=3, give.names=T, name.prefix="four") #four12, four13, four14
   gcom <- combine.groups(c(g2,g3,g4))
   
   #setup works as expected
@@ -173,7 +173,7 @@ test_that("break.group.evenly runs successfully", {
   g <- init$groupNum
   
   #setup
-  g2 <- cross.randomly(g, 20)
+  g2 <- make.random.crosses(g, 20)
   
   fs <- break.group.evenly(g)
   f2s <- break.group.evenly(g2, 3)
@@ -189,7 +189,7 @@ test_that("break.group.into.buckets runs successfully", {
   g <- init$groupNum
   
   #setup
-  g2 <- cross.randomly(g, 20)
+  g2 <- make.random.crosses(g, 20)
   
   fs <- break.group.into.buckets(g2, c(3L,13L))
   
@@ -203,21 +203,21 @@ test_that("break.group.into.buckets runs successfully", {
 })
 
 
-test_that("select.by.gebv runs successfully", {
+test_that("break.group.by.GEBV runs successfully", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
-  expect_identical(see.group.data(select.by.gebv(init$groupNum, number=5), "X"), c(0L,1L,2L,3L,4L))
+  expect_identical(see.group.data(break.group.by.GEBV(init$groupNum, number=5), "X"), c(0L,1L,2L,3L,4L))
   
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
-  expect_identical(see.group.data(select.by.gebv(init$groupNum, low.score.best=T, number=2), "X"), c(3L,5L))
+  expect_identical(see.group.data(break.group.by.GEBV(init$groupNum, low.score.best=T, number=2), "X"), c(3L,5L))
   
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
-  expect_identical(see.group.data(select.by.gebv(init$groupNum, percentage=50), "X"), c(0L,1L,2L))
+  expect_identical(see.group.data(break.group.by.GEBV(init$groupNum, percentage=50), "X"), c(0L,1L,2L))
   
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
-  expect_identical(see.group.data(select.by.gebv(init$groupNum, low.score.best=T, percentage=20), "X"), c(5L))
+  expect_identical(see.group.data(break.group.by.GEBV(init$groupNum, low.score.best=T, percentage=20), "X"), c(5L))
   
-  expect_error(select.by.gebv(g, low.score.best=T),"Exactly one of parameters `percentage` and `number` must be set.")
-  expect_error(select.by.gebv(g, percentage=20, number=2),"Exactly one of parameters `percentage` and `number` must be set.")
+  expect_error(break.group.by.GEBV(g, low.score.best=T),"Exactly one of parameters `percentage` and `number` must be set.")
+  expect_error(break.group.by.GEBV(g, percentage=20, number=2),"Exactly one of parameters `percentage` and `number` must be set.")
   
   clear.simdata()
 })

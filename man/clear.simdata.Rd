@@ -13,7 +13,7 @@ package's internal SimData struct (sim.data$p). Returns 0 on success.
 \seealso{
 Other loader functions: 
 \code{\link{load.data}()},
-\code{\link{load.different.effects}()},
+\code{\link{load.more.effects}()},
 \code{\link{load.more.genotypes}()}
 }
 \concept{loader functions}

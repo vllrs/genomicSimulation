@@ -32,6 +32,9 @@ the parent most recently identified as having given an allele.}
 have come from one parent or another, and so estimates the sections
 of the genotype that must have come from each parent.
 }
+\details{
+**Experimental function: may be changed or removed at any time, and result validity is not promised.**
+}
 \seealso{
 \code{\link{find.plot.crossovers}}, which performs the same calculations
 but also produces a plot.

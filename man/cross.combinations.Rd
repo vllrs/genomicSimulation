@@ -2,7 +2,7 @@
 % Please edit documentation in R/sim-progression.R
 \name{cross.combinations}
 \alias{cross.combinations}
-\title{Performs defined crosses as passed in as R vectors.}
+\title{OLD NAME | Performs defined crosses as passed in as R vectors.}
 \usage{
 cross.combinations(
   first.parents,
@@ -19,86 +19,13 @@ cross.combinations(
   save.genotype = FALSE
 )
 }
-\arguments{
-\item{first.parents}{a vector identifying the first parent in each cross to
-be carried out. Can be a vector of names or of indexes.}
-
-\item{second.parents}{a vector identifying the second parent in each cross to 
-be carried out. Can be a vector of names or of indexes.}
-
-\item{offspring}{The number of times each combination in the file is crossed.}
-
-\item{retain}{A boolean, repesenting whether to save the generated
-genotypes to memory or discard them. You may wish to discard them
-but save to file if you are generating too many crosses to save into
-memory.}
-
-\item{give.names}{A boolean representing whether or not to produce names
-for the new genotypes generated. The names produced would have format [name.prefix][id]}
-
-\item{name.prefix}{A string. If give.names is TRUE, the id is concatenated to 
-this to produce the name of each new genotype.}
-
-\item{track.pedigree}{A boolean representing whether or not to save the ids
-of the parents of each new genotype to the new genotype's pedigree. If this is 
-false, the new genotype's pedigree is unknown.}
-
-\item{give.ids}{A boolean representing whether or not to allocate each new 
-genotype an id. If this is FALSE, the new genotype is 'invisible' to pedigree trackers and
-even if the pedigree of its offspring is supposedly tracked, the pedigree trackers
-will not be able to identify the progenitors of its offspring. Furthermore, if it is
-false and names are generated using give.names, all names generated in the same group will
-be the same. Probably you'd only have this FALSE if you were discarding the results or worried
-about id overflow.}
-
-\item{file.prefix}{A string representing the prefix of files produced if save.pedigree=TRUE, 
-save.gebv=TRUE, or save.genotype=TRUE.}
-
-\item{save.pedigree}{A boolean. If TRUE, saves the pedigree in recursive format of each
-generated genotype to the file with filename "[file.prefix]-pedigree". This is a text file. 
-Generated genotypes are saved progressively (up to 1000 at a time), so if the 
-full result of a crosser function call will not fit in memory, this setting can allow
-you to still get results.}
-
-\item{save.gebv}{A boolean. If TRUE, saves the GEBVs of each generated genotype to the
-file with filename "[file.prefix]-eff". This is a tab-separated text file. 
-Valuse for generated genotypes are calculated and saved progressively (up to 1000 at a 
-time), so if the full result of a crosser function call will not fit in memory, this 
-setting can allow you to still get results.}
-
-\item{save.genotype}{A boolean. If TRUE, saves the SNP/line matrix in regular format
-(generated genotypes as rows, SNPs as columns) to the file with filename 
-"[file.prefix]-genome". This is a tab-separated text file. 
-Generated genotypes are saved progressively (up to 1000 at a time), so if the 
-full result of a crosser function call will not fit in memory, this setting can allow
-you to still get results.}
-}
-\value{
-The group number of the new crosses produced
-}
 \description{
-\code{cross.combinations} returns the group number of the group
-that the new genotypes were loaded into.
-}
-\details{
-The offspring parameter represents the number of times each cross in the file
-is carried out.
-
-Parents of each cross can be identified by name or by index. The first 
-entry in the first.parents vector and the first entry in the second.parents 
-vector are crossed to make the first offspring, then the next offspring comes 
-from crossing the parent identified at first.parents[2] with the
-parent identified at second.parents[2], etc.
+! This is the old name for \code{make.targeted.crosses}. From genomicSimulation v0.2.5,
+\code{make.targeted.crosses} is the recommended name over \code{cross.combinations}. 
+\code{cross.combinations} may become deprecated in future, when the package reaches 
+stability.
 }
 \seealso{
-Other crossing functions: 
-\code{\link{cross.all.pairs}()},
-\code{\link{cross.combinations.file}()},
-\code{\link{cross.dc.combinations.file}()},
-\code{\link{cross.randomly.between}()},
-\code{\link{cross.randomly}()},
-\code{\link{make.clones}()},
-\code{\link{make.doubled.haploids}()},
-\code{\link{self.n.times}()}
+\link{make.targeted.crosses}
 }
-\concept{crossing functions}
+\keyword{internal}

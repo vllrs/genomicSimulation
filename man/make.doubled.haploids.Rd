@@ -89,13 +89,13 @@ to duplicate is generated for each of them)
 }
 \seealso{
 Other crossing functions: 
-\code{\link{cross.all.pairs}()},
-\code{\link{cross.combinations.file}()},
-\code{\link{cross.combinations}()},
-\code{\link{cross.dc.combinations.file}()},
-\code{\link{cross.randomly.between}()},
-\code{\link{cross.randomly}()},
+\code{\link{make.all.unidirectional.crosses}()},
 \code{\link{make.clones}()},
+\code{\link{make.crosses.from.file}()},
+\code{\link{make.double.crosses.from.file}()},
+\code{\link{make.random.crosses.between}()},
+\code{\link{make.random.crosses}()},
+\code{\link{make.targeted.crosses}()},
 \code{\link{self.n.times}()}
 }
 \concept{crossing functions}
