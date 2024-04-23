@@ -63,11 +63,11 @@
 #' @export
 make.random.crosses <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, 
 		give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_random_crosses, sim.data$p, group, n.crosses, cap, give.names, 
-	             name.prefix, offspring, track.pedigree, give.ids, file.prefix, 
+	             name.prefix, offspring, track.pedigree, give.ids, fs::path_expand(file.prefix), 
 	             save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -83,9 +83,12 @@ make.random.crosses <- function(group, n.crosses=5, cap=0, offspring=1, retain=T
 #' @keywords internal 
 #' @export
 cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
-  return(make.random.crosses(group=group,n.crosses=n.crosses,cap=cap,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
+  return(make.random.crosses(group=group,n.crosses=n.crosses,cap=cap,offspring=offspring,
+                             retain=retain,give.names=give.names,name.prefix=name.prefix,
+                             track.pedigree=track.pedigree,give.ids=give.ids,
+                             file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
 
 #' Performs random crosses between two groups.
@@ -127,14 +130,14 @@ cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, 
 #' @export
 make.random.crosses.between <- function(group1, group2, cap1=0, cap2=0, 
 		n.crosses=5, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
   
 	return(.Call(SXP_make_random_crosses_between, sim.data$p, as.integer(group1), 
 	             as.integer(group2), cap1, cap2,
 				 n.crosses, give.names, name.prefix, offspring, track.pedigree, give.ids, 
-				 file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+				 fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' OLD NAME | Performs random crosses between two groups.
@@ -150,7 +153,7 @@ make.random.crosses.between <- function(group1, group2, cap1=0, cap2=0,
 #' @export
 cross.randomly.between <- function(group1, group2, cap1=0, cap2=0, 
 		n.crosses=5, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
   return(make.random.crosses.between(group1=group1,group2=group2,cap1=cap1,cap2=cap2,n.crosses=n.crosses,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
@@ -182,12 +185,12 @@ cross.randomly.between <- function(group1, group2, cap1=0, cap2=0,
 #' @export
 make.targeted.crosses <- function(first.parents, second.parents,
 		offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_targeted_crosses, sim.data$p, first.parents, second.parents,
 				 give.names, name.prefix, offspring, track.pedigree, give.ids, 
-				 file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+				 fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' OLD NAME | Performs defined crosses as passed in as R vectors.
@@ -203,7 +206,7 @@ make.targeted.crosses <- function(first.parents, second.parents,
 #' @export
 cross.combinations <- function(first.parents, second.parents,
 		offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
   return(make.targeted.crosses(first.parents=first.parents,second.parents=second.parents,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
@@ -229,11 +232,11 @@ cross.combinations <- function(first.parents, second.parents,
 #' @family crossing functions
 #' @export
 make.crosses.from.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_crosses_from_file, sim.data$p, cross.file, give.names, name.prefix, offspring, 
-				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+				 track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' OLD NAME | Performs defined crosses as laid out in a file.
@@ -248,9 +251,9 @@ make.crosses.from.file <- function(cross.file, offspring=1, retain=TRUE, give.na
 #' @keywords internal 
 #' @export
 cross.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
-  return(make.crosses.from.file(cross.file=cross.file,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
+  return(make.crosses.from.file(cross.file=cross.file,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=fs::path_expand(file.prefix),save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
 
 #' Performs defined crosses between children of known parents as 
@@ -276,11 +279,11 @@ cross.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.n
 #' @family crossing functions
 #' @export
 make.double.crosses.from.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_double_crosses_from_file, sim.data$p, cross.file, give.names, name.prefix, offspring, 
-				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+				 track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' OLD NAME | Performs defined crosses between children of known parents as 
@@ -296,7 +299,7 @@ make.double.crosses.from.file <- function(cross.file, offspring=1, retain=TRUE, 
 #' @keywords internal 
 #' @export
 cross.dc.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
   return(make.double.crosses.from.file(cross.file=cross.file,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
@@ -319,11 +322,11 @@ cross.dc.combinations.file <- function(cross.file, offspring=1, retain=TRUE, giv
 #' @family crossing functions
 #' @export
 make.all.unidirectional.crosses <- function(group, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_all_unidirectional_crosses, sim.data$p, group, give.names, name.prefix,
-	             offspring, track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+	             offspring, track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' OLD NAME | Performs crosses between every line and every other line in a group
@@ -339,7 +342,7 @@ make.all.unidirectional.crosses <- function(group, offspring=1, retain=TRUE, giv
 #' @keywords internal 
 #' @export
 cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
   return(make.all.unidirectional.crosses(group=group,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
@@ -368,11 +371,11 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 #' @family crossing functions
 #' @export
 self.n.times <- function(group, n, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
-		track.pedigree=TRUE, give.ids=TRUE, file.prefix=NULL, save.pedigree=FALSE, 
+		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_self_n_times, sim.data$p, group, n, give.names, name.prefix, offspring, 
-				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+				 track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }			
 			
 #' Creates doubled haploids from each genotype in a group
@@ -397,10 +400,10 @@ self.n.times <- function(group, n, offspring=1, retain=TRUE, give.names=FALSE, n
 #' @export
 make.doubled.haploids <- function(group, offspring=1, retain=TRUE, 
 		give.names=FALSE, name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, 
-		file.prefix=NULL, save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
+		file.prefix="", save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_doubled_haploids, sim.data$p, group, give.names, name.prefix, offspring, 
-				 track.pedigree, give.ids, file.prefix, save.pedigree, save.gebv, save.genotype, retain))
+				 track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' Creates a genetically identical copy of each member of a group
@@ -432,9 +435,9 @@ make.doubled.haploids <- function(group, offspring=1, retain=TRUE,
 #' @export
 make.clones <- function(group, offspring=1, retain=TRUE, inherit.names=TRUE, 
 		give.names=FALSE, name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, 
-		file.prefix=NULL, save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
+		file.prefix="", save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_clones, sim.data$p, group, inherit.names, give.names, 
-				 name.prefix, offspring, track.pedigree, give.ids, file.prefix, save.pedigree,
+				 name.prefix, offspring, track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree,
 				 save.gebv, save.genotype, retain))
 }

@@ -52,7 +52,7 @@ save.genome.model <- function(filename) {
 #' @export
 save.genotypes <- function(filename, group=NULL, type="R") {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_genotypes, sim.data$p, filename, group, type))
+	return(.Call(SXP_save_genotypes, sim.data$p, fs::path_expand(filename), group, type))
 }
 
 #' Generate and save count matrices for alleles in the SimData
@@ -80,7 +80,7 @@ save.genotypes <- function(filename, group=NULL, type="R") {
 #' @export
 save.allele.counts <- function(filename, group=NULL, allele) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_allele_counts, sim.data$p, filename, group, allele))
+	return(.Call(SXP_save_allele_counts, sim.data$p, fs::path_expand(filename), group, allele))
 }
 
 #' Save the pedigrees of genotypes currently saved to the SimData
@@ -129,7 +129,7 @@ save.allele.counts <- function(filename, group=NULL, allele) {
 #' @export
 save.pedigrees <- function(filename, group=NULL, type="R") {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_pedigrees, sim.data$p, filename, group, type))
+	return(.Call(SXP_save_pedigrees, sim.data$p, fs::path_expand(filename), group, type))
 }
 
 #' Save the GEBVs of genotypes currently saved to the SimData.
@@ -155,7 +155,7 @@ save.pedigrees <- function(filename, group=NULL, type="R") {
 #' @aliases save.gebvs
 save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_GEBVs, sim.data$p, filename, group, eff.set))
+	return(.Call(SXP_save_GEBVs, sim.data$p, fs::path_expand(filename), group, eff.set))
 }
 
 #' Save the local GEBVs of each block in each selected line's haplotypes to a file, using
@@ -184,7 +184,7 @@ save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 #' @aliases save.local.gebvs.blocks.from.file
 save.local.GEBVs.blocks.from.file <- function(filename, block.file, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_local_GEBVs_blocks_from_file, sim.data$p, filename, block.file, group, eff.set))
+	return(.Call(SXP_save_local_GEBVs_blocks_from_file, sim.data$p, fs::path_expand(filename), block.file, group, eff.set))
 }
 
 #' OLD NAME | Save the local GEBVs of each block in each selected line's 
@@ -201,7 +201,7 @@ save.local.GEBVs.blocks.from.file <- function(filename, block.file, group=NULL, 
 #' @export
 #' @aliases save.local.gebvs.by.file
 save.local.GEBVs.by.file <- function(filename, block.file, group=NULL, eff.set=1L) {
-  return(save.local.GEBVs.blocks.from.file(filename,block.file,group,eff.set))
+  return(save.local.GEBVs.blocks.from.file(filename,fs::path_expand(filename),group,eff.set))
 }
 
 #' Save the local GEBVs of each block in each selected line's haplotypes to a file,
@@ -228,7 +228,7 @@ save.local.GEBVs.by.file <- function(filename, block.file, group=NULL, eff.set=1
 #' @aliases save.local.gebvs.blocks.from.chrsplit
 save.local.GEBVs.blocks.from.chrsplit <- function(filename, n.blocks.per.chr, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_local_GEBVs_blocks_from_chrsplit, sim.data$p, filename, n.blocks.per.chr, group, eff.set))
+	return(.Call(SXP_save_local_GEBVs_blocks_from_chrsplit, sim.data$p, fs::path_expand(filename), n.blocks.per.chr, group, eff.set))
 }
 
 #' OLD NAME | Save the local GEBVs of each block in each selected line's haplotypes to a file,
@@ -245,5 +245,5 @@ save.local.GEBVs.blocks.from.chrsplit <- function(filename, n.blocks.per.chr, gr
 #' @export
 #' @aliases save.local.gebvs.by.chr
 save.local.GEBVs.by.chr <- function(filename, n.blocks.per.chr, group=NULL, eff.set=1L) {
-  return(save.local.GEBVs.blocks.from.chrsplit(filename,n.blocks.per.chr,group,eff.set))
+  return(save.local.GEBVs.blocks.from.chrsplit(fs::path_expand(filename),n.blocks.per.chr,group,eff.set))
 }

@@ -1,12 +1,13 @@
-## New Features 
+## New Features
 
-- Can now observe the values of custom labels using `see.group.data`. 
+- Can now observe the values of custom labels using `see.group.data`.
 
 ## Bug Fixes
 
 - Fixed a bug where some genotypes lost their group numbers during internal data-structure tidying in large simulations.
+- Input/output file paths can now include the tilde `~` character to represent the home directory, thanks to R package `fs`.
 
-## Improvements 
+## Improvements
 
 - Some culling of (unused) dependencies means we can now release genomicSimulation (R version) under the same MIT license as the C version.
 - Increased function naming consistency between R and C versions of the package. However, this means some R functions have changed names. Old function names still work (they directly call the new function name), but sometime in the future the old names may be removed. (Old name) -> (new recommended name) pairs for the R package are as follows:
@@ -24,13 +25,13 @@
 	- cross.all.pairs ->             make.all.unidirectional.crosses
 	- save.local.GEBVs.by.file ->    save.local.GEBVs.blocks.from.file
 	- save.local.GEBVs.by.chr ->     save.local.GEBVs.blocks.from.chrsplit
-- genomicSimulation now calls R_Calloc/R_Free for memory allocation rather than stdlib's malloc/free. 
+- genomicSimulation now calls R_Calloc/R_Free for memory allocation rather than stdlib's malloc/free.
 - Under-the-hood improvements to crossing functions and to the internal tidying function.
 - Same script and same random seed will produce different genotypes post-v0.2.4.003, because gametes are now generated successively (first one, then the other) rather than simultaneously.
 
 # genomicSimulation 0.2.4.003
 
-## Bug Fixes 
+## Bug Fixes
 
 - Group modification functions no longer crash R if there are more than 10 groups in existence.
 
@@ -53,11 +54,11 @@
 
 ## Improvements
 
-- BREAKING CHANGE: When load.data is called with an effect file, the return value is now a list containing an element $groupNum (identical to the old return value) and an element $effectID (representing the identifier of the marker effect set loaded). 
+- BREAKING CHANGE: When load.data is called with an effect file, the return value is now a list containing an element $groupNum (identical to the old return value) and an element $effectID (representing the identifier of the marker effect set loaded).
 - The save-as-you-go setting for saving breeding values in GenOptions now takes the identifier for a set of marker effects, if you wish to save the breeding values from that set of marker effects, or 0, to not use the save-as-you-go functionality.
- 
+
 ## Bug Fixes
-- Standardised file-output functions so that genotype names are consistently substituted with their PedigreeIDs, if the genotype does not have a name. 
+- Standardised file-output functions so that genotype names are consistently substituted with their PedigreeIDs, if the genotype does not have a name.
 - Stopped save-as-you-go genotype saving repeating the header row (of genetic marker names) every 1000 rows. The header row now only appears in the first row.
 - Semicolon separators appear correctly in the output of save_marker_blocks
 - Pedigrees are printed consistently between group-specific and whole-simulation variants of the same function. Parents are no longer skipped in favour of starting with grandparents in group-specific functions.
@@ -69,11 +70,11 @@
 
 - genomicSimulation had a chance of crashing on load.data for certain marker effect files. The chance was higher for effect files listing few markers or listing many alleles. This release is a quick-fix for this bug.
 
-# genomicSimulation 0.2.3 
+# genomicSimulation 0.2.3
 
 ## Improvements
 
-- Added new functions to calculate the optimal haplotype and breeding value possible using only the alleles present in a particular group. 
+- Added new functions to calculate the optimal haplotype and breeding value possible using only the alleles present in a particular group.
 	- `see.optimal.possible.GEBV`
 	- `see.optimal.possible.haplotype`
 - Increased name reading buffer from 30 to 45 as a temporary fix to allow longer marker names to be loaded.
@@ -101,9 +102,9 @@
 
 # genomicSimulation 0.2.1
 
-## Improvements 
+## Improvements
 
-- `delete.group` can now be passed a vector of group ids to delete from memory. Previously it could only delete a single group at a time. 
+- `delete.group` can now be passed a vector of group ids to delete from memory. Previously it could only delete a single group at a time.
 - Added new group splitting functions:
 	- `break.group.into.halfsib.families`
 	- `break.group.evenly`
@@ -111,7 +112,7 @@
 	- `break.group.randomly`
 	- `break.group.with.probabilities`
 - Added function `cross.randomly.between` to perform crosses where one parent is picked randomly from one group and the other from another group.
-- Added option to have a cap on the number of uses of each group member as a parent of a cross in `cross.randomly` and `cross.randomly.between`. 
+- Added option to have a cap on the number of uses of each group member as a parent of a cross in `cross.randomly` and `cross.randomly.between`.
 - Added function `make.clones` to clone or duplicate members of a group.
 
 ## Bug Fixes
@@ -155,7 +156,7 @@
 
 - `cross.combinations` split into `cross.combinations.file` and `cross.combinations`
 - `cross.dc.combinations` renamed to `cross.dc.combinations.file` for consistency
-- `save.local.GEBVs` split into to `save.local.GEBVs.by.chr` and `save.local.GEBVs.by.file` 
+- `save.local.GEBVs` split into to `save.local.GEBVs.by.chr` and `save.local.GEBVs.by.file`
 
 
 # genomicSimulation 0.1-3
@@ -167,7 +168,7 @@
 - Removed most R CMD check warnings and notes
 - C code brought inline with sister repo genomicSimulationC, which ensures bugs in C code will be found faster.
 
-## Bug fixes 
+## Bug fixes
 
 - Local GEBV calculator now only requests reasonable amounts of memory, so can be run outside of HPC environment
 - Ability to load files with more than 1000 genotypes has been added.

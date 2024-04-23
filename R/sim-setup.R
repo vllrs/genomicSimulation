@@ -19,11 +19,16 @@
 #' @family loader functions
 #' @export
 load.data <- function(allele.file, map.file, effect.file=NULL) {
-	sim.data$p <- .Call(SXP_load_data, allele.file, map.file, effect.file)
 	#the group number of the first group is always 1
 	if (is.null(effect.file)) {
+	  sim.data$p <- .Call(SXP_load_data, fs::path_expand(allele.file), 
+	                      fs::path_expand(map.file), 
+	                      NULL)
 		return(c(groupNum=1L)) 
 	} else {
+	  sim.data$p <- .Call(SXP_load_data, fs::path_expand(allele.file), 
+	                      fs::path_expand(map.file), 
+	                      fs::path_expand(effect.file))
 		return(list(groupNum=1L,effectID=1L))
 	}
 }
@@ -41,7 +46,7 @@ load.data <- function(allele.file, map.file, effect.file=NULL) {
 #' @export
 load.more.genotypes <- function(allele.file) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_load_more_genotypes, sim.data$p, allele.file)) 
+	return(.Call(SXP_load_more_genotypes, sim.data$p, fs::path_expand(allele.file))) 
 }
 
 #' Add a new set of marker effect values
@@ -59,7 +64,7 @@ load.more.genotypes <- function(allele.file) {
 #' @export
 load.more.effects <- function(effect.file) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_load_more_effects, sim.data$p, effect.file)) 
+	return(.Call(SXP_load_more_effects, sim.data$p, fs::path_expand(effect.file))) 
 }
 
 #' OLD NAME | Add a new set of marker effect values
