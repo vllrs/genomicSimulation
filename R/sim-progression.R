@@ -17,6 +17,9 @@
 #' @param cap If nonzero, this is the maximum number of times each member of 
 #' the group can be used as the parent of a cross.
 #' Set to 0 for no restriction on the number of offspring per parent.
+#' @param map The identifier for the recombination map with which gametes 
+#' from members of @a group will be generated. By default uses the oldest 
+#' loaded map currently active in simulation
 #' @param n.crosses The function will pick this many random pairs of parents
 #' to cross.
 #' @param offspring The number of times to cross each randomly-chosen pair. 
@@ -61,12 +64,12 @@
 #'
 #' @family crossing functions
 #' @export
-make.random.crosses <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, 
+make.random.crosses <- function(group, n.crosses=5, cap=0, map=0L, offspring=1, retain=TRUE, 
 		give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_make_random_crosses, sim.data$p, group, n.crosses, cap, give.names, 
+	return(.Call(SXP_make_random_crosses, sim.data$p, group, n.crosses, cap, map, give.names, 
 	             name.prefix, offspring, track.pedigree, give.ids, fs::path_expand(file.prefix), 
 	             save.pedigree, save.gebv, save.genotype, retain))
 }
@@ -122,20 +125,26 @@ cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, 
 #' @param cap2 If nonzero, this is the maximum number of times each member of 
 #' group2 can be used as the (second) parent of a cross.
 #' Set to 0 for no restriction on the number of offspring per parent.
+#' @param map1 The identifier for the recombination map with which gametes 
+#' from members of @a group1 will be generated. By default uses the oldest 
+#' loaded map currently active in simulation
+#' @param map2 The identifier for the recombination map with which gametes 
+#' from members of @a group2 will be generated. By default uses the oldest 
+#' loaded map currently active in simulation
 #' @inheritParams make.random.crosses
 #' @return The group number of the new crosses produced, or 0 if they could not be
 #' produced due to an invalid parent group number being provided.
 #'
 #' @family crossing functions
 #' @export
-make.random.crosses.between <- function(group1, group2, cap1=0, cap2=0, 
-		n.crosses=5, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+make.random.crosses.between <- function(group1, group2, n.crosses=5, cap1=0, cap2=0, 
+	  map1=0L, map2=0L, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
   
 	return(.Call(SXP_make_random_crosses_between, sim.data$p, as.integer(group1), 
-	             as.integer(group2), cap1, cap2,
+	             as.integer(group2), cap1, cap2, map1, map2,
 				 n.crosses, give.names, name.prefix, offspring, track.pedigree, give.ids, 
 				 fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
@@ -177,19 +186,25 @@ cross.randomly.between <- function(group1, group2, cap1=0, cap2=0,
 #' be carried out. Can be a vector of names or of indexes.
 #' @param second.parents a vector identifying the second parent in each cross to 
 #' be carried out. Can be a vector of names or of indexes.
+#' @param map1 The identifier for the recombination map with which gametes 
+#' from members of @a first.parents will be generated. By default uses the oldest 
+#' loaded map currently active in simulation
+#' @param map2 The identifier for the recombination map with which gametes 
+#' from members of @a second.parents will be generated. By default uses the oldest 
+#' loaded map currently active in simulation
 #' @inheritParams make.random.crosses
 #' @param offspring The number of times each combination in the file is crossed.
 #' @return The group number of the new crosses produced
 #'
 #' @family crossing functions
 #' @export
-make.targeted.crosses <- function(first.parents, second.parents,
+make.targeted.crosses <- function(first.parents, second.parents, map1=0L, map2=0L,
 		offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_targeted_crosses, sim.data$p, first.parents, second.parents,
-				 give.names, name.prefix, offspring, track.pedigree, give.ids, 
+				 map1, map2, give.names, name.prefix, offspring, track.pedigree, give.ids, 
 				 fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -225,17 +240,23 @@ cross.combinations <- function(first.parents, second.parents,
 #' @param cross.file a string containing a filename. The file should be available
 #' to read and contain a tab-separated pair of names on each line. Each line
 #' represents a cross to make.
+#' @param map1 The identifier for the recombination map with which gametes 
+#' will be generated from the first parent in each cross. By default uses the oldest 
+#' loaded map currently active in simulation
+#' @param map2 The identifier for the recombination map with which gametes 
+#' will be generated from the second parent in each cross. By default uses the oldest 
+#' loaded map currently active in simulation
 #' @inheritParams make.random.crosses
 #' @param offspring The number of times each combination in the file is crossed.
 #' @return The group number of the new crosses produced
 #'
 #' @family crossing functions
 #' @export
-make.crosses.from.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+make.crosses.from.file <- function(cross.file, map1=0L, map2=0L, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_make_crosses_from_file, sim.data$p, cross.file, give.names, name.prefix, offspring, 
+	return(.Call(SXP_make_crosses_from_file, sim.data$p, cross.file, map1, map2, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -272,17 +293,23 @@ cross.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.n
 #' @param cross.file a string containing a filename. The file should be available
 #' to read and contain a tab-separated quartet of names on each line. Each line
 #' represents a cross to make.
+#' @param map1 The identifier for the recombination map with which gametes 
+#' will be generated from the first parent in each cross. By default uses the oldest 
+#' loaded map currently active in simulation
+#' @param map2 The identifier for the recombination map with which gametes 
+#' will be generated from the second parent in each cross. By default uses the oldest 
+#' loaded map currently active in simulation
 #' @inheritParams make.random.crosses
 #' @param offspring The number of times each combination in the file is crossed.
 #' @return The group number of the new crosses produced
 #'
 #' @family crossing functions
 #' @export
-make.double.crosses.from.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+make.double.crosses.from.file <- function(cross.file, map1=0L, map2=0L, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_make_double_crosses_from_file, sim.data$p, cross.file, give.names, name.prefix, offspring, 
+	return(.Call(SXP_make_double_crosses_from_file, sim.data$p, cross.file, map1, map2, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -321,11 +348,11 @@ cross.dc.combinations.file <- function(cross.file, offspring=1, retain=TRUE, giv
 #'
 #' @family crossing functions
 #' @export
-make.all.unidirectional.crosses <- function(group, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+make.all.unidirectional.crosses <- function(group, map=0L, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_make_all_unidirectional_crosses, sim.data$p, group, give.names, name.prefix,
+	return(.Call(SXP_make_all_unidirectional_crosses, sim.data$p, group, map, give.names, name.prefix,
 	             offspring, track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -370,11 +397,11 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 #'
 #' @family crossing functions
 #' @export
-self.n.times <- function(group, n, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
+self.n.times <- function(group, n, map=0L, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_self_n_times, sim.data$p, group, n, give.names, name.prefix, offspring, 
+	return(.Call(SXP_self_n_times, sim.data$p, group, n, map, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }			
 			
@@ -398,11 +425,11 @@ self.n.times <- function(group, n, offspring=1, retain=TRUE, give.names=FALSE, n
 #'
 #' @family crossing functions
 #' @export
-make.doubled.haploids <- function(group, offspring=1, retain=TRUE, 
+make.doubled.haploids <- function(group, map=0L, offspring=1, retain=TRUE, 
 		give.names=FALSE, name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, 
 		file.prefix="", save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_make_doubled_haploids, sim.data$p, group, give.names, name.prefix, offspring, 
+	return(.Call(SXP_make_doubled_haploids, sim.data$p, group, map, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 

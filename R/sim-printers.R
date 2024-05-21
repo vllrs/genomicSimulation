@@ -219,16 +219,20 @@ save.local.GEBVs.by.file <- function(filename, block.file, group=NULL, eff.set=1
 #' @param n.blocks.per.chr An integer containing the number of blocks each chromosome
 #' will be divided into.
 #' @param group Save only lines that belong to this group.
+#' @param map identifier for the recombination map to use to calculate genetic 
+#' distances with which to split the map. By default uses the oldest loaded map
+#' currently active in simulation.
 #' @param eff.set identifier for the set of marker effects with which to calculate 
-#' local GEBVs.
+#' local GEBVs. By default uses the first loaded set of effect values.
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
 #' @export
 #' @aliases save.local.gebvs.blocks.from.chrsplit
-save.local.GEBVs.blocks.from.chrsplit <- function(filename, n.blocks.per.chr, group=NULL, eff.set=1L) {
+save.local.GEBVs.blocks.from.chrsplit <- function(filename, n.blocks.per.chr, group=NULL, map=0L, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_local_GEBVs_blocks_from_chrsplit, sim.data$p, fs::path_expand(filename), n.blocks.per.chr, group, eff.set))
+	return(.Call(SXP_save_local_GEBVs_blocks_from_chrsplit, sim.data$p, 
+	             fs::path_expand(filename), n.blocks.per.chr, group, map, eff.set))
 }
 
 #' OLD NAME | Save the local GEBVs of each block in each selected line's haplotypes to a file,

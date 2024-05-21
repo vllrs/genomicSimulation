@@ -4,7 +4,7 @@ test_that("GEBVs are correctly calculated and shared with the see function", {
   
   expect_equal(see.group.data(g, "bv", 1L), c(1.4,1.4,1.6,-0.1,0.6,-0.3))
   
-  capture_output(eff2 <- load.more.effects("helper_eff_2.txt"), print=F)
+  capture_output(eff2 <- load.effects("helper_eff_2.txt"), print=F)
   
   expect_equal(see.group.data(g,"bv", eff2), c(0.804,0.804,1.404,2.502,-0.696,1.902))
 })
@@ -120,7 +120,7 @@ test_that("Local GEBVs using blocks from slicing are correctly calculated and sa
 test_that("Functions to see optimal genotype and GEBV work", {
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
-  capture_output(eff2 <- load.more.effects("helper_eff_2.txt"), print=F)
+  capture_output(eff2 <- load.effects("helper_eff_2.txt"), print=F)
   
   expect_identical(see.optimal.haplotype(), "TAA")
   expect_equal(see.optimal.GEBV(), 1.8)

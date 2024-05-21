@@ -206,9 +206,9 @@ find.plot.crossovers <- function(parentage.file, out.file, window.size=1, certai
 						breaks=sort(unique(crossovers$parent)))
 }
 
-send.map <- function() {
+send.map <- function(mapID=0L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	m <- data.frame(.Call(SXP_send_map, sim.data$p))
+	m <- data.frame(.Call(SXP_send_map, sim.data$p,mapID))
 	colnames(m) <- c("SNP","chr","pos")
 	return(m)
 }

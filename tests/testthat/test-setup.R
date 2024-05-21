@@ -1,20 +1,15 @@
 # How many of these can be tested without going into the C input?
 
 test_that("package can load files", {
-  expect_output(load.data("helper_genotypes_long.txt", "helper_map.txt", "helper_eff_2.txt"),
-                "1003 genotypes of 3 markers were loaded. 0 pairs of alleles could not be loaded\n3 markers with map positions. 0 markers remain unmapped.\n6 effect values spanning 2 alleles loaded.")
-  expect_output(load.data("helper_genotypes.txt", "helper_map.txt"),
-                "6 genotypes of 3 markers were loaded. 0 pairs of alleles could not be loaded\n3 markers with map positions. 0 markers remain unmapped." )
-  expect_output(load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"),
-                "6 genotypes of 3 markers were loaded. 0 pairs of alleles could not be loaded\n3 markers with map positions. 0 markers remain unmapped.\n6 effect values spanning 2 alleles loaded." )
+  expect_snapshot(load.data("helper_genotypes_long.txt", "helper_map.txt", "helper_eff_2.txt"))
+
+  expect_snapshot(load.data("helper_genotypes.txt", "helper_map.txt"))
+  expect_snapshot(load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"))
   
-  expect_output(load.more.genotypes("helper_genotypes.txt"),
-                "6 genotypes were loaded.")
-  expect_output(load.more.genotypes("helper_genotypes_long.txt"),
-                "1003 genotypes were loaded")
+  expect_snapshot(load.genotypes("helper_genotypes.txt"))
+  expect_snapshot(load.genotypes("helper_genotypes_long.txt"))
   
-  expect_output(load.different.effects("helper_eff_2.txt"),
-                "6 effect values spanning 2 alleles loaded.")
+  expect_snapshot(load.effects("helper_eff_2.txt"))
   clear.simdata()
 })
 
@@ -52,13 +47,13 @@ test_that("package can load multiple effect sets", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
   expect_identical(init$effectID, 1L)
-  capture_output(eff2 <- load.more.effects("helper_eff_2.txt"), print=F)
+  capture_output(eff2 <- load.effects("helper_eff_2.txt"), print=F)
   expect_identical(eff2, 2L)
   
   delete.effect.set(2L)
   
   capture_output(g <- load.data("helper_genotypes.txt", "helper_map.txt"), print=F)
-  capture_output(eff3 <- load.more.effects("helper_eff.txt"), print=F)
+  capture_output(eff3 <- load.effects("helper_eff.txt"), print=F)
   expect_identical(eff3, 1L)
   
   clear.simdata()
@@ -76,10 +71,14 @@ test_that("Other functions don't run without data being loaded", {
   expect_error(make.random.crosses(1L),"Please load.data first")
   expect_error(make.random.crosses.between(1L,2L),"Please load.data first")
   expect_error(delete.group(1L),"Please load.data first")
+  expect_error(delete.effect.set(1L),"Please load.data first")
+  expect_error(delete.label(1L),"Please load.data first")
+  expect_error(delete.recombination.map(1L),"Please load.data first")
   expect_error(find.crossovers("imaginary", "imaginary2"),"Please load.data first")
   expect_error(find.plot.crossovers("imaginary", "imaginary2"),"Please load.data first")
-  expect_error(load.more.effects("imaginary"),"Please load.data first")
-  expect_error(load.more.genotypes("imaginary"),"Please load.data first")
+  expect_error(load.effects("imaginary"),"Please load.data first")
+  expect_error(load.genotypes("imaginary"),"Please load.data first")
+  expect_error(load.map("imaginary"),"Please load.data first")
   expect_error(make.doubled.haploids(1L),"Please load.data first")
   expect_error(make.group(c(3L,4L,5L)),"Please load.data first")
   expect_error(save.allele.counts("imaginary", allele="A"),"Please load.data first")
@@ -104,19 +103,20 @@ test_that("Other functions don't run without data being loaded", {
   expect_error(change.label.by.amount(2L, -2),"Please load.data first")
   expect_error(change.label.default(1L,0L),"Please load.data first")
   expect_error(change.names.to.values(c("A","B")),"Please load.data first")
+  expect_error(change.allele.symbol("A","B"),"Please load.data first")
   expect_error(break.group.by.label.value(1L,3L),"Please load.data first")
   expect_error(break.group.by.label.range(1L,2L,4L),"Please load.data first")
   
   capture_output(g0 <- load.data("helper_genotypes.txt", "helper_map.txt"), print=F)
-  expect_error(see.group.data(g0,"BV"),"Need to load at least one set of marker effects before requesting breeding values")
+  expect_error(see.group.data(g0$groupNum,"BV"),"Need to load at least one set of marker effects before requesting breeding values")
   expect_error(save.GEBVs("imaginary"),"Need to load at least one set of marker effects before requesting breeding values")
   expect_error(save.local.GEBVs.blocks.from.chrsplit("imaginary",3),"Need to load at least one set of marker effects before requesting breeding values")
   expect_error(save.local.GEBVs.blocks.from.file("imaginary","im2"),"Need to load at least one set of marker effects before requesting breeding values")
-  expect_error(break.group.by.GEBV(g0, number=2),"Need to load effect values before running this function")
+  expect_error(break.group.by.GEBV(g0$groupNum, number=2),"Need to load effect values before running this function")
   expect_error(see.optimal.GEBV(),"Need to load effect values before running this function")
   expect_error(see.optimal.haplotype(),"Need to load effect values before running this function")
-  expect_error(see.optimal.possible.GEBV(g0),"Need to load effect values before running this function")
-  expect_error(see.optimal.possible.haplotype(g0),"Need to load effect values before running this function")
+  expect_error(see.optimal.possible.GEBV(g0$groupNum),"Need to load effect values before running this function")
+  expect_error(see.optimal.possible.haplotype(g0$groupNum),"Need to load effect values before running this function")
   expect_error(see.minimal.GEBV(),"Need to load effect values before running this function")
   
   clear.simdata()

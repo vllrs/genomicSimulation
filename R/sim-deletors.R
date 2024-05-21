@@ -4,6 +4,7 @@
 #' package's internal SimData struct (sim.data$p). Returns 0 on success.
 #'
 #' @family loader functions
+#' @family deletor functions
 #' @export
 clear.simdata <- function() {
 	if (is.null(sim.data$p)) { return(0L) }
@@ -25,6 +26,7 @@ clear.simdata <- function() {
 #' @return 0 on success. An error is raised on failure.
 #'
 #' @family grouping functions
+#' @family deletor functions
 #' @export
 delete.group <- function(groups) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -41,7 +43,7 @@ delete.group <- function(groups) {
 #' @return 0 on success. An error is raised on failure.
 #'
 #' @family label functions
-#' @family grouping functions
+#' @family deletor functions
 #' @export
 delete.label <- function(labels) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
@@ -51,15 +53,32 @@ delete.label <- function(labels) {
 
 #' Delete marker effect set(s)
 #'
-#' \code{delete.effect.set} removes the given marker effect set(s) from simulation memory.
+#' \code{delete.effect.set} removes the given marker effect set(s) 
+#' from simulation memory.
 #'
-#' @param effect.sets an vector containing the label numbers of the labels to be deleted
+#' @param effect.sets an vector containing the effect set identifiers of the 
+#' effect sets to be deleted
 #' @return 0 on success. An error is raised on failure.
 #'
-#' @family grouping functions
+#' @family deletor functions
 #' @export
 delete.effect.set <- function(effect.sets) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   return(.Call(SXP_delete_eff_set, sim.data$p, effect.sets))
 }
 
+
+#' Delete recombination map(s)
+#'
+#' \code{delete.recombination.map} removes the given recombination map(s)
+#' from simulation memory.
+#'
+#' @param maps an vector containing the map identifiers of the maps to be deleted
+#' @return 0 on success. An error is raised on failure.
+#'
+#' @family deletor functions
+#' @export
+delete.recombination.map <- function(maps) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_delete_recombination_map, sim.data$p, maps))
+}

@@ -1,42 +1,60 @@
+
+#' @keywords internal 
+expand.path <- function(name) {
+  if (name != "" && is.character(name)) {
+    return(fs::path_expand(name))
+  } else {
+    return(NULL)
+  }
+}
+
 #' Create a new SimData object from data loaded from files
 #'
-#' \code{load.data} returns the group number of the group the starting
-#' data set was loaded into. It also sets up the markers, linkage map,
-#' and GEBV calculators.
+#' \code{load.data} sets up the simulation object with initial data
+#' from the provided files. Either a genotype file or a map file, or 
+#' both, should be provided, as a set of marker effects cannot be loaded
+#' without a reference set of markers from either of the former two
+#' files. 
+#' 
+#' The list of markers tracked by the simulation is immutable after this
+#' call. Therefore, the map file (or genotype file, if no map file 
+#' is provided) should contain all markers you will wish to simulate. 
+#' 
+#' Additional founder genotypes, recombination maps, and marker effect
+#' sets can be loaded after this call using @seealso \link{load.genotypes}, 
+#' @seealso \link{load.map},
+#' @seealso \link{load.effects}
+#' 
+#' See package vignette for file formats that the package can load.
 #'
-#' @param allele.file A string containing a filename. The file should
+#' @param genotype.file A string containing a filename. The file should
 #' contain a matrix of markers and alleles
 #' @param map.file A string containing a filename. The file should contain
 #' a linkage map for the markers loaded from allele.file
-#' @param effect.file (optional) A string containing a filename. The
+#' @param effect.file A string containing a filename. The
 #' file should contain effect values for calculating GEBVs of a trait
-#' @return The group number of the genotypes loaded from allele.file. This is
-#' always 1 in the current implementation. If an effect file was also loaded, the 
-#' return value will be a list with two entries: groupNum, for the group number of the
-#' first group loaded, and EffectID, for the identifier for the set of marker effects
-#' loaded from the effect file.
+#' @return A list with entries $groupNum, $mapID, and $effectID, representing
+#' the group number of the genotypes loaded from the genotype file, the 
+#' recombination map identifier of the map loaded from the map.file, and 
+#' the marker effect set identifier of the marker effects loaded from 
+#' the effect.file respectively.
 #'
 #' @family loader functions
 #' @export
-load.data <- function(allele.file, map.file, effect.file=NULL) {
-	#the group number of the first group is always 1
-	if (is.null(effect.file)) {
-	  sim.data$p <- .Call(SXP_load_data, fs::path_expand(allele.file), 
-	                      fs::path_expand(map.file), 
-	                      NULL)
-		return(c(groupNum=1L)) 
-	} else {
-	  sim.data$p <- .Call(SXP_load_data, fs::path_expand(allele.file), 
-	                      fs::path_expand(map.file), 
-	                      fs::path_expand(effect.file))
-		return(list(groupNum=1L,effectID=1L))
-	}
+load.data <- function(genotype.file=NULL, map.file=NULL, effect.file=NULL) {
+ 	sim.data$p <- .Call(SXP_load_data, expand.path(genotype.file), 
+ 	                    expand.path(map.file), 
+ 	                    expand.path(effect.file))
+	gn <- ifelse(is.null(genotype.file), NA, 1L)
+	mi <- ifelse(is.null(map.file) || is.null(gn), NA, 1L)
+	ei <- ifelse(is.null(effect.file) || is.null(mi), NA, 1L)
+	return(list(groupNum=gn,mapID=mi,effectID=ei))
 }
 
-#' Load more genotypes to the existing SimData object from a file
+#' Load genotypes to the existing SimData object from a file
 #'
-#' \code{load.more.genotypes} returns the group number of the group
-#' that the new genotypes were loaded into. Only the alleles at SNPs
+#' \code{load.genotypes} returns the group number of the group
+#' that the new genotypes were loaded into. Only the alleles at markers
 #' already tracked by the SimData are saved.
 #'
 #' @inheritParams load.data
@@ -44,9 +62,40 @@ load.data <- function(allele.file, map.file, effect.file=NULL) {
 #'
 #' @family loader functions
 #' @export
-load.more.genotypes <- function(allele.file) {
+load.genotypes <- function(allele.file) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_load_more_genotypes, sim.data$p, fs::path_expand(allele.file))) 
+	return(.Call(SXP_load_genotypes, sim.data$p, expand.path(allele.file))) 
+}
+
+#' OLD NAME | Load more genotypes to the existing SimData object from a file
+#' 
+#' ! This is the old name for \code{load.genotypes}. From genomicSimulation v0.2.5,
+#' \code{load.genotypes} is the recommended name over \code{load.more.genotypes}. 
+#' \code{load.more.genotypes} may become deprecated in future, when the package reaches 
+#' stability.
+#'
+#' @seealso \link{load.genotypes}
+#' 
+#' @keywords internal 
+#' @export
+load.more.genotypes <- function(allele.file) {
+  return(load.genotypes(allele.file))
+}
+
+#' Load an additional recombination map from a file
+#'
+#' \code{load.map} returns the identifier of the new recombination
+#' map. Only the markers already tracked by the SimData are included
+#' in this map.
+#'
+#' @inheritParams load.data
+#' @return The identifier of the recombination map loaded from map.file
+#'
+#' @family loader functions
+#' @export
+load.map <- function(map.file) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_load_map, sim.data$p, expand.path(map.file))) 
 }
 
 #' Add a new set of marker effect values
@@ -62,24 +111,24 @@ load.more.genotypes <- function(allele.file) {
 #'
 #' @family loader functions
 #' @export
-load.more.effects <- function(effect.file) {
-	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_load_more_effects, sim.data$p, fs::path_expand(effect.file))) 
+load.effects <- function(effect.file) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_load_effects, sim.data$p, expand.path(effect.file))) 
 }
 
 #' OLD NAME | Add a new set of marker effect values
 #' 
-#' ! This is the old name for \code{load.more.effects}. From genomicSimulation v0.2.5,
-#' \code{load.more.effects} is the recommended name over \code{load.different.effects}. 
+#' ! This is the old name for \code{load.effects}. From genomicSimulation v0.2.5,
+#' \code{load.effects} is the recommended name over \code{load.different.effects}. 
 #' \code{load.different.effects} may become deprecated in future, when the package reaches 
 #' stability.
 #'
-#' @seealso \link{load.more.effects}
+#' @seealso \link{load.effects}
 #' 
 #' @keywords internal 
 #' @export
 load.different.effects <- function(effect.file) {
-  return(load.more.effects(effect.file))
+  return(load.effects(effect.file))
 }
 
 #' Create a custom label

@@ -32,7 +32,8 @@ knitr::opts_chunk$set(
 | make.group.from.label | break.group.by.label.value |
 | make.group.from.label.range | break.group.by.label.range |
 | make.label | create.new.label |
-| load.different.effects | load.more.effects |
+| load.more.genotypes | load.genotypes | 
+| load.different.effects | load.effects |
 | cross.randomly | make.random.crosses |
 | cross.randomly.between | make.random.crosses.between |
 | cross.combinations | make.targeted.crosses |
@@ -53,7 +54,7 @@ genomicSimulation is a simple, fast scripting simulation tool for creating 'digi
 
 All core functionality is written in C. Performing the computation-intensive tasks at C-level allows for quick runtimes. Because it was initially created for simulating plant breeding programs, the package does not automatically track sex.
 
-Contact the package maintainers for any feature requests or improvement requests, or to report any bug or crash. 
+Contact the package maintainers at https://github.com/vllrs/genomicSimulation/ for any feature requests or improvement requests, or to report any bug or crash. 
 
 Guides on using the package can be found in sections 4 and 5 of this vignette.
 
@@ -61,23 +62,27 @@ Guides on using the package can be found in sections 4 and 5 of this vignette.
 
 ## Getting to know genomicSimulation
 
-genomicSimulation aims to give you a set of flexible building blocks with which you can design/script a breeding program. genomicSimulation exists as a set of scripting functions at R level (like `load.more.genotypes`, `cross.randomly`, and `see.optimal.haplotype`) and an invisible table containing the simulation's currently-existing genotypes. 
+genomicSimulation exists as a set of scripting functions at R level (like `load.genotypes`, `cross.randomly`, and `see.optimal.haplotype`) plus an invisible table containing the simulation's currently-active data.
 
-Working with genomicSimulation is about being able to build your simulation structure as you wish. Broadly speaking, simulation functions are split into three categories: creating more genotypes, selecting between genotypes, and reorganising/recategorising genotypes. These categories of actions can be used in any order and interspersed in any way. In fact, the only fixed requirement of a valid genomicSimulation script is that the first command is `load.data()`, which initialises the invisible table and loads the genetic map, which is the one un-changeable detail of a simulation. 
+Broadly speaking, the tool provides three main categories of simulation functions:
 
-In genomicSimulation, every genotype is a member of a 'group', an abstract category represented by a number. Selection is simulated by pulling selected genotypes into a new group; most crossing actions are performed using one group's members. Groups can be combined, split randomly, or split along specific lines. Groups can be deleted to destroy the genotypes they contain. 
+- creating more genotypes, 
+- selecting between genotypes,
+- and reorganising/recategorising genotypes. 
 
-Using these two factors (all genotypes being allocated to reconfigurable groups, and simulation actions being able to be undertaken in any order) genomicSimulation has the flexibility to simulate a huge range of breeding programs. You can imagine repeatedly simulating crosses from a 'breeding pool' group and discarding most offspring but for a selected subset which you merge into your breeding pool for the next generation, or simulating a nucleus breeding system with several funneled breeding pools running simultaneously, each replenished by the best offspring of their own pool and whatever trickles down from higher/more elite pools, or a concurrent population development/improvement program which splits off copies of certain genotypes to repeatedly self into homozygosity and test in the field.
+Simulation functions can be used in any order and interspersed in any way. The only fixed requirement of a valid genomicSimulation script is that the first command is `load.data()`, which initialises the invisible table and loads the list of tracked genetic markers, which is the one un-changeable detail of a simulation. 
 
-genomicSimulation's data is, unfortunately, stored in an invisible table. In this case, 'invisible' means there is a hidden variable `sim.data$p` of the 'external pointer' type in your R environment when a genomicSimulation simulation is in existence. This pointer is the address of an . Unfortunately, with genomicSimulation (and therefore its constituent tables) being built in C, there is no nice way for R to be able to see them.
+In genomicSimulation, every genotype is a member of a 'group', an abstract category represented by a number. Selection is simulated by pulling selected genotypes into a new group. Most crossing actions are performed using one group's members. Groups can be combined, split randomly, or split along specific lines. Groups can be deleted to destroy the genotypes they contain. 
 
-Instead, you will have to call genomicSimulation functions to look at your simulation data. As an R user, the functions `see.existing.groups()` and `see.group.data()`, which pull the data into R vectors, will become your friends. 
+Using these two factors (all genotypes being allocated to reconfigurable groups, and simulation actions being able to be undertaken in any order) genomicSimulation has the flexibility to simulate a huge range of breeding programs. You can imagine repeatedly simulating crosses from a 'breeding pool' group and discarding all but a selected subset of offspring which can be merged back into the breeding pool, or simulating a nucleus breeding system with several funneled breeding pools running simultaneously, each replenished by the best offspring of their own pool and whatever trickles down from more elite pools, or simulating a breeding program with concurrent population development/improvement streams which splits off copies of certain genotypes to repeatedly self into homozygosity for commercialisation testing.
+
+As an R user, the functions `see.existing.groups()` and `see.group.data()` are the easiest ways to look at your simulation data, but more varied output formats are available via saving data to files.
 
 
 # Speed
 On a consumer-model laptop laptop (Intel(R) Core(TM) i5-7200U CPU @ 2.50GHz, 8GB RAM) running RStudio version 1.2.5019, the process of loading 50 founder lines and 5112 SNPs took on average 0.64 seconds.
 
-A call to `cross.randomly` to generate 100,000 ($10^5$) offspring from those founders took on average 2 seconds to run. Since all crossing functions use the same underlying meiosis simulation and same methodology, this time should be fairly representative of the speed of any crossing function. 
+A call to `make.random.crosses` to generate 100,000 ($10^5$) offspring from those founders took on average 2 seconds to run. Since all crossing functions use the same underlying meiosis simulation and same methodology, this time should be fairly representative of the speed of any crossing function. 
 
 Output (writing to files) adds significant delays. The same command, with save-as-you-go output of GEBVs and pedigrees active, took approximately 20 seconds to run. With save-as-you-go output of GEBVs, pedigrees, and genotypes (genotypes in particular write a lot of characters to files), the function call took approximately 120 seconds. 
 
@@ -86,15 +91,151 @@ Generating the 100,000 offspring, then saving GEBVs, pedigrees, and genotypes to
 The C-level functions make no attempt to parallelise execution.
 
 # Package-Specific Details
-## Understanding `sim.data`
-The package has an internal invisible table where it stores simulated genotypes and other details. The table is a 'struct' object, called `SimData`, in the simulation tool's underlying C library. An external pointer to `SimData` is saved in a package-global R variable called `sim.data$p`. `sim.data$p` is hidden during regular use, and attempting to access the C-level data via the external pointer is not advised. Plenty of R-level functions are offered to modify and view simulation state and stored data.
+## Input Files
 
-To reset the simulation/clear it of all data, the function `clear.simdata()` is provided. Currently, functionality to have two concurrent simulation states does not exist.
+The first command run, to set up or reset the simulation, is `load.data`. This command takes up to three input files as parameters: a genotype matrix, a genetic map, and a list of marker effects. If multiple files are provided to `load.data`, the map file will be loaded first, followed by the genotype matrix and marker effect file.
+
+### Genetic map files
+
+The simplest genetic map file is formatted as follows:
+```
+marker chr pos
+m3 3 15
+m2 1 8.3
+m1 1 5.2
+```
+
+The first column represents marker names. For all genomicSimulation features to work, genetic markers must have names. There is no issue with purely numeric names.
+
+The second column represents the chromosome/linkage group in which that marker is found. Any alphanumeric combination may be used to denote a chromosome/linkage group, eg. '9' or '1A'.
+
+The third column represents the position in centimorgans of that marker along that linkage group. (Distance of 1cM = expected probability of 0.01 chromosomal crossovers in that range.)
+
+The header line is optional. However, if it is provided, the three columns "marker" "chr" and "pos" may be rearranged into any ordering. If the header is not provided, the order is assumed to be marker name, followed by chromosome, followed by position.
+
+Cells may be separated by spaces, tabs, commas, or any combination thereof. Cell spacers do not need to be consistent across the file. 
+
+The order in which genetic markers are presented in the file does not matter. If a marker is duplicated in the file, it will be recorded twice as two separate markers in the same position and with the same name. genomicSimulation does not check against this. However, if two markers have the same name, genotypes may not be loaded correctly, as loading genotypes depends on matching markers by name, so this should be avoided.
+
+Other valid genetic map files might include:
+```
+chr marker pos
+1A m1243509 173.2
+1A m2350898 462.2
+1B m4360992 32.009
+2A m1243556 243.5
+```
+or
+```
+gene 10 3.24
+othergene 10 8.3e-1
+etc 15 1.203e2
+```
+
+### Genotype matrix files
+
+The simplest genotype matrix file is formatted as follows:
+```
+name	G01	G02	G03	G04	G05	G06
+m1	TT	TT	TT	TA	TT	AT
+m3	TT	TT	TA	TA	TT	TT
+m2	AA	AA	AA	AA	CC	AA
+```
+where G01, G02, ..., are names of the founder genotypes; m1, m2, ..., are the genetic markers; and entries in the matrix are the alleles that the founder genotypes have at those markers. 
+
+The genotype matrix may be row-major or column-major (that is, the genetic markers may be rows, or columns). The program will determine the orientation by attempting to match row and column headers with names of markers tracked by the simulation. If the simulation does not yet have a list of tracked markers (that is, if this is the first file to be loaded, before even a genetic map file), then it defaults to assuming that columns represent genetic markers.  
+
+Cells may be separated by spaces, tabs, commas, or any combination thereof. Cell spacers do not need to be consistent across the file. 
+
+The order in which genetic markers are presented in the file does not matter. Genotypes, however, will be saved internally in the simulation in the order that they appear in the file. Genotype names need not be unique.
+
+Marker names must be provided, so if the file does not have a header row, it must have a header column containing genetic marker names, and if it does not have a header column, it must have a header row containing genetic marker names.
+
+The first or corner cell (in the above example, containing the value "name") can be deleted or can contain any text, which will be ignored. 
+
+The simulation tool can parse a few different encodings of the alleles at each marker. The format of the allele pair will be automatically detected. All allele pairs in the same genotype matrix must be in the same format.
+
+Allele pair encodings, with phase:
+
+- Any pair of characters (see the above example). Alleles can be any character that is not a space, tab, comma, or newline.
+- Any pair of characters, separated by a forwards slash "/" character. 
+
+Allele pair encodings, without phase (the simulation tool will randomise phase as the file is loaded):
+
+- Alternate allele counts ("0", "1", "2")
+- IUPAC encodings ("G", "A", "T", "C", "R", "Y", "M", "K", "S", "W", "N")
+
+**Note you might have a genotype matrix that uses "alternate allele counts"-style encoding but presents it in a format that looks like pairs of alleles, eg. "AA", "AT", and "TT".** genomicSimulation expects allele pair encodings to include haplotype phase, (that is, to have four possible values for genotypes of two alleles, not three: "AA", "AT", "TA", and "TT"). 
+
+Two options for loading a dataset with non-phased "AA"/"AT"/"TT" allele pairs are:
+
+- Use “haplotyping”/”haplotype phasing”/”haplotype inference” software to infer whether heterozygotes are "AT" or "TA", before loading into genomicSimulation.
+- Find-and-replace "TT" with "0", "AT" with "1", and "AA" with "2" before loading into genomicSimulation. genomicSimulation will then randomise the phase of each haplotype.
+
+Other valid genotype matrix files might include:
+```
+ m100, m101, m102
+cand1,0,0,1
+cand2,1,2,2
+cand4,2,1,2
+```
+or
+```
+marker1	T/T	T/T	T/T	T/A	T/T	A/T
+marker3	T/T	T/T	T/A	T/A	T/T	T/T
+marker2	A/A	A/A	A/A	A/A	T/T	A/A
+```
+
+### Marker effect files
+
+Loading effect file(s) is optional for running the simulation. The simplest marker effect file is formatted as follows:
+```
+marker allele eff
+m1 A -0.8
+m2 A -0.1
+m3 A 0.1
+m1 T 0.9
+m3 T -0.1
+```
+
+The first column is to be a genetic marker name, corresponding to a name used in a previously-loaded map file. 
+
+The second should be the allele (non-space character, eg "A") that this effect value corresponds to. 
+
+The third should be a decimal representing the additive effect value of that allele for that marker.
+
+The header line is optional. However, if it is provided, the three columns "marker" "allele" and "eff" may be rearranged. If the header is not provided, the order is assumed to be marker name, followed by allele symbol, followed by additive effect value. 
+
+Cells may be separated by spaces, tabs, commas, or any combination thereof. Cell spacers do not need to be consistent across the file. 
+
+The order in which rows are presented in the file does not generally matter. If a particular marker/allele combination is included multiple times in the file, only the last effect value in that file for that combination will be saved.
+
+A particular marker/allele combination not being included in the file is equivalent to that combination having an effect value of 0. If a particular marker/allele combination is included multiple times in a file, only the last occurrence is saved. If a marker name in the file does not match any marker tracked by the simulation, that row will be ignored. The simulation will print out the number of marker/allele pairs for which effects are loaded: for the sample file above, that would be 5.
+
+Other valid marker effect files might include:
+```
+marker eff allele
+m1243509 0.1 A
+m1243509 -0.1 T
+m2350898 0.15 T
+m2350898 -0.1 A
+```
+or
+```
+specialgene G 1.0
+```
+
+### Loading from other file formats
+Updates to expand the range of allowed input formats are coming soon.
+
+
+## The invisible table
+The package has an internal invisible table (called `SimData`) where it stores simulated genotypes and other details. An external pointer to `SimData` is saved in a package-global R variable called `sim.data$p`. `sim.data$p` is hidden during regular use, and attempting to access the C-level data via the external pointer is not advised. All user-facing functions in the C library have R interfaces provided.
+
+To reset the simulation/clear it of all data, the function `clear.simdata()` is provided. Currently the R version does not have functionality for having two concurrent simulation states in the same R session.
 
 ### Markers
-Each `SimData` is given a list of markers and a map for positioning these in the genome on creation (see Indexes: Input File Formats: Linkage maps). These are the only details that cannot be changed after creation without clearing the `SimData`: they serve as the foundation of the invisible table. 
-
-The `SimData` object saves names of markers as-is, as long as the name is under 45 characters long. Behaviour is undefined if any marker name is longer than 45 characters. (The currently-non-modifiable NAME_LENGTH setting (see Indexes: Global Settings Index) is associated with work on fixing this limitation).
+The foundation of the `SimData` (that is, the only detail that cannot be changed without clearing the invisible table) is the list of genetic markers present in the map file (or the genotype file, if no map file was provided) passed to `load.data`. Only these markers will be tracked in simulation, even if later genotypes/maps/marker effects loaded mention other markers. 
 
 Because the `SimData` stores its markers in genome order, any outputs produced will have the markers ordered according to the genetic map loaded at its creation. If an output method provides genotypes as strings of alleles, the string will also be ordered according to this genetic map.
 
@@ -110,9 +251,7 @@ Additional sets of marker effects can be loaded in with `load.different.effects(
 ### Genotypes
 Each genotype/line may or may not be given a name. Generating names for simulated genotypes can be turned on in the common crossing settings (see Indexes: Crossing Function Settings). 
 
-At least one genotype must be loaded in the initialisation command `load.data`. genomicSimulation has no genome-construction or mutation mechanisms: there is no other way to get your simulation population started! At any point in simulation more genotypes can be imported from files using the function `load.more.genotypes` (see Indexes: Input File Formats: Founder genotypes).
-
-When loading genotypes from a file, behaviour is undefined if any genotype has a name longer than 45 characters. (Once again, the currently-non-modifiable NAME_LENGTH setting (see Indexes: Global Settings Index) is implicated in attempts to remove this limitation.)
+You will likely want to load at least one genotype before starting simulation operations. genomicSimulation has no genome-construction or mutation mechanisms: there is no other way to get your simulation population started! At any point in simulation more genotypes can be imported from files using the function `load.genotypes`.
 
 ## Understanding Groups
 As far as genomicSimulation is concerned, every genotype always exists as a member of a group. Genotypes loaded from the same file are automatically allocated to the same group. Every crossing function also places the genotypes it produces in a new group. Each group is denoted by a number.
@@ -125,7 +264,7 @@ The group numbers of groups created or modified by a function call will be given
 
 ## Understanding Custom Labels
 
-Sometimes you might have reason to want to track extra details about your genotypes (a common use case would be the age of the simulated individual), or you might want a categorisation system that persists even when groups are broken apart, dissolved, and/or reformed in efforts to perform particular selection or mating procedure.
+Sometimes you might have reason to want to track extra details about your genotypes (a common use case would be the age or sex of the simulated individual), or you might want a categorisation system that persists even when groups are broken apart, dissolved, and/or reformed in efforts to perform particular selection or mating procedure.
 
 A custom label is an attribute or field that is stable until changed by the user. genomicSimulation gives its users the power to create as many labels as desired, to set default values for each label, and to change the value of the label on each simulated individual.
 
@@ -136,15 +275,16 @@ Like group numbers, label IDs are integers greater than 0. The function `make.la
 Also like groups, use `delete.label` to delete a custom label (all simulated individuals will still exist, but they will no longer have any value under the custom label that no longer exists). Merely removing the label ID from the R environment does nothing to remove the label from simulation memory.
 
 ## Understanding Identifiers
-There are five categories of identifiers that may be observed during use of the simulation.
+There are six categories of identifiers that may be observed during use of the simulation.
 
 1. Group numbers/group IDs, which were discussed in the preceding section on groups. They are integers greater than 0 that define a set of genotypes/lines. Any number of lines can share a group number, and a line's group number may be changed over the course of the simulation.
 1. Label IDs, which were discussed in the preceding section on labels. Like group numbers, they are integers greater than 0. They define a particular custom label. A label keeps its same identifier for its lifetime.  
-1. Effect Set IDs, which were discussed in the preceding section on sets of marker effects for calculating breeding values. Like group numbers and label IDs, they are integers greater than 0. They define a particular set of marker effects. A marker effect set keeps its same identifier for its lifetime in the simulation (though, if you load the same effect file multiple times, there could be multiple identical marker effect sets in the simulation).
+1. Recombination Map IDs, which represent a particular genetic map/linkage map loaded in `load.data` or `load.map`. Like group numbers and label IDs, these identifiers are integers greater than 0.  A recombination map keeps its same identifier for its lifetime in the simulation (though, if you load the same recombination map multiple times, there could be multiple identical maps in the simulation, and once a map is deleted via `delete.recombination.map`, its ID may be reused).
+1. Effect Set IDs, which represent a particular set of additive marker effects to be used for calculating breeding values. Each set of effects represents marker effects loaded from a single file in `load.data` or `load.effects`. Like group numbers and label IDs, these identifiers are integers greater than 0. A marker effect set keeps its same identifier for its lifetime in the simulation (though, if you load the same effect file multiple times, there could be multiple identical marker effect sets in the simulation, and once a set of marker effects is deleted via `delete.effect.set`, its ID may be reused).
 1. Genotype Pedigree IDs. These are integers greater than 0 that are unique to a particular genotype for the lifetime of the simulation. IDs are used for tracking pedigree. However, genotypes are not guaranteed to have an ID: genotypes created during crossing with the setting `give.ids` set to FALSE will not be allocated IDs and will have 0 instead. 
-1. Indexes. These represent the position/column number in the invisible table at which the genotype is stored. They are therefore unique to the genotype but not continuous over the lifetime of the simulation, because when genotypes/columns are deleted, the column numbers of the remaining genotypes may change. Because, unlike IDs, every genotype is guaranteed to have an index, functions like `make.group` and `cross.combinations` that act on specific genotypes (rather than groups) generally take indexes as inputs. Since indexes can change, however, it is important to not place a `delete.group` call between getting index data and using indexes in one of these function calls.
+1. Indexes. These represent the position/column number in the invisible table at which the genotype is stored. They are therefore unique to the genotype but not continuous over the lifetime of the simulation, because when genotypes/columns are deleted, the column numbers of the remaining genotypes may change. Because, unlike IDs, every genotype is guaranteed to have an index, functions like `make.group` and `make.targeted.crosses` that act on specific genotypes (rather than groups) generally take indexes as inputs. Since indexes can change, however, it is important to not place a `delete.group` call between getting index data and using indexes in one of these function calls.
 
-The return values of nearly every function in the package (excluding the functions that pull data into R, whose names begin with `see.`) are vectors of integers representing one of the first three identifiers, above. If the function is `make.label`, it returns the new label's ID. If the function is `load.different.effects`, it returns the marker effect set from the provided effect file's new effect set ID. Most commonly, if the function created or modified groups, the return value(s) are the group number(s) of the group(s) created or modified. If the function returns 0, then it succeeded but did not change any groups. 
+The return values of nearly every function in the package (excluding the functions that pull data into R, whose names begin with `see.`) are vectors of integers representing one of the first four identifiers, above. If the function is `make.label`, it returns the new label's ID. If the function is `load.effects`, it returns the marker effect set ID from the provided effect file's set of marker effects. If the function is `load.map`, it returns the identifier for the recombination map just loaded. Most commonly, if the function created or modified groups, the return value(s) are the group number(s) of the group(s) created or modified. If the function returns 0, then it succeeded but did not change any groups.
 
 ## Understanding Output Methods
 There are three sets of functions to get output from the simulation. 
@@ -230,7 +370,7 @@ init <- load.data("../tests/testthat/helper_genotypes.txt",
                 "../tests/testthat/helper_eff.txt")
 cows <- init$groupNum
 # Load the small initial data set again, pretending this represents a different set of genotypes
-bulls <- load.more.genotypes("../tests/testthat/helper_genotypes.txt") 
+bulls <- load.genotypes("../tests/testthat/helper_genotypes.txt") 
 
 # Create some offspring
 f1 <- make.random.crosses.between(cows, bulls, n.crosses=5)
@@ -251,7 +391,7 @@ init <- load.data("../tests/testthat/helper_genotypes.txt",
                 "../tests/testthat/helper_eff.txt")
 cows <- init$groupNum
 # Load the small initial data set again, pretending this represents a different set of genotypes
-bulls <- load.more.genotypes("../tests/testthat/helper_genotypes.txt") 
+bulls <- load.genotypes("../tests/testthat/helper_genotypes.txt") 
 
 # Define our interpretation of the custom label
 FEMALE <- 1L
@@ -396,21 +536,21 @@ Loading data:
 
 - `[group] <- load.data(allele.file, map.file, effect.file = NULL)`
 - If the effect file in `load.data` is not NULL, the return type is instead `list(groupNum=[group], effectID=[effect set])`
-- `[group] <- load.more.genotypes(allele.file)`
-- `[effect set] <- load.more.effects(effect.file)`
-- `delete.effect.set(effect.sets)`
+- `[group] <- load.genotypes(allele.file)`
+- `[recombination map] <- load.map(map.file)`
+- `[effect set] <- load.effects(effect.file)`
 
 Simulating crossing:
 
-- `[group] <- make.random.crosses(group,n.crosses,[[settings]])`
-- `[group] <- make.random.crosses.between(group1,group2,cap1,cap2,n.crosses,[[settings]])`
-- `[group] <- make.targeted.crosses(first.parents,second.parents,[[settings]])`
-- `[group] <- make.crosses.from.file(cross.file,[[settings]])`
-- `[group] <- make.double.crosses.from.file(cross.file,[[settings]])`
-- `[group] <- make.all.unidirectional.crosses(group,[[settings]])`
-- `[group] <- self.n.times(group,n,[[settings]])`
+- `[group] <- make.random.crosses(group,n.crosses,maps=0L,[[settings]])`
+- `[group] <- make.random.crosses.between(group1,group2,cap1,cap2,n.crosses,map1=0L,map2=0L,[[settings]])`
+- `[group] <- make.targeted.crosses(first.parents,second.parents,map1=0L,map2=0L,[[settings]])`
+- `[group] <- make.crosses.from.file(cross.file,map1=0L,map2=0L,[[settings]])`
+- `[group] <- make.double.crosses.from.file(cross.file,map1=0L,map2=0L,[[settings]])`
+- `[group] <- make.all.unidirectional.crosses(group,map=0L,[[settings]])`
+- `[group] <- self.n.times(group,n,map=0L,[[settings]])`
+- `[group] <- make.doubled.haploids(group,map=0L,[[settings]])`
 - `[group] <- make.clones(group,inherit.names,[[settings]])`
-- `[group] <- make.doubled.haploids(group,[[settings]])`
 
 Manipulating custom labels:
 
@@ -431,7 +571,6 @@ Performing selection:
 
 Modify groupings:
 
-- `delete.group(groups)`
 - `[group] <- combine.groups(groups)`
 - `[group] <- make.group(indexes)`
 - `[group] <- break.group.by.label.value(label, value, in group(s)/no group)`
@@ -445,6 +584,9 @@ Modify groupings:
   - `[vector of groups] <- break.group.with.probabilities(group, [vector of probabilities])`
 
 Save data (saves results to files):
+
+- `change.allele.symbol(from, to, marker=NULL)`
+- `change.names.to.values(values, group=NA)`
 
 - `save.genotypes(filename, group = NULL, type = "R")`
 - `save.allele.counts(filename, group = NULL, allele)`
@@ -463,7 +605,7 @@ View data (pulls data into R dataframes):
 - `[float: the maximum possible GEBV from the pool of alleles that exist in the group] <- see.optimal.possible.GEBV(eff.set=1L)`
 - `[float: the minimum possible GEBV] <- see.minimal.GEBV(eff.set=1L)`
 
-Identify recombination events:
+Identify recombination events (experimental, not under current development):
 
 - `find.crossovers(parentage.file, out.file, window.size = 1, certainty = TRUE)`
 - `find.plot.crossovers(parentage.file, out.file, window.size = 1, certainty = TRUE)`
@@ -471,6 +613,9 @@ Identify recombination events:
 Data Storage:
 
 - `clear.simdata()`
+- `delete.group(groups)`
+- `delete.recombination.map(maps)`
+- `delete.effect.set(effect.sets)`
 
 ## Crossing Function Settings
 All crossing functions take in a common set of settings. These are briefly described below.
@@ -486,51 +631,7 @@ All crossing functions take in a common set of settings. These are briefly descr
 - `save.gebv` : An integer. If 0, does not save GEBVs. If greater than 0, saves the GEBVs of each generated genotype to the tab-separated text file with filename "[file.prefix]-eff". The GEBVs will be calculated using the marker effect set whose identifier was given to this parameter.
 - `save.genotype` : A boolean. If TRUE, saves the SNP/line matrix in regular format (generated genotypes as rows, SNPs as columns) to the tab-separated text file with filename "[file.prefix]-genome".
 
-
-## Input File Formats
-### Founder genotypes and SNPs
-The basic file format expected to the `allele.file` parameter of `load.data` is:
-```
-name	G01	G02	G03	G04	G05	G06
-m1	TT	TT	TT	TA	TT	AT
-m3	TT	TT	TA	TA	TT	TT
-m2	AA	AA	AA	AA	TT	AA
-```
-where G01, G02, ..., are the parent lines and m1, m2 and m3 are the SNPs. Cells may be space-separated or tab-separated. The value in the first cell ("name" in this example) is ignored.
-
-To load more genotypes after original creation of the `SimData`, use the function `group <- load.more.genotypes(allele.file)`
-
-
-### Linkage maps
-
-The function's parameter `map.file` requires a file format like the following:
-```
-marker chr pos
-m3 3 15
-m2 1 8.3
-m1 1 5.2
-```
-The first line's values are not checked. After that, it requires that all rows have three tab-separated values. The first should be the marker name, the second an integer representing the chromosome number, and the third a decimal representing the position of the SNP along the chromosome in centiMorgans (cM). 
-
-This function loads only markers that already appear in the `SimData`'s SNP list, which is created from the SNPs in the genotype matrix file (`allele.file`). It will print out how many markers it successfully loaded.
-
-
-### Effect files
-Loading an effect file is optional for running the simulation. Its format should be:
-```
-m1 A -0.8
-m2 A -0.1
-m3 A 0.1
-m1 T 0.9
-m3 T -0.1
-m2 T -0.5
-```
-
-The first column should be a SNP marker name, the second should be the allele this effect value corresponds to (as a single character), and then a decimal representing the effect value of that allele for that SNP.
-
-A particular SNP/allele combination not being included in the file is equivalent to that combination having an effect value of 0. If a particular SNP/allele combination is included multiple times in a file, only the last occurence is saved.
-
-### Combination crossing functions
+## Combination crossing functions
 Two crossing functions (`make.crosses.from.file` and `make.double.crosses.from.file`) take instructions from files.
 
 - `make.crosses.from.file` : Take a file containing tab-separated pairs of line names and perform those crosses. An example file looks like:
@@ -659,7 +760,8 @@ Available data types: Description (`data.type` parameter value)
 - IDs (D)
 - Indexes (X)
 - Genotypes (G)
-- GEBVs/breeding values (B)
+- GEBVs/breeding values (B). The additional parameter `effect.set` can be used to
+select which set of marker effects to use to calculate the breeding values. It defaults to the first loaded set of effect values.
 - Name of the first parent, or the first parent's ID if it has no name (P1)
 - Name of the second parent, or the second parent's ID if it has no name (P2)
 - Full/recursive known pedigree, as a string (PED)

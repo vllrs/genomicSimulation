@@ -1,6 +1,9 @@
 ## New Features
 
-- Can now observe the values of custom labels using `see.group.data`.
+- Some culling of (unused) dependencies means we can now release genomicSimulation (R version) under the same MIT license as the C version.
+- Add ability to observe the values of custom labels using `see.group.data`.
+- Add ability to load multiple recombination maps into simulation at a time. The associated new functions are `load.map` and `delete.recombination.map`.
+- New function `change.allele.symbol` changes the internal representation of a particular allele. It does not modify corresponding marker effects. This may be useful for tidying printed output.
 
 ## Bug Fixes
 
@@ -9,14 +12,15 @@
 
 ## Improvements
 
-- Some culling of (unused) dependencies means we can now release genomicSimulation (R version) under the same MIT license as the C version.
+- Smarter and more robust file loaders. They can now automatically detect headers and allele encodings. See R version vignette (Section: Input Files) or Templates page of C version documentation for more information. 
 - Increased function naming consistency between R and C versions of the package. However, this means some R functions have changed names. Old function names still work (they directly call the new function name), but sometime in the future the old names may be removed. (Old name) -> (new recommended name) pairs for the R package are as follows:
 	- see.minimum.GEBV ->            see.minimal.GEBV
 	- select.by.gebv ->              break.group.by.GEBV
 	- make.group.from.label ->       break.group.by.label.value
 	- make.group.from.label.range -> break.group.by.label.range
 	- make.label ->                  create.new.label
-	- load.different.effects ->      load.more.effects
+	- load.more.genotypes ->         load.genotypes
+	- load.different.effects ->      load.effects
 	- cross.randomly ->              make.random.crosses
 	- cross.randomly.between ->      make.random.crosses.between
 	- cross.combinations ->          make.targeted.crosses

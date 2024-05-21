@@ -125,3 +125,29 @@ change.names.to.values <- function(values, group=NA, startIndex=0) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   return(.Call(SXP_change_name_to_values, sim.data$p, values, group, startIndex))    
 }
+
+
+#' Change the visual representation of an allele
+#'
+#' genomicSimulation represents alleles as single-character symbols. 
+#' \code{change.allele.symbol} swaps occurrences of the allele represented
+#' by one character with a different character, in a particular marker 
+#' or across all markers.
+#' 
+#' All genotypes present in simulation will be affected.
+#' 
+#' If @a to is an allele that already exists, all distinction between 
+#' alleles @a from and @a to will be irreversibly lost.
+#' 
+#' @param from Character symbol that will be replaced. eg. "A"
+#' @param to Character symbol that @a from will be replaced with. eg. "b"
+#' @param marker Name of the genetic marker across which to perform this
+#' replacement operation, or NA if the allele should be replaced
+#' across all genetic markers. 
+#' 
+#' @family saving functions 
+#' @export
+change.allele.symbol <- function(from, to, marker=NA) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  return(.Call(SXP_change_allele_symbol, sim.data$p, marker, from, to))  
+} 
