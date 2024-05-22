@@ -70,7 +70,7 @@ make.random.crosses <- function(group, n.crosses=5, cap=0, map=0L, offspring=1, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_random_crosses, sim.data$p, group, n.crosses, cap, map, give.names, 
-	             name.prefix, offspring, track.pedigree, give.ids, fs::path_expand(file.prefix), 
+	             name.prefix, offspring, track.pedigree, give.ids, genomicSimulation:::expand.path(file.prefix), 
 	             save.pedigree, save.gebv, save.genotype, retain))
 }
 
@@ -146,7 +146,7 @@ make.random.crosses.between <- function(group1, group2, n.crosses=5, cap1=0, cap
 	return(.Call(SXP_make_random_crosses_between, sim.data$p, as.integer(group1), 
 	             as.integer(group2), cap1, cap2, map1, map2,
 				 n.crosses, give.names, name.prefix, offspring, track.pedigree, give.ids, 
-				 fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
+				 genomicSimulation:::expand.path(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' OLD NAME | Performs random crosses between two groups.
@@ -205,7 +205,7 @@ make.targeted.crosses <- function(first.parents, second.parents, map1=0L, map2=0
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_targeted_crosses, sim.data$p, first.parents, second.parents,
 				 map1, map2, give.names, name.prefix, offspring, track.pedigree, give.ids, 
-				 fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
+				 genomicSimulation:::expand.path(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' OLD NAME | Performs defined crosses as passed in as R vectors.
@@ -257,7 +257,7 @@ make.crosses.from.file <- function(cross.file, map1=0L, map2=0L, offspring=1, re
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_crosses_from_file, sim.data$p, cross.file, map1, map2, give.names, name.prefix, offspring, 
-				 track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
+				 track.pedigree, give.ids, genomicSimulation:::expand.path(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' OLD NAME | Performs defined crosses as laid out in a file.
@@ -274,7 +274,7 @@ make.crosses.from.file <- function(cross.file, map1=0L, map2=0L, offspring=1, re
 cross.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
-  return(make.crosses.from.file(cross.file=cross.file,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=fs::path_expand(file.prefix),save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
+  return(make.crosses.from.file(cross.file=cross.file,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=genomicSimulation:::expand.path(file.prefix),save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
 
 #' Performs defined crosses between children of known parents as 
@@ -310,7 +310,7 @@ make.double.crosses.from.file <- function(cross.file, map1=0L, map2=0L, offsprin
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_double_crosses_from_file, sim.data$p, cross.file, map1, map2, give.names, name.prefix, offspring, 
-				 track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
+				 track.pedigree, give.ids, genomicSimulation:::expand.path(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' OLD NAME | Performs defined crosses between children of known parents as 
@@ -353,7 +353,7 @@ make.all.unidirectional.crosses <- function(group, map=0L, offspring=1, retain=T
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_all_unidirectional_crosses, sim.data$p, group, map, give.names, name.prefix,
-	             offspring, track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
+	             offspring, track.pedigree, give.ids, genomicSimulation:::expand.path(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' OLD NAME | Performs crosses between every line and every other line in a group
@@ -402,7 +402,7 @@ self.n.times <- function(group, n, map=0L, offspring=1, retain=TRUE, give.names=
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_self_n_times, sim.data$p, group, n, map, give.names, name.prefix, offspring, 
-				 track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
+				 track.pedigree, give.ids, genomicSimulation:::expand.path(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }			
 			
 #' Creates doubled haploids from each genotype in a group
@@ -430,7 +430,7 @@ make.doubled.haploids <- function(group, map=0L, offspring=1, retain=TRUE,
 		file.prefix="", save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_doubled_haploids, sim.data$p, group, map, give.names, name.prefix, offspring, 
-				 track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
+				 track.pedigree, give.ids, genomicSimulation:::expand.path(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
 
 #' Creates a genetically identical copy of each member of a group
@@ -465,6 +465,6 @@ make.clones <- function(group, offspring=1, retain=TRUE, inherit.names=TRUE,
 		file.prefix="", save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_make_clones, sim.data$p, group, inherit.names, give.names, 
-				 name.prefix, offspring, track.pedigree, give.ids, fs::path_expand(file.prefix), save.pedigree,
+				 name.prefix, offspring, track.pedigree, give.ids, genomicSimulation:::expand.path(file.prefix), save.pedigree,
 				 save.gebv, save.genotype, retain))
 }

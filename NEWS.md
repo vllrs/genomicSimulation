@@ -1,3 +1,9 @@
+## Improvements
+
+- No longer `Depends` on package `fs`. `fs` is only used if file paths are used that contain tildes `~` needing to be expanded to home directories.
+
+# genomicSimulation 0.2.5
+
 ## New Features
 
 - Some culling of (unused) dependencies means we can now release genomicSimulation (R version) under the same MIT license as the C version.
@@ -12,7 +18,7 @@
 
 ## Improvements
 
-- Smarter and more robust file loaders. They can now automatically detect headers and allele encodings. See R version vignette (Section: Input Files) or Templates page of C version documentation for more information. 
+- Smarter and more robust file loaders. They can now automatically detect headers and allele encodings. See R version vignette (Section: Input Files) or Templates page of C version documentation for more information.
 - Increased function naming consistency between R and C versions of the package. However, this means some R functions have changed names. Old function names still work (they directly call the new function name), but sometime in the future the old names may be removed. (Old name) -> (new recommended name) pairs for the R package are as follows:
 	- see.minimum.GEBV ->            see.minimal.GEBV
 	- select.by.gebv ->              break.group.by.GEBV

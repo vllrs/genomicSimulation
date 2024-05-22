@@ -1,13 +1,3 @@
-
-#' @keywords internal 
-expand.path <- function(name) {
-  if (name != "" && is.character(name)) {
-    return(fs::path_expand(name))
-  } else {
-    return(NULL)
-  }
-}
-
 #' Create a new SimData object from data loaded from files
 #'
 #' \code{load.data} sets up the simulation object with initial data
@@ -42,9 +32,9 @@ expand.path <- function(name) {
 #' @family loader functions
 #' @export
 load.data <- function(genotype.file=NULL, map.file=NULL, effect.file=NULL) {
- 	sim.data$p <- .Call(SXP_load_data, expand.path(genotype.file), 
- 	                    expand.path(map.file), 
- 	                    expand.path(effect.file))
+ 	sim.data$p <- .Call(SXP_load_data, genomicSimulation:::expand.path(genotype.file), 
+ 	                    genomicSimulation:::expand.path(map.file), 
+ 	                    genomicSimulation:::expand.path(effect.file))
 	gn <- ifelse(is.null(genotype.file), NA, 1L)
 	mi <- ifelse(is.null(map.file) || is.null(gn), NA, 1L)
 	ei <- ifelse(is.null(effect.file) || is.null(mi), NA, 1L)
@@ -64,7 +54,7 @@ load.data <- function(genotype.file=NULL, map.file=NULL, effect.file=NULL) {
 #' @export
 load.genotypes <- function(allele.file) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_load_genotypes, sim.data$p, expand.path(allele.file))) 
+	return(.Call(SXP_load_genotypes, sim.data$p, genomicSimulation:::expand.path(allele.file))) 
 }
 
 #' OLD NAME | Load more genotypes to the existing SimData object from a file
@@ -95,7 +85,7 @@ load.more.genotypes <- function(allele.file) {
 #' @export
 load.map <- function(map.file) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_load_map, sim.data$p, expand.path(map.file))) 
+  return(.Call(SXP_load_map, sim.data$p, genomicSimulation:::expand.path(map.file))) 
 }
 
 #' Add a new set of marker effect values
@@ -113,7 +103,7 @@ load.map <- function(map.file) {
 #' @export
 load.effects <- function(effect.file) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_load_effects, sim.data$p, expand.path(effect.file))) 
+  return(.Call(SXP_load_effects, sim.data$p, genomicSimulation:::expand.path(effect.file))) 
 }
 
 #' OLD NAME | Add a new set of marker effect values
