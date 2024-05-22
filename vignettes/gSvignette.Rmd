@@ -160,9 +160,9 @@ Allele pair encodings, with phase:
 - Any pair of characters (see the above example). Alleles can be any character that is not a space, tab, comma, or newline.
 - Any pair of characters, separated by a forwards slash "/" character. 
 
-Allele pair encodings, without phase (the simulation tool will randomise phase as the file is loaded):
+Allele pair encodings, without phase (the simulation tool will randomise phase of heterozygotes as the file is loaded):
 
-- Alternate allele counts ("0", "1", "2")
+- Alternate allele counts ("0", "1", "2"). If alternate allele counts are used, the reference allele is assumed to be T and the alternate allele A. ("0" then corresponds to "TT", "2" to "AA", and "1" will be randomised as either "TA" or "AT".) `change.allele.symbol` can be used after loading if you wish to change T and/or A to other symbols.
 - IUPAC encodings ("G", "A", "T", "C", "R", "Y", "M", "K", "S", "W", "N")
 
 **Note you might have a genotype matrix that uses "alternate allele counts"-style encoding but presents it in a format that looks like pairs of alleles, eg. "AA", "AT", and "TT".** genomicSimulation expects allele pair encodings to include haplotype phase, (that is, to have four possible values for genotypes of two alleles, not three: "AA", "AT", "TA", and "TT"). 
