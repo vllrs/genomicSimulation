@@ -1,6 +1,7 @@
 ## Improvements
 
 - No longer `Depends` on package `fs`. `fs` is only used if file paths are used that contain tildes `~` needing to be expanded to home directories.
+- Fix a potential (untested) issue when using very long R vectors, by updating vector length calculation in R wrapper functions from `length()` to `xlength()`.
 
 # genomicSimulation 0.2.5
 

@@ -8,10 +8,10 @@
 #define PEDIGREEID_IFY(n) (PedigreeID){.id=n}
 
 void convertVECSXP_to_GroupNum(SEXP container, GroupNum* output) {
-	int len = length(container);
+  R_xlen_t len = xlength(container);
 	int *intvec = INTEGER(container);
 
-	for (int i = 0; i < len; ++i) {
+	for (R_xlen_t i = 0; i < len; ++i) {
 		if (intvec[i] <= 0) {
 			warning("%i is not a possible group number", intvec[i]);
 			output[i] = NO_GROUP;
@@ -108,9 +108,9 @@ SEXP SXP_get_optimal_possible_haplotype(SEXP exd, SEXP s_groups, SEXP s_eff_set)
 	  error("`effect.set` parameter is of invalid type\n");
 	}
 
-	int len = length(s_groups);
+	R_xlen_t len = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
-	for (int i = 0; i < len; ++i) {
+	for (R_xlen_t i = 0; i < len; ++i) {
 		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n", i+1); }
 	}
 
@@ -162,9 +162,9 @@ SEXP SXP_get_optimal_possible_GEBV(SEXP exd, SEXP s_groups, SEXP s_eff_set) {
 	  error("`effect.set` parameter is of invalid type\n");
 	}
 
-	int len = length(s_groups);
+	R_xlen_t len = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
-	for (int i = 0; i < len; ++i) {
+	for (R_xlen_t i = 0; i < len; ++i) {
 		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n",i+1); }
 	}
 
@@ -532,9 +532,9 @@ SEXP SXP_change_name_to_values(SEXP exd, SEXP s_values, SEXP s_group, SEXP s_sta
 	if (TYPEOF(s_values) != STRSXP) {
 		error("`values` are invalid: must be strings");
 	}
-	int len = length(s_values);
+	R_xlen_t len = xlength(s_values);
 	char* names[len];
-	for (int i = 0; i < len; ++i) {
+	for (R_xlen_t i = 0; i < len; ++i) {
 		names[i] = R_Calloc(sizeof(char)*(NAME_LENGTH + 1), char);
 		strncpy(names[i], CHAR(STRING_ELT(s_values, i)), sizeof(char)*NAME_LENGTH);
 		//names[i][NAME_LENGTH] = '\0'; // terminate 'em. Just in case they're trying
@@ -564,7 +564,7 @@ SEXP SXP_change_allele_symbol(SEXP exd, SEXP s_markername, SEXP s_from, SEXP s_t
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
 	const char* c_markername;
-	if (length(s_markername) == 0 || asChar(s_markername) == NA_STRING) {
+	if (xlength(s_markername) == 0 || asChar(s_markername) == NA_STRING) {
 		c_markername = NULL;
 	} else {
 		c_markername = CHAR(asChar(s_markername));
@@ -597,10 +597,10 @@ SEXP SXP_clear_simdata(SEXP exd) {
 SEXP SXP_delete_group(SEXP exd, SEXP s_groups) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int n = length(s_groups);
+  R_xlen_t n = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 
-	for (int i = 0; i < n; ++i) {
+	for (R_xlen_t i = 0; i < n; ++i) {
 		if (groups[i] == NA_INTEGER || groups[i] < 1) {
 			error("Entry %d in `group` parameter is of invalid type\n", i + 1);
 		}
@@ -613,10 +613,10 @@ SEXP SXP_delete_group(SEXP exd, SEXP s_groups) {
 SEXP SXP_delete_label(SEXP exd, SEXP s_labels) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int n = length(s_labels);
+  R_xlen_t n = xlength(s_labels);
 	int *labels = INTEGER(s_labels);
 
-	for (int i = 0; i < n; ++i) {
+	for (R_xlen_t i = 0; i < n; ++i) {
 		if (labels[i] == NA_INTEGER || labels[i] < 1) {
 			error("Entry %d in `labels` parameter is of invalid type\n", i + 1);
 		}
@@ -629,10 +629,10 @@ SEXP SXP_delete_label(SEXP exd, SEXP s_labels) {
 SEXP SXP_delete_eff_set(SEXP exd, SEXP s_eff_sets) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int n = length(s_eff_sets);
+  R_xlen_t n = xlength(s_eff_sets);
 	int *eff_sets = INTEGER(s_eff_sets);
 
-	for (int i = 0; i < n; ++i) {
+	for (R_xlen_t i = 0; i < n; ++i) {
 		if (eff_sets[i] == NA_INTEGER || eff_sets[i] < 1) {
 			error("Entry %d in `effect_sets` parameter is of invalid type\n", i + 1);
 		}
@@ -645,10 +645,10 @@ SEXP SXP_delete_eff_set(SEXP exd, SEXP s_eff_sets) {
 SEXP SXP_delete_recombination_map(SEXP exd, SEXP s_maps) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int n = length(s_maps);
+  R_xlen_t n = xlength(s_maps);
 	int *maps = INTEGER(s_maps);
 
-	for (int i = 0; i < n; ++i) {
+	for (R_xlen_t i = 0; i < n; ++i) {
 		if (maps[i] == NA_INTEGER || maps[i] < 1) {
 			error("Entry %d in `maps` parameter is of invalid type\n", i + 1);
 		}
@@ -663,7 +663,7 @@ SEXP SXP_delete_recombination_map(SEXP exd, SEXP s_maps) {
 SEXP SXP_combine_groups(SEXP exd, SEXP s_groups) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int len = length(s_groups);
+  R_xlen_t len = xlength(s_groups);
 
 	GroupNum groups[len];
 	convertVECSXP_to_GroupNum(s_groups, groups);
@@ -675,9 +675,9 @@ SEXP SXP_combine_groups(SEXP exd, SEXP s_groups) {
 SEXP SXP_make_group_from(SEXP exd, SEXP s_indexes) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int n = length(s_indexes);
+  R_xlen_t n = xlength(s_indexes);
 	unsigned int *ns = (unsigned int*) INTEGER(s_indexes);
-	for (int i = 0; i < n; ++i) {
+	for (R_xlen_t i = 0; i < n; ++i) {
 		if (ns[i] == NA_INTEGER || ns[i] < 0) {
 			error("The `indexes` vector contains at least one invalid index\n");
 		}
@@ -860,7 +860,7 @@ SEXP SXP_break_group_into_buckets(SEXP exd, SEXP s_group, SEXP s_buckets) {
 		error("`buckets` parameter must be a vector of integers\n");
 	}
 
-	int n_groups = length(s_buckets)+1;
+	R_xlen_t n_groups = xlength(s_buckets)+1;
 	int* counts = INTEGER(s_buckets);
 
 	GroupNum results[n_groups];
@@ -868,7 +868,7 @@ SEXP SXP_break_group_into_buckets(SEXP exd, SEXP s_group, SEXP s_buckets) {
 
 	SEXP out = PROTECT(allocVector(INTSXP, n_groups));
 	int* outc = INTEGER(out);
-	for (int i = 0; i < n_groups; ++i) {
+	for (R_xlen_t i = 0; i < n_groups; ++i) {
 		outc[i] = results[i].num;
 	}
 
@@ -888,7 +888,7 @@ SEXP SXP_break_group_into_probabilities(SEXP exd, SEXP s_group, SEXP s_probs) {
 		error("`probabilies` parameter must be a vector of decimals\n");
 	}
 
-	int n_groups = length(s_probs)+1;
+	R_xlen_t n_groups = xlength(s_probs)+1;
 	double* probabilities = REAL(s_probs);
 
 	GroupNum results[n_groups];
@@ -897,7 +897,7 @@ SEXP SXP_break_group_into_probabilities(SEXP exd, SEXP s_group, SEXP s_probs) {
 
 	SEXP out = PROTECT(allocVector(INTSXP, n_groups));
 	int* outc = INTEGER(out);
-	for (int i = 0; i < n_groups; ++i) {
+	for (R_xlen_t i = 0; i < n_groups; ++i) {
 		outc[i] = results[i].num;
 	}
 
@@ -915,7 +915,7 @@ SEXP SXP_break_group_by_label_value(SEXP exd, SEXP s_label, SEXP s_value, SEXP s
 		error("`label` parameter is invalid: negative");
 	}
 
-	int glen = length(s_groups);
+	R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 
 	int value = asInteger(s_value);
@@ -938,7 +938,7 @@ SEXP SXP_break_group_by_label_value(SEXP exd, SEXP s_label, SEXP s_value, SEXP s
 
 		GroupNum newSubGroups[glen];
 		int j = 0;
-		for (int i = 0; i < glen; ++i) {
+		for (R_xlen_t i = 0; i < glen; ++i) {
 			if (groups[i] < 1) {
 				Rprintf("Entry %i in the `group` vector is an invalid group number (0 or negative)", i + 1);
 			} else {
@@ -963,7 +963,7 @@ SEXP SXP_break_group_by_label_range(SEXP exd, SEXP s_label, SEXP s_lowbound, SEX
 		error("`label` parameter is invalid: negative");
 	}
 
-	int glen = length(s_groups);
+	R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 
 	int low = asInteger(s_lowbound);
@@ -991,7 +991,7 @@ SEXP SXP_break_group_by_label_range(SEXP exd, SEXP s_label, SEXP s_lowbound, SEX
 
 		GroupNum newSubGroups[glen];
 		int j = 0;
-		for (int i = 0; i < glen; ++i) {
+		for (R_xlen_t i = 0; i < glen; ++i) {
 			if (groups[i] < 1) {
 				Rprintf("entry %i in the `group` vector is an invalid group number (0 or negative)", i + 1);
 			} else {
@@ -1008,16 +1008,16 @@ SEXP SXP_change_label_default(SEXP exd, SEXP s_labels, SEXP s_defaults) {
 
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int lblen = length(s_labels);
+  R_xlen_t lblen = xlength(s_labels);
 	int *labels = INTEGER(s_labels);
 
-	int dlen = length(s_defaults);
+	R_xlen_t dlen = xlength(s_defaults);
 	int *defaults = INTEGER(s_defaults);
 
 	// Find the minimum length of the vectors and discard everything further along
-	int matchedLen = lblen < dlen ? lblen : dlen;
+	R_xlen_t matchedLen = lblen < dlen ? lblen : dlen;
 
-	for (int i = 0; i < matchedLen; ++i) {
+	for (R_xlen_t i = 0; i < matchedLen; ++i) {
 		if (labels[i] < 1) {
 			error("entry in `label` vector is invalid: too small or large to be a label");
 		} else {
@@ -1038,7 +1038,7 @@ SEXP SXP_change_label_to_values(SEXP exd, SEXP s_label, SEXP s_values, SEXP s_gr
 		error("`label` parameter is invalid: negative");
 	}
 
-	int vlen = length(s_values);
+	R_xlen_t vlen = xlength(s_values);
 	int* values = INTEGER(s_values);
 
 	int group = asInteger(s_group);
@@ -1073,7 +1073,7 @@ SEXP SXP_change_label_by_amount(SEXP exd, SEXP s_label, SEXP s_incr, SEXP s_grou
 		error("`amount` parameter is invalid: must be an integer");
 	}
 
-	int len = length(s_groups);
+	R_xlen_t len = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 
 	if (len == 1) {
@@ -1087,7 +1087,7 @@ SEXP SXP_change_label_by_amount(SEXP exd, SEXP s_label, SEXP s_incr, SEXP s_grou
 		}
 
 	} else {
-		for (int i = 0; i < len; ++i) {
+		for (R_xlen_t i = 0; i < len; ++i) {
 			if (groups[i] < 1) {
 				Rprintf("entry %i in the `group` vector is an invalid group number (0 or negative)", i + 1);
 			} else {
@@ -1114,7 +1114,7 @@ SEXP SXP_change_label_to_this(SEXP exd, SEXP s_label, SEXP s_const, SEXP s_group
 		error("`value` parameter is invalid: must be an integer");
 	}
 
-	int len = length(s_groups);
+	R_xlen_t len = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 
 	if (len == 1) {
@@ -1129,7 +1129,7 @@ SEXP SXP_change_label_to_this(SEXP exd, SEXP s_label, SEXP s_const, SEXP s_group
 		}
 
 	} else {
-		for (int i = 0; i < len; ++i) {
+		for (R_xlen_t i = 0; i < len; ++i) {
 			if (groups[i] < 1) {
 				Rprintf("entry %i in the `group` vector is an invalid group number (0 or negative)", i + 1);
 			} else {
@@ -1145,9 +1145,9 @@ SEXP SXP_break_group_by_GEBV_num(SEXP exd, SEXP s_groups, SEXP s_eff_set, SEXP s
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->n_eff_sets <= 0) { error("Need to load effect values before running this function\n"); }
 
-	int len = length(s_groups);
+	R_xlen_t len = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
-	for (int i = 0; i < len; ++i) {
+	for (R_xlen_t i = 0; i < len; ++i) {
 		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: negative at index %i\n", i+1); }
 	}
 
@@ -1169,7 +1169,7 @@ SEXP SXP_break_group_by_GEBV_num(SEXP exd, SEXP s_groups, SEXP s_eff_set, SEXP s
 	} else {
 		SEXP out = PROTECT(allocVector(INTSXP, len));
 		int* outc = INTEGER(out);
-		for (int i = 0; i < len; ++i) {
+		for (R_xlen_t i = 0; i < len; ++i) {
 			outc[i] = split_by_bv(d, GROUPNUM_IFY(groups[i]), EFFECTID_IFY(eff_id), num_to_select, want_low).num;
 		}
 		UNPROTECT(1);
@@ -1182,9 +1182,9 @@ SEXP SXP_break_group_by_GEBV_percent(SEXP exd, SEXP s_groups, SEXP s_eff_set, SE
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->n_eff_sets <= 0) { error("Need to load effect values before running this function\n"); }
 
-	int len = length(s_groups);
+	R_xlen_t len = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
-	for (int i = 0; i < len; ++i) {
+	for (R_xlen_t i = 0; i < len; ++i) {
 		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: negative at index %i\n", i+1); }
 	}
 
@@ -1212,7 +1212,7 @@ SEXP SXP_break_group_by_GEBV_percent(SEXP exd, SEXP s_groups, SEXP s_eff_set, SE
 		// Get an R vector of the same length as the number of new size 1 groups created
 		SEXP out = PROTECT(allocVector(INTSXP, len));
 		int* outc = INTEGER(out);
-		for (int i = 0; i < len; ++i) {
+		for (R_xlen_t i = 0; i < len; ++i) {
 			num_to_select = get_group_size(d, GROUPNUM_IFY(groups[i])) * pc_to_select / 100;
 			outc[i] = split_by_bv(d, GROUPNUM_IFY(groups[i]), EFFECTID_IFY(eff_id), num_to_select, want_low).num;
 		}
@@ -1274,13 +1274,13 @@ SEXP SXP_make_random_crosses(SEXP exd, SEXP s_groups, SEXP s_crosses, SEXP s_cap
 									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
 									 s_saveGenes, s_retain);
 
-	int glen = length(s_groups);
+  R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
-	for (int i = 0; i < glen; ++i) {
+	for (R_xlen_t i = 0; i < glen; ++i) {
 		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n", i+1); }
 	}
 	
-	int maplen = length(s_map);
+	R_xlen_t maplen = xlength(s_map);
 	if (maplen != 1 && maplen != glen) {
 		error("Cannot match up provided recombination maps to groups: lists differ in length");
 	}
@@ -1302,11 +1302,11 @@ SEXP SXP_make_random_crosses(SEXP exd, SEXP s_groups, SEXP s_crosses, SEXP s_cap
 		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
 		if (maplen == 1) {
-			for (int i = 0; i < glen; ++i) {
+			for (R_xlen_t i = 0; i < glen; ++i) {
 				outc[i] = make_random_crosses(d, GROUPNUM_IFY(groups[i]), n, cap, MAPID_IFY(map[0]), g).num;
 			}
 		} else {
-			for (int i = 0; i < glen; ++i) {
+			for (R_xlen_t i = 0; i < glen; ++i) {
 				outc[i] = make_random_crosses(d, GROUPNUM_IFY(groups[i]), n, cap, MAPID_IFY(map[i]), g).num;
 			}
 		}
@@ -1333,7 +1333,7 @@ SEXP SXP_make_random_crosses_between(SEXP exd, SEXP s_group1, SEXP s_group2, SEX
 	int cap2 = asInteger(s_cap2);
 	if (cap2 == NA_INTEGER) { error("The parameter `cap2` is invalid\n"); }
 	
-	if (length(s_map1) > 1 || length(s_map2) > 1) {
+	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
 		warning("More than one recombination map per group provided. Only the first recombination map will be used");
 	}
 	int map1 = INTEGER(s_map1)[0];
@@ -1355,23 +1355,23 @@ SEXP SXP_make_targeted_crosses(SEXP exd, SEXP s_firstparents, SEXP s_secondparen
 		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	if (length(s_firstparents) != length(s_secondparents)) {
+	if (xlength(s_firstparents) != xlength(s_secondparents)) {
 		error("Parent vectors must be the same length\n");
 	}
 
-	int ncrosses = length(s_firstparents);
+	R_xlen_t ncrosses = xlength(s_firstparents);
 
 	int combinations[2][ncrosses];
 	char pname[NAME_LENGTH+1];
 
 	if (TYPEOF(s_firstparents) == STRSXP) {
-		for (int i = 0; i < ncrosses; ++i) {
+		for (R_xlen_t i = 0; i < ncrosses; ++i) {
 			strncpy(pname, CHAR(STRING_ELT(s_firstparents, i)), sizeof(char)*NAME_LENGTH);
 			combinations[0][i] = gsc_get_index_of_name(d->m, pname);
 		}
 	} else if (TYPEOF(s_firstparents) == INTSXP) {
 		int* indexes = INTEGER(s_firstparents);
-		for (int i = 0; i < ncrosses; ++i) {
+		for (R_xlen_t i = 0; i < ncrosses; ++i) {
 			combinations[0][i] = indexes[i];
 		}
 	} else {
@@ -1379,21 +1379,21 @@ SEXP SXP_make_targeted_crosses(SEXP exd, SEXP s_firstparents, SEXP s_secondparen
 	}
 
 	if (TYPEOF(s_secondparents) == STRSXP) {
-		for (int i = 0; i < ncrosses; ++i) {
+		for (R_xlen_t i = 0; i < ncrosses; ++i) {
 			strncpy(pname, CHAR(STRING_ELT(s_secondparents, i)), sizeof(char)*NAME_LENGTH);
 			combinations[1][i] = gsc_get_index_of_name(d->m, pname);
 		}
 
 	} else if (TYPEOF(s_secondparents) == INTSXP) {
 		int* indexes = INTEGER(s_secondparents);
-		for (int i = 0; i < ncrosses; ++i) {
+		for (R_xlen_t i = 0; i < ncrosses; ++i) {
 			combinations[1][i] = indexes[i];
 		}
 	} else {
 		error("second.parents must be a vector of strings or integers\n");
 	}
 	
-	if (length(s_map1) > 1 || length(s_map2) > 1) {
+	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
 		warning("More than one recombination map per group provided. Only the first recombination map each will be used");
 	}
 	int map1 = INTEGER(s_map1)[0];
@@ -1421,7 +1421,7 @@ SEXP SXP_make_crosses_from_file(SEXP exd, SEXP s_filename, SEXP s_map1, SEXP s_m
 
 	const char* filename = CHAR(asChar(s_filename));
 	
-	if (length(s_map1) > 1 || length(s_map2) > 1) {
+	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
 		warning("More than one recombination map per parent provided. Only the first recombination map each will be used");
 	}
 	int map1 = INTEGER(s_map1)[0];
@@ -1443,7 +1443,7 @@ SEXP SXP_make_double_crosses_from_file(SEXP exd, SEXP s_filename, SEXP s_map1, S
 
 	const char* filename = CHAR(asChar(s_filename));
 	
-	if (length(s_map1) > 1 || length(s_map2) > 1) {
+	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
 		warning("More than one recombination map per parent provided. Only the first recombination map each will be used");
 	}
 	int map1 = INTEGER(s_map1)[0];
@@ -1461,13 +1461,13 @@ SEXP SXP_make_all_unidirectional_crosses(SEXP exd, SEXP s_groups, SEXP s_map, SE
 	GenOptions g = SXP_create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
 									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
 									 s_saveGenes, s_retain);
-	int glen = length(s_groups);
+  R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
-	for (int i = 0; i < glen; ++i) {
+	for (R_xlen_t i = 0; i < glen; ++i) {
 		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n", i+1); }
 	}
 	
-	int maplen = length(s_map);
+	R_xlen_t maplen = xlength(s_map);
 	if (maplen != 1 && maplen != glen) {
 		error("Cannot match up provided recombination maps to groups: lists differ in length");
 	}
@@ -1482,11 +1482,11 @@ SEXP SXP_make_all_unidirectional_crosses(SEXP exd, SEXP s_groups, SEXP s_map, SE
 		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
 		if (maplen == 1) {
-			for (int i = 0; i < glen; ++i) {
+			for (R_xlen_t i = 0; i < glen; ++i) {
 				outc[i] = make_all_unidirectional_crosses(d, GROUPNUM_IFY(groups[i]), MAPID_IFY(map[0]), g).num;
 			}
 		} else {
-			for (int i = 0; i < glen; ++i) {
+			for (R_xlen_t i = 0; i < glen; ++i) {
 				outc[i] = make_all_unidirectional_crosses(d, GROUPNUM_IFY(groups[i]), MAPID_IFY(map[i]), g).num;
 			}
 	
@@ -1502,13 +1502,13 @@ SEXP SXP_self_n_times(SEXP exd, SEXP s_groups, SEXP s_ngen, SEXP s_map, SEXP s_n
 	GenOptions g = SXP_create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
 									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
 									 s_saveGenes, s_retain);
-	int glen = length(s_groups);
+  R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
-	for (int i = 0; i < glen; ++i) {
+	for (R_xlen_t i = 0; i < glen; ++i) {
 		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n", i+1); }
 	}
 	
-	int maplen = length(s_map);
+	R_xlen_t maplen = xlength(s_map);
 	if (maplen != 1 && maplen != glen) {
 		error("Cannot match up provided recombination maps to groups: lists differ in length");
 	}
@@ -1526,11 +1526,11 @@ SEXP SXP_self_n_times(SEXP exd, SEXP s_groups, SEXP s_ngen, SEXP s_map, SEXP s_n
 		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
 		if (maplen == 1) {
-			for (int i = 0; i < glen; ++i) {
+			for (R_xlen_t i = 0; i < glen; ++i) {
 				outc[i] = self_n_times(d, cn, GROUPNUM_IFY(groups[i]), MAPID_IFY(map[0]), g).num;
 			}
 		} else {
-			for (int i = 0; i < glen; ++i) {
+			for (R_xlen_t i = 0; i < glen; ++i) {
 				outc[i] = self_n_times(d, cn, GROUPNUM_IFY(groups[i]), MAPID_IFY(map[i]), g).num;
 			}			
 		}
@@ -1545,13 +1545,13 @@ SEXP SXP_make_doubled_haploids(SEXP exd, SEXP s_groups, SEXP s_map, SEXP s_name,
 	GenOptions g = SXP_create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
 									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
 									 s_saveGenes, s_retain);
-	int glen = length(s_groups);
+  R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
-	for (int i = 0; i < glen; ++i) {
+	for (R_xlen_t i = 0; i < glen; ++i) {
 		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n", i+1); }
 	}
 	
-	int maplen = length(s_map);
+	R_xlen_t maplen = xlength(s_map);
 	if (maplen != 1 && maplen != glen) {
 		error("Cannot match up provided recombination maps to groups: lists differ in length");
 	}
@@ -1566,11 +1566,11 @@ SEXP SXP_make_doubled_haploids(SEXP exd, SEXP s_groups, SEXP s_map, SEXP s_name,
 		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
 		if (maplen == 1) {
-			for (int i = 0; i < glen; ++i) {
+			for (R_xlen_t i = 0; i < glen; ++i) {
 				outc[i] = make_doubled_haploids(d, GROUPNUM_IFY(groups[i]), MAPID_IFY(map[0]), g).num;
 			}
 		} else {
-			for (int i = 0; i < glen; ++i) {
+			for (R_xlen_t i = 0; i < glen; ++i) {
 				outc[i] = make_doubled_haploids(d, GROUPNUM_IFY(groups[i]), MAPID_IFY(map[i]), g).num;
 			}			
 		}
@@ -1586,7 +1586,7 @@ SEXP SXP_make_clones(SEXP exd, SEXP s_groups, SEXP s_inherit_name, SEXP s_name,
 	GenOptions g = SXP_create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
 									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
 									 s_saveGenes, s_retain);
-	int glen = length(s_groups);
+  R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 	for (int i = 0; i < glen; ++i) {
 		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n", i+1); }
@@ -1603,7 +1603,7 @@ SEXP SXP_make_clones(SEXP exd, SEXP s_groups, SEXP s_inherit_name, SEXP s_name,
 		// Get an R vector of the same length as the number of new size 1 groups created
 		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
-		for (int i = 0; i < glen; ++i) {
+		for (R_xlen_t i = 0; i < glen; ++i) {
 			outc[i] = make_clones(d, GROUPNUM_IFY(groups[i]), inherit_name, g).num;
 		}
 		UNPROTECT(1);
