@@ -29,8 +29,10 @@ test_that("see.group.data works", {
   g2 <- make.targeted.crosses(c(0,1), c(2,3))
   expect_identical(see.group.data(g2, "P1"), c("G01", "G02"))
   expect_identical(see.group.data(g2, "P2"), c("G03", "G04"))
+  expect_identical(see.group.data(g2, "P2D"), as.integer(c(3,4)))
   g3 <- self.n.times(g2, 1)
   expect_identical(see.group.data(g3,"P2"), c("7", "8"))
+  expect_identical(see.group.data(g3,"P1D"), c(7L,8L))
   expect_identical(see.group.data(g3,"pedigree"), c("9\t=(7=(G01,G03))", "10\t=(8=(G02,G04))"))
   
   # little bit of excessive label testing snuck in here

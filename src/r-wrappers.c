@@ -300,8 +300,8 @@ enum GroupDataAccessOptions {
   ACCESS_PEDIGREESTRING,
   ACCESS_P1NAME,
   ACCESS_P2NAME,
-  //ACCESS_P1PEDIGREEID,
-  //ACCESS_P2PEDIGREEID,
+  ACCESS_P1PEDIGREEID,
+  ACCESS_P2PEDIGREEID,
   ACCESS_UNKNOWNTYPE
 };
 
@@ -336,10 +336,10 @@ SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set
       switch (c2) {
       case 'E':
         datatype = ACCESS_PEDIGREESTRING; break;
-      //case '1':
-      //  datatype = ACCESS_P1PEDIGREEID; break;
-      //case '2':
-      //  datatype = ACCESS_P2PEDIGREEID; break;
+      case '1':
+        datatype = ACCESS_P1PEDIGREEID; break;
+      case '2':
+        datatype = ACCESS_P2PEDIGREEID; break;
       default:
         break;
       }
@@ -548,6 +548,30 @@ SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set
 	      GenoLocation loc = next_forwards(&it);
 	      while (IS_VALID_LOCATION(loc)) {
 	        outci[outi] = get_id(loc).id;
+	        ++outi;
+	        loc = next_forwards(&it);
+	      }
+	      delete_bidirectional_iter(&it);
+	    }
+	  }
+	  for (; outi < cumulativesize; ++outi) {
+	    outci[outi] = NA_INTEGER;
+	  }
+	  UNPROTECT(1);
+	  return out;
+	  
+	case ACCESS_P1PEDIGREEID:
+	case ACCESS_P2PEDIGREEID:
+	  out = PROTECT(allocVector(INTSXP, cumulativesize));
+	  outci = INTEGER(out);
+	  outi = 0;
+	  for (R_xlen_t i = 0; i < glen; ++i) {
+	    if (gsizes[i] > 0) {
+	      BidirectionalIterator it = create_bidirectional_iter(d,GROUPNUM_IFY(groups[i]));
+	      GenoLocation loc = next_forwards(&it);
+	      while (IS_VALID_LOCATION(loc)) {
+	        PedigreeID parentid = c2 == '1' ? get_first_parent(loc) : get_second_parent(loc);
+	        outci[outi] = parentid.id;
 	        ++outi;
 	        loc = next_forwards(&it);
 	      }

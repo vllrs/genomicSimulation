@@ -1,6 +1,7 @@
 ## New Features
 
 - `see.group.data` can now be called with multiple groups. The results from each group will be concatenated. This allows you to replace lines like `c(see.group.data(group1,"BV"),see.group.data(group2,"BV"))` with `see.group.data(c(group1,group2),"BV")`.
+- Added ability to observe the pedigree IDs of parents using `see.group.data`. (Previously, `see.group.data` could be used to observe the names of parents, which would fall back to the pedigree IDs of parents for parents without names. Some use cases may appreciate the ability to access pedigree IDs consistently.)
 
 ## Improvements
 
