@@ -30,6 +30,11 @@ clear.simdata <- function() {
 #' @export
 delete.group <- function(groups) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (!is.integer(groups)) {
+    ngroup <- groups
+    groups <- as.integer(groups)
+    if (!all.equal(ngroup,groups)) { stop("Group identifiers must be integers.") }
+  }
 	return(.Call(SXP_delete_group, sim.data$p, groups))
 }
 

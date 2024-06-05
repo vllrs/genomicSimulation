@@ -28,9 +28,9 @@ test_that("After deleting a group, other data is shuffled correctly in memory", 
   
   expect_output(delete.group(g2), "1003 genotypes were deleted")
   expect_identical(see.group.data(g, "XIndexes"), c(0L, 1L, 2L, 3L, 4L, 5L))
-  expect_identical(see.group.data(g3, "XIndexes"), c(6L:1008L))
+  expect_identical(see.group.data(g3, "XIndexes"), c(6:1008))
   
-  expect_output(delete.group(g), "6 genotypes were deleted")
+  expect_output(delete.group(1), "6 genotypes were deleted")
   expect_identical(see.group.data(g3, "XIndexes"), c(0L:1002L))
   
 })

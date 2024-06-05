@@ -26,7 +26,7 @@ test_that("see.group.data works", {
   
   expect_equal(see.group.data(g, "BVs"), c(1.4,1.4,1.6,-0.1,0.6,-0.3))
   
-  g2 <- make.targeted.crosses(c(0L,1L), c(2L,3L))
+  g2 <- make.targeted.crosses(c(0,1), c(2,3))
   expect_identical(see.group.data(g2, "P1"), c("G01", "G02"))
   expect_identical(see.group.data(g2, "P2"), c("G03", "G04"))
   g3 <- self.n.times(g2, 1)
@@ -56,7 +56,7 @@ test_that("see.group.data works with multiple groups", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   g <- init$groupNum
   
-  expect_warning(ntmp <- see.group.data(c(g,50L), "Names"))
+  expect_warning(ntmp <- see.group.data(c(g,50), "Names"))
   expect_identical(ntmp, c("G01","G02","G03","G04","G05","G06"))
   
   g2 <- cross.randomly(g,n.crosses=10)

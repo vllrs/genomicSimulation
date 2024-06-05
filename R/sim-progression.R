@@ -203,6 +203,16 @@ make.targeted.crosses <- function(first.parents, second.parents, map1=0L, map2=0
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (is.numeric(first.parents) && !is.integer(first.parents)) {
+    numeric.fp <- first.parents
+    first.parents <- as.integer(first.parents)
+    if (!all.equal(numeric.fp,first.parents)) { stop("Parent 1 indexes must be integers.") }
+  }
+  if (is.numeric(second.parents) && !is.integer(second.parents)) {
+    numeric.sp <- second.parents
+    second.parents <- as.integer(second.parents)
+    if (!all.equal(numeric.sp,second.parents)) { stop("Parent 2 indexes must be integers.") }
+  }
 	return(.Call(SXP_make_targeted_crosses, sim.data$p, first.parents, second.parents,
 				 map1, map2, give.names, name.prefix, offspring, track.pedigree, give.ids, 
 				 genomicSimulation:::expand.path(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
