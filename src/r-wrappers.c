@@ -290,183 +290,339 @@ SEXP SXP_see_existing_groups(SEXP exd) {
 
 }
 
-SEXP SXP_see_group_data(SEXP exd, SEXP s_group, SEXP s_whatData, SEXP s_eff_set_id, SEXP s_label_id) {
+enum GroupDataAccessOptions {
+  ACCESS_PEDIGREEID,
+  ACCESS_INDEX,
+  ACCESS_NAME,
+  ACCESS_BV,
+  ACCESS_LABEL,
+  ACCESS_GENOTYPE,
+  ACCESS_PEDIGREESTRING,
+  ACCESS_P1NAME,
+  ACCESS_P2NAME,
+  //ACCESS_P1PEDIGREEID,
+  //ACCESS_P2PEDIGREEID,
+  ACCESS_UNKNOWNTYPE
+};
+
+SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set_id, SEXP s_label_id) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+  
+  enum GroupDataAccessOptions datatype = ACCESS_UNKNOWNTYPE;
+  R_xlen_t typeselectorlen = xlength(asChar(s_whatData));
+  char c = CHAR(asChar(s_whatData))[0];
+  char c2, c3;
+  switch (c) {
+  case 'D':
+    datatype = ACCESS_PEDIGREEID; break;
+  case 'X':
+    datatype = ACCESS_INDEX; break;
+  case 'N':
+    datatype = ACCESS_NAME; break;
+  case 'B':
+    datatype = ACCESS_BV; break;
+  case 'L':
+    datatype = ACCESS_LABEL; break;
+  case 'G':
+    datatype = ACCESS_GENOTYPE; break;
+  case 'P':
+    if (typeselectorlen == 1) {
+      break;
+    }
+    c2 = CHAR(asChar(s_whatData))[1];
+    c3 = typeselectorlen > 2 ? CHAR(asChar(s_whatData))[2] : '\0';
+    switch (c3) {
+    case 'D':
+      switch (c2) {
+      case 'E':
+        datatype = ACCESS_PEDIGREESTRING; break;
+      //case '1':
+      //  datatype = ACCESS_P1PEDIGREEID; break;
+      //case '2':
+      //  datatype = ACCESS_P2PEDIGREEID; break;
+      default:
+        break;
+      }
+      break;
+    default:
+      switch (c2) {
+      case '1':
+        datatype = ACCESS_P1NAME; break;
+      case '2':
+        datatype = ACCESS_P2NAME; break;
+      default:
+        break;
+      }
+      break;
+    }
+  default: break;
+  }
 
-	int group_id = asInteger(s_group);
-	if (group_id == NA_INTEGER || group_id < 0) {
-		error("`group` parameter is of invalid type\n");
+  R_xlen_t glen = xlength(s_groups);
+	int *groups = INTEGER(s_groups);
+	
+	if (datatype == ACCESS_UNKNOWNTYPE) {
+	  error("`data.type` parameter is not a valid option");
 	}
-
-	char c = CHAR(asChar(s_whatData))[0];
-	char c2;
-	int group_size = get_group_size(d, GROUPNUM_IFY(group_id));
-	if (group_size == 0) {
-		error("The group is empty\n");
+	
+	// Collect group sizes
+	size_t* gsizes = R_alloc(glen, sizeof(size_t));
+	size_t cumulativesize = 0;
+	for (R_xlen_t i = 0; i < glen; ++i) {
+	  gsizes[i] = 0;
+	  if (groups[i] == NA_INTEGER || groups[i] < 1) {
+	    if (glen == 1) {
+	      warning("`group` parameter is invalid (0 or negative)");
+	    } else {
+	      warning("%i (entry %i in the `group` vector) is an invalid group number (0 or negative)", groups[i], i + 1);
+	    }
+	    
+	  } else {
+    	gsizes[i] = get_group_size(d, GROUPNUM_IFY(groups[i]));
+    	if (gsizes[i] == 0) {
+    	  if (glen == 1) {
+    	    warning("`group` is an empty group\n");
+    	  } else {
+    	    warning("Group %i (entry %i in the `group` vector) is an empty group\n", groups[i], i + 1);
+    	  }
+    	} else {
+    	  cumulativesize += gsizes[i];
+    	}
+	  }
 	}
-
-	if (c == 'D') {
-		PedigreeID data[group_size];
-		memset(data, 0, sizeof(PedigreeID) * group_size);
-		get_group_ids(d, GROUPNUM_IFY(group_id), group_size, data);
-
-		// save to an R vector
-		SEXP out = PROTECT(allocVector(INTSXP, group_size));
-		int* outc = INTEGER(out);
-		for (int i = 0; i < group_size; ++i) {
-			outc[i] = data[i].id;
-		}
-		UNPROTECT(1);
-		return out;
-
-	} else if (c == 'X') {
-		unsigned int data[group_size];
-		get_group_indexes(d, GROUPNUM_IFY(group_id), group_size, data);
-
-		// save to an R vector
-		SEXP out = PROTECT(allocVector(INTSXP, group_size));
-		int* outc = INTEGER(out);
-		for (int i = 0; i < group_size; ++i) {
-			outc[i] = data[i];
-		}
-		UNPROTECT(1);
-		return out;
-
-	} else if (c == 'B') {
-		if (d->n_eff_sets <= 0) { error("Need to load at least one set of marker effects before requesting breeding values\n"); }
-
-		int eff_id = asInteger(s_eff_set_id);
-		if (eff_id == NA_INTEGER || eff_id < 1) {
-		error("`effect.set` parameter is of invalid type: needs to be effect set id\n");
-		}
-
-		double data[group_size];
-		memset(data, 0, sizeof(double) * group_size);
-		get_group_bvs(d, GROUPNUM_IFY(group_id),  EFFECTID_IFY(eff_id), group_size, data);
-
-		SEXP out = PROTECT(allocVector(REALSXP, group_size));
-		double* outc = REAL(out);
-		for (int i = 0; i < group_size; ++i) {
-			outc[i] = data[i];
-		}
-		UNPROTECT(1);
-		return out;
-
-	} else if (c == 'N') {
-		char* data[group_size];
-		memset(data, 0, sizeof(char*) * group_size);
-		get_group_names(d, GROUPNUM_IFY(group_id), group_size, data);
-
-		PedigreeID backupdata[group_size];
-		memset(backupdata, 0, sizeof(PedigreeID) * group_size);
-		get_group_ids(d, GROUPNUM_IFY(group_id), group_size, backupdata);
-
-		char buffer[gsc_get_integer_digits(backupdata[group_size - 1].id) + 1];
-
-		SEXP out = PROTECT(allocVector(STRSXP, group_size));
-		for (int i = 0; i < group_size; ++i) {
-			if (data[i] != NULL) {
-				SET_STRING_ELT(out, i, mkChar(data[i]));
-			} else {
-				sprintf(buffer, "%d", backupdata[i].id);
-				SET_STRING_ELT(out, i, mkChar(buffer));
-			}
-		}
-		UNPROTECT(1);
-		return out;
-
-	} else if (c == 'G') {
-		char* rawdata[group_size];
-		memset(rawdata, 0, sizeof(char*) * group_size);
-		get_group_genes(d, GROUPNUM_IFY(group_id), group_size, rawdata);
-
-		char* data[group_size];
-		memset(data, 0, sizeof(char*) * group_size);
-		// copy over to another array, adding string terminators
-		int glen = d->genome.n_markers * 2; // genotype length
-		for (int i = 0; i < group_size; ++i) {
-			data[i] = R_Calloc(glen + 1,char);
-			for (int j = 0; j < glen; ++j) {
-				data[i][j] = rawdata[i][j];
-			}
-			data[i][glen] = '\0';
-		}
-
-		SEXP out = PROTECT(allocVector(STRSXP, group_size));
-		for (int i = 0; i < group_size; ++i) {
-			SET_STRING_ELT(out, i, mkChar(data[i]));
-			free(data[i]);
-		}
-		UNPROTECT(1);
-		return out;
-
-	} else if (c == 'P' && (c2 = CHAR(asChar(s_whatData))[1]) == 'E' && CHAR(asChar(s_whatData))[2] == 'D') {
-		char* data[group_size];
-		memset(data, 0, sizeof(char*) * group_size);
-		get_group_pedigrees(d, GROUPNUM_IFY(group_id), group_size, data);
-
-		SEXP out = PROTECT(allocVector(STRSXP, group_size));
-		for (int i = 0; i < group_size; ++i) {
-			SET_STRING_ELT(out, i, mkChar(data[i]));
-			free(data[i]);
-		}
-		UNPROTECT(1);
-		return out;
-
-	} else if (c == 'P' && (c2 == '1' || c2 == '2')) {
-		int parent = c2 == '1' ? 1 : 2;
-		char* data[group_size];
-		memset(data, 0, sizeof(char*) * group_size);
-		get_group_parent_names(d, GROUPNUM_IFY(group_id), group_size, parent, data);
-
-		PedigreeID backupdata[group_size];
-		memset(backupdata, 0, sizeof(PedigreeID) * group_size);
-		get_group_parent_ids(d, GROUPNUM_IFY(group_id), group_size, parent, backupdata);
-
-		char buffer[gsc_get_integer_digits(backupdata[group_size - 1].id) + 1];
-
-		SEXP out = PROTECT(allocVector(STRSXP, group_size));
-		for (int i = 0; i < group_size; ++i) {
-			if (data[i] != NULL) {
-				SET_STRING_ELT(out, i, mkChar(data[i]));
-			} else {
-				sprintf(buffer, "%d", backupdata[i].id);
-				SET_STRING_ELT(out, i, mkChar(buffer));
-			}
-		}
-		UNPROTECT(1);
-		return out;
-
-	} else if (c == 'L') {
-		if (d->n_labels <= 0) { error("Need to create at least one custom label before requesting custom label values\n"); }
-
-		int label_id = asInteger(s_label_id);
-		if (label_id == NA_INTEGER || label_id < 1) {
-		error("`label` parameter is of invalid type: needs to be a custom label id\n");
-		}
-		int label_index = get_index_of_label(d, LABELID_IFY(label_id));
-		if (label_index == GSC_UNINIT) {
-			error("`label` parameter does not match a current existing custom label id\n");
-		}
-
-		BidirectionalIterator it = create_bidirectional_iter(d, GROUPNUM_IFY(group_id));
-		GenoLocation loc = next_forwards(&it);
-
-		SEXP out = PROTECT(allocVector(INTSXP, group_size));
-		int* outc = INTEGER(out);
-		int i = 0;
-		for (; i < group_size && IS_VALID_LOCATION(loc); ++i) {
-			outc[i] = get_label_value(loc, label_index);
-			loc = next_forwards(&it);
-		}
-		for (; i < group_size; ++i) {
-			outc[i] = NA_INTEGER;
-		}
-		UNPROTECT(1);
-		return out;
-
-	} else {
-		error("`data.type` parameter is not a valid option");
+	
+	// Create output vector and fill.
+	// Got some real mixity of methods of 'how we fill the output vector' here. Sorry.
+	SEXP out; size_t outi; int* outci; double* outcr; 
+	switch (datatype) {
+	case ACCESS_BV: // calls a get_group function per group
+	  if (d->n_eff_sets <= 0) { 
+	    error("Need to load at least one set of marker effects before requesting breeding values\n"); 
+	  }
+	  
+	  int eff_id = asInteger(s_eff_set_id);
+	  if (eff_id == NA_INTEGER || eff_id < 1) {
+	    error("`effect.set` parameter is of invalid type: needs to be effect set id\n");
+	  }
+	  
+	  out = PROTECT(allocVector(REALSXP, cumulativesize));
+	  outcr = REAL(out);
+	  outi = 0;
+	  for (R_xlen_t i = 0; i < glen; ++i) {
+	    if (gsizes[i] > 0) {
+	      get_group_bvs(d, GROUPNUM_IFY(groups[i]),  EFFECTID_IFY(eff_id), gsizes[i], outcr + outi);
+	      outi += gsizes[i];
+	    }
+	  }
+	  for (; outi < cumulativesize; ++outi) {
+	    outcr[outi] = NA_REAL;
+	  }
+	  UNPROTECT(1);
+	  return out;
+	  
+	case ACCESS_GENOTYPE: // uses bidirectional iterator through each group
+	  out = PROTECT(allocVector(STRSXP, cumulativesize));
+	  outi = 0;
+	  char* buf = R_alloc(2*d->genome.n_markers + 1, sizeof(char)); // R_alloc, not R_calloc. R will clean up the memory itself.
+	  buf[d->genome.n_markers << 1] = '\0';
+	  for (R_xlen_t i = 0; i < glen; ++i) {
+	    if (gsizes[i] > 0) {
+	      BidirectionalIterator it = create_bidirectional_iter(d,GROUPNUM_IFY(groups[i]));
+	      GenoLocation loc = next_forwards(&it);
+	      while (IS_VALID_LOCATION(loc)) {
+	        memcpy(buf,get_alleles(loc),sizeof(*buf)*(d->genome.n_markers << 1));
+	        SET_STRING_ELT(out, outi, mkChar(buf));
+	        ++outi;
+	        loc = next_forwards(&it);
+	      }
+	      delete_bidirectional_iter(&it);
+	    }
+	  }
+	  for (; outi < cumulativesize; ++outi) {
+	    SET_STRING_ELT(out, outi, NA_STRING);
+	  }
+	  UNPROTECT(1);
+	  return out;
+	  
+	case ACCESS_INDEX: // uses manual iteration through each group
+	  out = PROTECT(allocVector(INTSXP, cumulativesize));
+	  outci = INTEGER(out);
+	  outi = 0;
+	  for (R_xlen_t i = 0; i < glen; ++i) {
+	    if (gsizes[i] > 0) {
+	      AlleleMatrix* am = d->m;
+	      size_t globalx = 0;
+	      do {
+	        for (size_t localx = 0; localx < am->n_genotypes; ++localx, ++globalx) {
+	          if (am->groups[localx].num == groups[i]) {
+	            outci[outi] = globalx;
+	            ++outi;
+	          }
+	        }
+	      } while ((am = am->next) != NULL);
+	    }
+	  }
+	  for (; outi < cumulativesize; ++outi) {
+	    outci[outi] = NA_INTEGER;
+	  }
+	  UNPROTECT(1);
+	  return out;
+	  
+	case ACCESS_LABEL: // uses a bidirectional iterator through each group
+	  if (d->n_labels <= 0) { error("Need to create at least one custom label before requesting custom label values\n"); }
+	  
+	  int label_id = asInteger(s_label_id);
+	  if (label_id == NA_INTEGER || label_id < 1) {
+	    error("`label` parameter is of invalid type: needs to be a custom label id\n");
+	  }
+	  int label_index = get_index_of_label(d, LABELID_IFY(label_id));
+	  if (label_index == GSC_UNINIT) {
+	    error("`label` parameter does not match a current existing custom label id\n");
+	  }
+	  
+	  out = PROTECT(allocVector(INTSXP, cumulativesize));
+	  outci = INTEGER(out);
+	  outi = 0;
+	  for (R_xlen_t i = 0; i < glen; ++i) {
+	    if (gsizes[i] > 0) {
+	      BidirectionalIterator it = create_bidirectional_iter(d,GROUPNUM_IFY(groups[i]));
+	      GenoLocation loc = next_forwards(&it);
+	      while (IS_VALID_LOCATION(loc)) {
+	        outci[outi] = get_label_value(loc, label_index);
+	        ++outi;
+	        loc = next_forwards(&it);
+	      }
+	      delete_bidirectional_iter(&it);
+	    }
+	  }
+	  for (; outi < cumulativesize; ++outi) {
+	    outci[outi] = NA_INTEGER;
+	  }
+	  UNPROTECT(1);
+	  return out;
+	  
+	case ACCESS_NAME: // uses bidirectional iterator through each group
+	  out = PROTECT(allocVector(STRSXP, cumulativesize));
+	  outi = 0;
+	  for (R_xlen_t i = 0; i < glen; ++i) {
+	    if (gsizes[i] > 0) {
+	      BidirectionalIterator it = create_bidirectional_iter(d,GROUPNUM_IFY(groups[i]));
+	      GenoLocation loc = next_forwards(&it);
+	      char buf[100];
+	      while (IS_VALID_LOCATION(loc)) {
+	        if (get_name(loc) == NULL) {
+	          int strlength = snprintf(NULL, 0,"%d",get_id(loc).id);
+	          if (strlength > 100) {
+	            char* buf2 = R_Calloc(sizeof(*buf2)*(strlength + 1),char);
+	            sprintf(buf2, "%d", get_id(loc).id);
+	            SET_STRING_ELT(out, outi, mkChar(buf2));
+	            R_Free(buf2);
+	            
+	          } else {
+	            sprintf(buf, "%d", get_id(loc).id);
+	            SET_STRING_ELT(out, outi, mkChar(buf));
+	          }
+	          
+	        } else {
+	          SET_STRING_ELT(out, outi, mkChar(get_name(loc)));
+	        }
+	        ++outi;
+	        loc = next_forwards(&it);
+	      }
+	      delete_bidirectional_iter(&it);
+	    }
+	  }
+	  for (; outi < cumulativesize; ++outi) {
+  	  SET_STRING_ELT(out, outi, NA_STRING);
+	  }
+	  UNPROTECT(1);
+	  return out;
+	  
+	case ACCESS_PEDIGREEID: // uses bidirectional iterator through each group
+	  out = PROTECT(allocVector(INTSXP, cumulativesize));
+	  outci = INTEGER(out);
+	  outi = 0;
+	  for (R_xlen_t i = 0; i < glen; ++i) {
+	    if (gsizes[i] > 0) {
+	      BidirectionalIterator it = create_bidirectional_iter(d,GROUPNUM_IFY(groups[i]));
+	      GenoLocation loc = next_forwards(&it);
+	      while (IS_VALID_LOCATION(loc)) {
+	        outci[outi] = get_id(loc).id;
+	        ++outi;
+	        loc = next_forwards(&it);
+	      }
+	      delete_bidirectional_iter(&it);
+	    }
+	  }
+	  for (; outi < cumulativesize; ++outi) {
+	    outci[outi] = NA_INTEGER;
+	  }
+	  UNPROTECT(1);
+	  return out;
+	  
+	case ACCESS_P1NAME:// bidirectional iterator through group
+	case ACCESS_P2NAME:
+	  out = PROTECT(allocVector(STRSXP, cumulativesize));
+	  outi = 0;
+	  for (R_xlen_t i = 0; i < glen; ++i) {
+	    if (gsizes[i] > 0) {
+	      BidirectionalIterator it = create_bidirectional_iter(d,GROUPNUM_IFY(groups[i]));
+	      GenoLocation loc = next_forwards(&it);
+	      char buf[100];
+	      while (IS_VALID_LOCATION(loc)) {
+	        PedigreeID parentid = c2 == '1' ? get_first_parent(loc) : get_second_parent(loc);
+	        char* n = NULL;
+	        if (parentid.id > 0) { n = gsc_get_name_of_id(d->m, parentid); }
+	        if (n == NULL) {
+	          int strlength = snprintf(NULL, 0,"%d",parentid.id);
+	          if (strlength > 100) {
+	            char* buf2 = R_Calloc(sizeof(*buf2)*(strlength + 1),char);
+	            sprintf(buf2, "%d", parentid.id);
+	            SET_STRING_ELT(out, outi, mkChar(buf2));
+	            R_Free(buf2);
+	            
+	          } else {
+	            sprintf(buf, "%d", parentid.id);
+	            SET_STRING_ELT(out, outi, mkChar(buf));
+	          }
+	          
+	        } else {
+	          SET_STRING_ELT(out, outi, mkChar(n));
+	        }
+	        ++outi;
+	        loc = next_forwards(&it);
+	      }
+	      delete_bidirectional_iter(&it);
+	    }
+	  }
+	  for (; outi < cumulativesize; ++outi) {
+	    SET_STRING_ELT(out, outi, NA_STRING);
+	  }
+	  UNPROTECT(1);
+	  return out;
+	  
+	case ACCESS_PEDIGREESTRING: // calls a get_group function per group
+	  out = PROTECT(allocVector(STRSXP, cumulativesize));
+	  outi = 0;
+	  for (R_xlen_t i = 0; i < glen; ++i) {
+	    if (gsizes[i] > 0) {
+	      char* buf[gsizes[i]];
+	      get_group_pedigrees(d, GROUPNUM_IFY(groups[i]), gsizes[i], buf);
+	      for (int j = 0; j < gsizes[i]; ++j, ++outi) {
+	        SET_STRING_ELT(out, outi, mkChar(buf[j]));
+	        free(buf[j]);
+	        
+	      }
+	    }
+	  }
+	  for (; outi < cumulativesize; ++outi) {
+	    SET_STRING_ELT(out,outi,NA_STRING);
+	  }
+	  UNPROTECT(1);
+	  return out;
+	  
+	default:
+	  error("`data.type` parameter is not a valid option");
 	}
 }
 

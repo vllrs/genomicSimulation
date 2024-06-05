@@ -7,31 +7,29 @@
 see.group.data(group, data.type, effect.set = 1L, label = 1L)
 }
 \arguments{
-\item{group}{an integer: the group number of the group to have a look at}
+\item{group}{a vector of integers: the group number(s) of the group(s) to
+access data from}
 
 \item{data.type}{a string that will be used to identify the type of data
 to be extracted. String parsing is case-insensitive.
 \itemize{
 \item If the first character is 'N', the 'N'ames of group members will be extracted. 
-\item If the first character is 'D', the I'D's of group members will be extracted. 
+\item If the first character is 'D', the pedigree I'D's of group members will be extracted. 
 \item If the first character is 'X', the Inde'X'es of group members will be extracted. 
 \item If the first character is 'G', the 'G'enotypes of the group members will be extracted.
-\item If the first character is 'C', the allele 'c'ounts of the group members for each marker
-will be extracted (that is, 0 for no copies of `count.allele` at that marker,
-1 for 1 copy, 2 for 2 copies, etc). A (group members)x(markers) matrix.
 \item If the first character is 'B', the 'b'reeding values/GEBVs of group members will be returned.
-The breeding values will be calculated according to the effect set whose identifier
-is provided by the effect.set parameter (by default, the first set of marker effects loaded).
-\item If it starts with "P1", the first parent of each group member is returned. As usual in 
-genomicSimulation, if the parent has a name, its name will be what is returned, otherwise,
-it will be its ID.
-\item If it starts with "P2", the second parent of each group member is returned. As usual in 
-genomicSimulation, if the parent has a name, its name will be what is returned, otherwise,
-it will be its ID.
-\item If it starts with "ped", the full pedigree log of each group member is returned.
 \item If it starts with "L", the values of a custom 'l'abel will be returned. The values 
 will be shown for the custom label whose identifier is provided by the label parameter
 (by default, the first custom label created).
+The breeding values will be calculated according to the effect set whose identifier
+is provided by the effect.set parameter (by default, the first set of marker effects loaded).
+\item If it starts with "P1", 
+the first parent of each group member is returned. If the parent has a name, 
+its name will be what is returned, otherwise, it will be its ID.
+\item If it starts with "P2", 
+the second parent of each group member is returned. If the parent has a name, 
+its name will be what is returned, otherwise, it will be its ID. 
+\item If it starts with "ped", the full pedigree log of each group member is returned.
 }}
 
 \item{effect.set}{identifier for the set of marker effects to be used to calculate breeding values.
@@ -46,9 +44,18 @@ A vector containing the desired data output for each member of the group.
 \description{
 \code{see.group.data} allows you to extract the names, IDs, indexes, 
 genotypes (as strings), breeding values, or parentage of group members as an R vector.
-As long as the group is not modified in between calls, the same ordering of group
-members will be used, so this function can be used to construct tables of data, eg.
+As long as the group is not modified in between calls, accessing any datatype 
+will return a vector using the same ordering of group members, 
+so this function can be used to construct tables of data, eg.
 \code{data.frame("i"=see.group.data(3,"X"),"GEBV"=see.group.data(3,"BV"))}.
+}
+\details{
+Multiple groups can be passed to this function. The function will still 
+return a single vector of data. Data from each group will be concatenated in 
+the order that the groups were provided to the function. That is, a call to
+\code{see.group.data(c(4,8,1),"N")} will return a single vector of names, 
+containing the names of members of group 4, followed by the names of members 
+of group 8, followed by the names of members of group 1.
 }
 \section{Warning about indexes}{
 

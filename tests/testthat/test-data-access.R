@@ -51,3 +51,23 @@ test_that("see.group.data works", {
   clear.simdata()
 })
 
+
+test_that("see.group.data works with multiple groups", {
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
+  
+  expect_warning(ntmp <- see.group.data(c(g,50L), "Names"))
+  expect_identical(ntmp, c("G01","G02","G03","G04","G05","G06"))
+  
+  g2 <- cross.randomly(g,n.crosses=10)
+  g3 <- cross.randomly(g,n.crosses=2)
+  
+  expect_identical(see.group.data(c(g3,g2,g),"X"), c(16:17, 6:15, 0:5))
+  
+  capture_output(delete.group(g))
+  
+  expect_warning(ntmp <- see.group.data(c(g3,g,g2),"D"))
+  expect_identical(ntmp, c(17:18, 7:16))
+  
+  clear.simdata()
+})

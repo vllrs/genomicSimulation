@@ -1,7 +1,12 @@
+## New Features
+
+- `see.group.data` can now be called with multiple groups. The results from each group will be concatenated. This allows you to replace lines like `c(see.group.data(group1,"BV"),see.group.data(group2,"BV"))` with `see.group.data(c(group1,group2),"BV")`.
+
 ## Improvements
 
 - No longer `Depends` on package `fs`. `fs` is only used if file paths are used that contain tildes `~` needing to be expanded to home directories.
 - Fix a potential (untested) issue when using very long R vectors, by updating vector length calculation in R wrapper functions from `length()` to `xlength()`.
+- `see.group.data` now raises a warning, instead of an error, when there are no members in the group(s) it accesses.
 
 # genomicSimulation 0.2.5
 

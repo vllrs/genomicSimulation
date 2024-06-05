@@ -8,7 +8,7 @@ test_that("After deleting a group, it is no longer in memory", {
   #testing function
   expect_output(delete.group(g), "6 genotypes were deleted")
   
-  expect_error(length(see.group.data(g, "XIndexes"))) #should give an error when the group no longer exists
+  expect_warning(length(see.group.data(g, "XIndexes")))
 })
 
 test_that("After deleting a group, other data is shuffled correctly in memory", {
