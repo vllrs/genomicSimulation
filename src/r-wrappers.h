@@ -23,6 +23,7 @@ SEXP SXP_send_map(SEXP exd, SEXP s_map);
 
 /*----------------------- Data Access ---------------------*/
 SEXP SXP_see_group_data(SEXP exd, SEXP s_group, SEXP s_whatData, SEXP s_eff_set_id, SEXP s_label_id);
+SEXP SXP_see_marker_names(SEXP exd);
 SEXP SXP_see_group_gene_data(SEXP exd, SEXP s_group, SEXP s_countAllele);
 SEXP SXP_see_existing_groups(SEXP exd);
 SEXP SXP_change_name_to_values(SEXP exd, SEXP s_values, SEXP s_group, SEXP s_start);

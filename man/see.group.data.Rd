@@ -23,12 +23,16 @@ will be shown for the custom label whose identifier is provided by the label par
 (by default, the first custom label created).
 The breeding values will be calculated according to the effect set whose identifier
 is provided by the effect.set parameter (by default, the first set of marker effects loaded).
-\item If it starts with "P1", 
+\item If it starts with "P1" (but has no third letter or the third letter is not D), 
 the first parent of each group member is returned. If the parent has a name, 
-its name will be what is returned, otherwise, it will be its ID.
-\item If it starts with "P2", 
+its name will be what is returned, otherwise, it will be its pedigree ID.
+\item If it starts with "P1D", the pedigree ID of the first parent of each 
+group member is returned.
+\item If it starts with "P2" (but has no third letter or the third letter is not D), 
 the second parent of each group member is returned. If the parent has a name, 
-its name will be what is returned, otherwise, it will be its ID. 
+its name will be what is returned, otherwise, it will be its pedigree ID.
+\item If it starts with "P2D", the pedigree ID of the second parent of each 
+group member is returned.
 \item If it starts with "ped", the full pedigree log of each group member is returned.
 }}
 

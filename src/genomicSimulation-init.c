@@ -22,6 +22,7 @@ R_CallMethodDef calledMethods[] = {
 	{"SXP_get_optimal_GEBV", (DL_FUNC) &SXP_get_optimal_GEBV, 2},
 	{"SXP_get_minimal_GEBV", (DL_FUNC) &SXP_get_minimal_GEBV, 2},
 	{"SXP_see_group_data", (DL_FUNC) &SXP_see_group_data, 5},
+	{"SXP_see_marker_names", (DL_FUNC) &SXP_see_marker_names, 1},
 	{"SXP_see_group_gene_data", (DL_FUNC) &SXP_see_group_gene_data, 3},
 	{"SXP_see_existing_groups", (DL_FUNC) &SXP_see_existing_groups, 1},
 	{"SXP_save_GEBVs", (DL_FUNC) &SXP_save_GEBVs, 4},

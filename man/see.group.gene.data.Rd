@@ -7,18 +7,25 @@
 see.group.gene.data(group, count.allele = NA_character_)
 }
 \arguments{
-\item{group}{an integer: the group number of the group to have a look at}
+\item{group}{a vector of integers: the group number(s) of the group(s) to
+access data from}
 
 \item{count.allele}{a character that will be used to identify the type of data
 to be extracted.
-If it is NA, then return the pair of alleles as a string eg "AT"
+If it is NA, as it is by default, then return the pair of alleles as a string eg "AT"
 If it is a character, then return the count of that allele eg. 'A' -> 0 if 
 no copies of A at that marker, 1 if heterozygous for A, 2 if "AA" at that marker.}
 }
 \description{
-\code{see.group.gene.data} allows you to extract (markers)x(group members)
-matrices of the genetics at each marker of some of the genotypes in simulation
-For the moment only implemented in R, not C
+\code{see.group.gene.data} allows you to extract a (markers)x(group members)
+matrix of genotypes in simulation.
+}
+\details{
+Multiple group numbers can be passed to this function. The function will still 
+return a single matrix. Column representing all group members from the first
+group will be first in the matrix, followed by columns representing all group
+members in the second group, and so on. Groups are concatenated in the same order
+as they were ordered in the input parameter passed to this function.
 }
 \seealso{
 Other grouping functions: 

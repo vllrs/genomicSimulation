@@ -73,3 +73,42 @@ test_that("see.group.data works with multiple groups", {
   
   clear.simdata()
 })
+
+test_that("See.group.gene.data works", {
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
+  
+  mt <- read.table("helper_genotypes.txt", header=TRUE)
+  rownames(mt) <- mt[,1]
+  mt <- mt[,-1]
+  mt <- as.matrix(mt)
+  
+  mt2 <- see.group.gene.data(1L)
+  
+  expect_true(all.equal(mt["m1",],mt2[1,]))
+  expect_true(all.equal(mt["m2",],mt2[2,]))
+  expect_true(all.equal(mt["m3",],mt2[3,]))
+  
+  mt3 <- see.group.gene.data(1L,"A")
+  
+  # Check counts of one allele
+  mtc <- matrix(0,nrow=dim(mt2)[1],ncol=dim(mt2)[2],dimnames=list(rownames(mt2),colnames(mt2)))
+  mtc[mt2 == "AA"] <- 2
+  mtc[mt2 == "AT" | mt2 == "TA"] <- 1
+  
+  expect_true(all.equal(mtc,mt3))
+  
+  # Check counts of both alleles always add up to 2
+  expect_equal(see.group.gene.data(g,"A") + see.group.gene.data(g,"T"), 
+               matrix(2,nrow=3,ncol=6,dimnames=list(rownames(mt2),colnames(mt2))))
+  
+  g2 <- make.random.crosses(g,n.crosses=13)
+  
+  # check counts of neither allele
+  expect_equal(see.group.gene.data(g,"C"), matrix(0,nrow=3,ncol=6),ignore_attr=TRUE)
+  
+  # Check other and multi-group calls seem to act as expected
+  expect_equal(dim(see.group.gene.data(g2)), c(3,13))
+  expect_equal(dim(see.group.gene.data(c(g,g2))), c(3,13+6))
+  
+})

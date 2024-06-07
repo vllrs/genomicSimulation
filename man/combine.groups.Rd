@@ -14,7 +14,7 @@ that are to be combined}
 the group number of the combined group
 }
 \description{
-\code{combine.group} combines the members of multple groups
+\code{combine.group} combines the members of multiple groups
 into a single group. This is useful for allowing certain crossing
 functions to act on these genotypes together.
 }

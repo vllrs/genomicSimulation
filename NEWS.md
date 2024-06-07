@@ -1,14 +1,19 @@
+
+# genomicSimulation (development version)
+
 ## New Features
 
 - `see.group.data` can now be called with multiple groups. The results from each group will be concatenated. This allows you to replace lines like `c(see.group.data(group1,"BV"),see.group.data(group2,"BV"))` with `see.group.data(c(group1,group2),"BV")`.
+- `see.group.gene.data` can now be called with multiple groups. The columns from each group will be concatenated.
 - Added ability to observe the pedigree IDs of parents using `see.group.data`. (Previously, `see.group.data` could be used to observe the names of parents, which would fall back to the pedigree IDs of parents for parents without names. Some use cases may appreciate the ability to access pedigree IDs consistently.)
 
 ## Improvements
 
 - No longer `Depends` on package `fs`. `fs` is only used if file paths are used that contain tildes `~` needing to be expanded to home directories.
 - Fix a potential (untested) issue when using very long R vectors, by updating vector length calculation in R wrapper functions from `length()` to `xlength()`.
-- `see.group.data` now raises a warning, instead of an error, when there are no members in the group(s) it accesses.
-- `see.group.data`, `delete.group`, and `combine.groups` no longer raise an error when the group numbers passed are of numeric type instead of integer type. Instead, as long as the numbers are whole numbers, they perform the type conversion. Likewise, `make.targeted.crosses` no longer raises an error when it is passed parent indexes that are of numeric type.
+- `see.group.data` and `see.group.gene.data` now raise a warning, instead of an error, when there are no group members allocated to the group(s) they access.
+- `see.group.data`, `see.group.gene.data`, `delete.group`, and `combine.groups` no longer raise an error when the group numbers passed are of numeric type instead of integer type. Instead, as long as the numbers are whole numbers, they perform the type conversion. Likewise, `make.targeted.crosses` no longer raises an error when it is passed parent indexes that are of numeric type instead of integer type.
+- Column names and row names of the matrix returned by `see.group.gene.data` now reflect genotype names and genetic marker names respectively.
 
 # genomicSimulation 0.2.5
 

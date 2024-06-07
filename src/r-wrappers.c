@@ -305,6 +305,34 @@ enum GroupDataAccessOptions {
   ACCESS_UNKNOWNTYPE
 };
 
+size_t check_group_sizes(SimData* d, R_xlen_t glen, int* groups, size_t* gsizes) {
+  size_t cumulativesize = 0;
+  for (R_xlen_t i = 0; i < glen; ++i) {
+    gsizes[i] = 0;
+    if (groups[i] == NA_INTEGER || groups[i] < 1) {
+      if (glen == 1) {
+        warning("`group` parameter is invalid (0 or negative)");
+      } else {
+        warning("%i (entry %i in the `group` vector) is an invalid group number (0 or negative)", groups[i], i + 1);
+      }
+      
+    } else {
+      gsizes[i] = get_group_size(d, GROUPNUM_IFY(groups[i]));
+      if (gsizes[i] == 0) {
+        if (glen == 1) {
+          warning("`group` is an empty group\n");
+        } else {
+          warning("Group %i (entry %i in the `group` vector) is an empty group\n", groups[i], i + 1);
+        }
+      } else {
+        cumulativesize += gsizes[i];
+      }
+    }
+  }
+  return cumulativesize;
+}
+
+
 SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set_id, SEXP s_label_id) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
   
@@ -358,38 +386,15 @@ SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set
   default: break;
   }
 
-  R_xlen_t glen = xlength(s_groups);
-	int *groups = INTEGER(s_groups);
-	
 	if (datatype == ACCESS_UNKNOWNTYPE) {
 	  error("`data.type` parameter is not a valid option");
 	}
 	
 	// Collect group sizes
+	R_xlen_t glen = xlength(s_groups);
+	int *groups = INTEGER(s_groups);
 	size_t* gsizes = R_alloc(glen, sizeof(size_t));
-	size_t cumulativesize = 0;
-	for (R_xlen_t i = 0; i < glen; ++i) {
-	  gsizes[i] = 0;
-	  if (groups[i] == NA_INTEGER || groups[i] < 1) {
-	    if (glen == 1) {
-	      warning("`group` parameter is invalid (0 or negative)");
-	    } else {
-	      warning("%i (entry %i in the `group` vector) is an invalid group number (0 or negative)", groups[i], i + 1);
-	    }
-	    
-	  } else {
-    	gsizes[i] = get_group_size(d, GROUPNUM_IFY(groups[i]));
-    	if (gsizes[i] == 0) {
-    	  if (glen == 1) {
-    	    warning("`group` is an empty group\n");
-    	  } else {
-    	    warning("Group %i (entry %i in the `group` vector) is an empty group\n", groups[i], i + 1);
-    	  }
-    	} else {
-    	  cumulativesize += gsizes[i];
-    	}
-	  }
-	}
+	size_t cumulativesize = check_group_sizes(d, glen, groups, gsizes);
 	
 	// Create output vector and fill.
 	// Got some real mixity of methods of 'how we fill the output vector' here. Sorry.
@@ -560,7 +565,7 @@ SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set
 	  UNPROTECT(1);
 	  return out;
 	  
-	case ACCESS_P1PEDIGREEID:
+	case ACCESS_P1PEDIGREEID: // bidirectional iterator through group
 	case ACCESS_P2PEDIGREEID:
 	  out = PROTECT(allocVector(INTSXP, cumulativesize));
 	  outci = INTEGER(out);
@@ -584,7 +589,7 @@ SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set
 	  UNPROTECT(1);
 	  return out;
 	  
-	case ACCESS_P1NAME:// bidirectional iterator through group
+	case ACCESS_P1NAME: // bidirectional iterator through group
 	case ACCESS_P2NAME:
 	  out = PROTECT(allocVector(STRSXP, cumulativesize));
 	  outi = 0;
@@ -650,33 +655,56 @@ SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set
 	}
 }
 
+SEXP SXP_see_marker_names(SEXP exd) {
+  SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+  
+  SEXP out = PROTECT(allocVector(STRSXP, d->genome.n_markers));
+  for (size_t i = 0; i < d->genome.n_markers; ++i) {
+    if (d->genome.marker_names == NULL) {
+      SET_STRING_ELT(out,i,NA_STRING);
+    } else {
+      SET_STRING_ELT(out,i,mkChar(d->genome.marker_names[i]));
+    }
+  }
+  UNPROTECT(1);
+  return out;
+}
 
-SEXP SXP_see_group_gene_data(SEXP exd, SEXP s_group, SEXP s_countAllele) {
+
+SEXP SXP_see_group_gene_data(SEXP exd, SEXP s_groups, SEXP s_countAllele) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int group_id = asInteger(s_group);
-	if (group_id == NA_INTEGER || group_id < 0) {
-		error("`group` parameter is of invalid type\n");
-	}
-
-	int group_size = get_group_size(d, GROUPNUM_IFY(group_id));
-	if (group_size == 0) {
-		error("The group is empty\n");
-	}
-
+  // Collect group sizes
+  R_xlen_t glen = xlength(s_groups);
+  int *groups = INTEGER(s_groups);
+  size_t* gsizes = R_alloc(glen, sizeof(size_t));
+  size_t cumulativesize = check_group_sizes(d, glen, groups, gsizes);
+  
+  // bidirectional iterator through group
 	if (asChar(s_countAllele) == NA_STRING) {
 		// Give the pairs of alleles
-
-		char* rawdata[group_size];
-		memset(rawdata, 0, sizeof(char*) * group_size);
-		get_group_genes(d, GROUPNUM_IFY(group_id), group_size, rawdata);
-
-		SEXP out = PROTECT(allocMatrix(STRSXP, d->genome.n_markers, group_size));
-		for (int i = 0; i < group_size; ++i) {
-			for (int j = 0; j < d->genome.n_markers; ++j) {
-				char alleles[] = {rawdata[i][2*j], rawdata[i][2*j + 1], '\0'};
-				SET_STRING_ELT(out, j + d->genome.n_markers*i, mkChar(alleles));
-			}
+		SEXP out = PROTECT(allocMatrix(STRSXP, d->genome.n_markers, cumulativesize));
+		size_t outi = 0;
+		for (R_xlen_t i = 0; i < glen; ++i) {
+		  if (gsizes[i] > 0) {
+		    BidirectionalIterator it = create_bidirectional_iter(d,GROUPNUM_IFY(groups[i]));
+		    GenoLocation loc = next_forwards(&it);
+		    while (IS_VALID_LOCATION(loc)) {
+		      char* geno = get_alleles(loc);
+		      for (size_t j = 0; j < d->genome.n_markers; ++j) {
+		        char alleles[] = {geno[2*j], geno[2*j + 1], '\0'};
+		        SET_STRING_ELT(out, j + d->genome.n_markers*outi, mkChar(alleles));
+		      }
+		      ++outi;
+		      loc = next_forwards(&it);
+		    }
+		    delete_bidirectional_iter(&it);
+		  }
+		}
+		for (; outi < cumulativesize; ++outi) {
+		  for (size_t j = 0; j < d->genome.n_markers; ++j) {
+		    SET_STRING_ELT(out, j + d->genome.n_markers*outi, NA_STRING);
+		  }
 		}
 		UNPROTECT(1);
 		return out;
@@ -684,24 +712,35 @@ SEXP SXP_see_group_gene_data(SEXP exd, SEXP s_group, SEXP s_countAllele) {
 	} else {
 		// Give the counts of allele c
 		char c = CHAR(asChar(s_countAllele))[0];
-
-		char* rawdata[group_size];
-		memset(rawdata, 0, sizeof(char*) * group_size);
-		get_group_genes(d, GROUPNUM_IFY(group_id), group_size, rawdata);
-
-		SEXP out = PROTECT(allocMatrix(INTSXP, d->genome.n_markers, group_size));
-		int* cout = INTEGER(out);
-		for (int i = 0; i < group_size; ++i) {
-			for (int j = 0; j < d->genome.n_markers; ++j) {
-				int count = 0;
-				if (rawdata[i][2*j] == c)     { ++count; }
-				if (rawdata[i][2*j + 1] == c) { ++count; }
-				cout[j + d->genome.n_markers*i] = count;
-			}
-		}
-		UNPROTECT(1);
-		return out;
-
+	  
+	  SEXP out = PROTECT(allocMatrix(INTSXP, d->genome.n_markers, cumulativesize));
+	  int* outc = INTEGER(out);
+	  size_t outi = 0;
+	  for (R_xlen_t i = 0; i < glen; ++i) {
+	    if (gsizes[i] > 0) {
+	      BidirectionalIterator it = create_bidirectional_iter(d,GROUPNUM_IFY(groups[i]));
+	      GenoLocation loc = next_forwards(&it);
+	      while (IS_VALID_LOCATION(loc)) {
+	        char* geno = get_alleles(loc);
+	        for (size_t j = 0; j < d->genome.n_markers; ++j) {
+	          int count = 0;
+	          if (geno[2*j] == c)     { ++count; }
+	          if (geno[2*j + 1] == c) { ++count; }
+	          outc[j + d->genome.n_markers*outi] = count;
+	        }
+	        ++outi;
+	        loc = next_forwards(&it);
+	      }
+	      delete_bidirectional_iter(&it);
+	    }
+	  }
+	  for (; outi < cumulativesize; ++outi) {
+	    for (size_t j = 0; j < d->genome.n_markers; ++j) {
+	      outc[j + d->genome.n_markers*outi] = NA_INTEGER;
+	    }
+	  }
+	  UNPROTECT(1);
+	  return out;
 	}
 }
 
