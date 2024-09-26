@@ -1,6 +1,6 @@
 #' Get a string containing the ultimate/highest-scoring set of alleles.
 #'
-#' \code{see.optimal.haplotype} allows you to extract the optimal haplotype 
+#' Allows you to extract the optimal haplotype 
 #' according to the current loaded effect values as an R string. An error is 
 #' raised if no effect values have been loaded. The optimal genotype (assuming
 #' only additive allele effects) is just the doubled version of this haplotype.
@@ -46,7 +46,7 @@ see.optimal.possible.haplotype <- function(group, eff.set=1L) {
 
 #' Get the ultimate/highest-possible GEBV given the current loaded effect values.
 #'
-#' \code{see.optimal.GEBV} allows you to extract the optimal GEBV
+#' Allows you to extract the optimal GEBV
 #' according to the current loaded effect values. An error is 
 #' raised if no effect values have been loaded.
 #' 
@@ -89,7 +89,7 @@ see.optimal.possible.GEBV <- function(group, eff.set=1L) {
 
 #' Get the lowest-possible GEBV given the current loaded effect values.
 #'
-#' \code{see.minimal.GEBV} allows you to extract the lowest GEBV score
+#' Allows you to extract the lowest GEBV score
 #' possible according to the current loaded effect values. An error is 
 #' raised if no effect values have been loaded.
 #' 
@@ -129,7 +129,7 @@ see.minimum.GEBV <- function(eff.set=1L) {
 #' have come from one parent or another, and so estimates the sections
 #' of the genotype that must have come from each parent.
 #' 
-#' **Experimental function: may be changed or removed at any time, and result validity is not promised.**
+#' **Experimental function: may be changed or removed at any time, and validity of results is not guaranteed.**
 #'
 #' @param parentage.file A string containing a filename. The file should
 #' contain tab-separated, the name of an line and the name of its parents.
@@ -160,7 +160,7 @@ find.crossovers <- function(parentage.file, out.file, window.size=1, certainty=T
 #' have come from one parent or another, and so estimates the sections
 #' of the genotype that must have come from each parent. It plots the result using ggplot
 #'
-#' **Experimental function: may be changed or removed at any time, and result validity is not promised.**
+#' **Experimental function: may be changed or removed at any time, and validity of results is not guaranteed.**
 #'
 #' @inheritParams find.crossovers
 #' @return 0 on success. The result will be printed to the file of name out.file

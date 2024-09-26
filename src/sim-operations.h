@@ -1,9 +1,9 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.2.5
+genomicSimulationC v0.2.5.02
 
-    Last edit: 21 May 2024
+    Last edit: 26 September 2024
 	License: MIT License
 
 Copyright (c) 2021 Kira Villiers
@@ -159,11 +159,13 @@ SOFTWARE.
 
 #define create_empty_simdata       gsc_create_empty_simdata
 #define clear_simdata              gsc_clear_simdata
-#define GenotypeFileFormat         gsc_GenotypeFileFormat
-#define load_mapfile			   gsc_load_mapfile
+#define load_mapfile			         gsc_load_mapfile
 #define load_effectfile            gsc_load_effectfile
 #define load_genotypefile          gsc_load_genotypefile
 #define load_data_files            gsc_load_data_files
+#define DETECT_FILE_FORMAT         GSC_DETECT_FILE_FORMAT
+#define FileFormatSpec             gsc_FileFormatSpec
+#define define_matrix_format_details  gsc_define_matrix_format_details
 
 #define create_bidirectional_iter  gsc_create_bidirectional_iter 
 #define create_randomaccess_iter   gsc_create_randomaccess_iter
@@ -662,7 +664,7 @@ typedef struct {
  * @shortnamed{KnownGenome}
  */
 typedef struct {
-    int n_markers; /**< The total number of markers.**/
+    unsigned int n_markers; /**< The total number of markers.**/
     char** marker_names; /**< A vector of @a n_markers strings containing the names of markers, ordered
                           * according to their index in an AlleleMatrix. */
     char*** names_alphabetical; /**< A vector of @a n_markers pointers to names in @a marker_names, ordered
@@ -873,7 +875,8 @@ struct gsc_MapfileUnit {
  * out of these options.
  *
  */
-enum gsc_GenotypeFileType {    
+enum gsc_GenotypeFileType {
+    GSC_GENOTYPEFILE_UNKNOWN,
     /** Either a marker-by-line matrix, where each marker is a row, or a
      *  line-by-marker matrix, where each marker is a column.
      *
@@ -922,11 +925,43 @@ enum gsc_GenotypeFileType {
     GSC_GENOTYPEFILE_VCF,
     // GSC_GENOTYPEFILE_FLATFILE
 };
-int			  gsc_add_doublematrixvector_product_to_dmatrix(gsc_DecimalMatrix* result, const gsc_DecimalMatrix* amat, const double* avec,
-                                              const gsc_DecimalMatrix* bmat, const double* bvec);
+
+/** Variants in the format of a genotype matrix file. */
+struct gsc_GenotypeFile_MatrixFormat {
+    int has_header; /** < Boolean: Is the first row of the file a header row? (Note: genotype matrix files must have
+                    * row headers, so this setting only applies to the presence/absense of column headers).
+                    * Set to GSC_TRUE or GSC_FALSE if this detail of the formatting is known, or a negative number like GSC_UNINIT if
+                    * the detail is not known and file loaders should auto-detect headers. */
+    int markers_as_rows; /** < Boolean: Are genetic markers the rows of the matrix (GSC_TRUE) or the columns of the matrix (GSC_FALSE)?
+                    * Set to GSC_TRUE or GSC_FALSE if this detail of the formatting is known, or a negative number like GSC_UNINIT if
+                    * the detail is not known and file loaders should auto-detect matrix orientation. */
+    enum gsc_GenotypeFileCellStyle cell_style; /** < How are the alleles for a genotype and marker encoded, in the body of the matrix?
+                    * Set to GSC_GENOTYPECELLSTYLE_UNKNOWN if this detail is not known and file loaders should auto-detect cell format. */
+};
+
+/** File format specifier for the genotype input file.
+ *
+ * If @a filetype is set to @a GSC_GENOTYPEFILE_UNKNOWN, then
+ * no specification is defined and the union @a spec will not be
+ * accessed. Otherwise, the values should correspond. If @a filetype is not @a GSC_GENOTYPEFILE_UNKNOWN, then
+ * the struct in @a spec should be of the matching file type
+ * (eg a struct gsc_GenotypeFile_MatrixFormat if the file type is GSC_GENOTYPEFILE_MATRIX).
+**/
+typedef struct {
+    enum gsc_GenotypeFileType filetype;
+    union {
+        struct gsc_GenotypeFile_MatrixFormat matrix;
+        //struct gsc_GenotypeFile_plinkFormat plink;
+        //struct gsc_GenotypeFile_vcfFormat vcf;
+    } spec;
+} gsc_FileFormatSpec;
+
+/** File format specifier to instruct genomicSimulation loaders to auto-detect all details of the file format. */
+#define GSC_DETECT_FILE_FORMAT ((gsc_FileFormatSpec){.filetype=GSC_GENOTYPEFILE_UNKNOWN})
+
+gsc_FileFormatSpec gsc_define_matrix_format_details(const int has_header, const int markers_as_rows, const enum gsc_GenotypeFileCellStyle cell_style);
 
 /** @} */
-
 /** @defgroup supporters Utils/Supporting Functions
  *
  * @{
@@ -990,10 +1025,17 @@ gsc_AlleleMatrix* gsc_create_empty_allelematrix(const int n_markers, const int n
 gsc_SimData* gsc_create_empty_simdata();
 void gsc_clear_simdata(gsc_SimData* d);
 
-gsc_GroupNum gsc_load_genotypefile(SimData* d, const char* filename);
+gsc_GroupNum gsc_load_genotypefile(SimData* d, const char* filename, const gsc_FileFormatSpec format);
+// static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detect_orientation(const SimData* d, const gsc_TableFileCell* cellqueue, const unsigned int firstrowlen, const unsigned int queuelen, struct gsc_GenotypeFile_MatrixFormat format, const char* filenameforlog);
+// static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detect_cellstyle(const gsc_TableFileCell* cellqueue, const unsigned int firstrowlen, const unsigned int queuelen, struct gsc_GenotypeFile_MatrixFormat format, const char* filenameforlog);
+// static enum gsc_GenotypeFileCellStyle gsc_helper_genotype_matrix_identify_cell_style(char* cell);
+// static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detect_header(const gsc_TableFileCell* cellqueue, const unsigned int firstrowlen, const unsigned int queuelen, struct gsc_GenotypeFile_MatrixFormat format, const char* filenameforlog);
+// static int gsc_helper_genotypefile_matrix_detect_cornercell_presence(const unsigned int ncellsfirstrow, const unsigned int ncellssecondrow, const int secondrowheaderisempty);
+
+
 // static struct gsc_MultiIDSet gsc_load_genotypefile_matrix(gsc_SimData* d, const char* filename, const char* mapfile)
 // static void gsc_helper_parse_genofile(char* filename, enum gsc_GenotypeFileType type, unsigned int* n_markers, char*** marker_names, unsigned int* n_lines, char*** line_names, struct gsc_GenotypeFileCell** cells)
-// static enum gsc_GenotypeFileCellStyle gsc_helper_genotype_matrix_identify_cell_style(char* cell)
+
 // static int gsc_helper_genotypefile_matrix_check_markers_are_rows(gsc_SimData* d, int hasheader, gsc_TableFileCell* firstrow, unsigned int firstrowlen, gsc_TableFileCell secondrowcellone)
 //static void gsc_helper_genotypecell_to_allelematrix(GenoLocation loc, unsigned int markerix, enum gsc_GenotypeFileCellStyle style, char* cell, gsc_SimData* forrng)
 
@@ -1007,7 +1049,7 @@ gsc_MapID gsc_create_uniformspaced_recombmap(gsc_SimData* d, unsigned int n_mark
 
 gsc_EffectID gsc_load_effectfile(gsc_SimData* d, const char* filename);
 
-struct gsc_MultiIDSet gsc_load_data_files(gsc_SimData* d, const char* data_file, const char* map_file, const char* effect_file);
+struct gsc_MultiIDSet gsc_load_data_files(gsc_SimData* d, const char* data_file, const char* map_file, const char* effect_file, const gsc_FileFormatSpec format);
 /** @} */
 
 

@@ -13,7 +13,7 @@ break.group.into.families(group)
 the group numbers of the new groups
 }
 \description{
-\code{break.group.into.families} allocates all genotypes in the
+Allocates all genotypes in the
 group that share the same parents to separate new groups.
 }
 \seealso{

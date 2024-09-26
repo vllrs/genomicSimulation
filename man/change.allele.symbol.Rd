@@ -17,7 +17,7 @@ across all genetic markers.}
 }
 \description{
 genomicSimulation represents alleles as single-character symbols. 
-\code{change.allele.symbol} swaps occurrences of the allele represented
+This function swaps occurrences of the allele represented
 by one character with a different character, in a particular marker 
 or across all markers.
 }

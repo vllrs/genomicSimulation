@@ -1,0 +1,4 @@
+G01 G02 G03, G04, G05, G06
+m1 T/T T/T T/T, T/A, T/T, A/T
+m3 T/T T/T T/A, T/A, T/T, T/T
+m2 A/A A/A A/A, A/A, T/T, A/A

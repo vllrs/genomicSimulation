@@ -5,7 +5,7 @@
 #' An implementation may return at some future date.
 #' Original documentation below.
 #'
-#' \code{save.genome.model} saves the SNP names, their linkage map positions, 
+#' Saves the SNP names, their linkage map positions, 
 #' and the effect values for calculating GEBVs (if applicable) to a file.
 #'
 #' The output is printed with first a tab-separated header row, containing
@@ -31,7 +31,7 @@ save.genome.model <- function(filename) {
 
 #' Save genotypes/lines currently tracked by the simulation.
 #'
-#' \code{save.genotypes} saves the alleles at each SNP of the
+#' Saves the alleles at each SNP of the
 #' lines stored in the SimData to a file.
 #'
 #' @param filename A string containing a filename to which the output will
@@ -57,7 +57,7 @@ save.genotypes <- function(filename, group=NULL, type="R") {
 
 #' Generate and save count matrices for alleles in the SimData
 #'
-#' \code{save.allele.counts} counts the number of occurences of a given
+#' Counts the number of occurences of a given
 #' allele at each SNP of each genotype in the selected set, and prints
 #' the output to a file.
 #'
@@ -85,7 +85,7 @@ save.allele.counts <- function(filename, group=NULL, allele) {
 
 #' Save the pedigrees of genotypes currently saved to the SimData
 #'
-#' \code{save.pedigrees} saves a record of the ancestors of genotypes
+#' Saves a record of the ancestors of genotypes
 #' for which this data was tracked. 
 #'
 #' Two formats are available for printing pedigrees. 
@@ -134,7 +134,7 @@ save.pedigrees <- function(filename, group=NULL, type="R") {
 
 #' Save the GEBVs of genotypes currently saved to the SimData.
 #'
-#' \code{save.GEBVs} calculates GEBVs for a set of genotypes using 
+#' Calculates GEBVs for a set of genotypes using 
 #' the current effect values saved to the SimData, then saves those GEBVs 
 #' to a file.
 #'
@@ -161,7 +161,7 @@ save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 #' Save the local GEBVs of each block in each selected line's haplotypes to a file, using
 #' blocks taken from a file.
 #'
-#' \code{save.local.GEBVs.blocks.from.file} calculates GEBVs for each block of markers listed in 
+#' Calculates GEBVs for each block of markers listed in 
 #' `block.file` for the maternal and paternal halves of its genotype. The results
 #' are saved to a file. The output file is formatted with the blocks as unlabelled columns
 #' and two rows for each genotype, named [line name]_1 and [line name]_2. The entries

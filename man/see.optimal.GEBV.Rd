@@ -15,7 +15,7 @@ maximal GEBV}
 The highest possible GEBV
 }
 \description{
-\code{see.optimal.GEBV} allows you to extract the optimal GEBV
+Allows you to extract the optimal GEBV
 according to the current loaded effect values. An error is 
 raised if no effect values have been loaded.
 }

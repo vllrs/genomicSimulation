@@ -22,7 +22,7 @@ starting with 'P' or 'p' to save in parents-only format.}
 0 on success. On failure an error will be raised.
 }
 \description{
-\code{save.pedigrees} saves a record of the ancestors of genotypes
+Saves a record of the ancestors of genotypes
 for which this data was tracked.
 }
 \details{

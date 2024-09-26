@@ -14,7 +14,7 @@ and all genotypes generated in future will have this value for this label.}
 The label number of the new label created.
 }
 \description{
-\code{make.label} creates a new custom label with the given default value.
+Creates a new custom label with the given default value.
 }
 \seealso{
 Other label functions: 

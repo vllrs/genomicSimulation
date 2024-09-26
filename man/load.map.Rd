@@ -14,9 +14,61 @@ a linkage map for the markers loaded from allele.file}
 The identifier of the recombination map loaded from map.file
 }
 \description{
-\code{load.map} returns the identifier of the new recombination
+Returns the identifier of the new recombination
 map. Only the markers already tracked by the SimData are included
 in this map.
+}
+\details{
+The simplest genetic map file is formatted as follows:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{marker chr pos
+m3 3 15
+m2 1 8.3
+m1 1 5.2
+}\if{html}{\out{</div>}}
+
+Other valid genetic map files might include:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{chr marker pos
+1A 1243509 173.2
+1A 2350898 462.2
+1B 4360992 32.009
+2A 1243556 243.5
+}\if{html}{\out{</div>}}
+
+or
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{gene 10 3.24
+othergene 10 8.3e-1
+etc 15 1.203e2
+}\if{html}{\out{</div>}}
+
+The header line is optional. If there is a header line, the three columns
+"marker" "chr" and "pos" may be rearranged into any ordering. If the header is
+not provided, the order is assumed to be marker name in the first column,
+followed by chromosome in the second column, followed by position in the third.
+
+Regarding marker names: For all genomicSimulation features to work, genetic
+markers must have names. There is no issue with purely numeric names.
+
+Regarding chromosomes/linkage group: any alphanumeric combination may be used
+to denote a chromosome/linkage group, for example '9' or '1A'. There is no
+limit on the number of unique chromosomes/linkage groups in the map.
+
+Regarding marker position: this represents the position in centimorgans of
+each marker along its linkage group. (Distance of 1 cM = expected probability
+of 0.01 chromosomal crossovers in that range.)
+
+The cells in the map file may be separated by spaces, tabs, commas, or any
+combination thereof. Cell spacers do not need to be consistent across the file,
+but therefore marker names/linkage group names cannot contain spaces, tabs, or commas.
+
+The order in which genetic markers are presented in the file does not matter.
+If a marker is duplicated in the file, it will be recorded twice as two
+separate markers in the same position and with the same name.  However,
+because loading genotypes depends on searching for markers by name, if two
+markers have the same name, genotypes may not be loaded correctly. Therefore
+it is suggested that all markers have unique names.
 }
 \seealso{
 Other loader functions: 

@@ -28,6 +28,34 @@ test_that("package can load files", {
 #  clear_simdata()
 #})
 
+test_that("package can load files with manually-specified formats", {
+  # Goal is not to test that automatic file format detection works as expected. That's covered in C tests
+  # Just want to show that, if something did go wrong in auto format detection,
+  # the manual format specification would work. 
+  
+  expect_identical(define.matrix.format.details(), list())
+  
+  expect_snapshot(load.data("helper_genotypes_long.txt", "helper_map.txt", 
+                            format=define.matrix.format.details(has.header=TRUE,
+                                                                markers.as.rows=TRUE,
+                                                                cell.style="pairs")))
+  
+  expect_snapshot(load.data("helper_genotypes_inverted_counts.txt", "helper_map.txt", 
+                            format=define.matrix.format.details(has.header=TRUE,
+                                                                markers.as.rows=FALSE)))
+  
+  expect_snapshot(load.data("helper_genotypes_noheader_nullable_counts.txt", "helper_map.txt", 
+                            format=define.matrix.format.details(has.header=FALSE,
+                                                                markers.as.rows=TRUE,
+                                                                cell.style="C")))
+  
+  expect_snapshot(load.genotypes("helper_genotypes_slash_nocorner.txt",
+                                 define.matrix.format.details(cell.style="/",markers.as.rows=TRUE)))
+  
+  clear.simdata()
+  
+})
+
 test_that("package can create and delete labels", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   

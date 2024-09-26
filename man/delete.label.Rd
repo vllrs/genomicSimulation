@@ -13,7 +13,7 @@ delete.label(labels)
 0 on success. An error is raised on failure.
 }
 \description{
-\code{delete.label} removes the given custom label(s) from all genotypes
+Removes the given custom label(s) from all genotypes
 and deletes them from simulation memory.
 }
 \seealso{

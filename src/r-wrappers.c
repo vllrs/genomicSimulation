@@ -22,7 +22,69 @@ void convertVECSXP_to_GroupNum(SEXP container, GroupNum* output) {
 }
 
 /*-------------------------- Setup -------------------------*/
-SEXP SXP_load_data(SEXP s_alleleFile, SEXP s_mapFile, SEXP s_effectFile) {
+void init_format_as_matrix(FileFormatSpec* mformat) {
+  if (mformat->filetype == GSC_GENOTYPEFILE_UNKNOWN) {
+    mformat->filetype = GSC_GENOTYPEFILE_MATRIX;
+    mformat->spec.matrix = (struct gsc_GenotypeFile_MatrixFormat) {
+           .has_header = GSC_UNINIT,
+           .markers_as_rows = GSC_UNINIT,
+           .cell_style = GSC_GENOTYPECELLSTYLE_UNKNOWN
+    };
+    
+  } else if (mformat->filetype != GSC_GENOTYPEFILE_MATRIX) {
+    //warning("why are you union hacking in R.")
+    error("Malformed `format` parameter");
+  }
+}
+
+FileFormatSpec SXP_parse_filespec_list(SEXP s_fileSpec) {
+  FileFormatSpec mformat = DETECT_FILE_FORMAT;
+  
+  SEXP s_listnames = getAttrib(s_fileSpec, R_NamesSymbol);
+  
+  for (int i = 0; i < length(s_fileSpec); i++) {
+    if(strcmp(CHAR(STRING_ELT(s_listnames, i)), "has.header") == 0) {
+      init_format_as_matrix(&mformat);
+      
+      int tmp = asLogical(VECTOR_ELT(s_fileSpec, i));
+      if (tmp == NA_LOGICAL) {
+        mformat.spec.matrix.has_header = GSC_UNINIT;
+      } else if (tmp) {
+        mformat.spec.matrix.has_header = GSC_TRUE;
+      } else {
+        mformat.spec.matrix.has_header = GSC_FALSE;
+      }
+    }
+    
+    if(strcmp(CHAR(STRING_ELT(s_listnames, i)), "markers.as.rows") == 0) {
+      init_format_as_matrix(&mformat);
+      
+      int tmp = asLogical(VECTOR_ELT(s_fileSpec, i));
+      if (tmp == NA_LOGICAL) {
+        mformat.spec.matrix.markers_as_rows = GSC_UNINIT;
+      } else if (tmp) {
+        mformat.spec.matrix.markers_as_rows = GSC_TRUE;
+      } else {
+        mformat.spec.matrix.markers_as_rows = GSC_FALSE;
+      }
+    }
+    
+    if(strcmp(CHAR(STRING_ELT(s_listnames, i)), "cell.style") == 0) {
+      init_format_as_matrix(&mformat);
+      
+      char c = CHAR(asChar(VECTOR_ELT(s_fileSpec, i)))[0];
+      switch (c) {
+        case 'P': mformat.spec.matrix.cell_style = GSC_GENOTYPECELLSTYLE_PAIR; break;
+        case '/': mformat.spec.matrix.cell_style = GSC_GENOTYPECELLSTYLE_SLASHPAIR; break;
+        case 'C': mformat.spec.matrix.cell_style = GSC_GENOTYPECELLSTYLE_COUNT; break;
+        case 'I': mformat.spec.matrix.cell_style = GSC_GENOTYPECELLSTYLE_ENCODED; break;
+      }
+    }
+  }
+  return mformat;
+}
+
+SEXP SXP_load_data(SEXP s_alleleFile, SEXP s_mapFile, SEXP s_effectFile, SEXP s_fileSpec) {
 	SimData* d = create_empty_simdata();
 	const char* c_alleleFile;
 	if (length(s_alleleFile) == 0 || asChar(s_alleleFile) == NA_STRING) {
@@ -45,7 +107,10 @@ SEXP SXP_load_data(SEXP s_alleleFile, SEXP s_mapFile, SEXP s_effectFile) {
 		c_effectFile = CHAR(asChar(s_effectFile));
 	}
 	
-	load_data_files(d, c_alleleFile, c_mapFile, c_effectFile);
+	if (!isNewList(s_fileSpec)) {
+	  error("`format` parameter is of invalid type: must be a list\n");
+	}
+	load_data_files(d, c_alleleFile, c_mapFile, c_effectFile, SXP_parse_filespec_list(s_fileSpec));
 
 	SEXP sdptr = PROTECT(R_MakeExternalPtr((void*) d, R_NilValue, R_NilValue));
 	R_RegisterCFinalizerEx(sdptr, SXP_delete_simdata, 1);
@@ -53,9 +118,12 @@ SEXP SXP_load_data(SEXP s_alleleFile, SEXP s_mapFile, SEXP s_effectFile) {
 	return sdptr;
 }
 
-SEXP SXP_load_genotypes(SEXP exd, SEXP s_alleleFile) {
+SEXP SXP_load_genotypes(SEXP exd, SEXP s_alleleFile, SEXP s_fileSpec) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	return ScalarInteger(load_genotypefile(d, CHAR(asChar(s_alleleFile))).num);
+  if (!isNewList(s_fileSpec)) {
+    error("`format` parameter is of invalid type: must be a list\n");
+  }
+	return ScalarInteger(load_genotypefile(d, CHAR(asChar(s_alleleFile)), SXP_parse_filespec_list(s_fileSpec)).num);
 }
 
 SEXP SXP_load_map(SEXP exd, SEXP s_mapFile) {

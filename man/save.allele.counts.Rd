@@ -21,7 +21,7 @@ allele to count.}
 0 on success. On failure an error will be raised.
 }
 \description{
-\code{save.allele.counts} counts the number of occurences of a given
+Counts the number of occurences of a given
 allele at each SNP of each genotype in the selected set, and prints
 the output to a file.
 }

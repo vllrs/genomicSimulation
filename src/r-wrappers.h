@@ -5,8 +5,9 @@
 
 /*-------------------------- Setup -------------------------*/
 
-SEXP SXP_load_data(SEXP s_alleleFile, SEXP s_mapFile, SEXP s_effectFile);
-SEXP SXP_load_genotypes(SEXP exd, SEXP s_alleleFile);
+FileFormatSpec SXP_parse_filespec_list(SEXP s_fileSpec);
+SEXP SXP_load_data(SEXP s_alleleFile, SEXP s_mapFile, SEXP s_effectFile, SEXP s_fileSpec);
+SEXP SXP_load_genotypes(SEXP exd, SEXP s_alleleFile, SEXP s_fileSpec);
 SEXP SXP_load_effects(SEXP exd, SEXP s_effectFile);
 SEXP SXP_load_map(SEXP exd, SEXP s_mapFile);
 SEXP SXP_create_new_label(SEXP exd, SEXP s_default);

@@ -17,7 +17,7 @@ genome order (lowest chromosome and lowest position to highest) according
 to the map that was included on initialisation.
 }
 \description{
-\code{see.optimal.haplotype} allows you to extract the optimal haplotype 
+Allows you to extract the optimal haplotype 
 according to the current loaded effect values as an R string. An error is 
 raised if no effect values have been loaded. The optimal genotype (assuming
 only additive allele effects) is just the doubled version of this haplotype.

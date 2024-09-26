@@ -3,7 +3,7 @@
 \name{break.group.by.GEBV}
 \alias{break.group.by.GEBV}
 \alias{break.group.by.gebv}
-\title{Perform selection on a group by true GEBV.}
+\title{Perform selection on a group on true GEBV}
 \usage{
 break.group.by.GEBV(
   from.group,
@@ -34,7 +34,7 @@ the group number of the new group, containing the genotypes that were
 positively selected.
 }
 \description{
-\code{select.by.gebv} calculates the GEBVs of all members of a group, sorts them
+Calculates the GEBVs of all members of a group, sorts them
 in either ascending or descending order, and then selects the best few. The number
 selected can be an exact number (select the best 5) or a percentage (take the best
 2\%). Exactly one of percentage and number parameters must be defined for the
@@ -44,7 +44,8 @@ function to run.
 
 For more complex selection than by true/unmasked GEBV, use the function
 \code{\link{see.group.data}}, use R scripting to identify which to select,
-and split them into a new group using \code{\link{make.group}}.
+and split them into a new group using \code{\link{make.group}}. The package vignette
+contains an example of this process
 }
 
 \seealso{

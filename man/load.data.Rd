@@ -4,7 +4,12 @@
 \alias{load.data}
 \title{Create a new SimData object from data loaded from files}
 \usage{
-load.data(genotype.file = NULL, map.file = NULL, effect.file = NULL)
+load.data(
+  genotype.file = NULL,
+  map.file = NULL,
+  effect.file = NULL,
+  format = list()
+)
 }
 \arguments{
 \item{genotype.file}{A string containing a filename. The file should
@@ -15,6 +20,9 @@ a linkage map for the markers loaded from allele.file}
 
 \item{effect.file}{A string containing a filename. The
 file should contain effect values for calculating GEBVs of a trait}
+
+\item{format}{Output of \link{define.matrix.format.details} to manually specify
+file format, or an empty list by default to detect file formats automatically}
 }
 \value{
 A list with entries $groupNum, $mapID, and $effectID, representing
@@ -24,7 +32,7 @@ the marker effect set identifier of the marker effects loaded from
 the effect.file respectively.
 }
 \description{
-\code{load.data} sets up the simulation object with initial data
+Sets up the simulation object with initial data
 from the provided files. Either a genotype file or a map file, or 
 both, should be provided, as a set of marker effects cannot be loaded
 without a reference set of markers from either of the former two

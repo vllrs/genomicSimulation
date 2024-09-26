@@ -13,7 +13,7 @@ delete.group(groups)
 0 on success. An error is raised on failure.
 }
 \description{
-\code{delete.group} finds the genotypes of the given group and removes
+Finds the genotypes of the given group and removes
 them from the SimData object's storage. A message is printed explaining
 how many genotypes were deleted.
 }

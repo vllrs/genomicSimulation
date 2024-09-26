@@ -13,7 +13,7 @@ has members, the second, named "GroupSize", being
 the number of genotypes currently allocated to that group
 }
 \description{
-\code{see.existing.groups} scans the saved data for groups that currently
+Scans the saved data for groups that currently
 have members and returns their group numbers and number of members.
 }
 \seealso{

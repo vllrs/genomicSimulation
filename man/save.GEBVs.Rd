@@ -22,7 +22,7 @@ GEBVs.}
 0 on success. On failure an error will be raised.
 }
 \description{
-\code{save.GEBVs} calculates GEBVs for a set of genotypes using 
+Calculates GEBVs for a set of genotypes using 
 the current effect values saved to the SimData, then saves those GEBVs 
 to a file.
 }

@@ -7,7 +7,7 @@
 clear.simdata()
 }
 \description{
-\code{clear.simdata} frees and deletes all data stored in the
+Frees and deletes all data stored in the
 package's internal SimData struct (sim.data$p). Returns 0 on success.
 }
 \seealso{

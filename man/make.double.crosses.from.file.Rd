@@ -85,8 +85,10 @@ you to still get results.}
 The group number of the new crosses produced
 }
 \description{
-\code{make.double.crosses.from.file} returns the group number of the group
-that the new genotypes were loaded into.
+Performs specific crosses between grandparents and their offspring 
+to create genotypes with certain grandparents as defined in the input file. 
+Returns the group number of the group
+that the offspring genotypes were loaded into.
 }
 \details{
 The function is designed for use in a situation where you wish to cross

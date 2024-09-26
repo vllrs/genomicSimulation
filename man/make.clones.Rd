@@ -79,8 +79,9 @@ The group number of the new genotypes produced, or 0 if none could be
 produced due to an invalid parent group number being provided.
 }
 \description{
-\code{make.clones} returns the group number of the group
-that the new clone genotypes were loaded into.
+Copy the genotypes in a particular group.
+Returns the group number of the group
+that the clone genotypes were loaded into.
 }
 \details{
 The function copies over the genotypes of the original group members exactly,

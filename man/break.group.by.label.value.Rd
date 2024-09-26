@@ -21,7 +21,7 @@ members of those groups.}
 the group number of the new group
 }
 \description{
-\code{break.group.by.label.value} allocates the genotypes with a particular value
+Allocates the genotypes with a particular value
 for a given custom label to a new group.
 }
 \details{

@@ -20,7 +20,7 @@ members of those groups.}
 0 on success
 }
 \description{
-\code{change.label.to} changes the value of a custom label for all 
+Changes the value of a custom label for all 
 genotypes or for members of group(s) to a certain value.
 }
 \details{

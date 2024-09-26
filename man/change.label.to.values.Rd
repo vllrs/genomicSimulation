@@ -22,7 +22,7 @@ The first position in the list is considered index 1.}
 0 on success
 }
 \description{
-\code{change.label.to.values} changes the values of a custom label for all 
+Changes the values of a custom label for all 
 genotypes or for members of group(s) to a sequence of values.
 }
 \details{

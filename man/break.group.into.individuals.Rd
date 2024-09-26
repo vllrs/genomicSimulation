@@ -13,7 +13,7 @@ break.group.into.individuals(group)
 the group numbers of the new groups
 }
 \description{
-\code{break.group.into.individuals} allocates every genotype inside
+Allocates every genotype inside
 a group to a separate group.
 }
 \seealso{

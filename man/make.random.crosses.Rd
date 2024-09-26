@@ -89,8 +89,9 @@ The group number of the new crosses produced, or 0 if they could not be
 produced due to an invalid parent group number being provided.
 }
 \description{
-\code{make.random.crosses} returns the group number of the group
-that the new genotypes were loaded into. Selfing is not permitted.
+Performs random crosses between members of a group. Selfing is not a possible operation.
+Returns the group number of the group
+that the new genotypes were loaded into.
 }
 \details{
 For random crossing, the n.crosses parameter represents the number of 

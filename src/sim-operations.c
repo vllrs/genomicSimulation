@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.5 - last edit 21 May 2024 */
+/* genomicSimulationC v0.2.5.02 - last edit 26 September 2024 */
 
 /** Default parameter values for GenOptions, to help with quick scripts and prototypes.
  *
@@ -6090,54 +6090,6 @@ static enum gsc_GenotypeFileCellStyle gsc_helper_genotype_matrix_identify_cell_s
     return GSC_GENOTYPECELLSTYLE_UNKNOWN;
 }
 
-/** Determine whether a genotype matrix is row- or column-oriented based on header and first cell of second row
- *
- * If it has no header, and either of the first-column cells provided can be found in the SimData's list of known
- * markers, then assume markers are rows. Else, default to markers being columns.
- *
- * If it does have a header, check:
- * - If the first cell in the header is a known marker: then markers are columns
- * - If the row header of the second row is a known marker: then markers are rows
- * - If any other cells in the header are known markers: then markers are columns
- * - Else assume markers are rows
- *
- * Can't tell if a header does not exist but will set hasheader to true if it does.
- *
- * @return GSC_TRUE if markers are rows, GSC_FALSE if markers are columns
- */
-static int gsc_helper_genotypefile_matrix_check_markers_are_rows(gsc_SimData* d, int hascornercell, gsc_TableFileCell* firstrow, unsigned int firstrowlen,
-                                                           gsc_TableFileCell secondrowcellone, int* hasheader) {
-    int rows = GSC_TRUE;
-    int cols = GSC_FALSE;
-
-    //if (hasheader) {
-        unsigned int headeri = hascornercell ? 1 : 0;
-        if (gsc_get_index_of_genetic_marker(firstrow[headeri].cell, d->genome, NULL)) {
-            *hasheader = GSC_TRUE;
-            return cols;
-        }
-        if (gsc_get_index_of_genetic_marker(secondrowcellone.cell, d->genome, NULL)) { return rows; }
-
-        //Checking remaining column headers.
-        for (++headeri; headeri < firstrowlen; ++headeri) {
-            if (gsc_get_index_of_genetic_marker(firstrow[headeri].cell, d->genome, NULL)) {
-                *hasheader = GSC_TRUE;
-                return cols;
-            }
-        }
-        // None found in column header, assume rows are markers
-        return rows;
-
-    /*} else {
-        if (gsc_get_index_of_genetic_marker(firstrow[0].cell, d->genome, NULL) ||
-                gsc_get_index_of_genetic_marker(secondrowcellone.cell,d->genome, NULL)) {
-            return rows;
-        } else {
-            return cols;
-        }
-    }*/
-}
-
 /** Parse a string and save it as the alleles of a genotype at a particular location and genetic marker.
  *
  * If the style in which the allele string is encoded does not denote phase,
@@ -6313,6 +6265,291 @@ static void gsc_emptylistnavigator_finaliselist(struct gsc_EmptyListNavigator* i
     it->d->current_id = it->currentid;
 }
 
+/** Determine whether a genotype matrix is row- or column-oriented
+ *
+ * The decision of whether a genotype matrix is storing markers as columns or rows is based on the following factors:
+ * - If no names from the column headers of the file cannot be matched to marker names from the SimData 
+ * (either because no markers are tracked by the SimData, because there is no column header in this matrix,
+ * or simply because none of the names match names tracked by the SimData), it is assumed that rows in the 
+ * genotype matrix represent markers.
+ * - If any name from the column header of the genotype file can be matched to the name of a genetic marker tracked 
+ * by the SimData, then it is assumed that columns in the genotype matrix represent markers. 
+ * 
+ * genomicSimulation requires marker names for file loading, so if markers are represented by columns in the matrix,
+ * the format specifier returned will also specify that the matrix does have a header row.
+ *
+ * @param d SimData object the genotype file is assumed to be loaded to. Required because determining 
+ * matrix orientation requires checking marker names against the markers tracked in the SimData.
+ * @param cellqueue array of cells read from the matrix. Requires at least the first row of the matrix, preferably
+ * the first row of the matrix plus the first two cells (header and first body cell) of the second row of the matrix.
+ * @param firstrowlen number of cells in the first row of the matrix. These cells can be accessed at indices 0-{firstrowlen-1}
+ * in @a cellqueue.
+ * @param queuelen number of cells saved sequentially in @a cellqueue. It is assumed that queuelen >= firstrowlen.
+ * @param format established details about the formatting of the genotype matrix
+ * @param filenameforlog The name of the matrix file or other identifier for this matrix that should be used 
+ * when printing out logging information.
+ * @return a format specification for the genotype matrix, with details about the orientation of the matrix added if
+ * those were not already supplied.
+ */
+static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detect_orientation(const SimData* d, 
+        const gsc_TableFileCell* cellqueue, const unsigned int firstrowlen, const unsigned int queuelen,
+        struct gsc_GenotypeFile_MatrixFormat format, const char* filenameforlog) {
+            
+    if (format.markers_as_rows == GSC_TRUE || format.markers_as_rows == GSC_FALSE) {
+        // pass
+    } else if (d->genome.n_maps == 0) {
+        // If there is no genetic map, we cannot check the row/column headers to see if any of them match the marker names..
+        // Default to markers being rows
+
+        Rprintf("(Loading %s) Format axis: genetic markers are -rows-, founder lines are |columns| (by assumption when no genetic map is loaded)\n", filenameforlog);
+        Rprintf("(Loading %s) No genetic map is loaded, will invent a map with equal spacing of these genetic markers (1cM apart)\n", filenameforlog);
+        format.markers_as_rows = GSC_TRUE;
+
+    } else if (format.has_header == GSC_FALSE) {
+        Rprintf("(Loading %s) Format axis: genetic markers are -rows-, founder lines are |columns| "
+                "(by assumption when matrix has no header row)\n", filenameforlog);
+        format.markers_as_rows = GSC_TRUE;
+
+    } else {
+        // Note: by here, either the user has told us there is a header row, or we get to detect whether there is one. So will investigate it by comparing names to what's in our map
+        // taken from older function gsc_helper_genotypefile_matrix_check_markers_are_rows
+        int firstsafeheaderindex = -1;
+        if (firstrowlen > 1) {
+            firstsafeheaderindex = 1;
+        } else if (firstrowlen == 1 && queuelen > firstrowlen + 1) { // second row has more than one cell read.
+            firstsafeheaderindex = 0; // assume there's no corner cell
+            format.has_header = GSC_TRUE;
+        }
+
+        if (firstsafeheaderindex >= 0) {
+            // Don't check the "first" cell. It might be a corner cell between the two headers, whose value should be ignored
+            // Check the next cell in the first row.
+            if (gsc_get_index_of_genetic_marker(cellqueue[firstsafeheaderindex].cell, d->genome, NULL)) {
+                Rprintf("(Loading %s) Format axis: genetic markers are |columns|, founder lines are -rows-\n", filenameforlog);
+                format.markers_as_rows = GSC_FALSE;
+                format.has_header = GSC_TRUE;
+                return format;
+            }
+
+            // If that wasn't a match, check the first row header, if it exists:
+            if (!cellqueue[firstrowlen].eof &&
+                    gsc_get_index_of_genetic_marker(cellqueue[firstrowlen].cell, d->genome, NULL)) {
+                Rprintf("(Loading %s) Format axis: genetic markers are -rows-, founder lines are |columns|\n", filenameforlog);
+                format.markers_as_rows = GSC_TRUE;
+                return format;
+            }
+
+            // Check remaining column headers
+            for (unsigned int i = firstsafeheaderindex + 1; i < firstrowlen; ++i) {
+                if (gsc_get_index_of_genetic_marker(cellqueue[i].cell, d->genome, NULL)) {
+                    Rprintf("(Loading %s) Format axis: genetic markers are |columns|, founder lines are -rows-\n", filenameforlog);
+                    format.markers_as_rows = GSC_FALSE;
+                    format.has_header = GSC_TRUE;
+                    return format;
+                }
+            }
+
+        }
+        Rprintf("(Loading %s) Format axis: genetic markers are -rows-, founder lines are |columns| (by default file format)\n", filenameforlog);
+        format.markers_as_rows = GSC_TRUE;
+    }
+    return format;
+
+}
+
+/** Determine the style in which alleles are stored in a genotype matrix 
+ *
+ * @param cellqueue array of cells read from the matrix. It should contain at least one body cell, if the matrix has any boy cells: that is, at least two cells if @a format.has_header is false, or an entire first row plus two cells if @a format.has_header is unknown or true.
+ * @param firstrowlen number of cells in the first row of the matrix.
+ * @param queuelen number of cells saved sequentially in @a cellqueue. It is assumed that queuelen >= firstrowlen.
+ * @param format established details about the formatting of the genotype matrix
+ * @param filenameforlog The name of the matrix file or other identifier for this matrix that should be used 
+ * when printing out logging information. 
+ * @return a format specification for the genotype matrix, with details about the style of
+ * allele encoding used in the body of the matrix added if those were not already supplied.
+ */
+static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detect_cellstyle(const gsc_TableFileCell* cellqueue, 
+        const unsigned int firstrowlen, const unsigned int queuelen, struct gsc_GenotypeFile_MatrixFormat format, const char* filenameforlog) {
+
+    int style_detected = GSC_FALSE;
+    int single_col_file = GSC_FALSE;
+    // 1. Detect format if not yet provided.
+    if (format.cell_style == GSC_GENOTYPECELLSTYLE_UNKNOWN) {
+        style_detected = GSC_TRUE;
+
+        if (firstrowlen == queuelen || cellqueue[firstrowlen].eof) { // There is only one row. Short-circuiting necessary
+            // if there is also only one column, we have no body cells to detect the style of
+            if (firstrowlen > 1) {
+                // Detection path for a single-line file. If it has a header, then this value might end up ignored
+                format.cell_style = gsc_helper_genotype_matrix_identify_cell_style(cellqueue[1]);
+            } else {
+                single_col_file = GSC_TRUE; // one-cell file. needs the warning.
+            }
+        } else { // there is more than one row
+            // If there is only one column, there are no body cells with style to detect
+            if (firstrowlen + 1 < queuelen && cellqueue[firstrowlen+1].predNewline < 1) {
+                // Detection path. There exists a second cell on the second line that we can read
+                format.cell_style = gsc_helper_genotype_matrix_identify_cell_style(cellqueue[firstrowlen+1]);
+            } else {
+                single_col_file = GSC_TRUE;
+            }
+        }
+    }
+    
+    // 2. Print cell style detection logs 
+    if (style_detected) {
+        switch(format.cell_style) {
+            case GSC_GENOTYPECELLSTYLE_PAIR:      Rprintf("(Loading %s) Allele format: phased allele pairs\n", filenameforlog); break;
+            case GSC_GENOTYPECELLSTYLE_SLASHPAIR: Rprintf("(Loading %s) Allele format: phased allele pairs (slash-separated)\n", filenameforlog); break;
+            case GSC_GENOTYPECELLSTYLE_COUNT:     Rprintf("(Loading %s) Allele format: reference allele counts (phase will be randomised)\n", filenameforlog); break;
+            case GSC_GENOTYPECELLSTYLE_ENCODED:   Rprintf("(Loading %s) Allele format: IUPAC encoded pair (phase will be randomised)\n", filenameforlog); break;
+            case GSC_GENOTYPECELLSTYLE_UNKNOWN:
+                if (single_col_file || firstrowlen == queuelen ||
+                        (firstrowlen + 1 == queuelen && cellqueue[firstrowlen].eof && cellqueue[firstrowlen].cell_len == 0)) {
+                    Rprintf("(Loading %s) Warning: empty genotype matrix. No genotypes will be loaded.\n", filenameforlog);
+                } else {
+                    fprintf(stderr,"(Loading %s) Failure: Unable to determine the formatting of pairs of alleles."
+                    " Check genomicSimulation manual for accepted allele pair encodings\n", filenameforlog);
+                }
+        }
+    }
+    
+    return format;
+}
+
+/** Determine whether a genotype matrix has a header row or not
+ *
+ * It is assumed that, during the detection process, @see gsc_helper_genotypefile_matrix_detect_orientation 
+ * and @see gsc_helper_genotypefile_matrix_detect_cellstyle
+ * will be called before this function. Doing so in the opposite order risks that the detection
+ * functions assume a file has an invalid configuration even though there is another 
+ * potential configuration that would be valid to load.
+ *
+ * This function does not guarantee that the returned format has a known (true or false)
+ * has_header field. has_header may still be unknown.
+ *
+ * The decision as to whether the genotype matrix has a header row is based on:
+ * - If the file is a single column, then it has no header row. 
+ * - If any cell in the first row does not match @a format.cell_style, then the first
+ * row is assumed to be a header row. 
+ * - If all cells in the first row match @a format.cell_style, then there is assumed to
+ * be no header row. 
+ *
+ * @param cellqueue array of cells read from the matrix. It should contain at least two cells, and ideally the whole of the first row of the matrix.
+ * @param firstrowlen number of cells in the first row of the matrix.
+ * @param queuelen number of cells saved sequentially in @a cellqueue. It is assumed that queuelen >= firstrowlen.
+ * @param format established details about the formatting of the genotype matrix
+ * @param filenameforlog The name of the matrix file or other identifier for this matrix that should be used 
+ * when printing out logging information. 
+ * @return a format specification for the genotype matrix, with the field defining whether
+ * there is a header row in the matrix added, if that were not already supplied.
+ */
+static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detect_header(const gsc_TableFileCell* cellqueue, 
+        const unsigned int firstrowlen, const unsigned int queuelen, struct gsc_GenotypeFile_MatrixFormat format, const char* filenameforlog) {
+    // Validity check: if genetic markers are columns, header row is mandatory
+    if (format.has_header == GSC_FALSE && format.markers_as_rows == GSC_FALSE) {
+        Rprintf("(Loading %s) Failure: genetic markers cannot be represented by columns when matrix has no header row\n", filenameforlog);
+        format.has_header = GSC_UNINIT;
+        return format;
+    }
+
+    // Detect header if we need to detect it.
+    if (format.has_header != GSC_FALSE && format.has_header != GSC_TRUE) {
+        if (firstrowlen == 1) { 
+            // we could have a single-column file (no header assumed), or 
+            // we could be a two-column file with no corner cell (must have a header)
+            if (queuelen > 2) {
+                if (cellqueue[2].eof || cellqueue[2].predNewline) {
+                    format.has_header = GSC_FALSE; // single column file
+                } else {
+                    format.has_header = GSC_TRUE; 
+                }
+            } // else can't draw any conclusions.
+            
+        } else if (format.cell_style != GSC_GENOTYPECELLSTYLE_UNKNOWN) {
+            // Idea: if we find a cell in the first row that doesn't match the expected cell style, then that first row is probably a header
+            format.has_header = GSC_FALSE;
+            for (unsigned int i = 1; i < firstrowlen; ++i) { // ignore first cell in row, it could be a corner cell or row header
+                if (gsc_helper_genotype_matrix_identify_cell_style(cellqueue[i]) != format.cell_style) {
+                    format.has_header = GSC_TRUE;
+                    break;
+                }
+            }
+        } // else don't know how to detect.
+
+        switch (format.has_header) {
+            case GSC_FALSE: Rprintf("(Loading %s) Format: genotype matrix without header row\n", filenameforlog); break;
+            case GSC_TRUE: Rprintf("(Loading %s) Format: genotype matrix with header row\n", filenameforlog); break;
+            default: warning("(Loading %s) Failure: Unable to determine whether file has header row\n", filenameforlog); break;
+        }
+    }
+
+    return format;
+}
+
+/** Determine whether a genotype matrix has a corner cell or not 
+ *
+ * A corner cell is a non-blank value in the first-row/first-column of the matrix,
+ * if the matrix has both a header row and header column.
+ *
+ * @param ncellsfirstrow number of cells in the first row of the matrix.
+ * @param ncellssecondrow number of cells in the second row of the matrix.
+ * @param secondrowheaderisempty truthy if the value in the first column of the second 
+ * row of the matrix is blank, falsy if there is a non-blank value in the first cell 
+ * of that second row of the matrix. (note: genomicSimulation's TableFileReader
+ * takes any blank space (including spaces at the beginning of a row) as cell dividers.
+ * That interface is the assumed input for calculating these parameters).
+ * @returns GSC_TRUE if there is a corner cell, GSC_FALSE if there is not a corner cell,
+ * and GSC_UNINIT if this was unable to be determined.
+ */
+static int gsc_helper_genotypefile_matrix_detect_cornercell_presence(const unsigned int ncellsfirstrow, const unsigned int ncellssecondrow, const int secondrowheaderisempty) {
+    if (ncellssecondrow == ncellsfirstrow + 1) {
+        return GSC_FALSE;
+    } else if (ncellssecondrow == ncellsfirstrow) {
+        if (secondrowheaderisempty) {
+            return GSC_FALSE; //genotype name is simply empty, making the second row look one column shorter than reality
+        } else {
+            return GSC_TRUE;
+        }
+    } else if (ncellssecondrow == ncellsfirstrow - 1 && secondrowheaderisempty) {
+        return GSC_TRUE; // genotype name on row 2 is empty but corner cell is not
+    } else {
+        return GSC_UNINIT;
+    }
+}
+
+/** Give genomicSimulation hints on the format of a genotype matrix file to be loaded.
+ *
+ * Sometimes genomicSimulation's automatic file formatting detection may misinterpret
+ * the formatting of a genotype matrix (eg assuming markers are columns, when they are
+ * actually rows of the matrix; assuming there is no header row even though there is one;
+ * being unable to determine that the body of the matrix are alternate allele counts because 
+ * there are some confusingly-placed "NA"s). For particularly large files, the file formatting
+ * detection process might slow down file imports or require more memory. 
+ *
+ * To bypass part or all of the formatting detection steps when importing a genotype matrix
+ * file, this function can be used to provide the final parameter for
+ * @see gsc_load_genotypefile or @see gsc_load_data_files.
+ * 
+ * @param has_header GSC_TRUE if the genotype matrix to be imported definitely has a header
+ * row, GSC_FALSE if the genotype matrix has no header row, or some other value (eg GSC_UNINIT)
+ * to not bypass the header detection steps of the import process. 
+ * @param markers_as_rows GSC_TRUE if each row in the genotype matrix represents a genetic
+ * marker, GSC_FALSE if each column of the genotype matrix represents a genetic marker, or 
+ * some other value (eg GSC_UNINIT) to not bypass the orientation detection steps of the import
+ * process.
+ * @param cell_style The style in which the alleles of a candidate at a marker are encoded 
+ * in the body cells of the genotype matrix. Use GSC_GENOTYPECELLSTYLE_UNKNOWN to not 
+ * bypass the cell style detection step of the import process.
+ * @returns a structure to pass as the final parameter of @see gsc_load_genotypefile or @see gsc_load_data_files
+ */
+gsc_FileFormatSpec gsc_define_matrix_format_details(const int has_header, const int markers_as_rows, const enum gsc_GenotypeFileCellStyle cell_style) {
+    return (FileFormatSpec){.filetype=GSC_GENOTYPEFILE_MATRIX,
+                            .spec=(struct gsc_GenotypeFile_MatrixFormat){.cell_style=cell_style,
+                                                                        .has_header=has_header,
+                                                                        .markers_as_rows=markers_as_rows}};
+}
+
 /** Loads a genotype file, with or without existing genome model in the SimData
  *
  * First, it reads the first row to determine if it is a header or not. This,
@@ -6326,15 +6563,24 @@ static void gsc_emptylistnavigator_finaliselist(struct gsc_EmptyListNavigator* i
  * incorrect number of cells in that row, and will simply have default null '\0' alleles
  * in that marker/parent line.
  *
- * @shortnamed{load_genotypefile_matrix}
- *
  * @return group number for the set of genotypes loaded from the file
  */
-static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d, const char* filename) {
+static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d, const char* filename, const gsc_FileFormatSpec format) {
     if (filename == NULL) return NO_GROUP;
+    if (format.filetype != GSC_GENOTYPEFILE_MATRIX && format.filetype != GSC_GENOTYPEFILE_UNKNOWN) {
+        warning("Non-genotype-matrix format specification provided to genotype matrix file loader function\n");
+        return NO_GROUP;
+    }
+
+    // Part 1: Detect file formatting details
+    struct gsc_GenotypeFile_MatrixFormat format_detected = 
+        { .has_header = GSC_UNINIT, .markers_as_rows = GSC_UNINIT, .cell_style = GSC_GENOTYPECELLSTYLE_UNKNOWN };
+    if (format.filetype == GSC_GENOTYPEFILE_MATRIX) {
+        format_detected = format.spec.matrix;
+    }
 
     gsc_TableFileReader tbl = gsc_tablefilereader_create(filename);
-    // Read header row
+    // Read one row + 2 cells (if possible)
     GSC_CREATE_BUFFER(cellsread,gsc_TableFileCell,100);
     unsigned int ncellsread = 0;
     do {
@@ -6344,162 +6590,240 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d, const char* fil
         if (ncellsread >= cellsreadcap) {
             GSC_STRETCH_BUFFER(cellsread,2*ncellsread);
         }
-    } while (!cellsread[ncellsread-1].eof && !cellsread[ncellsread-1].predNewline);
-    unsigned int ncellsfirstrow = ncellsread - 1;
+    } while (!cellsread[ncellsread-1].eof && (ncellsread <= 1 || !cellsread[ncellsread-1].predNewline));
+    unsigned int ncellsfirstrow = (cellsread[ncellsread-1].eof && cellsread[ncellsread-1].cell_len > 0) ? ncellsread : ncellsread - 1;
+    if (!cellsread[ncellsread-1].eof) { // read one more cell if possible
+        cellsread[ncellsread] = gsc_tablefilereader_get_next_cell(&tbl);
+        gsc_tablefilecell_deep_copy(&cellsread[ncellsread]);
+        ++ncellsread;
+        if (ncellsread >= cellsreadcap) {
+            GSC_STRETCH_BUFFER(cellsread,2*ncellsread);
+        }
+    }
+    if (ncellsread <= 1) { // EOF only
+        goto failure_exit;
+    }
+    //int is_onecol_file = cellsread[ncellsfirstrow + 1].predNewline > 0 || ncellsread == 2; // ncellsread == 2 means we read one cell, then an EOF
+    int is_onerow_file = ncellsread == ncellsfirstrow || cellsread[ncellsfirstrow].eof; // short-circuiting essential!
 
-    enum gsc_GenotypeFileCellStyle cellstyle;
-    gsc_TableFileCell* cellqueue;
-    unsigned int queuesize;
-    int hasheader;
-    int markersasrows = GSC_TRUE;
-    unsigned int expected_row_len;
+    format_detected = gsc_helper_genotypefile_matrix_detect_orientation(d, cellsread, ncellsfirstrow, ncellsread, format_detected, filename);
+    format_detected = gsc_helper_genotypefile_matrix_detect_cellstyle(cellsread, ncellsfirstrow, ncellsread, format_detected, filename);
+    format_detected = gsc_helper_genotypefile_matrix_detect_header(cellsread, ncellsfirstrow, ncellsread, format_detected, filename);
+    if ((format_detected.has_header != GSC_FALSE && format_detected.has_header != GSC_TRUE) || 
+        (format_detected.markers_as_rows != GSC_FALSE && format_detected.markers_as_rows != GSC_TRUE) ||
+        format_detected.cell_style == GSC_GENOTYPECELLSTYLE_UNKNOWN) {
+            goto failure_exit;
+    }
 
-    if (cellsread[ncellsfirstrow].eof) { // single-line file
-        hasheader = GSC_FALSE;
-        cellqueue = cellsread;
-        queuesize = ncellsfirstrow;
-        cellstyle = gsc_helper_genotype_matrix_identify_cell_style(cellqueue[1]);
-        expected_row_len = ncellsfirstrow;
-
-        Rprintf("(Loading %s) Format axis: genetic markers are -rows-, founder lines are |columns| (by default file format)\n", filename);
-
-    } else {
-        // read next line (we need number of cells on this line to know if the corner cell is or is not blank. Sorry about all the heap allocations)
-        do {
+    int format_has_corner_cell = GSC_UNINIT;
+    // If markers as columns, we do need to know how many cells are in the second row in order to detect a corner cell
+    if (!format_detected.markers_as_rows && !is_onerow_file) {
+        // Read rest of second row
+        while (!cellsread[ncellsread-1].eof && !cellsread[ncellsread-1].predNewline) {
             cellsread[ncellsread] = gsc_tablefilereader_get_next_cell(&tbl);
             gsc_tablefilecell_deep_copy(&cellsread[ncellsread]);
             ++ncellsread;
             if (ncellsread >= cellsreadcap) {
                 GSC_STRETCH_BUFFER(cellsread,2*ncellsread);
             }
-        } while (!cellsread[ncellsread-1].eof && !cellsread[ncellsread-1].predNewline);
-
-        unsigned int ncellssecondrow;
-        if (cellsread[ncellsread-1].predNewline) { // we stopped because of reaching line 3
-            ncellssecondrow = ncellsread - 1 - ncellsfirstrow;
-        } else { // we stopped because eof (and there's no final newline
-            ncellssecondrow = ncellsread - ncellsfirstrow;
         }
-        int hascornercell = (ncellsfirstrow == ncellssecondrow) ? GSC_TRUE : GSC_FALSE;
-
-        if (ncellssecondrow < 2) {
-            warning("(Loading %s) Failure: Unable to read file as a genotype matrix. Separators must be tabs, spaces, and/or commas, and file must have at least two columns\n", filename);
-            return NO_GROUP;
+        // Detect corner cell
+        unsigned int ncellssecondrow = ncellsread - ncellsfirstrow - 1;
+        format_has_corner_cell = gsc_helper_genotypefile_matrix_detect_cornercell_presence(ncellsfirstrow, ncellssecondrow, cellsread[ncellsfirstrow].predCol > 0);
+        if (format_has_corner_cell == GSC_UNINIT) {
+            warning( "(Loading %s) Failure: Header row length and second row length do not align\n", filename);
+            goto failure_exit;
         }
+    }
 
-        // Turn that list of cells we read into a queue, discard corner cell
-        cellqueue = cellsread;
-        queuesize = ncellsread;
+    // Create the queue of cells to parse (exclude header from this queue, because it needs to be dealt with differently)
+    gsc_TableFileCell* cellqueue = cellsread;
+    unsigned int queuesize = ncellsread;
+    if (format_detected.has_header) {
+        cellqueue = cellsread + ncellsfirstrow;
+        queuesize = ncellsread - ncellsfirstrow;
+    }
 
-        // Identify if this matrix has names on a header row, and how the alleles are formatted
-        cellstyle = gsc_helper_genotype_matrix_identify_cell_style(cellqueue[ncellsfirstrow+1]);
-        hasheader = GSC_FALSE;
-        if (hascornercell) {
-            for (unsigned int i = 1; i < ncellsfirstrow; ++i) {
-                if (gsc_helper_genotype_matrix_identify_cell_style(cellqueue[i]) != cellstyle) {
-                    hasheader = GSC_TRUE;
-                    break;
-                }
+    // PART 2: Create uniform-spaced map, if we have no map currently
+    int build_map_from_rows = GSC_FALSE;
+    if (d->genome.n_markers == 0) {
+        if (format_detected.markers_as_rows) {
+            build_map_from_rows = GSC_TRUE;
+            // We're going to have to do an independent read of the file to extract these. Will be a bit slower.
+            gsc_TableFileReader tbl2 = gsc_tablefilereader_create(filename);
+            gsc_TableFileCell cell = gsc_tablefilereader_get_next_cell(&tbl2);
+            unsigned int nmarkersread = format_detected.has_header ? 0 : 1;
+            do {
+             cell = gsc_tablefilereader_get_next_cell(&tbl2);
+                if (cell.predNewline) { ++nmarkersread; }
+            } while (!cell.eof);
+            gsc_tablefilereader_close(&tbl2);
+            if (cell.predNewline) { // there's a newline before eof, so no real actual last row
+                --nmarkersread;
             }
-        } else {
-            hasheader = GSC_TRUE;
-        }
 
-        if (hasheader && hascornercell && 0 == cellsread[ncellsfirstrow].predCol) {
-            cellqueue += 1;
-            --queuesize;
-            --ncellsfirstrow;
-            GSC_FREE(cellsread[0].cell);
-        }
-
-        // Identify whether markers are rows of the matrix, or columns.
-        markersasrows = GSC_TRUE;
-        if (d->genome.n_markers == 0) {
-            markersasrows = GSC_FALSE;
-            hasheader = GSC_TRUE; // we have to assume. they need names.
-            Rprintf("(Loading %s) Format axis: genetic markers are |columns|, founder lines are -rows- (by assumption when no genetic map is loaded)\n", filename);\
-            Rprintf("(Loading %s) No genetic map is loaded, will invent a map with equal spacing of these genetic markers (1cM apart)\n", filename);
-
-            d->genome.n_markers = ncellsfirstrow;
+            d->genome.n_markers = nmarkersread;
             d->genome.marker_names = gsc_malloc_wrap(sizeof(*d->genome.marker_names)*d->genome.n_markers, GSC_TRUE);
             d->genome.names_alphabetical = gsc_malloc_wrap(sizeof(*d->genome.names_alphabetical)*d->genome.n_markers, GSC_TRUE);
-            for (unsigned int i = 0; i < d->genome.n_markers; ++i) {
-                gsc_tablefilecell_deep_copy(&cellqueue[i]);
-                d->genome.marker_names[i] = cellqueue[i].cell;
-                cellqueue[i].isCellShallow = GSC_TRUE; // prevent deletion
-                d->genome.names_alphabetical[i] = &d->genome.marker_names[i];
+            gsc_create_uniformspaced_recombmap(d,0,NULL,d->genome.n_markers);
+            
+        } else { // markers as columns
+            if (!format_detected.has_header) { // you should not be able to get here. // assert(format_detected.has_header == GSC_TRUE);
+                warning( "(Loading %s) Failure: Genotype matrix with markers as columns but no header row is an unsupported file type (there is no way to tell which column is which marker)\n", filename);
+                goto failure_exit;
+            }
+            
+            unsigned int i = format_has_corner_cell ? 1 : 0; // starting index for iterating through names
+            d->genome.n_markers = ncellsfirstrow - i;
+            d->genome.marker_names = gsc_malloc_wrap(sizeof(*d->genome.marker_names)*d->genome.n_markers, GSC_TRUE);
+            d->genome.names_alphabetical = gsc_malloc_wrap(sizeof(*d->genome.names_alphabetical)*d->genome.n_markers, GSC_TRUE);
+            for (unsigned int j = 0; j < d->genome.n_markers; ++i, ++j) {
+                //gsc_tablefilecell_deep_copy(&cellqueue[i]); // already deep copied
+                d->genome.marker_names[j] = cellsread[i].cell;
+                cellsread[i].isCellShallow = GSC_TRUE; // prevent deletion
+                d->genome.names_alphabetical[j] = &d->genome.marker_names[j];
             }
             qsort(d->genome.names_alphabetical,d->genome.n_markers,sizeof(*d->genome.names_alphabetical),gsc_helper_indirect_alphabetical_str_comparer);
             gsc_create_uniformspaced_recombmap(d,0,NULL,d->genome.n_markers); // create based on the markers we've saved in 'genome'
-
-        } else {
-            markersasrows = gsc_helper_genotypefile_matrix_check_markers_are_rows(d, hascornercell, cellqueue, ncellsfirstrow,
-                                                                                  cellqueue[ncellsfirstrow], &hasheader);
-
-            if (markersasrows) {
-                Rprintf("(Loading %s) Format axis: genetic markers are -rows-, founder lines are |columns|\n", filename);
-            } else {
-                Rprintf("(Loading %s) Format axis: genetic markers are |columns|, founder lines are -rows-\n", filename);
-            }
         }
-        expected_row_len = ncellssecondrow;
     }
 
-    switch (hasheader) {
-    case GSC_TRUE:  Rprintf("(Loading %s) Format: genotype matrix with header row\n", filename); break;
-    case GSC_FALSE: Rprintf("(Loading %s) Format: genotype matrix without header row\n", filename); break;
-    }
-    switch (cellstyle) {
-    case GSC_GENOTYPECELLSTYLE_PAIR:      Rprintf("(Loading %s) Allele format: phased allele pairs\n", filename); break;
-    case GSC_GENOTYPECELLSTYLE_SLASHPAIR: Rprintf("(Loading %s) Allele format: phased allele pairs (slash-separated)\n", filename); break;
-    case GSC_GENOTYPECELLSTYLE_COUNT:     Rprintf("(Loading %s) Allele format: reference allele counts (phase will be randomised)\n", filename); break;
-    case GSC_GENOTYPECELLSTYLE_ENCODED:   Rprintf("(Loading %s) Allele format: IUPAC encoded pair (phase will be randomised)\n", filename); break;
-    case GSC_GENOTYPECELLSTYLE_UNKNOWN:
-        warning("(Loading %s) Failure: Unable to determine the formatting of pairs of alleles. Check genomicSimulation manual for accepted allele pair encodings\n", filename);
-        return NO_GROUP;
-    }
-
+    // PART 3: Parse file into an AlleleMatrix
+    
     gsc_GroupNum group = gsc_get_new_group_num(d);
-    struct gsc_EmptyListNavigator it = gsc_create_emptylistnavigator(d, group); // its job is to add successive AMs to d as necessary. Maybe it only links its AM to the SiMData and calls condense when required, at the end.
+    struct gsc_EmptyListNavigator it = gsc_create_emptylistnavigator(d, group);
+    unsigned int nvalidmarker = 0;
+    unsigned int n_cols = 0;
+    if (format_detected.markers_as_rows) {
 
-    if (markersasrows) {
-        unsigned int row = 0;
-        if (hasheader) {
-            ++row;
-            for (unsigned int i = 0; i < ncellsfirstrow; ++i) {
-                gsc_GenoLocation loc = (i == 0) ? gsc_emptylistnavigator_get_first(&it) : gsc_emptylistnavigator_get_next(&it);
-                gsc_set_name(loc,cellqueue[i].cell); // using names here so no need to free them.
-            }
-            cellqueue += ncellsfirstrow;
-            queuesize -= ncellsfirstrow;
-        }
-
-        // Now read info at the same time as processing it one by one.
-        unsigned int column = expected_row_len - 1;
-        unsigned int markeri; int validmarker = GSC_FALSE;
         gsc_GenoLocation loc;
         gsc_TableFileCell ncell;
-        int first = GSC_TRUE;
+        n_cols = (format_detected.has_header) ? ncellsfirstrow + 1 : ncellsfirstrow; // assume first row has no corner cell for now
+        int first = GSC_TRUE; 
+        int have_valid_marker; unsigned int markerix;
+        unsigned int column = 0;
+        unsigned int row = 0;
         do {
             ncell = gsc_helper_tablefilereader_get_next_cell_wqueue(&tbl,&cellqueue,&queuesize);
 
             if (ncell.cell != NULL) {
                 if (ncell.predNewline || first) {
-                    /*if (column + 1 != ncellssecondrow) {
-                        warning("(Loading %s) Invalid number of columns in row %u: %u instead of the expected %u\n", filename, (unsigned int) row, (unsigned int) column + 1, (unsigned int) ncellsfirstrow);
-                    }*/
                     char tmp = ncell.cell[ncell.cell_len]; ncell.cell[ncell.cell_len] = '\0';
-                    validmarker = gsc_get_index_of_genetic_marker(ncell.cell, d->genome, &markeri);
+                    
+                    if (build_map_from_rows) {
+                        have_valid_marker = GSC_TRUE;
+                        if (first) {
+                            markerix = 0;
+                        } else {
+                            markerix++;
+                        }
+                        gsc_tablefilecell_deep_copy(&ncell);
+                        d->genome.marker_names[markerix] = ncell.cell;
+                        ncell.isCellShallow = GSC_FALSE; // prevent deletion
+                    } else {
+                        have_valid_marker = gsc_get_index_of_genetic_marker(ncell.cell, d->genome, &markerix);
+                    }
+                    
+                    nvalidmarker += have_valid_marker;
                     ncell.cell[ncell.cell_len] = tmp;
+                    // Then, after reading first row, detect what our expected row length is, if defaults don't suit.
+                    if (row == 1 && format_detected.has_header) { 
+                        if (column + 1 != ncellsfirstrow && column + 1 != ncellsfirstrow + 1) {
+                            warning( "(Loading %s) Failure: Header row length and second row length do not align\n", filename);
+                            goto failure_exit;
+                        } else {
+                            n_cols = column + 1;
+                        }
+                    }
+                    first = GSC_FALSE;
                     column = 0;
                     ++row;
-                    first = GSC_FALSE;
 
-                } else if (validmarker && ncell.predCol) { // any number of column spacers treated as one column gap when reading a genotype matrix
+                } else if (ncell.predCol) { // any number of column spacers treated as one column gap when reading a genotype matrix
                     ++column;
-                    if (column <= expected_row_len) {
+                    if (have_valid_marker && column < n_cols) {
                         loc = (1 == column) ? gsc_emptylistnavigator_get_first(&it) : gsc_emptylistnavigator_get_next(&it);
-                        gsc_helper_genotypecell_to_allelematrix(loc,markeri,cellstyle,ncell.cell,d);
+                        gsc_helper_genotypecell_to_allelematrix(loc,markerix,format_detected.cell_style,ncell.cell,d);
+                    } // Note we ignore all extra cells in all rows
+                }
+            }
+
+            if (!ncell.isCellShallow) { GSC_FREE(ncell.cell); }
+        } while (!ncell.eof);
+        if (row == 1 && format_detected.has_header) {
+            if (column + 1 != ncellsfirstrow && column + 1 != ncellsfirstrow + 1) {
+                warning( "(Loading %s) Failure: Header row length and second row length do not align\n", filename);
+                goto failure_exit;
+            } else {
+                n_cols = column + 1;
+            }
+        }
+
+        // Then save the genotype names
+        if (format_detected.has_header) {
+            format_has_corner_cell = gsc_helper_genotypefile_matrix_detect_cornercell_presence(ncellsfirstrow, n_cols, cellsread[ncellsfirstrow].predCol > 0);
+            unsigned int i = format_has_corner_cell ? 1 : 0;
+            gsc_GenoLocation loc;
+            for (unsigned int j = 0; i < ncellsfirstrow; ++i, ++j) {
+                loc = (j == 0) ? gsc_emptylistnavigator_get_first(&it) : gsc_emptylistnavigator_get_next(&it);
+                // assert(!cellsread[i].isShallowCopy);
+                gsc_set_name(loc,cellsread[i].cell); // using names here so no need to free them. Since they're in cellsread 
+                cellsread[i].isCellShallow = GSC_TRUE; // prevent deletion
+            }
+        }
+
+        // Then finalise the map, if we're creating one:
+        if (build_map_from_rows) {
+            for (unsigned int i = 0; i < d->genome.n_markers; ++i) {
+                d->genome.names_alphabetical[i] = &d->genome.marker_names[i];
+            }
+            qsort(d->genome.names_alphabetical,d->genome.n_markers,sizeof(*d->genome.names_alphabetical),gsc_helper_indirect_alphabetical_str_comparer);
+        }
+        
+    } else { // markers as columns
+        if (!format_detected.has_header) { // you should not be able to get here.
+            warning( "(Loading %s) Failure: Genotype matrix with markers as columns but no header row is an unsupported file type (there is no way to tell which column is which marker)\n", filename);
+            goto failure_exit;
+        }
+
+        // Identify the marker corresponding to each column
+        unsigned int i = format_has_corner_cell ? 1 : 0;
+        unsigned int n_col = ncellsfirstrow + (1-i);
+        unsigned int* markerixs = gsc_malloc_wrap(sizeof(*markerixs)*ncellsfirstrow,GSC_TRUE);
+        for (unsigned int j = 0; i < ncellsfirstrow; ++i, ++j) {
+            markerixs[j] = d->genome.n_markers;
+            nvalidmarker += gsc_get_index_of_genetic_marker(cellsread[i].cell, d->genome, &markerixs[j]);
+        }
+
+        // Read the table
+        int first = GSC_TRUE; 
+        unsigned int row = 0;
+        unsigned int column = 0; // we count column numbers from 1 for the first body cell. sorry for the inconsistency with the branch of the if statement above.
+        gsc_GenoLocation loc;
+        gsc_TableFileCell ncell;
+        do {
+            ncell = gsc_helper_tablefilereader_get_next_cell_wqueue(&tbl,&cellqueue,&queuesize);
+
+            if (ncell.cell != NULL) {
+                if (ncell.predNewline) {
+                    loc = (first) ? gsc_emptylistnavigator_get_first(&it) : gsc_emptylistnavigator_get_next(&it);
+                    first = GSC_FALSE;
+                    
+                    ++row;
+                    column = 0;
+                    if (ncell.predCol) { // missing name.
+                        gsc_set_name(loc,NULL);
+                    } else {
+                        gsc_tablefilecell_deep_copy(&ncell);
+                        gsc_set_name(loc,ncell.cell);
+                        ncell.isCellShallow = GSC_TRUE; // so it does not get deleted
+                    }
+                }
+
+                if (ncell.predCol) {
+                    ++column;
+                    if (column < n_col && markerixs[column-1] < d->genome.n_markers) {
+                        gsc_helper_genotypecell_to_allelematrix(loc,markerixs[column-1],format_detected.cell_style,ncell.cell,d);
                     }
                 }
             }
@@ -6507,70 +6831,31 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d, const char* fil
             if (!ncell.isCellShallow) { GSC_FREE(ncell.cell); }
         } while (!ncell.eof);
 
-
-    } else { // markersascols
-
-        if (hasheader) {
-            unsigned int* markerixs = gsc_malloc_wrap(sizeof(unsigned int)*ncellsfirstrow,GSC_TRUE);
-            for (unsigned int i = 0; i < ncellsfirstrow; ++i) {
-                markerixs[i] = d->genome.n_markers;
-                gsc_get_index_of_genetic_marker(cellqueue[i].cell, d->genome, &markerixs[i]);
-                if (!cellqueue[i].isCellShallow) { GSC_FREE(cellqueue[i].cell); }
-            }
-            cellqueue += ncellsfirstrow;
-            queuesize -= ncellsfirstrow;
-
-            // Now read info at the same time as processing it one by one.
-            unsigned int row = 1;
-            unsigned int column = expected_row_len - 1;
-            gsc_GenoLocation loc;
-            gsc_TableFileCell ncell;
-            do {
-                ncell = gsc_helper_tablefilereader_get_next_cell_wqueue(&tbl,&cellqueue,&queuesize);
-
-                if (ncell.cell != NULL) {
-                    int isname = GSC_FALSE;
-                    if (ncell.predNewline) {
-                        loc = (1 == row) ? gsc_emptylistnavigator_get_first(&it) : gsc_emptylistnavigator_get_next(&it);
-                        ++row;
-                        column = 1;
-
-                        if (ncell.predCol) { // missing name.
-                            gsc_set_name(loc,NULL);
-                        } else {
-                            gsc_tablefilecell_deep_copy(&ncell);
-                            gsc_set_name(loc,ncell.cell);
-                            ncell.isCellShallow = GSC_TRUE; // so it does not get deleted
-                            isname = GSC_TRUE;
-                        }
-                    }
-
-                    if (!isname && column <= expected_row_len && markerixs[column-1] < d->genome.n_markers && ncell.predCol) { // any number of column spacers treated as one column gap when reading a genotype matrix
-                        gsc_helper_genotypecell_to_allelematrix(loc,markerixs[column-1],cellstyle,ncell.cell,d);
-                        ++column;
-                    }
-                }
-
-                if (!ncell.isCellShallow) { GSC_FREE(ncell.cell); }
-            } while (!ncell.eof);
-
-            GSC_FREE(markerixs);
-        } else {
-            // you should not be able to get here.
-            warning( "(Loading %s) Failure: Genotype matrix with markers as columns but no header row is an unsupported file type (there is no way to tell which column is which marker)\n", filename);
-        }
+        GSC_FREE(markerixs);
+        
     }
 
+    // PART 4: Tidy and clean and exit
     unsigned int ngenos = 0;
     AlleleMatrix* tmpam = it.firstAM;
     do {
         ngenos += tmpam->n_genotypes;
     } while ((tmpam = tmpam->next) != NULL);
-    Rprintf("(Loading %s) %u genotype(s) of %u marker(s) were loaded.\n", filename, (unsigned int) ngenos, it.firstAM->n_markers);
+    Rprintf("(Loading %s) %u genotype(s) of %u marker(s) were loaded.\n", filename, (unsigned int) ngenos, (unsigned int) nvalidmarker);
     gsc_emptylistnavigator_finaliselist(&it);
     ++d->n_groups;
+    
+    for (int i = 0; i < ncellsread; ++i) { if (!cellsread[i].isCellShallow) GSC_FREE(cellsread[i].cell); }
     GSC_DELETE_BUFFER(cellsread);
+    gsc_tablefilereader_close(&tbl);
     return group;
+
+    failure_exit:
+        // Clean up structures and return, having loaded no genotypes
+        for (int i = 0; i < ncellsread; ++i) { if (!cellsread[i].isCellShallow) GSC_FREE(cellsread[i].cell); }
+        GSC_DELETE_BUFFER(cellsread);
+        gsc_tablefilereader_close(&tbl);
+        return NO_GROUP;
 }
 
 /** Load a set of genotypes to a gsc_SimData object.
@@ -6588,11 +6873,11 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d, const char* fil
  *
  * @param d pointer to gsc_SimData to be populated
  * @param filename string name/path of file containing genotype data.
+ * @param format details on the format of the file (option, set to GSC_DETECT_FILE_FORMAT to auto-detect format).
 */
-gsc_GroupNum gsc_load_genotypefile(SimData* d, const char* filename) {
-    return gsc_load_data_files(d,filename,NULL,NULL).group;
+gsc_GroupNum gsc_load_genotypefile(SimData* d, const char* filename, const gsc_FileFormatSpec format) {
+    return gsc_load_data_files(d,filename,NULL,NULL,format).group;
 }
-
 
 /** Populates a gsc_SimData object with marker allele data, a genetic map, and
  * (optionally) marker effect values.
@@ -6608,21 +6893,26 @@ gsc_GroupNum gsc_load_genotypefile(SimData* d, const char* filename) {
  * allele data.
  * @param map_file string name/path of file containing genetic map data (optional, set to NULL if not needed).
  * @param effect_file string name/path of file containing effect values (optional, set to NULL if not wanted).
+ * @param format details on the format of the file (option, set to GSC_DETECT_FILE_FORMAT to auto-detect format).
  * @returns a @a gsc_MultiIDSet entry, containing the group number of the founding group, the map id of the recombination
  * map loaded, and the effect set id of the loaded effect file if applicable.
 */
 struct gsc_MultiIDSet gsc_load_data_files(gsc_SimData* d, const char* genotype_file,
-                                             const char* map_file, const char* effect_file) {
-    // Parse file suffix
-    enum gsc_GenotypeFileType type = GSC_GENOTYPEFILE_MATRIX;
-    char* suffix = strrchr(genotype_file,'.');
-    if (suffix != NULL) {
-        if (strcmp(suffix,".bed") == 0) {
-            type = GSC_GENOTYPEFILE_BED;
-        } else if (strcmp(suffix,".ped") == 0) {
-            type = GSC_GENOTYPEFILE_PED;
-        } else if (strcmp(suffix,".vcf") == 0) {
-            type = GSC_GENOTYPEFILE_VCF;
+                                             const char* map_file, const char* effect_file, const gsc_FileFormatSpec format) {
+    // Parse file suffix for file type, if it was not already provided
+    enum gsc_GenotypeFileType type = format.filetype;
+
+    if (type == GSC_GENOTYPEFILE_UNKNOWN) {
+        type = GSC_GENOTYPEFILE_MATRIX;
+        char* suffix = strrchr(genotype_file,'.');
+        if (suffix != NULL) {
+            if (strcmp(suffix,".bed") == 0) {
+                type = GSC_GENOTYPEFILE_BED;
+            } else if (strcmp(suffix,".ped") == 0) {
+                type = GSC_GENOTYPEFILE_PED;
+            } else if (strcmp(suffix,".vcf") == 0) {
+                type = GSC_GENOTYPEFILE_VCF;
+            }
         }
     }
 
@@ -6630,7 +6920,7 @@ struct gsc_MultiIDSet gsc_load_data_files(gsc_SimData* d, const char* genotype_f
 
     switch (type) {
     case GSC_GENOTYPEFILE_BED:
-        //Rprintf("Will attempt to parse %s as a plink .bed file\n", filename);
+        //if (detectedtype) { Rprintf("Will attempt to parse %s as a plink .bed file\n", filename); }
         warning("plink .bed file parsing not yet implemented\n");
         break;
     case GSC_GENOTYPEFILE_PED:
@@ -6642,7 +6932,7 @@ struct gsc_MultiIDSet gsc_load_data_files(gsc_SimData* d, const char* genotype_f
     default:
         //Rprintf("(Loading files) Will treat %s as a genotype matrix (see genomicSimulation's default input file types)\n", genotype_file);
         out.map = gsc_load_mapfile(d, map_file);
-        out.group = gsc_load_genotypefile_matrix(d, genotype_file);
+        out.group = gsc_load_genotypefile_matrix(d, genotype_file, format);
         out.effSet = gsc_load_effectfile(d, effect_file);
     }
 
@@ -8541,8 +8831,8 @@ int gsc_calculate_group_count_matrix( const gsc_SimData* d, const gsc_GroupNum g
     } else {
         int groupSize = gsc_get_group_size(d, group);
         if (counts->rows < groupSize || counts->cols < d->genome.n_markers) {
-            fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
-                    d->genome.n_markers, groupSize, counts->rows, counts->cols);
+            fprintf(stderr, "`counts` is the wrong size to be filled: needs %u by %d but is %d by %d\n",
+                    (unsigned int) d->genome.n_markers, groupSize, counts->rows, counts->cols);
             return 1;
         }
 
@@ -8593,13 +8883,13 @@ int gsc_calculate_group_count_matrix_pair( const gsc_SimData* d, const gsc_Group
     } else {
         int groupSize = gsc_get_group_size(d, group);
         if (counts->rows < groupSize || counts->cols < d->genome.n_markers) {
-            fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
-                    d->genome.n_markers, groupSize, counts->rows, counts->cols);
+            fprintf(stderr, "`counts` is the wrong size to be filled: needs %u by %d but is %d by %d\n",
+                    (unsigned int) d->genome.n_markers, groupSize, counts->rows, counts->cols);
             return 1;
         }
         if (counts2->rows < groupSize || counts2->cols < d->genome.n_markers) {
-            fprintf(stderr, "`counts2` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
-                    d->genome.n_markers, groupSize, counts2->rows, counts2->cols);
+            fprintf(stderr, "`counts2` is the wrong size to be filled: needs %u by %d but is %d by %d\n",
+                    (unsigned int) d->genome.n_markers, groupSize, counts2->rows, counts2->cols);
             return 1;
         }
 

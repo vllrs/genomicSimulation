@@ -102,7 +102,7 @@ The group number of the new crosses produced, or 0 if they could not be
 produced due to an invalid parent group number being provided.
 }
 \description{
-\code{make.random.crosses.between} performs crosses where the first parent comes 
+Performs crosses where the first parent comes 
 from one group and the second from another. It returns the group number of the group
 that the new genotypes were loaded into.
 }

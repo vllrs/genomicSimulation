@@ -20,7 +20,7 @@ An implementation may return at some future date.
 Original documentation below.
 }
 \details{
-\code{save.genome.model} saves the SNP names, their linkage map positions, 
+Saves the SNP names, their linkage map positions, 
 and the effect values for calculating GEBVs (if applicable) to a file.
 
 The output is printed with first a tab-separated header row, containing

@@ -19,7 +19,7 @@ and sorted by their index that the first entry of `values` should be copied into
 0 on success
 }
 \description{
-\code{change.names.to.values} changes the names of members of group(s) or
+Changes the names of members of group(s) or
 genotypes in general to a sequence of values.
 }
 \details{

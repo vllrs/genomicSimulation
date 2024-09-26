@@ -21,7 +21,7 @@ members of those groups.}
 0 on success
 }
 \description{
-\code{change.label.by.amount} changes the values of a custom
+Changes the values of a custom
 label for all genotypes or for members of group(s) by a given increment amount, 
 positive or negative.
 }

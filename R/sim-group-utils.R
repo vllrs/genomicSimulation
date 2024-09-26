@@ -1,6 +1,6 @@
 #' Assign multiple groups' worth of genotypes to a single group
 #'
-#' \code{combine.group} combines the members of multiple groups
+#' Combines the members of multiple groups
 #' into a single group. This is useful for allowing certain crossing
 #' functions to act on these genotypes together.
 #'
@@ -22,7 +22,7 @@ combine.groups <- function(groups) {
 
 #' Assign each genotype inside a group to a separate new group
 #'
-#' \code{break.group.into.individuals} allocates every genotype inside
+#' Allocates every genotype inside
 #' a group to a separate group.
 #'
 #' @param group an integer: the group number of the group to be split
@@ -37,7 +37,7 @@ break.group.into.individuals <- function(group) {
 
 #' Assign each family inside a group to separate new groups
 #'
-#' \code{break.group.into.families} allocates all genotypes in the
+#' Allocates all genotypes in the
 #' group that share the same parents to separate new groups. 
 #'
 #' @param group an integer: the group number of the group to be split
@@ -53,7 +53,7 @@ break.group.into.families <- function(group) {
 #' Assign all genotypes inside a group that share one parent 
 #' to separate new groups
 #'
-#' \code{break.group.into.halfsib.families} allocates all genotypes in the
+#' Allocates all genotypes in the
 #' group that share one same parent (either the same first or the same 
 #' second parent) to separate new groups. 
 #'
@@ -161,7 +161,7 @@ break.group.with.probabilities <- function(group, probabilities) {
 
 #' Assign certain genotypes to a new group by index
 #'
-#' \code{make.group} allocates the genotypes with indexes in the vector
+#' Allocates the genotypes with indexes in the vector
 #' indexes to a single new group.
 #'
 #' Unlike other functions in this package with the prefix \code{make},
@@ -181,7 +181,7 @@ make.group <- function(indexes) {
 
 #' Assign genotypes with a certain label value to a new group
 #'
-#' \code{break.group.by.label.value} allocates the genotypes with a particular value
+#' Allocates the genotypes with a particular value
 #' for a given custom label to a new group.
 #' 
 #' Multiple group inputs supported. All selected genotypes, no matter their 
@@ -265,7 +265,7 @@ make.group.from.label.range <- function(label, rangeLowEnd, rangeHighEnd, group=
 
 #' Change the default value of a custom label
 #'
-#' \code{change.label.default} changes the default (birth) value of a custom
+#' Changes the default (birth) value of a custom
 #' label(s) to the given integer value(s).
 #' 
 #' If `defaults` is shorter than `labels` 
@@ -287,7 +287,7 @@ change.label.default <- function(labels, defaults) {
 
 #' Set values of a custom label
 #'
-#' \code{change.label.to.values} changes the values of a custom label for all 
+#' Changes the values of a custom label for all 
 #' genotypes or for members of group(s) to a sequence of values.
 #' 
 #' The function orders the genotypes selected by the `group` parameter by their
@@ -322,7 +322,7 @@ change.label.to.values <- function(label, values, group=NA, startIndex=1) {
 
 #' Set a flat value for a custom label
 #'
-#' \code{change.label.to} changes the value of a custom label for all 
+#' Changes the value of a custom label for all 
 #' genotypes or for members of group(s) to a certain value.
 #' 
 #' Multiple group input supported.
@@ -345,7 +345,7 @@ change.label.to.this <- function(label, value, group=NA) {
 
 #' Add/subtract from a custom label
 #'
-#' \code{change.label.by.amount} changes the values of a custom
+#' Changes the values of a custom
 #' label for all genotypes or for members of group(s) by a given increment amount, 
 #' positive or negative.
 #' 
@@ -368,9 +368,9 @@ change.label.by.amount <- function(label, amount, group=NA) {
 }
 
 
-#' Perform selection on a group by true GEBV.
+#' Perform selection on a group on true GEBV
 #'
-#' \code{select.by.gebv} calculates the GEBVs of all members of a group, sorts them
+#' Calculates the GEBVs of all members of a group, sorts them
 #' in either ascending or descending order, and then selects the best few. The number
 #' selected can be an exact number (select the best 5) or a percentage (take the best
 #' 2\%). Exactly one of percentage and number parameters must be defined for the
@@ -379,7 +379,8 @@ change.label.by.amount <- function(label, amount, group=NA) {
 #' @section Custom selection:
 #' For more complex selection than by true/unmasked GEBV, use the function
 #' \code{\link{see.group.data}}, use R scripting to identify which to select,
-#' and split them into a new group using \code{\link{make.group}}. 
+#' and split them into a new group using \code{\link{make.group}}. The package vignette
+#' contains an example of this process
 #'
 #' @param from.group an integer: the group number of the group perform selection on.
 #' @param low.score.best If FALSE, then the highest GEBVs are selected. If TRUE,

@@ -18,7 +18,7 @@ defaults for each label in `labels` at corresponding positions.}
 0 on success
 }
 \description{
-\code{change.label.default} changes the default (birth) value of a custom
+Changes the default (birth) value of a custom
 label(s) to the given integer value(s).
 }
 \details{

@@ -15,7 +15,7 @@ minimum GEBV.}
 The lowest possible GEBV
 }
 \description{
-\code{see.minimal.GEBV} allows you to extract the lowest GEBV score
+Allows you to extract the lowest GEBV score
 possible according to the current loaded effect values. An error is 
 raised if no effect values have been loaded.
 }

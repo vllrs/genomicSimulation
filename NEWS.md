@@ -6,6 +6,7 @@
 - `see.group.data` can now be called with multiple groups. The results from each group will be concatenated. This allows you to replace lines like `c(see.group.data(group1,"BV"),see.group.data(group2,"BV"))` with `see.group.data(c(group1,group2),"BV")`.
 - `see.group.gene.data` can now be called with multiple groups. The columns from each group will be concatenated.
 - Added ability to observe the pedigree IDs of parents using `see.group.data`. (Previously, `see.group.data` could be used to observe the names of parents, which would fall back to the pedigree IDs of parents for parents without names. Some use cases may appreciate the ability to access pedigree IDs consistently.)
+- Added ability to override the automatically detected file layout details in `load.data` and `load.genotypes` using the new function `define.matrix.format.details`, so that files whose format is incorrectly detected are not prevented from being loaded. 
 
 ## Improvements
 
@@ -14,6 +15,12 @@
 - `see.group.data` and `see.group.gene.data` now raise a warning, instead of an error, when there are no group members allocated to the group(s) they access.
 - `see.group.data`, `see.group.gene.data`, `delete.group`, and `combine.groups` no longer raise an error when the group numbers passed are of numeric type instead of integer type. Instead, as long as the numbers are whole numbers, they perform the type conversion. Likewise, `make.targeted.crosses` no longer raises an error when it is passed parent indexes that are of numeric type instead of integer type.
 - Column names and row names of the matrix returned by `see.group.gene.data` now reflect genotype names and genetic marker names respectively.
+- Vignette and function docs edited for better clarity around compatible input file formats and function name changes made in v0.2.5
+- Under-the-hood improvements and simplifications of the genotype matrix input file layout detection systems.
+
+## Bug Fixes
+
+- In `load.data` or `load.genotypes`, the number of markers per genotype that were successfully loaded is now accurately reflected in the printed log messages. Previously, these functions incorrectly printed out the total number of markers in the stored genetic map while claiming it was the number of markers in the genotype file that had been accurately matched to that map.
 
 # genomicSimulation 0.2.5
 

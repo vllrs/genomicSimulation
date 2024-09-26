@@ -14,7 +14,7 @@ to move to the new group. Use \code{get.group.data} to get these}
 the group number of the new group
 }
 \description{
-\code{make.group} allocates the genotypes with indexes in the vector
+Allocates the genotypes with indexes in the vector
 indexes to a single new group.
 }
 \details{

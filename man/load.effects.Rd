@@ -12,12 +12,65 @@ contain effect values for calculating GEBV for a trait}
 }
 \value{
 The effect set ID. 1 for the first set loaded, 2 for the next, and so on.
-This should be passed to breeding-value-calculating functions to tell them to 
+This should be passed to breeding-value-calculating functions to tell them to
 use this set of marker effects.
 }
 \description{
 Only the alleles at SNPs
 already tracked by the SimData are saved.
+}
+\details{
+Loading marker effect file(s) is optional for running the simulation. The simplest marker effect file is formatted as follows:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{marker allele eff
+m1 A -0.8
+m2 A -0.1
+m3 A 0.1
+m1 T 0.9
+m3 T -0.1
+}\if{html}{\out{</div>}}
+
+Other valid marker effect files might include:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{marker eff allele
+m1243509 0.1 A
+m1243509 -0.1 T
+m2350898 0.15 T
+m2350898 -0.1 A
+}\if{html}{\out{</div>}}
+
+or
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{specialgene G 1.0
+}\if{html}{\out{</div>}}
+
+A single marker effect file represents the allele effects for one trait.
+Multiple files like this can be loaded in order to calculate breeding values
+for multiple traits separately.
+
+The header line is optional. If there is a header line, the three columns
+"marker" "allele" and "eff" may be rearranged into any ordering. If the header
+is not provided, the order is assumed to be marker name in the first column,
+followed by allele, followed by additive effect value.
+
+The order of the rows in the file does not matter. If multiple rows exist in
+the file for the same marker name/allele combination, only the last row's
+additive effect value will be saved.
+
+Regarding marker names: Only rows in this file whose marker name matches a
+marker name from a previously- or simultaneously-loaded map file or genotype
+matrix file will be loaded.
+
+Regarding allele: This column should be the allele (non-space character, eg "A")
+that this effect value corresponds to.
+
+Regarding allele effect: This column should be a decimal representing the
+additive effect value of the same-row allele for the same-row marker. It can
+be positive or negative or zero, and can be represented by an integer, a
+decimal, or scientific notation.
+
+Cells may be separated by spaces, tabs, commas, or any combination thereof.
+Cell spacers do not need to be consistent across the file.
 }
 \seealso{
 Other loader functions: 

@@ -38,7 +38,7 @@ have come from one parent or another, and so estimates the sections
 of the genotype that must have come from each parent. It plots the result using ggplot
 }
 \details{
-**Experimental function: may be changed or removed at any time, and result validity is not promised.**
+**Experimental function: may be changed or removed at any time, and validity of results is not guaranteed.**
 }
 \seealso{
 \code{\link{find.crossovers}}, which does not produce the plot and so will

@@ -13,7 +13,7 @@ delete.recombination.map(maps)
 0 on success. An error is raised on failure.
 }
 \description{
-\code{delete.recombination.map} removes the given recombination map(s)
+Removes the given recombination map(s)
 from simulation memory.
 }
 \seealso{

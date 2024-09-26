@@ -14,7 +14,7 @@ effect sets to be deleted}
 0 on success. An error is raised on failure.
 }
 \description{
-\code{delete.effect.set} removes the given marker effect set(s) 
+Removes the given marker effect set(s) 
 from simulation memory.
 }
 \seealso{

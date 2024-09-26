@@ -85,8 +85,9 @@ The group number of the new genotypes produced, or 0 if none could be
 produced due to an invalid parent group number being provided.
 }
 \description{
-\code{self.n.times} returns the group number of the group
-that the new genotypes were loaded into.
+Crosses each genotype with itself repeatedly for a given number of generations.
+Returns the group number of the group
+that the selfed progeny genotypes were loaded into.
 }
 \details{
 The function performs a selfing step (crosses each genotype

@@ -17,7 +17,7 @@ by the second}
 the group numbers of the new groups
 }
 \description{
-\code{break.group.into.halfsib.families} allocates all genotypes in the
+Allocates all genotypes in the
 group that share one same parent (either the same first or the same 
 second parent) to separate new groups.
 }

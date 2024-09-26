@@ -26,7 +26,7 @@ contiguous.}
 0 on success. On failure an error will be raised.
 }
 \description{
-\code{save.genotypes} saves the alleles at each SNP of the
+Saves the alleles at each SNP of the
 lines stored in the SimData to a file.
 }
 \seealso{

@@ -32,7 +32,7 @@ local GEBVs.}
 0 on success. On failure an error will be raised.
 }
 \description{
-\code{save.local.GEBVs.blocks.from.file} calculates GEBVs for each block of markers listed in 
+Calculates GEBVs for each block of markers listed in 
 `block.file` for the maternal and paternal halves of its genotype. The results
 are saved to a file. The output file is formatted with the blocks as unlabelled columns
 and two rows for each genotype, named [line name]_1 and [line name]_2. The entries

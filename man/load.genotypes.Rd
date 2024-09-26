@@ -4,15 +4,109 @@
 \alias{load.genotypes}
 \title{Load genotypes to the existing SimData object from a file}
 \usage{
-load.genotypes(allele.file)
+load.genotypes(allele.file, format = list())
+}
+\arguments{
+\item{format}{Output of \link{define.matrix.format.details} to manually specify
+file format, or an empty list by default to detect file formats automatically}
 }
 \value{
 The group number of the genotypes loaded from allele.file.
 }
 \description{
-\code{load.genotypes} returns the group number of the group
+Returns the group number of the group
 that the new genotypes were loaded into. Only the alleles at markers
 already tracked by the SimData are saved.
+}
+\details{
+The simplest genotype matrix file is formatted as follows:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{name	G01	G02	G03	G04	G05	G06
+m1	TT	TT	TT	TA	TT	AT
+m3	TT	TT	TA	TA	TT	TT
+m2	AA	AA	AA	AA	CC	AA
+}\if{html}{\out{</div>}}
+
+where G01, G02, ..., are names of the founder genotypes;
+m1, m2, ..., are the genetic markers; and entries in the matrix are the
+alleles that the founder genotypes have at those markers.
+
+Other valid genotype matrix files might include:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{m100, m101, m102
+cand1,0,0,1
+cand2,1,2,2
+cand4,2,1,2
+}\if{html}{\out{</div>}}
+
+or
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{marker1	T/T	T/T	T/T	T/A	T/T	A/T
+marker3	T/T	T/T	T/A	T/A	T/T	T/T
+marker2	A/A	A/A	A/A	A/A	T/T	A/A
+}\if{html}{\out{</div>}}
+
+The genotype matrix can be row-major or column-major (that is, the genetic markers
+may be rows, or columns). The program will determine the orientation by attempting
+to match row and column headers with names of markers tracked by the simulation
+(extracted from a genetic map file). If the simulation does not yet have
+a list of tracked markers (that is, no genetic map has been simultaneously or
+previously provided), then it defaults to assuming that rows represent genetic markers.
+
+The order in which genetic markers are presented in the file does not matter.
+Candidate genotypes, however, will be saved internally in the simulation in
+the order that they appear in the file. Candidate genotype names do not need
+to be unique. Candidate genotype names are optional, if candidates are stored
+as columns. genomicSimulation cannot read a gentoype matrix with no row headers,
+so if candidates are stored as rows, then they are required to have names.
+
+Genetic markers' names are required.
+
+When there are both row and column headers, the first/corner cell (the one
+that contained the value "name" in the first example above) can be deleted
+or can contain any text. Its value will be ignored.
+
+The table cells in the genotype matrix file may be separated by spaces, tabs,
+commas, or any combination thereof. Cell spacers do not need to be consistent across the file.
+
+There are several options for how the alleles at each marker can be presented.
+All allele pair cells in the same genotype matrix must be in the same format.
+The format of the allele pairs in the genotype matrix is automatically detected.
+There are four acceptable formats for allele pairs in the genotype matrix:
+\enumerate{
+\item Any pair of characters (eg. "AA", "TA", "nW"). Each character is an allele.
+This is a format that specifies allele phase (ie. "AT" and "TA" are different genotypes).
+\item Any pair of characters, separated by a forwards slash "/" character (eg. "A/A", "T/A", "n/W").
+The two characters either side of the slash are the alleles.
+This is a format that specifies allele phase (ie. "AT" and "TA" are different genotypes).
+\item Alternate allele counts ("0", "1", "2"). This is a format that does not
+specify allele phase, so phase of heterozygotes will be randomised when loaded.
+The counts represent the number of copies of the alternate allele (stored inside
+genomicSimulation as "A", while the reference allele is stored as "T"). "0"
+then corresponds to "TT", "2" to "AA", and "1" will be randomised as either
+"TA" or "AT". Corresponding marker effect files for calculating breeding
+values must use allele "A" consistently to represent the alternate allele,
+and "T" to represent the reference. (alternatively, \code{change.allele.symbol}
+can be used after loading to change T and/or A to other symbols.)
+\item (subset of) IUPAC encodings of DNA bases ("G", "A", "T", "C", "R", "Y", "M", "K", "S", "W", "N").
+This is a format that does not specify allele phase, so phase of heterozygotes
+will be randomised when loaded. See package vignette for more details.
+}
+
+\strong{Note you might have a genotype matrix of only "AA", "AT", and "TT". This
+uses "alternate allele counts"-style encoding (like format 3) but presents it
+in a format that looks like pairs of alleles (format 1).} genomicSimulation
+expects allele pair encodings to include haplotype phase, (that is, to have
+four possible values for genotypes of two alleles, not three: eg. "AA", "AT",
+"TA", and "TT" instead of just "AA", "AT", "TT").
+
+Two options for loading a dataset with non-phased "AA"/"AT"/"TT" allele pairs are:
+\itemize{
+\item Use “haplotyping”/”haplotype phasing”/”haplotype inference” software to infer
+whether heterozygotes are "AT" or "TA", before loading into genomicSimulation.
+\item Find-and-replace "TT" with "0", "AT" with "1", and "AA" with "2" before loading
+into genomicSimulation. genomicSimulation will then randomise the phase of each haplotype.
+}
 }
 \seealso{
 Other loader functions: 

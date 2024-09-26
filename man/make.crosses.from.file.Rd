@@ -84,8 +84,9 @@ you to still get results.}
 The group number of the new crosses produced
 }
 \description{
-\code{make.crosses.from.file} returns the group number of the group
-that the new genotypes were loaded into.
+Performs specific crosses between defined pairs of parents taken from the input file. 
+Returns the group number of the group
+that the offspring genotypes were loaded into.
 }
 \details{
 The offspring parameter represents the number of times each cross in the file

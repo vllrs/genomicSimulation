@@ -1,7 +1,8 @@
 #' Performs random crosses between members of a group.
 #'
-#' \code{make.random.crosses} returns the group number of the group
-#' that the new genotypes were loaded into. Selfing is not permitted.
+#' Performs random crosses between members of a group. Selfing is not a possible operation.
+#' Returns the group number of the group
+#' that the new genotypes were loaded into. 
 #'
 #' For random crossing, the n.crosses parameter represents the number of 
 #' random crosses to perform. Each cross will be repeated a number of times
@@ -96,7 +97,7 @@ cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, 
 
 #' Performs random crosses between two groups.
 #'
-#' \code{make.random.crosses.between} performs crosses where the first parent comes 
+#' Performs crosses where the first parent comes 
 #' from one group and the second from another. It returns the group number of the group
 #' that the new genotypes were loaded into.
 #'
@@ -170,8 +171,8 @@ cross.randomly.between <- function(group1, group2, cap1=0, cap2=0,
 
 #' Performs defined crosses as passed in as R vectors.
 #'
-#' \code{make.targeted.crosses} returns the group number of the group
-#' that the new genotypes were loaded into. 
+#' Performs specific crosses between defined pairs of parents. Returns the group number of the group
+#' that the offspring genotypes were loaded into. 
 #'
 #' The offspring parameter represents the number of times each cross in the file
 #' is carried out.
@@ -238,8 +239,9 @@ cross.combinations <- function(first.parents, second.parents,
 
 #' Performs defined crosses as laid out in a file.
 #'
-#' \code{make.crosses.from.file} returns the group number of the group
-#' that the new genotypes were loaded into. 
+#' Performs specific crosses between defined pairs of parents taken from the input file. 
+#' Returns the group number of the group
+#' that the offspring genotypes were loaded into. 
 #'
 #' The offspring parameter represents the number of times each cross in the file
 #' is carried out.
@@ -290,8 +292,10 @@ cross.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.n
 #' Performs defined crosses between children of known parents as 
 #' laid out in a file.
 #'
-#' \code{make.double.crosses.from.file} returns the group number of the group
-#' that the new genotypes were loaded into. 
+#' Performs specific crosses between grandparents and their offspring 
+#' to create genotypes with certain grandparents as defined in the input file. 
+#' Returns the group number of the group
+#' that the offspring genotypes were loaded into. 
 #'
 #' The function is designed for use in a situation where you wish to cross
 #' unnamed lines or make crosses between simulated lines without having to check
@@ -344,8 +348,9 @@ cross.dc.combinations.file <- function(cross.file, offspring=1, retain=TRUE, giv
 #' Performs crosses between every line and every other line in a group
 #' in one direction
 #'
-#' \code{make.all.unidirectional.crosses} returns the group number of the group
-#' that the new genotypes were loaded into.
+#' Simulates a cross for each pair in the half-diallel of parents in a group.
+#' Returns the group number of the group
+#' that the offspring genotypes were loaded into. 
 #'
 #' The function performs one cross between each pair of genotypes in the
 #' group. Order of parents is not considered because in the simulation method
@@ -386,8 +391,9 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 
 #' Performs n selfing steps on the lines in a group
 #'
-#' \code{self.n.times} returns the group number of the group
-#' that the new genotypes were loaded into.
+#' Crosses each genotype with itself repeatedly for a given number of generations.
+#' Returns the group number of the group
+#' that the selfed progeny genotypes were loaded into. 
 #'
 #' The function performs a selfing step (crosses each genotype
 #' with itself), then another on the output of that setp, etc., for a total of 
@@ -445,8 +451,9 @@ make.doubled.haploids <- function(group, map=0L, offspring=1, retain=TRUE,
 
 #' Creates a genetically identical copy of each member of a group
 #'
-#' \code{make.clones} returns the group number of the group
-#' that the new clone genotypes were loaded into.
+#' Copy the genotypes in a particular group.
+#' Returns the group number of the group
+#' that the clone genotypes were loaded into. 
 #'
 #' The function copies over the genotypes of the original group members exactly,
 #' and applies metadata according to the optional parameters chosen.

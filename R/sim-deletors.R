@@ -1,6 +1,6 @@
 #' Clear the internal storage of all data
 #'
-#' \code{clear.simdata} frees and deletes all data stored in the
+#' Frees and deletes all data stored in the
 #' package's internal SimData struct (sim.data$p). Returns 0 on success.
 #'
 #' @family loader functions
@@ -16,7 +16,7 @@ clear.simdata <- function() {
 
 #' Delete a group's worth of genotypes
 #'
-#' \code{delete.group} finds the genotypes of the given group and removes
+#' Finds the genotypes of the given group and removes
 #' them from the SimData object's storage. A message is printed explaining
 #' how many genotypes were deleted.
 #' 
@@ -41,7 +41,7 @@ delete.group <- function(groups) {
 
 #' Delete custom label(s)
 #'
-#' \code{delete.label} removes the given custom label(s) from all genotypes
+#' Removes the given custom label(s) from all genotypes
 #' and deletes them from simulation memory.
 #'
 #' @param labels an vector containing the label numbers of the labels to be deleted
@@ -58,7 +58,7 @@ delete.label <- function(labels) {
 
 #' Delete marker effect set(s)
 #'
-#' \code{delete.effect.set} removes the given marker effect set(s) 
+#' Removes the given marker effect set(s) 
 #' from simulation memory.
 #'
 #' @param effect.sets an vector containing the effect set identifiers of the 
@@ -75,7 +75,7 @@ delete.effect.set <- function(effect.sets) {
 
 #' Delete recombination map(s)
 #'
-#' \code{delete.recombination.map} removes the given recombination map(s)
+#' Removes the given recombination map(s)
 #' from simulation memory.
 #'
 #' @param maps an vector containing the map identifiers of the maps to be deleted

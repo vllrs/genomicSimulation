@@ -81,8 +81,9 @@ The group number of the new crosses produced, or 0 if they could not be
 produced due to an invalid parent group number being provided.
 }
 \description{
-\code{make.all.unidirectional.crosses} returns the group number of the group
-that the new genotypes were loaded into.
+Simulates a cross for each pair in the half-diallel of parents in a group.
+Returns the group number of the group
+that the offspring genotypes were loaded into.
 }
 \details{
 The function performs one cross between each pair of genotypes in the

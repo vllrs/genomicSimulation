@@ -105,7 +105,7 @@ see.group.gene.data <- function(group, count.allele=NA_character_) {
 
 #' Get a list of the groups currently existing in the SimData
 #'
-#' \code{see.existing.groups} scans the saved data for groups that currently
+#' Scans the saved data for groups that currently
 #' have members and returns their group numbers and number of members.
 #'
 #' @return A dataframe containing two columns, the first, named "Group", 
@@ -125,7 +125,7 @@ see.existing.groups <- function() {
 
 #' Set the names of genotypes in simulation memory
 #'
-#' \code{change.names.to.values} changes the names of members of group(s) or
+#' Changes the names of members of group(s) or
 #'genotypes in general to a sequence of values.
 #' 
 #' The function orders the genotypes selected by the `group` parameter by their
@@ -158,7 +158,7 @@ change.names.to.values <- function(values, group=NA, startIndex=0) {
 #' Change the visual representation of an allele
 #'
 #' genomicSimulation represents alleles as single-character symbols. 
-#' \code{change.allele.symbol} swaps occurrences of the allele represented
+#' This function swaps occurrences of the allele represented
 #' by one character with a different character, in a particular marker 
 #' or across all markers.
 #' 
