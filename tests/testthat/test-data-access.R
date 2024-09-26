@@ -89,9 +89,23 @@ test_that("See.group.gene.data works", {
   expect_true(all.equal(mt["m2",],mt2[2,]))
   expect_true(all.equal(mt["m3",],mt2[3,]))
   
-  mt3 <- see.group.gene.data(1L,"A")
+  # Check works when there's missing alleles
+  capture_output(g2 <- load.genotypes("helper_genotypes_noheader_nullable_counts.txt",
+                                      define.matrix.format.details(has.header=FALSE)))
+  
+  mt2b <- see.group.gene.data(g2,unknown.allele = '?')
+  expect_equal(rownames(mt2b),rownames(mt2))
+  expect_equal(which(mt2b=="TT"),which(mt2=="TT"))
+  expect_equal(which(mt2b=="AA"),which(mt2=="AA"))
+  expect_equal(mt2b[1,4],"??")
+  expect_equal(sum(mt2b=="??"),1)
+  expect_equal(which(mt2b=="AT" | mt2b=="TA" | mt2b=="??"),which(mt2=="AT"|mt2=="TA"))
+  
+  expect_warning(see.group.gene.data(g2,unknown.allele='\n'))
   
   # Check counts of one allele
+  mt3 <- see.group.gene.data(1L,"A")
+  
   mtc <- matrix(0,nrow=dim(mt2)[1],ncol=dim(mt2)[2],dimnames=list(rownames(mt2),colnames(mt2)))
   mtc[mt2 == "AA"] <- 2
   mtc[mt2 == "AT" | mt2 == "TA"] <- 1

@@ -85,18 +85,23 @@ see.group.data <- function(group, data.type, effect.set=1L, label=1L) {
 #' If it is NA, as it is by default, then return the pair of alleles as a string eg "AT"
 #' If it is a character, then return the count of that allele eg. 'A' -> 0 if 
 #' no copies of A at that marker, 1 if heterozygous for A, 2 if "AA" at that marker.
+#' @param unknown.allele The single character that will be used to represent alleles with 
+#' the value '\0' in the table, if @a count.allele is NA. It is unused if @a count.allele
+#' is not NA. '\0' alleles represent genetic marker/candidate combinations that were 
+#' missing data/failed to load data in the original input file. They propagate 
+#' through the generations the same as non-missing alleles. 
 #' 
 #' @family grouping functions
 #' @family data access functions
 #' @export
-see.group.gene.data <- function(group, count.allele=NA_character_) {
+see.group.gene.data <- function(group, count.allele=NA_character_, unknown.allele="-") {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   if (!is.integer(group)) {
     tmp <- group
     group <- as.integer(group)
     if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
   }
-  m <- .Call(SXP_see_group_gene_data, sim.data$p, group, count.allele)
+  m <- .Call(SXP_see_group_gene_data, sim.data$p, group, count.allele, unknown.allele)
   colnames(m) <- suppressWarnings(see.group.data(group,"Names"))
   rownames(m) <- .Call(SXP_see_marker_names, sim.data$p)
   return(m)

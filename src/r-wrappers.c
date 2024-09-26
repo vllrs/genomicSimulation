@@ -739,7 +739,7 @@ SEXP SXP_see_marker_names(SEXP exd) {
 }
 
 
-SEXP SXP_see_group_gene_data(SEXP exd, SEXP s_groups, SEXP s_countAllele) {
+SEXP SXP_see_group_gene_data(SEXP exd, SEXP s_groups, SEXP s_countAllele, SEXP s_unknownAllele) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
   // Collect group sizes
@@ -750,6 +750,14 @@ SEXP SXP_see_group_gene_data(SEXP exd, SEXP s_groups, SEXP s_countAllele) {
   
   // bidirectional iterator through group
 	if (asChar(s_countAllele) == NA_STRING) {
+	  char printUnknown;
+	  if (asChar(s_unknownAllele) == NA_STRING || !isprint(CHAR(asChar(s_unknownAllele))[0])) {
+	    printUnknown = '-';
+	    warning("Defaulting to printing '\\0' alleles as a dash '-'");
+	  } else {
+	    printUnknown = CHAR(asChar(s_unknownAllele))[0];
+	  }
+	  
 		// Give the pairs of alleles
 		SEXP out = PROTECT(allocMatrix(STRSXP, d->genome.n_markers, cumulativesize));
 		size_t outi = 0;
@@ -761,6 +769,8 @@ SEXP SXP_see_group_gene_data(SEXP exd, SEXP s_groups, SEXP s_countAllele) {
 		      char* geno = get_alleles(loc);
 		      for (size_t j = 0; j < d->genome.n_markers; ++j) {
 		        char alleles[] = {geno[2*j], geno[2*j + 1], '\0'};
+		        if (alleles[0] == '\0') { alleles[0] = printUnknown; }
+		        if (alleles[1] == '\0') { alleles[1] = printUnknown; }
 		        SET_STRING_ELT(out, j + d->genome.n_markers*outi, mkChar(alleles));
 		      }
 		      ++outi;
