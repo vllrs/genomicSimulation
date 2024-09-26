@@ -41,6 +41,11 @@ see.optimal.haplotype <- function(eff.set=1L) {
 #' @export
 see.optimal.possible.haplotype <- function(group, eff.set=1L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (!is.integer(group)) {
+    tmp <- group
+    group <- as.integer(group)
+    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
+  }
   return(.Call(SXP_get_optimal_possible_haplotype, sim.data$p, group, eff.set))  
 }
 
@@ -84,6 +89,11 @@ see.optimal.GEBV <- function(eff.set=1L) {
 #' @aliases see.optimal.possible.gebv
 see.optimal.possible.GEBV <- function(group, eff.set=1L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (!is.integer(group)) {
+    tmp <- group
+    group <- as.integer(group)
+    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
+  }
   return(.Call(SXP_get_optimal_possible_GEBV, sim.data$p, group, eff.set))    
 }
 

@@ -17,6 +17,8 @@
 - Column names and row names of the matrix returned by `see.group.gene.data` now reflect genotype names and genetic marker names respectively.
 - Vignette and function docs edited for better clarity around compatible input file formats and function name changes made in v0.2.5
 - Under-the-hood improvements and simplifications of the genotype matrix input file layout detection systems.
+- `break.group.into.buckets` now accepts integer bucket sizes even if they are not in R integer vector format.
+- Functions which accept vectors of integers (eg. `break.group.into.buckets`, `make.group`, `change.label.to.values`) provide more meaningful error messages when passed a character vector instead.
 
 ## Bug Fixes
 

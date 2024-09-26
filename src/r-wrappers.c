@@ -964,11 +964,11 @@ SEXP SXP_make_group_from(SEXP exd, SEXP s_indexes) {
 
   R_xlen_t n = xlength(s_indexes);
 	unsigned int *ns = (unsigned int*) INTEGER(s_indexes);
-	for (R_xlen_t i = 0; i < n; ++i) {
+	/*for (R_xlen_t i = 0; i < n; ++i) {
 		if (ns[i] == NA_INTEGER || ns[i] < 0) {
 			error("The `indexes` vector contains at least one invalid index\n");
 		}
-	}
+	}*/ // <- check is carried out in R level these days
 
 	return ScalarInteger(make_group_from(d, n, ns).num);
 }

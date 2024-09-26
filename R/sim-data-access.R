@@ -60,9 +60,9 @@
 see.group.data <- function(group, data.type, effect.set=1L, label=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
   if (!is.integer(group)) {
-    ngroup <- group
+    tmp <- group
     group <- as.integer(group)
-    if (!all.equal(ngroup,group)) { stop("Group identifiers must be integers.") }
+    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
   }
 	return(.Call(SXP_see_group_data, sim.data$p, group, toupper(data.type), effect.set, label))
 }
@@ -92,9 +92,9 @@ see.group.data <- function(group, data.type, effect.set=1L, label=1L) {
 see.group.gene.data <- function(group, count.allele=NA_character_) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   if (!is.integer(group)) {
-    ngroup <- group
+    tmp <- group
     group <- as.integer(group)
-    if (!all.equal(ngroup,group)) { stop("Group identifiers must be integers.") }
+    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
   }
   m <- .Call(SXP_see_group_gene_data, sim.data$p, group, count.allele)
   colnames(m) <- suppressWarnings(see.group.data(group,"Names"))

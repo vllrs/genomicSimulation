@@ -13,9 +13,9 @@
 combine.groups <- function(groups) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
   if (!is.integer(groups)) {
-    ngroup <- groups
+    tmp <- groups
     groups <- as.integer(groups)
-    if (!all.equal(ngroup,groups)) { stop("Group identifiers must be integers.") }
+    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
   }
 	return(.Call(SXP_combine_groups, sim.data$p, groups))
 }
@@ -125,6 +125,11 @@ break.group.evenly <- function(group, into.n=2) {
 #' @export
 break.group.into.buckets <- function(group, buckets) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (!is.integer(buckets)) {
+    tmp <- buckets
+    buckets <- as.integer(buckets)
+    if (!isTRUE(all(tmp==buckets))) { stop("Bucket sizes must be integers.") }
+  }
   return(.Call(SXP_break_group_into_buckets, sim.data$p, group, buckets))  
 }
 
@@ -176,6 +181,11 @@ break.group.with.probabilities <- function(group, probabilities) {
 #' @export
 make.group <- function(indexes) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (!is.integer(indexes)) {
+    tmp <- indexes
+    indexes <- as.integer(indexes)
+    if (!isTRUE(all(tmp==indexes))) { stop("Genotype indexes must be integers.") }
+  }
 	return(.Call(SXP_make_group_from, sim.data$p, indexes))
 }
 
@@ -315,6 +325,11 @@ change.label.default <- function(labels, defaults) {
 #' @export
 change.label.to.values <- function(label, values, group=NA, startIndex=1) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (!is.integer(values)) {
+    tmp <- indexes
+    values <- as.integer(values)
+    if (!isTRUE(all(tmp==values))) { stop("Label values must be integers.") }
+  }
   return(.Call(SXP_change_label_to_values, sim.data$p, label, 
                values, group, startIndex))    
 }
