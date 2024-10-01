@@ -7,9 +7,9 @@ This project is an R package that runs stochastic simulations of genetics in bre
 
 ### Installation
 
-This package is not yet submitted to CRAN. [See the latest release here](https://github.com/vllrs/genomicSimulation/releases).
+This package is not yet available on CRAN. 
 
-Install the developing version from [Github](https://github.com/vllrs/genomicSimulation).
+[See the latest release here](https://github.com/vllrs/genomicSimulation/releases). Alternatively, install the development version from [Github](https://github.com/vllrs/genomicSimulation).
 
 ```r
 remotes::install_github('vllrs/genomicSimulation')
