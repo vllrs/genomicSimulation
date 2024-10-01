@@ -1,9 +1,9 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.2.5.02
+genomicSimulationC v0.2.5.04
 
-    Last edit: 26 September 2024
+    Last edit: 1 October 2024
 	License: MIT License
 
 Copyright (c) 2021 Kira Villiers
@@ -560,7 +560,7 @@ typedef struct {
                             * are saved to "{filename_prefix}-pedigree.txt", even
                             * if `will_save_to_simdata` is false.
                             * Pedigrees are saved in the format of gsc_save_full_pedigree()*/
-    gsc_EffectID will_save_bvs_to_file; /**< If equal to NOT_AN_EFFECT_SET, no bvs are calculated or saved.
+    gsc_EffectID will_save_bvs_to_file; /**< If equal to NO_EFFECTSET, no bvs are calculated or saved.
                             * Otherwise, for each offspring in the cross,
                             * the breeding values according
                             * to the marker effect set with this gsc_EffectID

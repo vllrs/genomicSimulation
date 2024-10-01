@@ -7,6 +7,9 @@
 load.genotypes(allele.file, format = list())
 }
 \arguments{
+\item{allele.file}{A string containing a filename. The file should
+contain a matrix of markers and alleles}
+
 \item{format}{Output of \link{define.matrix.format.details} to manually specify
 file format, or an empty list by default to detect file formats automatically}
 }

@@ -5,14 +5,14 @@
 \title{Create a new SimData object from data loaded from files}
 \usage{
 load.data(
-  genotype.file = NULL,
+  allele.file = NULL,
   map.file = NULL,
   effect.file = NULL,
   format = list()
 )
 }
 \arguments{
-\item{genotype.file}{A string containing a filename. The file should
+\item{allele.file}{A string containing a filename. The file should
 contain a matrix of markers and alleles}
 
 \item{map.file}{A string containing a filename. The file should contain

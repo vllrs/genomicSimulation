@@ -15,7 +15,7 @@ combine.groups <- function(groups) {
   if (!is.integer(groups)) {
     tmp <- groups
     groups <- as.integer(groups)
-    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
+    if (!isTRUE(all(tmp==groups))) { stop("Group identifiers must be integers.") }
   }
 	return(.Call(SXP_combine_groups, sim.data$p, groups))
 }
@@ -326,7 +326,7 @@ change.label.default <- function(labels, defaults) {
 change.label.to.values <- function(label, values, group=NA, startIndex=1) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   if (!is.integer(values)) {
-    tmp <- indexes
+    tmp <- values
     values <- as.integer(values)
     if (!isTRUE(all(tmp==values))) { stop("Label values must be integers.") }
   }

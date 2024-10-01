@@ -4,7 +4,7 @@
 \alias{see.group.gene.data}
 \title{Get genotypes or allele counts of a group as a matrix.}
 \usage{
-see.group.gene.data(group, count.allele = NA_character_)
+see.group.gene.data(group, count.allele = NA_character_, unknown.allele = "-")
 }
 \arguments{
 \item{group}{a vector of integers: the group number(s) of the group(s) to
@@ -15,6 +15,12 @@ to be extracted.
 If it is NA, as it is by default, then return the pair of alleles as a string eg "AT"
 If it is a character, then return the count of that allele eg. 'A' -> 0 if 
 no copies of A at that marker, 1 if heterozygous for A, 2 if "AA" at that marker.}
+
+\item{unknown.allele}{The single character that will be used to represent alleles with 
+the value '\0' in the table, if @a count.allele is NA. It is unused if @a count.allele
+is not NA. '\0' alleles represent genetic marker/candidate combinations that were 
+missing data/failed to load data in the original input file. They propagate 
+through the generations the same as non-missing alleles.}
 }
 \description{
 \code{see.group.gene.data} allows you to extract a (markers)x(group members)

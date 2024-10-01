@@ -461,7 +461,7 @@ SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set
 	// Collect group sizes
 	R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
-	size_t* gsizes = R_alloc(glen, sizeof(size_t));
+	size_t* gsizes = (size_t*)R_alloc(glen, sizeof(size_t));
 	size_t cumulativesize = check_group_sizes(d, glen, groups, gsizes);
 	
 	// Create output vector and fill.
@@ -745,7 +745,7 @@ SEXP SXP_see_group_gene_data(SEXP exd, SEXP s_groups, SEXP s_countAllele, SEXP s
   // Collect group sizes
   R_xlen_t glen = xlength(s_groups);
   int *groups = INTEGER(s_groups);
-  size_t* gsizes = R_alloc(glen, sizeof(size_t));
+  size_t* gsizes = (size_t*)R_alloc(glen, sizeof(size_t));
   size_t cumulativesize = check_group_sizes(d, glen, groups, gsizes);
   
   // bidirectional iterator through group

@@ -17,7 +17,7 @@
 #' 
 #' See package vignette for file formats that the package can load.
 #'
-#' @param genotype.file A string containing a filename. The file should
+#' @param allele.file A string containing a filename. The file should
 #' contain a matrix of markers and alleles
 #' @param map.file A string containing a filename. The file should contain
 #' a linkage map for the markers loaded from allele.file
@@ -33,12 +33,12 @@
 #'
 #' @family loader functions
 #' @export
-load.data <- function(genotype.file=NULL, map.file=NULL, effect.file=NULL, format=list()) {
- 	sim.data$p <- .Call(SXP_load_data, genomicSimulation:::expand.path(genotype.file), 
+load.data <- function(allele.file=NULL, map.file=NULL, effect.file=NULL, format=list()) {
+ 	sim.data$p <- .Call(SXP_load_data, genomicSimulation:::expand.path(allele.file), 
  	                    genomicSimulation:::expand.path(map.file), 
  	                    genomicSimulation:::expand.path(effect.file),
  	                    format)
-	gn <- ifelse(is.null(genotype.file), NA, 1L)
+	gn <- ifelse(is.null(allele.file), NA, 1L)
 	mi <- ifelse(is.null(map.file) || is.null(gn), NA, 1L)
 	ei <- ifelse(is.null(effect.file) || is.null(mi), NA, 1L)
 	return(list(groupNum=gn,mapID=mi,effectID=ei))
