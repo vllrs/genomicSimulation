@@ -15,7 +15,7 @@
 - No longer `Depends` on package `fs`. `fs` is only used if file paths are used that contain tildes `~` needing to be expanded to home directories.
 - Fix a potential (untested) issue when using very long R vectors, by updating vector length calculation in R wrapper functions from `length()` to `xlength()`.
 - `see.group.data` and `see.group.gene.data` now raise a warning, instead of an error, when there are no group members allocated to the group(s) they access.
-- `see.group.data`, `see.group.gene.data`, `delete.group`, and `combine.groups` no longer raise an error when the group numbers passed are of numeric type instead of integer type. Instead, as long as the numbers are whole numbers, they perform the type conversion. Likewise, `make.targeted.crosses` no longer raises an error when it is passed parent indexes that are of numeric type instead of integer type.
+- `see.group.data`, `see.group.gene.data`, `delete.group`, and `combine.groups` no longer raise an error when the group numbers passed are of numeric type instead of integer type. Instead, as long as the numbers are whole numbers, they perform the type conversion. Likewise, `make.targeted.crosses` no longer raises an error when it is passed parent indexes that are of numeric type instead of integer type, as long as the numbers are whole numbers. Likewise, `make.random.crosses`, `make.all.unidirectional.crosses`, `self.n.times` and `make.doubled.haploids` no longer raise an error when the group numbers or map IDs passed are of numeric type instead of integer type, as long as the numbers are whole numbers. 
 - Column names and row names of the matrix returned by `see.group.gene.data` now reflect genotype names and genetic marker names respectively.
 - Vignette and function docs edited for better clarity around compatible input file formats and function name changes made in v0.2.5
 - Under-the-hood improvements and simplifications of the genotype matrix input file layout detection systems.
@@ -23,6 +23,9 @@
 - File saving output functions with multiple possible output formats (`save.genotypes` & `save.pedigrees`) now prefer a logical/boolean parameter to select the output format, the same way as the underlying C library does, instead of needing to memorise format strings. The old string parameters will still be accepted, so no need to modify old code.
 - `break.group.into.buckets` now accepts integer bucket sizes even if they are not in R integer vector format.
 - Functions which accept vectors of integers (eg. `break.group.into.buckets`, `make.group`, `change.label.to.values`) provide more meaningful error messages when passed a character vector instead.
+- Use of superseded progression function names (eg. `cross.combinations` for `make.targeted.crosses`) now produce warnings. 
+- Superseded progression function names in tests have been replaced with their current names. 
+- Clarified in documentation which progression functions accept a vector of genetic map IDs, and which only accept a single genetic map.
 
 ## Bug Fixes
 

@@ -20,7 +20,11 @@
 #' Set to 0 for no restriction on the number of offspring per parent.
 #' @param map The identifier for the recombination map with which gametes 
 #' from members of @a group will be generated. By default uses the oldest 
-#' loaded map currently active in simulation
+#' loaded map currently active in simulation. If a vector of groups is provided,
+#' this parameter can be a single map to be used for crossing operations on all groups, 
+#' or this parameter can be a vector of the same length as `group`, in which case 
+#' each map will be used for simulating the crossing operations on the group which
+#' is at the corresponding position in the vector.
 #' @param n.crosses The function will pick this many random pairs of parents
 #' to cross.
 #' @param offspring The number of times to cross each randomly-chosen pair. 
@@ -70,6 +74,16 @@ make.random.crosses <- function(group, n.crosses=5, cap=0, map=0L, offspring=1, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (!is.integer(group)) {
+    tmp <- group
+    group <- as.integer(group)
+    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
+  }
+  if (!is.integer(map)) {
+    tmp <- map
+    map <- as.integer(map)
+    if (!isTRUE(all(tmp==map))) { stop("Map identifiers must be integers.") }
+  }
 	return(.Call(SXP_make_random_crosses, sim.data$p, group, n.crosses, cap, map, give.names, 
 	             name.prefix, offspring, track.pedigree, give.ids, genomicSimulation:::expand.path(file.prefix), 
 	             save.pedigree, save.gebv, save.genotype, retain))
@@ -89,6 +103,7 @@ make.random.crosses <- function(group, n.crosses=5, cap=0, map=0L, offspring=1, 
 cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
+  .Deprecated("make.random.crosses")
   return(make.random.crosses(group=group,n.crosses=n.crosses,cap=cap,offspring=offspring,
                              retain=retain,give.names=give.names,name.prefix=name.prefix,
                              track.pedigree=track.pedigree,give.ids=give.ids,
@@ -165,6 +180,7 @@ cross.randomly.between <- function(group1, group2, cap1=0, cap2=0,
 		n.crosses=5, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
+  .Deprecated("make.random.crosses.between")
   return(make.random.crosses.between(group1=group1,group2=group2,cap1=cap1,cap2=cap2,n.crosses=n.crosses,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
 
@@ -189,10 +205,12 @@ cross.randomly.between <- function(group1, group2, cap1=0, cap2=0,
 #' be carried out. Can be a vector of names or of indexes.
 #' @param map1 The identifier for the recombination map with which gametes 
 #' from members of @a first.parents will be generated. By default uses the oldest 
-#' loaded map currently active in simulation
+#' loaded map currently active in simulation. The same map will be used for simulating
+#' the gametes of the first parent of all the targeted crosses.
 #' @param map2 The identifier for the recombination map with which gametes 
 #' from members of @a second.parents will be generated. By default uses the oldest 
-#' loaded map currently active in simulation
+#' loaded map currently active in simulation. The same map will be used for simulating
+#' the gametes of the second parent of all the targeted crosses.
 #' @inheritParams make.random.crosses
 #' @param offspring The number of times each combination in the file is crossed.
 #' @return The group number of the new crosses produced
@@ -234,6 +252,7 @@ cross.combinations <- function(first.parents, second.parents,
 		offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
+  .Deprecated("make.targeted.crosses")
   return(make.targeted.crosses(first.parents=first.parents,second.parents=second.parents,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
 
@@ -254,10 +273,12 @@ cross.combinations <- function(first.parents, second.parents,
 #' represents a cross to make.
 #' @param map1 The identifier for the recombination map with which gametes 
 #' will be generated from the first parent in each cross. By default uses the oldest 
-#' loaded map currently active in simulation
+#' loaded map currently active in simulation. The same map will be used for simulating
+#' the gametes of the first parent of all the targeted crosses.
 #' @param map2 The identifier for the recombination map with which gametes 
 #' will be generated from the second parent in each cross. By default uses the oldest 
-#' loaded map currently active in simulation
+#' loaded map currently active in simulation. The same map will be used for simulating
+#' the gametes of the second parent of all the targeted crosses.
 #' @inheritParams make.random.crosses
 #' @param offspring The number of times each combination in the file is crossed.
 #' @return The group number of the new crosses produced
@@ -286,6 +307,7 @@ make.crosses.from.file <- function(cross.file, map1=0L, map2=0L, offspring=1, re
 cross.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
+  .Deprecated("make.crosses.from.file")
   return(make.crosses.from.file(cross.file=cross.file,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=genomicSimulation:::expand.path(file.prefix),save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
 
@@ -300,19 +322,22 @@ cross.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.n
 #' The function is designed for use in a situation where you wish to cross
 #' unnamed lines or make crosses between simulated lines without having to check
 #' what they were named. Each line of the file has four names, and the function
-#' searches for an offspring of the first two, and an offspring of the last two,
+#' searches for an offspring of the first two that already exists in the simulation, 
+#' and an offspring of the last two that already exists in the simulation,
 #' then crosses these offspring. The grandparent generation, therefore, must have
-#' names.
+#' names, so that they can be located in the pedigree.
 #'
 #' @param cross.file a string containing a filename. The file should be available
 #' to read and contain a tab-separated quartet of names on each line. Each line
 #' represents a cross to make.
 #' @param map1 The identifier for the recombination map with which gametes 
 #' will be generated from the first parent in each cross. By default uses the oldest 
-#' loaded map currently active in simulation
+#' loaded map currently active in simulation. The same map will be used for simulating
+#' the gametes of the first parent of all the targeted crosses.
 #' @param map2 The identifier for the recombination map with which gametes 
 #' will be generated from the second parent in each cross. By default uses the oldest 
-#' loaded map currently active in simulation
+#' loaded map currently active in simulation. The same map will be used for simulating
+#' the gametes of the second parent of all the targeted crosses.
 #' @inheritParams make.random.crosses
 #' @param offspring The number of times each combination in the file is crossed.
 #' @return The group number of the new crosses produced
@@ -342,6 +367,7 @@ make.double.crosses.from.file <- function(cross.file, map1=0L, map2=0L, offsprin
 cross.dc.combinations.file <- function(cross.file, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
+  .Deprecated("make.double.crosses.from.file")
   return(make.double.crosses.from.file(cross.file=cross.file,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
 
@@ -367,6 +393,16 @@ make.all.unidirectional.crosses <- function(group, map=0L, offspring=1, retain=T
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (!is.integer(group)) {
+    tmp <- group
+    group <- as.integer(group)
+    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
+  }
+  if (!is.integer(map)) {
+    tmp <- map
+    map <- as.integer(map)
+    if (!isTRUE(all(tmp==map))) { stop("Map identifiers must be integers.") }
+  }
 	return(.Call(SXP_make_all_unidirectional_crosses, sim.data$p, group, map, give.names, name.prefix,
 	             offspring, track.pedigree, give.ids, genomicSimulation:::expand.path(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
@@ -386,6 +422,7 @@ make.all.unidirectional.crosses <- function(group, map=0L, offspring=1, retain=T
 cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
+  .Deprecated("make.all.unidirectional.crosses")
   return(make.all.unidirectional.crosses(group=group,offspring=offspring,retain=retain,give.names=give.names,name.prefix=name.prefix,track.pedigree=track.pedigree,give.ids=give.ids,file.prefix=file.prefix,save.pedigree=save.pedigree,save.gebv=save.gebv,save.genotype=save.genotype))		
 }
 
@@ -396,8 +433,8 @@ cross.all.pairs <- function(group, offspring=1, retain=TRUE, give.names=FALSE, n
 #' that the selfed progeny genotypes were loaded into. 
 #'
 #' The function performs a selfing step (crosses each genotype
-#' with itself), then another on the output of that setp, etc., for a total of 
-#' n steps of selfing. 
+#' with itself), then performs a selfing step on those offspring, and repeats for a total of 
+#' n generations of selfing. 
 #'
 #' The offspring parameter represents the number of genotypes produced from each 
 #' genotype in the original group. These genotypes from the same family are 
@@ -417,6 +454,16 @@ self.n.times <- function(group, n, map=0L, offspring=1, retain=TRUE, give.names=
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
 		save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (!is.integer(group)) {
+    tmp <- group
+    group <- as.integer(group)
+    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
+  }
+  if (!is.integer(map)) {
+    tmp <- map
+    map <- as.integer(map)
+    if (!isTRUE(all(tmp==map))) { stop("Map identifiers must be integers.") }
+  }
 	return(.Call(SXP_self_n_times, sim.data$p, group, n, map, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, genomicSimulation:::expand.path(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }			
@@ -445,6 +492,16 @@ make.doubled.haploids <- function(group, map=0L, offspring=1, retain=TRUE,
 		give.names=FALSE, name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, 
 		file.prefix="", save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (!is.integer(group)) {
+    tmp <- group
+    group <- as.integer(group)
+    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
+  }
+  if (!is.integer(map)) {
+    tmp <- map
+    map <- as.integer(map)
+    if (!isTRUE(all(tmp==map))) { stop("Map identifiers must be integers.") }
+  }
 	return(.Call(SXP_make_doubled_haploids, sim.data$p, group, map, give.names, name.prefix, offspring, 
 				 track.pedigree, give.ids, genomicSimulation:::expand.path(file.prefix), save.pedigree, save.gebv, save.genotype, retain))
 }
@@ -481,6 +538,11 @@ make.clones <- function(group, offspring=1, retain=TRUE, inherit.names=TRUE,
 		give.names=FALSE, name.prefix=NULL, track.pedigree=TRUE, give.ids=TRUE, 
 		file.prefix="", save.pedigree=FALSE, save.gebv=FALSE, save.genotype=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (!is.integer(group)) {
+    tmp <- group
+    group <- as.integer(group)
+    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
+  }
 	return(.Call(SXP_make_clones, sim.data$p, group, inherit.names, give.names, 
 				 name.prefix, offspring, track.pedigree, give.ids, genomicSimulation:::expand.path(file.prefix), save.pedigree,
 				 save.gebv, save.genotype, retain))

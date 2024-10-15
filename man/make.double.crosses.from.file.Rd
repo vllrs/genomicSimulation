@@ -28,11 +28,13 @@ represents a cross to make.}
 
 \item{map1}{The identifier for the recombination map with which gametes 
 will be generated from the first parent in each cross. By default uses the oldest 
-loaded map currently active in simulation}
+loaded map currently active in simulation. The same map will be used for simulating
+the gametes of the first parent of all the targeted crosses.}
 
 \item{map2}{The identifier for the recombination map with which gametes 
 will be generated from the second parent in each cross. By default uses the oldest 
-loaded map currently active in simulation}
+loaded map currently active in simulation. The same map will be used for simulating
+the gametes of the second parent of all the targeted crosses.}
 
 \item{offspring}{The number of times each combination in the file is crossed.}
 
@@ -94,9 +96,10 @@ that the offspring genotypes were loaded into.
 The function is designed for use in a situation where you wish to cross
 unnamed lines or make crosses between simulated lines without having to check
 what they were named. Each line of the file has four names, and the function
-searches for an offspring of the first two, and an offspring of the last two,
+searches for an offspring of the first two that already exists in the simulation, 
+and an offspring of the last two that already exists in the simulation,
 then crosses these offspring. The grandparent generation, therefore, must have
-names.
+names, so that they can be located in the pedigree.
 }
 \seealso{
 Other crossing functions: 

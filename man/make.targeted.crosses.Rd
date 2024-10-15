@@ -30,11 +30,13 @@ be carried out. Can be a vector of names or of indexes.}
 
 \item{map1}{The identifier for the recombination map with which gametes 
 from members of @a first.parents will be generated. By default uses the oldest 
-loaded map currently active in simulation}
+loaded map currently active in simulation. The same map will be used for simulating
+the gametes of the first parent of all the targeted crosses.}
 
 \item{map2}{The identifier for the recombination map with which gametes 
 from members of @a second.parents will be generated. By default uses the oldest 
-loaded map currently active in simulation}
+loaded map currently active in simulation. The same map will be used for simulating
+the gametes of the second parent of all the targeted crosses.}
 
 \item{offspring}{The number of times each combination in the file is crossed.}
 

@@ -45,9 +45,9 @@ test_that("labels can be used to split groups", {
 test_that("combine.groups successfully merges 2+ groups", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   g <- init$groupNum
-  g2 <- cross.randomly(g, n.crosses=5, offspring=1)
-  g3 <- cross.randomly(g, n.crosses=5, offspring=1)
-  g4 <- cross.randomly(g, n.crosses=7, offspring=1)
+  g2 <- make.random.crosses(g, n.crosses=5, offspring=1)
+  g3 <- make.random.crosses(g, n.crosses=5, offspring=1)
+  g4 <- make.random.crosses(g, n.crosses=7, offspring=1)
   
   #setup worked as expected
   expect_identical(see.existing.groups(), data.frame("Group"=c(g,g2,g3,g4),"GroupSize"=c(6L,5L,5L,7L)))
@@ -127,7 +127,7 @@ test_that("break.group.randomly runs successfully", {
   g <- init$groupNum
   
   #setup
-  g2 <- cross.randomly(g, 2000)
+  g2 <- make.random.crosses(g, 2000)
   
   fs <- break.group.randomly(g2)
   
@@ -147,7 +147,7 @@ test_that("break.group.with.probabilities runs successfully", {
   g <- init$groupNum
   
   #setup
-  g2 <- cross.randomly(g, 2000)
+  g2 <- make.random.crosses(g, 2000)
   
   fs <- break.group.with.probabilities(g2, c(0.2,0.5))
   

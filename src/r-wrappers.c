@@ -1620,9 +1620,9 @@ SEXP SXP_make_random_crosses_between(SEXP exd, SEXP s_group1, SEXP s_group2, SEX
 									 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
 									 s_saveGenes, s_retain);
 
-	int group1_c = INTEGER(s_group1)[0];
+	int group1_c = asInteger(s_group1);
 	if (group1_c == NA_INTEGER || group1_c < 0) { error("The parameter `group1` is invalid\n"); }
-	int group2_c = INTEGER(s_group2)[0];
+	int group2_c = asInteger(s_group2);
 	if (group2_c == NA_INTEGER || group2_c < 0) { error("The parameter `group2` is invalid\n"); }
 
 	int cap1 = asInteger(s_cap1);
@@ -1633,9 +1633,9 @@ SEXP SXP_make_random_crosses_between(SEXP exd, SEXP s_group1, SEXP s_group2, SEX
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
 		warning("More than one recombination map per group provided. Only the first recombination map will be used");
 	}
-	int map1 = INTEGER(s_map1)[0];
+	int map1 = asInteger(s_map1);
 	if (map1 == NA_INTEGER || map1 < 0) { error("The parameter `map1` is invalid\n"); }
-	int map2 = INTEGER(s_map2)[0];
+	int map2 = asInteger(s_map2);
 	if (map2 == NA_INTEGER || map2 < 0) { error("The parameter `map2` is invalid\n"); }
 
 	int n = asInteger(s_crosses);
@@ -1693,9 +1693,9 @@ SEXP SXP_make_targeted_crosses(SEXP exd, SEXP s_firstparents, SEXP s_secondparen
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
 		warning("More than one recombination map per group provided. Only the first recombination map each will be used");
 	}
-	int map1 = INTEGER(s_map1)[0];
+	int map1 = asInteger(s_map1);
 	if (map1 == NA_INTEGER || map1 < 0) { error("The parameter `map1` is invalid\n"); }
-	int map2 = INTEGER(s_map2)[0];
+	int map2 = asInteger(s_map2);
 	if (map2 == NA_INTEGER || map2 < 0) { error("The parameter `map2` is invalid\n"); }
 
 
@@ -1721,9 +1721,9 @@ SEXP SXP_make_crosses_from_file(SEXP exd, SEXP s_filename, SEXP s_map1, SEXP s_m
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
 		warning("More than one recombination map per parent provided. Only the first recombination map each will be used");
 	}
-	int map1 = INTEGER(s_map1)[0];
+	int map1 = asInteger(s_map1);
 	if (map1 == NA_INTEGER || map1 < 0) { error("The parameter `map1` is invalid\n"); }
-	int map2 = INTEGER(s_map2)[0];
+	int map2 = asInteger(s_map2);
 	if (map2 == NA_INTEGER || map2 < 0) { error("The parameter `map2` is invalid\n"); }
 
 	return ScalarInteger(make_crosses_from_file(d, filename, MAPID_IFY(map1),MAPID_IFY(map2), g).num);
@@ -1743,9 +1743,9 @@ SEXP SXP_make_double_crosses_from_file(SEXP exd, SEXP s_filename, SEXP s_map1, S
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
 		warning("More than one recombination map per parent provided. Only the first recombination map each will be used");
 	}
-	int map1 = INTEGER(s_map1)[0];
+	int map1 = asInteger(s_map1);
 	if (map1 == NA_INTEGER || map1 < 0) { error("The parameter `map1` is invalid\n"); }
-	int map2 = INTEGER(s_map2)[0];
+	int map2 = asInteger(s_map2);
 	if (map2 == NA_INTEGER || map2 < 0) { error("The parameter `map2` is invalid\n"); }
 
 	return ScalarInteger(make_double_crosses_from_file(d, filename, MAPID_IFY(map1), MAPID_IFY(map2), g).num);

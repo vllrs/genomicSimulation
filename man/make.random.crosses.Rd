@@ -35,7 +35,11 @@ Set to 0 for no restriction on the number of offspring per parent.}
 
 \item{map}{The identifier for the recombination map with which gametes 
 from members of @a group will be generated. By default uses the oldest 
-loaded map currently active in simulation}
+loaded map currently active in simulation. If a vector of groups is provided,
+this parameter can be a single map to be used for crossing operations on all groups, 
+or this parameter can be a vector of the same length as `group`, in which case 
+each map will be used for simulating the crossing operations on the group which
+is at the corresponding position in the vector.}
 
 \item{offspring}{The number of times to cross each randomly-chosen pair.}
 

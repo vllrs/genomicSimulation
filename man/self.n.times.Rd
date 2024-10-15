@@ -29,7 +29,11 @@ random crosses. If a vector, the parameters and breeding method
 
 \item{map}{The identifier for the recombination map with which gametes 
 from members of @a group will be generated. By default uses the oldest 
-loaded map currently active in simulation}
+loaded map currently active in simulation. If a vector of groups is provided,
+this parameter can be a single map to be used for crossing operations on all groups, 
+or this parameter can be a vector of the same length as `group`, in which case 
+each map will be used for simulating the crossing operations on the group which
+is at the corresponding position in the vector.}
 
 \item{offspring}{This many offspring of each group member will be produced at the 
 first selfing step. After that step, exactly one selfed offspring from each
@@ -91,8 +95,8 @@ that the selfed progeny genotypes were loaded into.
 }
 \details{
 The function performs a selfing step (crosses each genotype
-with itself), then another on the output of that setp, etc., for a total of 
-n steps of selfing. 
+with itself), then performs a selfing step on those offspring, and repeats for a total of 
+n generations of selfing. 
 
 The offspring parameter represents the number of genotypes produced from each 
 genotype in the original group. These genotypes from the same family are 

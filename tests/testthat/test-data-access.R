@@ -61,8 +61,8 @@ test_that("see.group.data works with multiple groups", {
   expect_warning(ntmp <- see.group.data(c(g,50), "Names"))
   expect_identical(ntmp, c("G01","G02","G03","G04","G05","G06"))
   
-  g2 <- cross.randomly(g,n.crosses=10)
-  g3 <- cross.randomly(g,n.crosses=2)
+  g2 <- make.random.crosses(g,n.crosses=10)
+  g3 <- make.random.crosses(g,n.crosses=2)
   
   expect_identical(see.group.data(c(g3,g2,g),"X"), c(16:17, 6:15, 0:5))
   

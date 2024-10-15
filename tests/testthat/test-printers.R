@@ -115,7 +115,7 @@ test_that("save.pedigrees in one-step format with group works", {
   g <- init$groupNum
   capture_output(g2 <- make.group(c(0L,1L,2L)), print=F)
   capture_output(delete.group(g), print=F)
-  capture_output(f <- cross.all.pairs(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
+  capture_output(f <- make.all.unidirectional.crosses(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
   
   save.pedigrees("imaginary5", group=f, recursive.format = FALSE)
   f_out <- readLines("imaginary5")
@@ -134,7 +134,7 @@ test_that("save.pedigrees in one-step format without group works", {
   g <- init$groupNum
   capture_output(g2 <- make.group(c(0L,1L,2L)), print=F)
   capture_output(delete.group(g), print=F)
-  capture_output(f <- cross.all.pairs(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
+  capture_output(f <- make.all.unidirectional.crosses(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
   
   save.pedigrees("imaginary5", recursive.format=FALSE)
   f_out <- readLines("imaginary5")
@@ -155,9 +155,9 @@ test_that("save.pedigrees in recursive format with group works", {
   g <- init$groupNum
   capture_output(g2 <- make.group(c(0L,1L,2L)), print=F)
   capture_output(delete.group(g), print=F)
-  capture_output(f <- cross.all.pairs(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
-  capture_output(fd <- cross.all.pairs(f, give.names = T, give.ids = T, name.prefix = "D"), print=F)
-  capture_output(fe <- cross.combinations(1L, 1L, give.names = T, give.ids = T, name.prefix = "E"), print=F)
+  capture_output(f <- make.all.unidirectional.crosses(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
+  capture_output(fd <- make.all.unidirectional.crosses(f, give.names = T, give.ids = T, name.prefix = "D"), print=F)
+  capture_output(fe <- make.targeted.crosses(1L, 1L, give.names = T, give.ids = T, name.prefix = "E"), print=F)
   capture_output(f <- combine.groups(c(f,fd,fe)), print=F)
   
   save.pedigrees("imaginary6", group=f, recursive.format = TRUE)
@@ -180,9 +180,9 @@ test_that("save.pedigrees in recursive format without group works", {
   g <- init$groupNum
   capture_output(g2 <- make.group(c(0L,1L,2L)), print=F)
   capture_output(delete.group(g), print=F)
-  capture_output(f <- cross.all.pairs(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
-  capture_output(fd <- cross.all.pairs(f, give.names = T, give.ids = T, name.prefix = "D"), print=F)
-  capture_output(fe <- cross.combinations(1L, 1L, give.names = T, give.ids = T, name.prefix = "E"), print=F)
+  capture_output(f <- make.all.unidirectional.crosses(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
+  capture_output(fd <- make.all.unidirectional.crosses(f, give.names = T, give.ids = T, name.prefix = "D"), print=F)
+  capture_output(fe <- make.targeted.crosses(1L, 1L, give.names = T, give.ids = T, name.prefix = "E"), print=F)
   
   save.pedigrees("imaginary6", recursive.format=TRUE)
   f_out <- readLines("imaginary6")
