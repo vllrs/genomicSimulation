@@ -8,7 +8,8 @@ load.data(
   allele.file = NULL,
   map.file = NULL,
   effect.file = NULL,
-  format = list()
+  format = list(),
+  genotype.file = NULL
 )
 }
 \arguments{
@@ -23,6 +24,9 @@ file should contain effect values for calculating GEBVs of a trait}
 
 \item{format}{Output of \link{define.matrix.format.details} to manually specify
 file format, or an empty list by default to detect file formats automatically}
+
+\item{genotype.file}{An alternate parameter name for `allele.file`. `allele.file`
+is preferred, for consistency with \link{load.genotypes}}
 }
 \value{
 A list with entries $groupNum, $mapID, and $effectID, representing

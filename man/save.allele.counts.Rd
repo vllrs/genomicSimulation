@@ -2,9 +2,9 @@
 % Please edit documentation in R/sim-printers.R
 \name{save.allele.counts}
 \alias{save.allele.counts}
-\title{Generate and save count matrices for alleles in the SimData}
+\title{Generate and save count matrices of alleles in the simulation to a file}
 \usage{
-save.allele.counts(filename, group = NULL, allele)
+save.allele.counts(filename, group = NULL, allele, markers.as.rows = TRUE)
 }
 \arguments{
 \item{filename}{A string containing a filename to which the output will
@@ -16,21 +16,24 @@ to that group.}
 
 \item{allele}{The first character of this string will be used as the 
 allele to count.}
+
+\item{markers.as.rows}{A logical representing the orientation of the matrix
+in the output file. If TRUE, SNP markers will be rows of the matrix, and candidate 
+lines will be columns. If FALSE, SNP markers will be columns of the matrix, and 
+candidate lines will be rows.}
 }
 \value{
 0 on success. On failure an error will be raised.
 }
 \description{
-Counts the number of occurences of a given
-allele at each SNP of each genotype in the selected set, and prints
-the output to a file.
+Counts the number of occurrences of a given
+allele at each SNP for each candidate in the simulation or for all 
+candidates in a group. Prints
+the output to a file in a tab-separated matrix.
 }
 \details{
-The function prints its results to a tab-separated matrix file. The first line/
-column header gives the name (or id if the genotype does not have a name allocated)
-of each genotype that is having its counts printed. After that header row, all rows 
-begin with the name of a SNP, followed by the number of the given allele at that
-marker in the corresponding genotype from the header row.
+Candidate lines are represented in the output file by their names, if they
+have names, or by their pedigree IDs if they are unnamed.
 }
 \seealso{
 Other saving functions: 

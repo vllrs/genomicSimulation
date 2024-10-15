@@ -19,6 +19,8 @@
 #'
 #' @param allele.file A string containing a filename. The file should
 #' contain a matrix of markers and alleles
+#' @param genotype.file An alternate parameter name for `allele.file`. `allele.file`
+#' is preferred, for consistency with \link{load.genotypes}
 #' @param map.file A string containing a filename. The file should contain
 #' a linkage map for the markers loaded from allele.file
 #' @param effect.file A string containing a filename. The
@@ -33,7 +35,17 @@
 #'
 #' @family loader functions
 #' @export
-load.data <- function(allele.file=NULL, map.file=NULL, effect.file=NULL, format=list()) {
+load.data <- function(allele.file=NULL, map.file=NULL, effect.file=NULL, format=list(), genotype.file=NULL) {
+  if (!is.null(genotype.file)) {
+    if (!is.null(allele.file)) {
+      stop("Cannot use both `allele.file` and `genotype.file` parameters in the same call.")
+    } else {
+      .Deprecated(msg="For consistency with load.genotypes, prefer parameter name `allele.file` over `genotype.file` in load.data.",
+                  old="load.data(genotype.file, map.file, effect.file)", new="load.data(allele.file, map.file, effect.file)")
+      allele.file <- genotype.file
+    }
+  }
+  
  	sim.data$p <- .Call(SXP_load_data, genomicSimulation:::expand.path(allele.file), 
  	                    genomicSimulation:::expand.path(map.file), 
  	                    genomicSimulation:::expand.path(effect.file),

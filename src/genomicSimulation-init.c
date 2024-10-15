@@ -27,7 +27,7 @@ R_CallMethodDef calledMethods[] = {
 	{"SXP_see_existing_groups", (DL_FUNC) &SXP_see_existing_groups, 1},
 	{"SXP_save_GEBVs", (DL_FUNC) &SXP_save_GEBVs, 4},
 	{"SXP_save_local_GEBVs_blocks_from_chrsplit", (DL_FUNC) &SXP_save_local_GEBVs_blocks_from_chrsplit, 6},
-	{"SXP_save_allele_counts", (DL_FUNC) &SXP_save_allele_counts, 4},
+	{"SXP_save_allele_counts", (DL_FUNC) &SXP_save_allele_counts, 5},
 	{"SXP_save_local_GEBVs_blocks_from_file", (DL_FUNC) &SXP_save_local_GEBVs_blocks_from_file, 5},
 	{"SXP_save_genotypes", (DL_FUNC) &SXP_save_genotypes, 4},
 	{"SXP_save_pedigrees", (DL_FUNC) &SXP_save_pedigrees, 4},

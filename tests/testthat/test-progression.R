@@ -23,7 +23,7 @@ test_that("make.targeted.crosses works", {
   g <- init$groupNum
   
   #Make sure it doesn't crash and creates right-size group
-  g2 <- make.targeted.crosses(first.parents=c(0L,1L), second.parents=c(3L,0L))
+  g2 <- make.targeted.crosses(first.parents=c(0,1), second.parents=c(3,0))
   g3 <- make.targeted.crosses(first.parents=c("G01", "G02", "G03"), second.parents=c("G06","G05","G04"))
   expect_identical(see.existing.groups(), data.frame("Group"=c(g,g2,g3),"GroupSize"=c(6L,2L,3L)))
   

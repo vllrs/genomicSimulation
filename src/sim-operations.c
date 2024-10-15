@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.5.04 - last edit 1 October 2024 */
+/* genomicSimulationC v0.2.5.05 - last edit 15 October 2024 */
 
 /** Default parameter values for GenOptions, to help with quick scripts and prototypes.
  *
@@ -1307,12 +1307,16 @@ void gsc_condense_allele_matrix( gsc_SimData* d) {
  * @returns uninitialised gsc_BidirectionalIterator for the provided group.
  */
 gsc_BidirectionalIterator gsc_create_bidirectional_iter( gsc_SimData* d, const gsc_GroupNum group) {
+    return gsc_create_bidirectional_iter_fromAM(d->m, group);
+}
+
+gsc_BidirectionalIterator gsc_create_bidirectional_iter_fromAM( gsc_AlleleMatrix* am, const gsc_GroupNum group) {
     return (gsc_BidirectionalIterator) {
-        .d = d,
+        .am = am,
         .group = group,
         .localPos = GSC_UNINIT,
 
-        .cachedAM = d->m,
+        .cachedAM = am,
         .cachedAMIndex = 0,
 
         .atStart = GSC_FALSE,
@@ -1455,7 +1459,7 @@ gsc_AlleleMatrix* gsc_get_nth_AlleleMatrix(gsc_AlleleMatrix* listStart, const un
  */
 gsc_GenoLocation gsc_set_bidirectional_iter_to_start(gsc_BidirectionalIterator* it) {
     unsigned int first = 0;
-    gsc_AlleleMatrix* firstAM = it->d->m;
+    gsc_AlleleMatrix* firstAM = it->am;
     unsigned int firstAMIndex = 0;
     char anyExist = GSC_TRUE;
 
@@ -1528,7 +1532,7 @@ gsc_GenoLocation gsc_set_bidirectional_iter_to_start(gsc_BidirectionalIterator* 
  */
 gsc_GenoLocation gsc_set_bidirectional_iter_to_end(gsc_BidirectionalIterator* it) {
     unsigned long last = 0;
-    gsc_AlleleMatrix* lastAM = it->d->m;
+    gsc_AlleleMatrix* lastAM = it->am;
     unsigned int lastAMIndex = 0;
     char anyExist = GSC_TRUE;
 
@@ -1570,7 +1574,7 @@ gsc_GenoLocation gsc_set_bidirectional_iter_to_end(gsc_BidirectionalIterator* it
             // Move along and set anyExist if appropriate
             if (exitNow == GSC_FALSE) {
                 --lastAMIndex;
-                lastAM = gsc_get_nth_AlleleMatrix(it->d->m, lastAMIndex);
+                lastAM = gsc_get_nth_AlleleMatrix(it->am, lastAMIndex);
                 if (lastAM->n_genotypes == 0) {
                     last = GSC_UNINIT;
                     anyExist = GSC_FALSE;
@@ -1757,7 +1761,7 @@ gsc_GenoLocation gsc_next_backwards(gsc_BidirectionalIterator* it) {
                 int nextAMIndex = it->cachedAMIndex;
                 do {
                     nextAMIndex--;
-                    nextAM = gsc_get_nth_AlleleMatrix(it->d->m, nextAMIndex);
+                    nextAM = gsc_get_nth_AlleleMatrix(it->am, nextAMIndex);
                 } while (nextAM != NULL && nextAM->n_genotypes == 0);
 
                 if (nextAM == NULL) {
@@ -1801,7 +1805,7 @@ gsc_GenoLocation gsc_next_backwards(gsc_BidirectionalIterator* it) {
                 int nextAMIndex = it->cachedAMIndex;
                 do {
                     nextAMIndex--;
-                    nextAM = gsc_get_nth_AlleleMatrix(it->d->m, nextAMIndex);
+                    nextAM = gsc_get_nth_AlleleMatrix(it->am, nextAMIndex);
                 } while (nextAM != NULL && nextAM->n_genotypes == 0);
 
                 if (nextAM == NULL) {
@@ -3948,7 +3952,7 @@ int gsc_get_group_bvs( const gsc_SimData* d, const gsc_GroupNum group_id, const 
         if (group_size == 0) { return 0; }
     }
 
-    gsc_DecimalMatrix dm_bvs = gsc_calculate_group_bvs(d, group_id, effID );
+    gsc_DecimalMatrix dm_bvs = gsc_calculate_bvs(d, group_id, effID );
 
 	for (int i = 0; i < dm_bvs.cols; ++i) {
         output[i] = dm_bvs.matrix[0][i];
@@ -4121,9 +4125,7 @@ int gsc_get_group_parent_names( const gsc_SimData* d, const gsc_GroupNum group_i
  */
 int gsc_get_group_pedigrees( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, char** output) {
 	char* fname = "gS_gpptmp";
-	FILE* fp = fopen(fname, "w");
-	gsc_save_group_full_pedigree(fp, d, group_id);
-	fclose(fp);
+	gsc_save_pedigrees(fname,d,group_id,GSC_TRUE);
 
 	FILE* fp2;
 	if ((fp2 = fopen(fname, "r")) == NULL) {
@@ -4775,7 +4777,7 @@ void gsc_delete_markerblocks(gsc_MarkerBlocks* b) {
  * @param it pointer to the struct whose data is to be cleared.
  */
 void gsc_delete_bidirectional_iter(gsc_BidirectionalIterator* it) {
-    it->d = NULL;
+    it->am = NULL;
     //it->group = GSC_NO_GROUP;
     it->localPos = GSC_UNINIT;
     it->cachedAM = NULL;
@@ -7469,7 +7471,8 @@ static FILE* gsc_helper_genoptions_save_genotypes_setup(const gsc_SimData* d, co
         }
 		strcat(tmpname_g, "-genotype.txt");
 		fg = fopen(tmpname_g, "w");
-        gsc_save_names_header(fg,d->genome.n_markers,(const char**)d->genome.marker_names);
+		// Save genetic markers as header row.
+		gsc_save_utility_genotypes(fg, NULL, d->genome.n_markers, d->genome.marker_names, GSC_FALSE);
 	}
 	return fg;
 }
@@ -7480,7 +7483,9 @@ static FILE* gsc_helper_genoptions_save_genotypes_setup(const gsc_SimData* d, co
  */
 static void gsc_helper_genoptions_save_pedigrees(FILE* fp, gsc_SimData* d, gsc_AlleleMatrix* tosave) {
 	if (fp) {
-        gsc_save_allelematrix_full_pedigree( fp, tosave, d);
+	    gsc_BidirectionalIterator it = gsc_create_bidirectional_iter_fromAM(tosave, NO_GROUP);
+	    gsc_save_utility_pedigrees(fp, &it, GSC_TRUE, d->m);
+        gsc_delete_bidirectional_iter(&it);
 	}
 }
 /** save-as-you-go (breeding values)
@@ -7491,9 +7496,9 @@ static void gsc_helper_genoptions_save_pedigrees(FILE* fp, gsc_SimData* d, gsc_A
  */
 static void gsc_helper_genoptions_save_bvs(FILE* fe, gsc_EffectMatrix* effMatrices, int effIndex, gsc_AlleleMatrix* tosave) {
 	if (fe && effIndex != GSC_UNINIT) {
-        gsc_DecimalMatrix eff = gsc_calculate_bvs( tosave, effMatrices + effIndex );
-        gsc_save_manual_bvs( fe, &eff, tosave->ids, (const char**) tosave->names);
-		gsc_delete_dmatrix( &eff);
+	    gsc_BidirectionalIterator it = gsc_create_bidirectional_iter_fromAM(tosave, NO_GROUP);
+	    gsc_save_utility_bvs(fe, &it, effMatrices + effIndex);
+        gsc_delete_bidirectional_iter(&it);
 	}
 }
 /** save-as-you-go (genotypes/alleles)
@@ -7503,7 +7508,9 @@ static void gsc_helper_genoptions_save_bvs(FILE* fe, gsc_EffectMatrix* effMatric
  */
 static void gsc_helper_genoptions_save_genotypes(FILE* fg, gsc_AlleleMatrix* tosave) {
 	if (fg) {
-		gsc_save_allele_matrix( fg, tosave );
+	    gsc_BidirectionalIterator it = gsc_create_bidirectional_iter_fromAM(tosave, NO_GROUP);
+	    gsc_save_utility_genotypes(fg, &it, tosave->n_markers, NULL, GSC_FALSE);
+        gsc_delete_bidirectional_iter(&it);
 	}
 }
 /** Apply gsc_GenOptions naming scheme and gsc_PedigreeID allocation to a single 
@@ -8615,7 +8622,7 @@ gsc_GroupNum gsc_split_by_bv(gsc_SimData* d, const gsc_GroupNum group, const gsc
 	}
 	
 	// This should be ordered the same as the indexes
-    gsc_DecimalMatrix fits = gsc_calculate_group_bvs( d, group, effID ); // 1 by group_size matrix
+    gsc_DecimalMatrix fits = gsc_calculate_bvs( d, group, effID ); // 1 by group_size matrix
 	
 	// get an array of pointers to those fitnesses
     GSC_CREATE_BUFFER(p_fits,double*,fits.cols);
@@ -8645,103 +8652,92 @@ gsc_GroupNum gsc_split_by_bv(gsc_SimData* d, const gsc_GroupNum group, const gsc
     return out;
 }
 
-/** Calculates the fitness metric/breeding value for each genotype in the gsc_AlleleMatrix
-* in a certain group, and returns the results in a gsc_DecimalMatrix.
-*
-* The breeding value is calculated for each genotype by taking the sum of (number of
-* copies of this allele at this marker times this allele's effect at this marker)
-* for each marker for each different allele. To do
-* this, the vector containing each allele's effect values is multiplied by a matrix
-* containing the counts of that allele at each marker.
-*
-* The function exits with error code 1 if no marker effect file is loaded.
-*
- * @shortnamed{calculate_group_bvs}
-*
-* @param d pointer to the gsc_SimData object to which the groups and individuals belong.
-* It must have a marker effect file loaded to successfully run this function.
-* @param group calculate breeding values for each genotype in the group with this group number.
-* @param effID Identifier of the marker effect set to be used to calculate these breeding values
-* @returns A gsc_DecimalMatrix containing the score for each individual in the group.
-*/
-gsc_DecimalMatrix gsc_calculate_group_bvs(const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID) {
-	// check that both of the items to be multiplied exist.
-    const int effIndex = gsc_get_index_of_eff_set(d, effID);
-    if (effIndex == GSC_UNINIT || d->e[effIndex].effects.rows < 1 || d->m == NULL) {
-		error( "Either effect matrix or allele matrix does not exist\n");
-	}
-    gsc_EffectMatrix e = d->e[effIndex];
-
-    int group_size = gsc_get_group_size( d, group );
-	gsc_DecimalMatrix sum = gsc_generate_zero_dmatrix(1, group_size);
-    if (group_size < 1) {
-        warning("Group %d does not exist.\n", group.num);
-        return sum;
-    }
-    gsc_DecimalMatrix counts = gsc_generate_zero_dmatrix(group_size, d->genome.n_markers);
-    gsc_DecimalMatrix counts2 = gsc_generate_zero_dmatrix(group_size, d->genome.n_markers);
-
-    int i = 0; // highest allele index
-
-    for (; i < e.effects.rows - 1; i += 2) {
-		// get the allele counts in counts
-        gsc_calculate_group_count_matrix_pair(d, group, e.effect_names[i], &counts, e.effect_names[i+1], &counts2);
-
-		// multiply counts with effects and add to bv sum
-        gsc_add_doublematrixvector_product_to_dmatrix(&sum, &counts, e.effects.matrix[i], &counts2, e.effects.matrix[i+1]);
-	}
-    if (i < e.effects.rows) { // deal with the last odd-numbered allele
-        gsc_calculate_group_count_matrix(d, group, e.effect_names[i], &counts);
-        gsc_add_matrixvector_product_to_dmatrix(&sum, &counts, e.effects.matrix[i]);
-	}
-
-	gsc_delete_dmatrix(&counts);
-	gsc_delete_dmatrix(&counts2);
-
-	return sum;
-}
-
-/** Calculates the fitness metric/breeding value for each genotype in the gsc_AlleleMatrix,
- * and returns the results in a gsc_DecimalMatrix struct.
+/** Calculate the fitness metric/breeding value for every genotype in the simulation
+ * or every genotype in a certain group
  *
- * The breeding value is calculated for each genotype by taking the sum of (number of
- * copies of this allele at this marker times this allele's effect at this marker)
- * for each marker for each different allele. To do
- * this, the vector containing each allele's effect values is multiplied by a matrix
- * containing the counts of that allele at each marker.
- *
- * The function exits with error code 1 if no marker effect file is loaded.
+ * To calculate the breeding value, the number of copies of each allele at each 
+ * marker for each genotype are counted. The counts of each allele are multiplied 
+ * by the additive marker effect of that allele at that marker. Then, each 
+ * genotype's allele effects across all markers are summed up.
  *
  * @shortnamed{calculate_bvs}
  *
- * @param m pointer to the gsc_AlleleMatrix object to which the genotypes belong.
- * @param e pointer to the gsc_EffectMatrix that effect values have been loaded into.
- * @returns A gsc_DecimalMatrix containing the score for each individual in the group.
- */
-gsc_DecimalMatrix gsc_calculate_bvs( const gsc_AlleleMatrix* m, const gsc_EffectMatrix* e) {
-	// check that both of the items to be multiplied exist.
-    if (e->effects.rows < 1 || m == NULL) {
-		error( "Either effect matrix or allele matrix does not exist\n");
+ * @param d pointer to the gsc_SimData object in which the marker effects and 
+ * genotypes to be used to calculate breeding values are stored.
+ * @param group NO_GROUP to calculate breeding values for all genotypes in the 
+ * simulation, or a group number to calculate breeding values for all members of that group.
+ * @param effID Identifier of the marker effect set to be used to calculate these breeding values
+ * @returns A (1 x number of genotypes) gsc_DecimalMatrix containing the breeding value scores
+*/
+gsc_DecimalMatrix gsc_calculate_bvs( gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID) {
+    const int effIndex = gsc_get_index_of_eff_set(d, effID);
+    if (effIndex == GSC_UNINIT || d->e[effIndex].effects.rows < 1 || d->m == NULL) {
+		warning( "Effect matrix does not exist\n"); 
+		return gsc_generate_zero_dmatrix(0, 0);
 	}
+    gsc_EffectMatrix e = d->e[effIndex];
 
-	gsc_DecimalMatrix sum = gsc_generate_zero_dmatrix(1, m->n_genotypes);
-	gsc_DecimalMatrix counts = gsc_generate_zero_dmatrix(m->n_genotypes, m->n_markers);
-	gsc_DecimalMatrix counts2 = gsc_generate_zero_dmatrix(m->n_genotypes, m->n_markers);
+    gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d, group);
 
-    int i = 0; // highest allele index
+    gsc_DecimalMatrix bvs = gsc_calculate_utility_bvs(&it, &e);
 
-	for (; i < e->effects.rows - 1; i += 2) {
+    gsc_delete_bidirectional_iter(&it);
+    return bvs;
+}
+
+/** Calculate the fitness metric/breeding value for a set of genotypes
+ *
+ * The breeding value is calculated as the sum, across all alleles, of 
+ * the (genotypes x markers) count matrix for that allele multiplied by 
+ * the (markers x 1) marker effects for that allele.
+ *
+ * @param targets Iterator for the genotypes whose breeding values are to be calculated.
+ * @param effset Set of additive marker effects to use to calculate the breeding values.
+ * @returns (1 x number of genotypes in iterator) gsc_DecimalMatrix,
+ * containing the breeding value scores
+ */
+gsc_DecimalMatrix gsc_calculate_utility_bvs(gsc_BidirectionalIterator* targets, const gsc_EffectMatrix* effset) {
+    if (targets == NULL || effset == NULL) {
+        warning( "Either targets or marker effects were not provided\n"); 
+		return gsc_generate_zero_dmatrix(0, 0);
+    }
+
+    GSC_CREATE_BUFFER(genotypes, char*, 50);
+    unsigned int n_genotypes = 0;
+    gsc_GenoLocation loc = gsc_set_bidirectional_iter_to_start(targets);
+    while (IS_VALID_LOCATION(loc)) {
+        if (n_genotypes >= genotypescap) {
+            GSC_STRETCH_BUFFER(genotypes, 2*n_genotypes);
+        }
+        genotypes[n_genotypes] = gsc_get_alleles(loc);
+        ++n_genotypes;
+
+        loc = gsc_next_forwards(targets);
+    }
+
+    unsigned int n_markers = effset->effects.cols;
+	gsc_DecimalMatrix sum = gsc_generate_zero_dmatrix(1, n_genotypes);
+    gsc_DecimalMatrix counts = gsc_generate_zero_dmatrix(n_genotypes, n_markers );
+    gsc_DecimalMatrix counts2 = gsc_generate_zero_dmatrix(n_genotypes, n_markers );
+
+    unsigned int i = 0; // highest allele index
+
+    for (; i < effset->effects.rows - 1; i += 2) {
 		// get the allele counts in counts
-		gsc_calculate_count_matrix_pair(m, e->effect_names[i], &counts, e->effect_names[i+1], &counts2);
+        gsc_calculate_utility_allele_counts_pair(n_markers, n_genotypes, (const char**) genotypes, 
+                                              effset->effect_names[i], &counts, effset->effect_names[i+1], &counts2);
 
 		// multiply counts with effects and add to bv sum
-		gsc_add_doublematrixvector_product_to_dmatrix(&sum, &counts, e->effects.matrix[i], &counts2, e->effects.matrix[i+1]);
+        gsc_add_doublematrixvector_product_to_dmatrix(&sum, &counts, effset->effects.matrix[i], 
+                                                      &counts2, effset->effects.matrix[i+1]);
 	}
-	if (i < e->effects.rows) { // deal with the last odd-numbered allele
-		gsc_calculate_count_matrix(m, e->effect_names[i], &counts);
-		gsc_add_matrixvector_product_to_dmatrix(&sum, &counts, e->effects.matrix[i]);
+    if (i < effset->effects.rows) { // deal with the last odd-numbered allele
+        gsc_calculate_utility_allele_counts(n_markers, n_genotypes, (const char**) genotypes,
+                                         effset->effect_names[i], &counts);
+        gsc_add_matrixvector_product_to_dmatrix(&sum, &counts, effset->effects.matrix[i]);
 	}
 
+    GSC_DELETE_BUFFER(genotypes);
 	gsc_delete_dmatrix(&counts);
 	gsc_delete_dmatrix(&counts2);
 
@@ -8749,241 +8745,131 @@ gsc_DecimalMatrix gsc_calculate_bvs( const gsc_AlleleMatrix* m, const gsc_Effect
 }
 
 /** Calculates the number of times at each marker that a particular allele appears
- * for each genotype in a group.
- * Returns the result in a pre-created gsc_DecimalMatrix. Useful for multiplying to
- * effect matrix to calculate breeding values.
  *
- * @shortnamed{calculate_group_count_matrix}
+ * Returns the results in a calculated DecimalMatrix. This structure should be 
+ * deleted with @a delete_dmatrix once there is no more use for it.
  *
- * @param d pointer to the gsc_SimData.
- * @param group group number for which to calculate counts of the allele, or 0
- * to count alleles for all genotypes in the simulation
+ * @shortnamed{calculate_allele_counts}
+ *
+ * @param d simulation object containing the genotypes whose alleles will be counted
+ * @param group NO_GROUP to count alleles of all genotypes in the simulation, or a 
+ * specific group identifier to count only the alleles of members of that group.
  * @param allele the single-character allele to be counting.
- * @param counts pointer to the gsc_DecimalMatrix into which to put the number
- * of `allele` occurences at each row/marker for each column/genotype in the group.
- * @returns 0 on success, nonzero on failure.
+ * @returns a (num genotypes x num markers) gsc_DecimalMatrix, with each cell 
+ * containing the number of incidences of the allele.
+ * The first axis of the DecimalMatrix corresponds to candidate genotypes, 
+ * the second axis corresponds to genetic markers.
  * */
-int gsc_calculate_group_count_matrix( const gsc_SimData* d, const gsc_GroupNum group, const char allele, gsc_DecimalMatrix* counts) {
-    if (group.num == GSC_NO_GROUP.num) {
-        return GSC_UNINIT; // @@
-    } else {
-        int groupSize = gsc_get_group_size(d, group);
-        if (counts->rows < groupSize || counts->cols < d->genome.n_markers) {
-            fprintf(stderr, "`counts` is the wrong size to be filled: needs %u by %d but is %d by %d\n",
-                    (unsigned int) d->genome.n_markers, groupSize, counts->rows, counts->cols);
-            return 1;
+gsc_DecimalMatrix gsc_calculate_allele_counts( gsc_SimData* d, const gsc_GroupNum group, const char allele) {
+    // To upgrade this to use iterators instead, we'll need some modifications to DecimalMatrix. Future work.
+    GSC_CREATE_BUFFER(genotypes, char*, 50);
+    unsigned int n_genotypes = 0;
+    gsc_BidirectionalIterator it = create_bidirectional_iter(d, group);
+    gsc_GenoLocation loc = gsc_set_bidirectional_iter_to_start(&it);
+    while (IS_VALID_LOCATION(loc)) {
+        if (n_genotypes >= genotypescap) {
+            GSC_STRETCH_BUFFER(genotypes, 2*n_genotypes);
         }
+        genotypes[n_genotypes] = gsc_get_alleles(loc);
+        ++n_genotypes;
 
-        GSC_CREATE_BUFFER(genes,char*,groupSize);
-        gsc_get_group_genes(d, group, groupSize, genes);
-
-        for (int i = 0; i < groupSize; ++i) {
-            R_CheckUserInterrupt();
-            for (int j = 0; j < d->genome.n_markers; ++j) {
-                int cell_sum = 0;
-                if (genes[i] != NULL) {
-                    if (genes[i][2*j] == allele)     cell_sum += 1;
-                    if (genes[i][2*j + 1] == allele) cell_sum += 1;
-                }
-                counts->matrix[i][j] = cell_sum;
-            }
-        }
-        GSC_DELETE_BUFFER(genes);
-        return 0;
+        loc = gsc_next_forwards(&it);
     }
-}
+    gsc_delete_bidirectional_iter(&it);
 
-/** Calculates the number of times at each marker that two particular alleles appear
- * for each genotype in a group.
- * Returns the result in two pre-created gsc_DecimalMatrix. Useful for multiplying to
- * effect matrix to calculate breeding values.
- *
- * This function is the same as gsc_calculate_group_count_matrix(), but for
- * two alleles at a time, for the purpose of loop unrolling in breeding value
- * calculations.
- *
- * @shortnamed{calculate_group_count_matrix_pair}
- *
- * @param d pointer to the gsc_SimData.
- * @param group group number for which to calculate counts of the allele, or 0 to
- * count alleles for all genotypes in the simulation
- * @param allele the first single-character allele to be counting.
- * @param counts pointer to the gsc_DecimalMatrix into which to put the number
- * of `allele` occurences at each row/marker for each column/genotype in the group.
- * @param allele2 the second single-character allele to be counting.
- * @param counts2 pointer to the gsc_DecimalMatrix into which to put the number
- * of `allele2` occurences at each row/marker for each column/genotype in the group.
- * @returns 0 on success, nonzero on failure.
- * */
-int gsc_calculate_group_count_matrix_pair( const gsc_SimData* d, const gsc_GroupNum group, const char allele, gsc_DecimalMatrix* counts, const char allele2, gsc_DecimalMatrix* counts2) {
-    if (group.num == GSC_NO_GROUP.num) {
-        return GSC_UNINIT; //@@
-    } else {
-        int groupSize = gsc_get_group_size(d, group);
-        if (counts->rows < groupSize || counts->cols < d->genome.n_markers) {
-            fprintf(stderr, "`counts` is the wrong size to be filled: needs %u by %d but is %d by %d\n",
-                    (unsigned int) d->genome.n_markers, groupSize, counts->rows, counts->cols);
-            return 1;
-        }
-        if (counts2->rows < groupSize || counts2->cols < d->genome.n_markers) {
-            fprintf(stderr, "`counts2` is the wrong size to be filled: needs %u by %d but is %d by %d\n",
-                    (unsigned int) d->genome.n_markers, groupSize, counts2->rows, counts2->cols);
-            return 1;
-        }
+    unsigned int n_markers = d->m->n_markers;
+    gsc_DecimalMatrix counts = gsc_generate_zero_dmatrix(n_genotypes, n_markers );
 
-        GSC_CREATE_BUFFER(genes,char*,groupSize);
-        gsc_get_group_genes(d, group, groupSize, genes);
+    gsc_calculate_utility_allele_counts(n_markers, n_genotypes, (const char** const) genotypes, allele, &counts);
 
-        for (int i = 0; i < groupSize; ++i) {
-            R_CheckUserInterrupt();
-            if (genes[i] == NULL) {
-                continue;
-            }
-
-            for (int j = 0; j < d->genome.n_markers; ++j) {
-                int cell_sum = 0;
-                int cell_sum2 = 0;
-                if      (genes[i][2*j] == allele)      { ++cell_sum; }
-                else if (genes[i][2*j] == allele2)     { ++cell_sum2;}
-                if      (genes[i][2*j + 1] == allele)  { ++cell_sum; }
-                else if (genes[i][2*j + 1] == allele2) { ++cell_sum2;}
-                counts->matrix[i][j] = cell_sum;
-                counts2->matrix[i][j] = cell_sum2;
-            }
-        }
-        GSC_DELETE_BUFFER(genes);
-        return 0;
-    }
+    GSC_DELETE_BUFFER(genotypes);
+    return counts;
 }
 
 /** Calculates the number of times at each marker that a particular allele appears
- * for each genotype in a particular gsc_AlleleMatrix (does not go through the linked list).
- * Returns the result in a pre-created gsc_DecimalMatrix. Useful for multiplying to
- * effect matrix to calculate breeding values.
  *
- * @shortnamed{calculate_count_matrix}
+ * Saves the result to a gsc_DecimalMatrix provided by the calling context.
  *
- * @param m pointer to the gsc_AlleleMatrix that contains the genotypes to count alleles.
+ * @param n_markers number of genetic markers in each genotype.
+ * @param n_genotypes number of genotypes to calculate counts for. (length of the following vector)
+ * @param genotypes pointers to genotype strings for which to count the alleles at particular markers.
  * @param allele the single-character allele to be counting.
  * @param counts pointer to the gsc_DecimalMatrix into which to put the number
- * of `allele` occurences at each row/marker for each column/genotype in the gsc_AlleleMatrix.
- * @returns 0 on success, nonzero on failure.
+ * of `allele` occurences at each row/marker for each column/genotype in the group.
+ * The DecimalMatrix should have at least @a n_genotypes rows and @a n_markers columns,
+ * if not, no output will be saved.
  * */
-int gsc_calculate_count_matrix( const gsc_AlleleMatrix* m, const char allele, gsc_DecimalMatrix* counts) {
-	//gsc_DecimalMatrix counts = generate_zero_dmatrix(m->n_markers, m->n_genotypes);
-    if (counts->rows < m->n_genotypes || counts->cols < m->n_markers) {
-        fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
-                m->n_markers, m->n_genotypes, counts->rows, counts->cols);
-        return 1;
+void gsc_calculate_utility_allele_counts( const unsigned int n_markers, const unsigned int n_genotypes, const char** const genotypes,  const char allele, gsc_DecimalMatrix* counts) {
+    if (genotypes == NULL || counts == NULL || 
+        counts->rows < n_genotypes || 
+        counts->cols < n_markers) {
+        warning( "Inputs for calculating count matrix are improperly sized: calculation cannot proceed.\n"); return;
     }
 
-    for (int i = 0; i < m->n_genotypes; ++i) {
+    for (unsigned int i = 0; i < n_genotypes; ++i) {
         R_CheckUserInterrupt();
-        if (m->alleles[i] == NULL) {
+        if (genotypes[i] == NULL) {
             continue;
         }
 
-        for (int j = 0; j < m->n_markers; ++j) {
+        for (unsigned int j = 0; j < n_markers; ++j) {
             int cell_sum = 0;
-            if (m->alleles[i][2*j] == allele)     cell_sum += 1;
-            if (m->alleles[i][2*j + 1] == allele) cell_sum += 1;
+            if      (genotypes[i][2*j] == allele)      { ++cell_sum; }
+            if      (genotypes[i][2*j + 1] == allele)  { ++cell_sum; }
             counts->matrix[i][j] = cell_sum;
         }
     }
-    return 0;
 }
 
 /** Calculates the number of times at each marker that two particular alleles appear
- * for each genotype in an gsc_AlleleMatrix (does not go through the linked list).
- * Returns the result in two pre-created gsc_DecimalMatrix. Useful for multiplying to
- * effect matrix to calculate breeding values.
  *
- * This function is the same as gsc_calculate_count_matrix(), but for
+ * Saves the results for each allele to a gsc_DecimalMatrix provided by the calling context.
+ *
+ * This function is the same as @a gsc_calculate_utility_allele_counts, but for
  * two alleles at a time, for the purpose of loop unrolling in breeding value
  * calculations.
  *
- * @shortnamed{calculate_count_matrix_pair}
- *
- * @param m pointer to the gsc_AlleleMatrix that contains the genotypes to count alleles.
+ * @param n_markers number of genetic markers in each genotype.
+ * @param n_genotypes number of genotypes to calculate counts for. (length of the following vector)
+ * @param genotypes pointers to genotype strings for which to count the alleles at particular markers.
  * @param allele the first single-character allele to be counting.
  * @param counts pointer to the gsc_DecimalMatrix into which to put the number
  * of `allele` occurences at each row/marker for each column/genotype in the group.
+ * The DecimalMatrix should have at least @a n_genotypes rows and @a n_markers columns,
+ * if not, no output will be saved.
  * @param allele2 the second single-character allele to be counting.
  * @param counts2 pointer to the gsc_DecimalMatrix into which to put the number
  * of `allele2` occurences at each row/marker for each column/genotype in the group.
- * @returns 0 on success, nonzero on failure.
+ * The DecimalMatrix should have at least @a n_genotypes rows and @a n_markers columns,
+ * if not, no output will be saved.
  * */
-int gsc_calculate_count_matrix_pair( const gsc_AlleleMatrix* m, const char allele, gsc_DecimalMatrix* counts, const char allele2, gsc_DecimalMatrix* counts2) {
-	if (counts->rows < m->n_genotypes || counts->cols < m->n_markers) {
-        fprintf(stderr, "`counts` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
-                m->n_markers, m->n_genotypes, counts->rows, counts->cols);
-        return 1;
-	}
-    if (counts2->rows < m->n_genotypes || counts2->cols < m->n_markers) {
-        fprintf(stderr, "`counts2` is the wrong size to be filled: needs %d by %d but is %d by %d\n",
-                m->n_markers, m->n_genotypes, counts2->rows, counts2->cols);
-        return 1;
-	}
+void gsc_calculate_utility_allele_counts_pair( const unsigned int n_markers, const unsigned int n_genotypes, const char** const genotypes, 
+                        const char allele, gsc_DecimalMatrix* counts, const char allele2, gsc_DecimalMatrix* counts2) {
+    if (genotypes == NULL || counts == NULL || counts2 == NULL || 
+        counts->rows < n_genotypes || counts2->rows < n_genotypes || 
+        counts->cols < n_markers || counts2->cols < n_markers) {
+        warning( "Inputs for calculating count matrix are improperly sized: calculation cannot proceed.\n"); return;
+    }
 
-	for (int i = 0; i < m->n_genotypes; ++i) {
-		R_CheckUserInterrupt();
-		if (m->alleles[i] == NULL) {
-			continue;
-		}
+    for (unsigned int i = 0; i < n_genotypes; ++i) {
+        R_CheckUserInterrupt();
+        if (genotypes[i] == NULL) {
+            continue;
+        }
 
-		for (int j = 0; j < m->n_markers; ++j) {
-			int cell_sum = 0;
-			int cell_sum2 = 0;
-			if      (m->alleles[i][2*j] == allele)      { ++cell_sum; }
-			else if (m->alleles[i][2*j] == allele2)     { ++cell_sum2;}
-			if      (m->alleles[i][2*j + 1] == allele)  { ++cell_sum; }
-			else if (m->alleles[i][2*j + 1] == allele2) { ++cell_sum2;}
-			counts->matrix[i][j] = cell_sum;
-			counts2->matrix[i][j] = cell_sum2;
-		}
-	}
-	return 0;
+        for (unsigned int j = 0; j < n_markers; ++j) {
+            int cell_sum = 0;
+            int cell_sum2 = 0;
+            if      (genotypes[i][2*j] == allele)      { ++cell_sum; }
+            else if (genotypes[i][2*j] == allele2)     { ++cell_sum2;}
+            if      (genotypes[i][2*j + 1] == allele)  { ++cell_sum; }
+            else if (genotypes[i][2*j + 1] == allele2) { ++cell_sum2;}
+            counts->matrix[i][j] = cell_sum;
+            counts2->matrix[i][j] = cell_sum2;
+        }
+    }
 }
 
-/** Calculates the number of times at each marker that a particular allele appears
- * for each genotype in the linked list starting at the given gsc_AlleleMatrix.
- * Returns the result as a gsc_DecimalMatrix. Useful for multiplying to
- * effect matrix to calculate breeding values.
- *
- * @shortnamed{calculate_full_count_matrix}
- *
- * @param m pointer to the gsc_AlleleMatrix that contains the genotypes to count alleles.
- * @param allele the single-character allele to be counting.
- * @returns gsc_DecimalMatrix containing counts for every genotype in the gsc_AlleleMatrix
- * linked list.
- * */
-gsc_DecimalMatrix gsc_calculate_full_count_matrix( const gsc_AlleleMatrix* m, const char allele) {
-    const gsc_AlleleMatrix* currentm = m;
-	int size = 0;
-	do {
-		size += currentm->n_genotypes;
-	} while ((currentm = currentm->next) != NULL);
-
-	gsc_DecimalMatrix counts = gsc_generate_zero_dmatrix(size, m->n_markers);
-
-	currentm = m;
-	int currenti = 0;
-	for (int i = 0; i < size; ++i, ++currenti) {
-		R_CheckUserInterrupt();
-		if (currenti >= currentm->n_genotypes) {
-			currenti = 0;
-			currentm = currentm->next;
-		}
-
-        for (int j = 0; j < m->n_markers; ++j) {
-			int cell_sum = 0;
-			if (currentm->alleles[i][2*j] == allele)     cell_sum += 1;
-			if (currentm->alleles[i][2*j + 1] == allele) cell_sum += 1;
-			counts.matrix[i][j] = cell_sum;
-		}
-	}
-	return counts;
-}
 
 /** Divide the genotype into blocks where each block contains all markers within
  * a 1/n length section of each chromosome in the map, and return the resulting
@@ -9741,812 +9627,596 @@ double gsc_calculate_minimal_bv(const gsc_SimData* d, const gsc_EffectID effID) 
 	return worst_gebv;
 }
 
-/*--------------------------------Printing-----------------------------------*/
+/*--------------------------------Saving-----------------------------------*/
 
-/** Prints the markers contained in a set of blocks to a file. Column separators are tabs.
+/** Prints the markers contained in a set of blocks to a file. 
  *
- * The printing format is:
- *
- * Chrom	Pos	Name	Class	Markers
- *
- * 0	0	b0	b	m1;m2;m3;m4;
- *
- * 0	0	b0	b	m7;m9;
- *
- * ...
- *
- * where m1, m2, m3, m4 are the names of the markers in the first block and
- * m7 and m9 are the names of the markers in the second block. Note that chromosome
- * numbers and positions are not actually specified, just replaced with 0. Only the last
- * column is meaningful.
+ * Two printing formats are available. @see gsc_save_utility_markerblocks
+ * for a description of the two printing formats.
  *
  * @shortnamed{save_markerblocks}
  *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the gsc_SimData whose data we print
+ * @param fname name of the file to which the output will be saved. Any prior 
+ * file contents will be overwritten.
+ * @param d pointer to the gsc_SimData from which marker names and chromsome allocations will be accessed.
  * @param b gsc_MarkerBlocks struct containing the groupings of markers to print.
+ * @param labelMapID If this paramter is a valid map ID, the function will save 
+ * the marker blocks in the three-column format, with their chromosome index and size.
+ * Otherwise, if this value is NO_MAP or an invalid map ID, the function will save
+ * the marker blocks in the simple format. The formats are described in the 
+ * documentation of the function @a gsc_save_utility_markerblocks
 */
-void gsc_save_markerblocks(FILE* f, const gsc_SimData* d, const gsc_MarkerBlocks b) {
-	const char header[] = "Chrom\tPos\tName\tClass\tMarkers\n";
-	fwrite(header, sizeof(char)*strlen(header), 1, f);
+void gsc_save_markerblocks(const char* fname, gsc_SimData* d, const gsc_MarkerBlocks b, 
+                           const gsc_MapID labelMapID) {
+    FILE* f;
+    if ((f = fopen(fname, "w")) == NULL) {
+		warning( "Failed to open file %s for writing output\n", fname); return;
+	}
 
-	// for the moment we do not name or give locations of different blocks
-	const char unspecified[] = "0\t0\tb0\tb\t";
-	const int unspeci_length = strlen(unspecified);
+    int mapix;
+	if (labelMapID.id == NO_MAP.id || (mapix = gsc_get_index_of_map(d, labelMapID)) == GSC_UNINIT) {
+	    gsc_save_utility_markerblocks(f, b, d->genome.n_markers, d->genome.marker_names, NULL);
+	} else {
+	    gsc_save_utility_markerblocks(f, b, d->genome.n_markers, d->genome.marker_names, &d->genome.maps[mapix]);
+	}
+}
 
-	for (int i = 0; i < b.num_blocks; ++i) {
-		fwrite(unspecified, sizeof(char)*unspeci_length, 1, f);
+/** Prints genotypes from the simulation to a file
+ *
+ * The output file will contain a matrix of genetic markers by genotypes (or vice-versa), 
+ * with each cell in the body of the matrix containing the (phased) pair of alleles
+ * belonging to that genotype at that genetic marker.
+ *
+ * For more details on printings format, @see gsc_save_utility_genotypes.
+ *
+ * @shortnamed{save_genotypes}
+ *
+ * @param fname name of the file to which the output will be saved. Any prior 
+ * file contents will be overwritten.
+ * @param d pointer to the gsc_SimData in which the genotypes to be saved can be found.
+ * @param groupID group number of the group of genotypes to save, or NO_GROUP to 
+ * save all genotypes in the simulation.
+ * @param markers_as_rows If true, genetic markers will be rows in the output 
+ * matrix, and genotypes will be columns. If false, genetic markers will be columns 
+ * in the output matrix, and genotypes will be rows.
+*/
+void gsc_save_genotypes(const char* fname, gsc_SimData* d, const gsc_GroupNum groupID, 
+                        const int markers_as_rows) {
+    FILE* f;
+    if ((f = fopen(fname, "w")) == NULL) {
+		warning( "Failed to open file %s for writing output\n", fname); return;
+	}
 
-		for (int j = 0; j < b.num_markers_in_block[i]; ++j) {
-			int k = b.markers_in_block[i][j];
+	gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d, groupID);
 
-            fwrite(d->genome.marker_names[k], sizeof(char)*strlen(d->genome.marker_names[k]), 1, f);
+	gsc_save_utility_genotypes(f, &it, d->genome.n_markers, d->genome.marker_names, markers_as_rows);
+
+    delete_bidirectional_iter(&it);
+    fclose(f);
+}
+
+/** Prints allele counts of genotypes from the simulation to a file 
+ *
+ * The output file will contain a matrix of genetic markers by genotypes (or vice-versa), 
+ * with each cell in the body of the matrix containing the the allele counts of a 
+ * some allele for each genetic marker.
+ *
+ * For more details on printings format, @see gsc_save_utility_allele_counts.
+ *
+ * @shortnamed{save_allele_counts}
+ *
+ * @param fname name of the file to which the output will be saved. Any prior 
+ * file contents will be overwritten.
+ * @param d pointer to the gsc_SimData in which the genotypes to be saved can be found.
+ * @param groupID group number of the group of genotypes to save allele counts for, 
+ * or NO_GROUP to save allele counts for all genotypes in the simulation.
+ * @param allele the allele to count occurences of
+ * @param markers_as_rows If true, genetic markers will be rows in the output 
+ * matrix, and genotypes will be columns. If false, genetic markers will be columns 
+ * in the output matrix, and genotypes will be rows.
+*/
+void gsc_save_allele_counts(const char* fname, gsc_SimData* d, const gsc_GroupNum groupID, 
+													 const char allele, const int markers_as_rows) {
+    FILE* f;
+    if ((f = fopen(fname, "w")) == NULL) {
+		warning( "Failed to open file %s for writing output\n", fname); return;
+	}
+
+    gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d, groupID);
+
+	gsc_save_utility_allele_counts(f, &it, d->genome.n_markers, d->genome.marker_names, markers_as_rows, allele);
+
+    delete_bidirectional_iter(&it);
+    fclose(f);
+}
+
+/** Prints pedigrees of genotypes in the simulation to a file 
+ *
+ * Two printing formats are available. @see gsc_save_utility_pedigrees for a 
+ * description of the two printing formats.
+ *
+ * Genotype information is not retained after deletion. This includes PedigreeIDs.
+ * This means that if the parents or ancestor genotypes have already
+ * been deleted, they will be deemed missing and will not appear in the pedigree.
+ *
+ * @shortnamed{save_pedigrees}
+ *
+ * @param fname name of the file to which the output will be saved. Any prior 
+ * file contents will be overwritten.
+ * @param d pointer to the gsc_SimData in which the genotypes whose pedigrees 
+ * will be saved can be found.
+ * @param groupID group number of the group of genotypes whose pedigrees will be saved, 
+ * or NO_GROUP to save pedigrees of all genotypes in the simulation.
+ * @param full_pedigree If true, pedigrees will be traced back recursively 
+ * through all genotypes in the simulation. If false, only the two immediate 
+ * parents of the genotype will be located. For more information 
+*/
+void gsc_save_pedigrees(const char* fname, gsc_SimData* d,
+                        const gsc_GroupNum groupID, const int full_pedigree) { 
+    FILE* f;
+    if ((f = fopen(fname, "w")) == NULL) {
+		warning( "Failed to open file %s for writing output\n", fname); return;
+	}
+
+    gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d, groupID);
+
+    gsc_save_utility_pedigrees(f, &it, full_pedigree, d->m);
+
+    delete_bidirectional_iter(&it);
+    fclose(f);
+}
+
+/** Prints breeding values of genotypes in the simulation to a file 
+ *
+ * @see gsc_save_utility_bvs for a description of the output format.
+ *
+ * @shortnamed{save_bvs}
+ *
+ * @param fname name of the file to which the output will be saved. Any prior 
+ * file contents will be overwritten.
+ * @param d pointer to the gsc_SimData in which the genotypes whose breeding values
+ * will be calculated can be found.
+ * @param groupID group number of the group of genotypes whose breeding values will be saved, 
+ * or NO_GROUP to save breeding values of all genotypes in the simulation.
+ * @param effID identifier of the set of marker effects in @a d that will be 
+ * used to calculate the breeding values.
+*/
+void gsc_save_bvs(const char* fname, gsc_SimData* d, const gsc_GroupNum groupID, 
+                 const gsc_EffectID effID) {
+    FILE* f;
+    if ((f = fopen(fname, "w")) == NULL) {
+		warning( "Failed to open file %s for writing output\n", fname); return;
+	}
+
+	int effix = gsc_get_index_of_eff_set(d, effID);
+    if (effix == GSC_UNINIT) {
+        warning( "Marker effect set %i does not exist: cannot calculate breeding values\n", effID.id); return;
+    }
+
+    gsc_BidirectionalIterator it = gsc_create_bidirectional_iter(d, groupID);
+
+    gsc_save_utility_bvs(f, &it, &d->e[effix]);
+
+    delete_bidirectional_iter(&it);
+    fclose(f);
+}
+
+/** Check if a marker index is found in a particular LinkageGroup, and provide 
+ *  its distance along the chromosome/linkage group if so. */
+static int gsc_helper_is_marker_in_chr(const unsigned int markerix, const gsc_LinkageGroup chr, double* pos) {
+    int offset;
+    switch (chr.type) {
+        case GSC_LINKAGEGROUP_SIMPLE:
+            offset = markerix - chr.map.simple.first_marker_index;
+            if (offset >= 0 && offset < chr.map.simple.n_markers) {
+               if (pos != NULL && chr.map.simple.n_markers > 1) {
+                   *pos = chr.map.simple.dists[offset] * chr.map.simple.expected_n_crossovers;
+               } else {
+                   *pos = 0; // if there is only one marker on chromosome
+               }
+               return GSC_TRUE; 
+            } else {
+                return GSC_FALSE;
+            }
+        case GSC_LINKAGEGROUP_REORDER:
+            for (unsigned int i = 0; i < chr.map.reorder.n_markers; ++i) {
+                if (markerix == chr.map.reorder.marker_indexes[i]) {
+                    if (pos != NULL) {
+                        *pos = chr.map.reorder.dists[i] * chr.map.reorder.expected_n_crossovers;
+                    }
+                    return GSC_TRUE;
+                }
+            }
+            return GSC_FALSE;
+    }
+    return GSC_FALSE;
+}
+
+/** Prints the markers contained in a set of blocks to a file. 
+ *
+ * For a more user-friendly interface to this function: @see gsc_save_markerblocks
+ *
+ * Two printing formats are available. The simple printing format each block's
+ * markers as a semicolon-separated list, with each line representing one block. Eg:
+ *
+ * m1;m2;m3;m4;
+ *
+ * m7;m9;
+ *
+ * ... 
+ *
+ * where m1, m2, m3, m4 are the names of the markers in the first block and
+ * m7 and m9 are the names of the markers in the second block. This format will
+ * be printed if no genetic map is provided.
+ *
+ * Alternatively, if a valid genetic map is provided, this function will print 
+ * out two extra columns of information. 
+ * If all markers in the block belong to the same linkage group/chromosome,
+ * according to the suggested genetic map, then the first column of the file 
+ * will contain the index of the chromosome in the map, and the second column
+ * will contain the length of the block in centimorgans. If not all markers in 
+ * the block belong to the same chromosome, these columns' values will be replaced
+ * with dashes. Eg:
+ *
+ * Chrom	Len	Markers
+ *
+ * 0    5.500000	m1;m2;m3;m4;
+ *
+ * -    -	m7;m9;
+ *
+ * ...
+ *
+ * where m7 and m9 from the second block are not on the same chromosome, but m1,
+ * m2, m3, and m4 are all on the first chromosome (index=0) in the map. The 
+ * largest distance between two markers out of m1, m2, m3 and m4 is 5.5 centimorgans.
+ *
+ * Note that, since genomicSimulation does not save the names of chromosomes, 
+ * the values in the "Chrom" column will not correspond to the names of the 
+ * chromosomes in the input genetic map. To find which chromsomes correspond to
+ * which chromosome indexes in the output of this function, you can order the 
+ * chromosome names from shortest to longest, and order chromosome names of the 
+ * same length alphanumerically. Eg. 
+ * Chromosome names "1A", "1B", and "2" would be ordered as:
+ * 2 (chrom index 0), 1A (chrom index 1), 1B (chrom index 2).
+ *
+ * @param f file pointer opened for writing to put the output
+ * @param b gsc_MarkerBlocks struct containing the groupings of markers to print
+ * @param n_markers length of the vector @a marker_names
+ * @param marker_names list of marker names, ordered so that indexes in @a b
+ * can be accessed to get the corresponding marker name
+ * @param map If NULL, this function will save the marker blocks in the simple format. 
+ * If not null, this function will save the marker blocks in the three-column format,
+ * with their chromosome index and length calculated from this genetic map.
+ * Both formats are described in this function's documentation.
+*/
+void gsc_save_utility_markerblocks(FILE* f, const gsc_MarkerBlocks b, const unsigned int n_markers, 
+		char** const marker_names, const RecombinationMap* map) {
+
+    // Header only gets printed if there are multiple columns. 
+    // (If no map is provided, we print only the third column (markers in each block))
+    if (map != NULL) {
+        const char header[] = "Chrom\tLen\tMarkers\n";
+        fwrite(header, sizeof(char)*strlen(header), 1, f);
+    }
+
+	for (unsigned int i = 0; i < b.num_blocks; ++i) {
+        if (map != NULL) {
+            // If we are provided a map, then try to find and print the length of each block
+            int isonchr = -1;
+            double len = 0;
+            if (b.num_markers_in_block[i] > 0) {
+                double minpos = 0;
+                double maxpos = 0;
+                for (int chrix = 0; chrix < map->n_chr; ++chrix) {
+                    if (gsc_helper_is_marker_in_chr(b.markers_in_block[i][0],
+                                                        map->chrs[chrix],&minpos)) {
+                        isonchr = chrix;
+                        maxpos = minpos;
+                        for (unsigned int j = 1; j < b.num_markers_in_block[i]; ++j) {
+                            double pos;
+                            if (gsc_helper_is_marker_in_chr(b.markers_in_block[i][j],
+                                                        map->chrs[chrix],&pos)) {
+                                maxpos = (pos > maxpos) ? pos : maxpos;
+                                minpos = (pos < minpos) ? pos : minpos;
+                            } else {
+                                isonchr = -1;
+                                break;
+                            }
+                        }
+                        len = maxpos - minpos;
+                        break;
+                    }
+                }
+            }
+
+            if (isonchr >= 0) {
+                fprintf(f,"%d\t%lf\t",isonchr,len*100);
+            } else {
+                const char colns[] = "-\t-\t";
+                fwrite(colns, sizeof(char)*strlen(colns), 1, f);
+            }
+        }
+
+        // Print the markers contained in the block
+        for (unsigned int j = 0; j < b.num_markers_in_block[i]; ++j) {
+			unsigned int k = b.markers_in_block[i][j];
+			if (k <= n_markers) {
+			    fwrite(marker_names[k], sizeof(char)*strlen(marker_names[k]), 1, f);
+            } else {
+                fprintf(f,"%i",(int)k);
+            }
             fputc(';',f);
 		}
 
-		fwrite("\n", sizeof(char), 1, f);
+	    fwrite("\n", sizeof(char), 1, f);
 	}
-
+	
 	fflush(f);
 	return;
-
 }
 
-/** Prints a list of names as a tab-separated row to a file.
+/** Prints a matrix of genotype information to a file.
  *
- * Used, for example, for printing marker names as a header
- * in a genotype output file.
- *
- * @shortnamed{save_names_header}
- *
- * @param f file pointer opened for writing to put the output
- * @param n number of names to print
- * @param names list of strings/names to print. Must contain at least [n] names.
-*/
-void gsc_save_names_header(FILE* f, unsigned int n, const char** names) {
-    if (names == NULL) return;
-    for (int i = 0; i < n; ++i) {
-        fwrite("\t", sizeof(char), 1, f);
-        if (names[i] != NULL) { // assume all-or-nothing with marker names
-            fwrite(names[i], sizeof(char), strlen(names[i]), f);
-        }
-    }
-    fwrite("\n", sizeof(char), 1, f);
-}
-
-/** Prints all the genotype data saved in the linked list of AlleleMatrices
- * starting with `m` to a file. Uses the following format:
- *
- * [id]OR[name]	[allele pairs for each marker]
- *
- * [id]OR[name]	[allele pairs for each marker]
- *
- * ...
- *
- * ID will be printed if the genotype does not have a name saved
- *
- * @shortnamed{save_allele_matrix}
- *
- * @param f file pointer opened for writing to put the output
- * @param m pointer to the gsc_AlleleMatrix whose data we print
-*/
-void gsc_save_allele_matrix(FILE* f, const gsc_AlleleMatrix* m) {
-	do {
-		for (int i = 0; i < m->n_genotypes; ++i) {
-			// print the name or ID of the individual.
-			if (m->names[i] != NULL) {
-				fwrite(m->names[i], sizeof(char), strlen(m->names[i]), f);
-			} else {
-				//fwrite(group_contents + i, sizeof(int), 1, f);
-                fprintf(f, "%d", m->ids[i].id);
-			}
-
-
-			for (int j = 0; j < m->n_markers; ++j) {
-				//fprintf(f, "\t%c%c", m->alleles[j][2*i], m->alleles[j][2*i + 1]);
-				fwrite("\t", sizeof(char), 1, f);
-				fwrite(m->alleles[i] + 2*j, sizeof(char), 1, f);
-				fwrite(m->alleles[i] + 2*j + 1, sizeof(char), 1, f);
-			}
-			///fprintf(f, "\n");
-			fwrite("\n", sizeof(char), 1, f);
-		}
-	} while ((m = m->next) != NULL);
-
-	fflush(f);
-
-}
-
-/** Prints all the gene data saved in the linked list starting with `m` to the
- * file. Uses the following format:
- *
- * 		[id]OR[name]	[id]OR[name] ...
- *
- * [marker name]	[allele pairs for each marker]
- *
- * [marker name]	[allele pairs for each marker]
- *
- * ...
- *
- * ID will be printed if the genotype does not have a name saved
- *
- * @shortnamed{save_transposed_allele_matrix}
- *
- * @param f file pointer opened for writing to put the output
- * @param m pointer to the gsc_AlleleMatrix whose data we print
- * @param markers array of strings that correspond to names of the markers.
-*/
-void gsc_save_transposed_allele_matrix(FILE* f, const gsc_AlleleMatrix* m, const char** markers) {
-	// Count number of genotypes in the AM
-    const gsc_AlleleMatrix* currentm = m; // current matrix
-	int tn_genotypes = 0;
-	do {
-		tn_genotypes += currentm->n_genotypes;
-	} while ((currentm = currentm->next) != NULL);
-
-	currentm = m;
-
-	/* Print header */
-	for (int i = 0, currenti = 0; i < tn_genotypes; ++i, ++currenti) {
-		if (currenti >= currentm->n_genotypes) {
-			currenti = 0;
-			currentm = currentm->next;
-		}
-		if (currentm->names[currenti] != NULL) { // assume all-or-nothing with marker names
-			//fprintf(f, "\t%s", markers[i]);
-			fwrite("\t", sizeof(char), 1, f);
-			fwrite(currentm->names[currenti], sizeof(char), strlen(currentm->names[currenti]), f);
-		} else {
-            fprintf(f, "\t%d", currentm->ids[currenti].id);
-		}
-
-	}
-	//fprintf(f, "\n");
-	fwrite("\n", sizeof(char), 1, f);
-
-	for (int j = 0; j < m->n_markers; ++j) {
-		if (markers != NULL && markers[j] != NULL) {
-			fwrite(markers[j], sizeof(char), strlen(markers[j]), f);
-		}
-
-		currentm = m;
-
-		for (int i = 0, currenti = 0; i < tn_genotypes; ++i, ++currenti) {
-			if (currenti >= currentm->n_genotypes) {
-				currenti = 0;
-				currentm = currentm->next;
-			}
-
-			fwrite("\t", sizeof(char), 1, f);
-			fwrite(currentm->alleles[currenti] + 2*j, sizeof(char), 1, f);
-			fwrite(currentm->alleles[currenti] + 2*j + 1, sizeof(char), 1, f);
-		}
-
-		fwrite("\n", sizeof(char), 1, f);
-	}
-
-	fflush(f);
-}
-
-/** Prints the genotypes of each individual in a given group to a file, with
- * the following format.
- *
- * 		[marker name]	[marker name]
- *
- * [id]OR[name]	[allele pairs for each marker]
- *
- * [id]OR[name]	[allele pairs for each marker]
- *
- * ...
- *
- * ID will be printed if the genotype does not have a name saved
- *
- * @shortnamed{save_group_genotype}
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the gsc_SimData containing the genotypes of the group and
- * the marker names.
- * @param group_id group number of the group of individuals whose genotypes to print.
-*/
-void gsc_save_group_genotypes(FILE* f, gsc_SimData* d, gsc_GroupNum group_id) {
-	/* Get the stuff we'll be printing. */
-	int group_size = gsc_get_group_size( d, group_id);
-    if (group_size < 1) {
-        warning("Group %d does not exist: no data saved.\n", group_id.num);
-        return;
-    }
-    GSC_CREATE_BUFFER(names,char*,group_size);
-    GSC_CREATE_BUFFER(ids,gsc_PedigreeID,group_size);
-    gsc_get_group_names( d, group_id, group_size, names );
-    gsc_get_group_ids( d, group_id, group_size, ids );
-
-	/* Print header */
-	//fwrite(&group_id, sizeof(int), 1, f);
-    fprintf(f, "%d", group_id.num);
-    if (d->genome.marker_names != NULL) {
-        for (int i = 0; i < d->genome.n_markers; ++i) {
-			// assume all-or-nothing with marker names
-			//fprintf(f, "\t%s", markers[i]);
-			fwrite("\t", sizeof(char), 1, f);
-            fwrite(d->genome.marker_names[i], sizeof(char), strlen(d->genome.marker_names[i]), f);
-		}
-	}
-	//fprintf(f, "\n");
-	fwrite("\n", sizeof(char), 1, f);
-
-    GSC_CREATE_BUFFER(alleles,char*,group_size);
-    gsc_get_group_genes( d, group_id, group_size, alleles );
-
-	/* Print the body */
-	for (int i = 0; i < group_size; ++i) {
-		// print the name or ID of the individual.
-		if (names[i] != NULL) {
-			fwrite(names[i], sizeof(char), strlen(names[i]), f);
-		} else {
-			//fwrite(group_contents + i, sizeof(int), 1, f);
-            fprintf(f, "%d", ids[i].id);
-		}
-
-        for (int j = 0; j < d->genome.n_markers; ++j) {
-			//fprintf(f, "\t%c%c", m->alleles[j][2*i], m->alleles[j][2*i + 1]);
-			fwrite("\t", sizeof(char), 1, f);
-			fwrite(alleles[i] + 2*j, sizeof(char), 1, f);
-			fwrite(alleles[i] + 2*j + 1, sizeof(char), 1, f);
-		}
-		///fprintf(f, "\n");
-		fwrite("\n", sizeof(char), 1, f);
-	}
-	fflush(f);
-    GSC_DELETE_BUFFER(alleles);
-    GSC_DELETE_BUFFER(names);
-    GSC_DELETE_BUFFER(ids);
-}
-
-/** Prints the genotypes of each individual in a given group to a file, with
- * the following format.
- *
-* 		[id]OR[name]	[id]OR[name] ...
- *
- * [marker name]	[allele pairs for each marker]
- *
- * [marker name]	[allele pairs for each marker]
- *
- * ...
- *
- * ID will be printed if the genotype does not have a name saved
- *
- * @shortnamed{save_transposed_group_genotype}
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the gsc_SimData containing the genotypes of the group and
- * the marker names.
- * @param group_id group number of the group of individuals whose genotypes to print.
-*/
-void gsc_save_transposed_group_genotypes(FILE* f, const gsc_SimData* d, const gsc_GroupNum group_id) {
-	/* Get the stuff we'll be printing. */
-	int group_size = gsc_get_group_size( d, group_id);
-    if (group_size < 1) {
-        warning("Group %d does not exist: no data saved.\n", group_id.num);
-        return;
-    }
-
-    GSC_CREATE_BUFFER(names,char*,group_size);
-    GSC_CREATE_BUFFER(ids,gsc_PedigreeID,group_size);
-    gsc_get_group_names( d, group_id, group_size, names );
-    gsc_get_group_ids( d, group_id, group_size, ids );
-
-	/* Print header */
-    fprintf(f, "%d", group_id.num);
-	for (int i = 0; i < group_size; ++i) {
-		fwrite("\t", sizeof(char), 1, f);
-        if (names[i] != NULL) {
-            fwrite(names[i], sizeof(char), strlen(names[i]), f);
-        } else {
-            //fwrite(group_contents + i, sizeof(int), 1, f);
-            fprintf(f, "%d", ids[i].id);
-        }
-	}
-	//fprintf(f, "\n");
-	fwrite("\n", sizeof(char), 1, f);
-
-    GSC_DELETE_BUFFER(names);
-    GSC_DELETE_BUFFER(ids);
-    GSC_CREATE_BUFFER(alleles,char*,group_size);
-    gsc_get_group_genes( d, group_id, group_size, alleles );
-
-	/* Print the body */
-    for (int i = 0; i < d->genome.n_markers; ++i) {
-		// print the name or ID of the individual.
-        if (d->genome.marker_names != NULL && d->genome.marker_names[i] != NULL) {
-            fwrite(d->genome.marker_names[i], sizeof(char), strlen(d->genome.marker_names[i]), f);
-		}
-
-		for (int j = 0; j < group_size; ++j) {
-			fwrite("\t", sizeof(char), 1, f);
-			fwrite(alleles[j] + 2*i, sizeof(char), 1, f);
-			fwrite(alleles[j] + 2*i + 1, sizeof(char), 1, f);
-		}
-		///fprintf(f, "\n");
-		fwrite("\n", sizeof(char), 1, f);
-	}
-	fflush(f);
-    GSC_DELETE_BUFFER(alleles);
-}
-
-
-/** Print the number of copies of a particular allele at each marker of each genotype
- * in the gsc_SimData to a file. The following tab-separated format is used:
- *
- * 		[id]OR[name]	[id]OR[name] ...
- *
- * [marker name]	[allele count for each marker]
- *
- * [marker name]	[allele count for each marker]
- *
- * ...
- *
- * ID will be printed if the genotype does not have a name saved.
- *
- * @shortnamed{save_count_matrix}
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the gsc_SimData containing the group members.
- * @param allele the allele character to count
+ * This is a generic scaffold for the following functions:
+ * @see gsc_save_utility_genotypes
+ * @see gsc_save_utility_allele_counts
  */
-void gsc_save_count_matrix(FILE* f, const gsc_SimData* d, const char allele) {
-	gsc_DecimalMatrix counts = gsc_calculate_full_count_matrix(d->m, allele);
+static void gsc_scaffold_save_genotype_info(FILE* f, gsc_BidirectionalIterator* targets, 
+        unsigned int n_markers, char** const marker_names, const int markers_as_rows,
+        void (*bodycell_printer)(FILE*, gsc_GenoLocation, unsigned int, void*), void* bodycell_printer_data) {
 
-	gsc_AlleleMatrix* currentm = d->m;
-	// print the header
-	for (int i = 0, currenti = 0; i < counts.rows; ++i, ++currenti) {
-		if (currenti >= currentm->n_genotypes) {
-			currenti = 0;
-			currentm = currentm->next;
-		}
-		fwrite("\t", sizeof(char), 1, f);
-		if (currentm->names[currenti] != NULL) {
-			fwrite(currentm->names[currenti], sizeof(char), strlen(currentm->names[currenti]), f);
-        } else {
-            fprintf(f, "%d", currentm->ids[currenti].id);
-        }
-	}
-
-	fwrite("\n", sizeof(char), 1, f);
-
-	// Print the body
-    for (int i = 0; i < d->genome.n_markers; ++i) { // loop through markers
-        if (d->genome.marker_names != NULL && d->genome.marker_names[i] != NULL) {
-            fwrite(d->genome.marker_names[i], sizeof(char), strlen(d->genome.marker_names[i]), f);
-		}
-
-		for (int j = 0; j < counts.rows; ++j) { // loop through genotypes
-			// print the matrix entries
-            fwrite("\t", sizeof(char), 1, f);
-            fprintf(f, "%d", (int) counts.matrix[j][i]);
-		}
-		//print the newline
-		if (i + 1 < counts.rows) {
-			fwrite("\n", sizeof(char), 1, f);
-		}
-	}
-
-	gsc_delete_dmatrix(&counts);
-	fflush(f);
-}
-
-/** Print the number of copies of a particular allele at each marker of each genotype
- * in a group to a file. The following tab-separated format is used:
- *
- * 		[id]OR[name]	[id]OR[name] ...
- *
- * [marker name]	[allele count for each marker]
- *
- * [marker name]	[allele count for each marker]
- *
- * ...
- *
- * ID will be printed if the genotype does not have a name saved.
- *
- * @shortnamed{save_group_count_matrix}
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the gsc_SimData containing the group members.
- * @param group group number of the group of individuals to print the
- * allele count of.
- * @param allele the allele character to count
- */
-void gsc_save_group_count_matrix(FILE* f, const gsc_SimData* d, const char allele, const gsc_GroupNum group) {
-	unsigned int group_size = gsc_get_group_size( d, group);
-    if (group_size < 1) {
-        warning("Group %d does not exist: no data saved.\n", group.num);
-        return;
+    // legacy feature: if printing a specific group's members, put the group number in the top left corner cell
+    if (targets != NULL && targets->group.num != NO_GROUP.num) {
+        fprintf(f,"%d",targets->group.num);
     }
 
-    GSC_CREATE_BUFFER(group_names,char*,group_size);
-    gsc_get_group_names( d, group, group_size, group_names );
-    GSC_CREATE_BUFFER(group_ids,gsc_PedigreeID,group_size);
-    gsc_get_group_ids(d,group,group_size, group_ids);
+    unsigned int ntargets;
+    switch (markers_as_rows) {
+        case GSC_TRUE:
+            ntargets = 0;
+            // Header row (genotype names)
+            if (targets != NULL) {
+                gsc_GenoLocation loc = gsc_set_bidirectional_iter_to_start(targets);
+                while (IS_VALID_LOCATION(loc)) {
+                    fwrite("\t", sizeof(char), 1, f);
+                    ++ntargets;
+                    char* n = gsc_get_name(loc);
+                    if (n != NULL) {
+                        fwrite(n, sizeof(char)*strlen(n), 1, f);
+                    } else {
+                        fprintf(f, "%d", gsc_get_id(loc).id);
+                    }
+                    
+                    loc = gsc_next_forwards(targets);
+                }
+                fwrite("\n", sizeof(char), 1, f);
+            }
 
-    fprintf(f, "%d", group.num);
-	// print the header
-	for (int i = 0; i < group_size; ++i) {
-		fwrite("\t", sizeof(char), 1, f);
-		if (group_names[i] != NULL) {
-			fwrite(group_names[i], sizeof(char), strlen(group_names[i]), f);
-        } else {
-            fprintf(f, "%d", group_ids[i].id);
-        }
-	}
-    GSC_DELETE_BUFFER(group_names);
-    GSC_DELETE_BUFFER(group_ids);
-    gsc_DecimalMatrix counts = gsc_generate_zero_dmatrix(group_size,d->genome.n_markers);
-    gsc_calculate_group_count_matrix(d,group,allele,&counts);
-
-	fwrite("\n", sizeof(char), 1, f);
-
-	// Print the body
-    for (int i = 0; i < d->genome.n_markers; ++i) { // loop through markers
-        if (d->genome.marker_names != NULL && d->genome.marker_names[i] != NULL) {
-            fwrite(d->genome.marker_names[i], sizeof(char), strlen(d->genome.marker_names[i]), f);
-		}
-
-		for (int j = 0; j < group_size; ++j) { // loop through genotypes
-			// print the matrix entries
-            fwrite("\t", sizeof(char), 1, f);
-            fprintf(f, "%d", (int) counts.matrix[j][i]);
-		}
-		//print the newline
-        if (i + 1 < counts.rows) {
-			fwrite("\n", sizeof(char), 1, f);
-		}
-	}
-
-	gsc_delete_dmatrix(&counts);
-	fflush(f);
-}
-
-/** Print the parents of each genotype in the gsc_SimData to a file. The following
- * tab-separated format is used:
- *
- * [genotype name]	[parent 1 name]	[parent 2 name]
- *
- * [genotype name]	[parent 1 name]	[parent 2 name]
- *
- * ...
- *
- * The parents are identified by the two ids saved in the genotype's
- * pedigrees field in the gsc_AlleleMatrix struct.
- *
- * If a group member or parent has no name, the name will be
- * replaced in the output file with its session-unique id. If the parent
- * id is 0 (which means the parent is unknown) no
- * name or id is printed for that parent.
- *
- * @shortnamed{save_one_step_pedigree}
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the gsc_SimData containing the genotypes and their pedigrees
- */
-void gsc_save_one_step_pedigree(FILE* f, const gsc_SimData* d) {
-	char* name;
-	gsc_AlleleMatrix* m = d->m;
-
-	do {
-		for (int i = 0; i < m->n_genotypes; ++i) {
-			/*Group member name*/
-			if (m->names[i] != NULL) {
-				fwrite(m->names[i], sizeof(char), strlen(m->names[i]), f);
-			} else {
-                fprintf(f, "%d", m->ids[i].id);
-			}
-			fwrite("\t", sizeof(char), 1, f);
-
-
-            /* Parent 1 */
-            if (m->pedigrees[0][i].id != GSC_NO_PEDIGREE.id) {
-                name = gsc_get_name_of_id( d->m, m->pedigrees[0][i] );
-                if (name != NULL) {
-                    fwrite(name, sizeof(char), strlen(name), f);
-                } else {
-                    fprintf(f, "%d", m->pedigrees[0][i].id);
+            // Body (genotypes and genotype names)
+            // - This is our row counter 
+            unsigned int row = 0;
+            gsc_GenoLocation* genos = NULL;
+            // - This is our genotype position cache, because BidirectionalIterator does not have a built-in cache
+            if (ntargets > 0 && ((row < n_markers || (ntargets > 0 && row < targets->cachedAM->n_markers)))) {
+                genos = gsc_malloc_wrap(sizeof(*genos)*ntargets, GSC_FALSE);
+                if (genos != NULL) {
+                    genos[0] = gsc_set_bidirectional_iter_to_start(targets);
+                    for (unsigned int i = 1; i < ntargets; ++i) { 
+                        genos[i] = gsc_next_forwards(targets); 
+                    }
                 }
             }
-            fwrite("\t", sizeof(char), 1, f);
+            while (row < n_markers || (ntargets > 0 && row < targets->cachedAM->n_markers)) {
+                // Row header
+                if (row < n_markers) {
+                    if (marker_names[row] != NULL) {
+                        fwrite(marker_names[row], sizeof(char)*strlen(marker_names[row]), 1, f);
+                    }
+                }
 
-            /* Parent 2 */
-            if (m->pedigrees[1][i].id != GSC_NO_PEDIGREE.id) {
-                name = gsc_get_name_of_id( d->m, m->pedigrees[1][i]);
-                if (name != NULL) {
-                    fwrite(name, sizeof(char), strlen(name), f);
-                } else {
-                    fprintf(f, "%d", m->pedigrees[1][i].id);
+                // Row body
+                for (unsigned int i = 0; i < ntargets; ++i) {
+                    gsc_GenoLocation loc;
+                    if (genos != NULL) {
+                        loc = genos[i];
+                    } else {
+                        loc = (i == 0) ? gsc_set_bidirectional_iter_to_start(targets) : 
+                                         gsc_next_forwards(targets);
+                    }
+
+                    fwrite("\t", sizeof(char), 1, f);
+                    bodycell_printer(f,loc,row,bodycell_printer_data);
+                }
+                
+                fwrite("\n", sizeof(char), 1, f);
+                ++row;
+            }
+            if (genos != NULL) { GSC_FREE(genos); }
+
+            break;
+            
+        case GSC_FALSE:
+            // Header row (marker names)
+            if (marker_names != NULL) {
+                for (unsigned int i = 0; i < n_markers; ++i) {
+                    fwrite("\t", sizeof(char), 1, f);
+                    if (marker_names[i] != NULL) {
+                        fwrite(marker_names[i], sizeof(char)*strlen(marker_names[i]), 1, f);
+                    }
+                }
+                fwrite("\n", sizeof(char), 1, f);
+            }
+
+            // Body (genotypes and genotype names)
+            if (targets != NULL) {
+                gsc_GenoLocation loc = gsc_set_bidirectional_iter_to_start(targets);
+                while (IS_VALID_LOCATION(loc)) {
+                    // Row header
+                    char* n = gsc_get_name(loc);
+                    if (n != NULL) {
+                        fwrite(n, sizeof(char)*strlen(n), 1, f);
+                    } else {
+                        fprintf(f, "%d", gsc_get_id(loc).id);
+                    }
+
+                    // Row body
+                    for (unsigned int i = 0; i < targets->cachedAM->n_markers; ++i) {
+                        fwrite("\t", sizeof(char), 1, f);
+                        bodycell_printer(f,loc,i,bodycell_printer_data);
+                    }
+                    fwrite("\n", sizeof(char), 1, f);
+
+                    loc = gsc_next_forwards(targets);
                 }
             }
-
-			fwrite("\n", sizeof(char), 1, f);
-		}
-	} while ((m = m->next) != NULL);
-	fflush(f);
-}
-
-/** Print the parents of each genotype in a group to a file. The following
- * tab-separated format is used:
- *
- * [group member name]	[parent 1 name]	[parent 2 name]
- *
- * [group member name]	[parent 1 name]	[parent 2 name]
- *
- * ...
- *
- * The parents are identified by the two ids saved in the genotype's
- * pedigrees field in the gsc_AlleleMatrix struct.
- *
- * If a group member or parent has no name, the name will be
- * replaced in the output file with its session-unique id. If the parent
- * id of an individual is 0 (which means the parent is unknown) no
- * name or id is printed for that parent.
- *
- * @shortnamed{save_group_one_step_pedigree}
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the gsc_SimData containing the group members.
- * @param group group number of the group of individuals to print the
- * immediate parents of.
- */
-void gsc_save_group_one_step_pedigree(FILE* f, const gsc_SimData* d, const gsc_GroupNum group) {
-	int group_size = gsc_get_group_size( d, group);
-    if (group_size < 1) {
-        warning("Group %d does not exist: no data saved.\n", group.num);
-        return;
+             
+            break;
     }
 
-    GSC_CREATE_BUFFER(group_contents,gsc_PedigreeID,group_size);
-    gsc_get_group_ids( d, group, group_size, group_contents );
-    GSC_CREATE_BUFFER(group_names,char*,group_size);
-    gsc_get_group_names( d, group, group_size, group_names );
-    GSC_CREATE_BUFFER(parent1s,gsc_PedigreeID,group_size);
-    GSC_CREATE_BUFFER(parent2s,gsc_PedigreeID,group_size);
-    gsc_get_group_parent_ids(d, group, group_size, 1, parent1s );
-    gsc_get_group_parent_ids(d, group, group_size, 2, parent2s );
-	char* name;
-
-	for (int i = 0; i < group_size; i++) {
-		/*Group member name*/
-		if (group_names[i] != NULL) {
-			fwrite(group_names[i], sizeof(char), strlen(group_names[i]), f);
-		} else {
-			//fwrite(group_contents + i, sizeof(int), 1, f);
-            fprintf(f, "%d", group_contents[i].id);
-		}
-		fwrite("\t", sizeof(char), 1, f);
-
-        // Prints both parents, even if they're the same one.
-        /* Parent 1 */
-        if (parent1s[i].id != GSC_NO_PEDIGREE.id) {
-            name = gsc_get_name_of_id( d->m, parent1s[i]);
-            if (name != NULL) {
-                fwrite(name, sizeof(char), strlen(name), f);
-            } else {
-                fprintf(f, "%d", parent1s[i].id);
-            }
-        }
-        fwrite("\t", sizeof(char), 1, f);
-
-        /* Parent 2 */
-        if (parent2s[i].id != GSC_NO_PEDIGREE.id) {
-            name = gsc_get_name_of_id( d->m, parent2s[i]);
-            if (name != NULL) {
-                fwrite(name, sizeof(char), strlen(name), f);
-            } else {
-                fprintf(f, "%d", parent2s[i].id);
-            }
-        }
-
-		fwrite("\n", sizeof(char), 1, f);
-	}
-	fflush(f);
-    GSC_DELETE_BUFFER(parent1s);
-    GSC_DELETE_BUFFER(parent2s);
-    GSC_DELETE_BUFFER(group_contents);
-    GSC_DELETE_BUFFER(group_names);
+    fflush(f);
+    return;  
 }
 
-/** Print the full known pedigree of each genotype in the gsc_SimData
- * to a file. The following
- * tab-separated format is used:
- *
- * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
- *
- * [id]	[name]=([parent pedigree])
- *
- * ...
- *
- * Note that this pedigree is recursively constructed, so if a genotype's
- * parents are known, [parent pedigree] is replaced with a string of format
- * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of
- * a genotype are the same individual (i.e. it was produced by selfing, the
- * comma and second parent pedigree are ommitted, as in the second line sample
- * in the format above.
- *
- * The parents of a genotype are identified by the two ids saved in the
- * genotype's pedigrees field in the gsc_AlleleMatrix struct.
- *
- * If a group member or parent has no name, the name will be
- * replaced in the output file with its session-unique id. If the parent
- * id of an individual is 0, the individual is printed without brackets or
- * parent pedigrees and recursion stops here.
- *
- * @shortnamed{save_full_pedigree}
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the gsc_SimData containing all genotypes to print.
- */
-void gsc_save_full_pedigree(FILE* f, const gsc_SimData* d) {
-	const char newline[] = "\n";
-
-	gsc_AlleleMatrix* m = d->m;
-
-	do {
-		for (int i = 0; i < m->n_genotypes; ++i) {
-			/*Group member name*/
-            fprintf(f, "%d\t", m->ids[i].id);
-			if (m->names[i] != NULL) {
-				fwrite(m->names[i], sizeof(char), strlen(m->names[i]), f);
-			}
-
-            if (m->pedigrees[0][i].id != GSC_NO_PEDIGREE.id || m->pedigrees[1][i].id != GSC_NO_PEDIGREE.id) {
-				gsc_save_parents_of(f, d->m, m->pedigrees[0][i], m->pedigrees[1][i]);
-			}
-			fwrite(newline, sizeof(char), 1, f);
-		}
-	} while ((m = m->next) != NULL);
-	fflush(f);
-}
-
-/** Print the full known pedigree of each genotype in a group to a file. The following
- * tab-separated format is used:
- *
- * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
- *
- * [id]	[name]=([parent pedigree])
- *
- * ...
- *
- * Note that this pedigree is recursively constructed, so if a genotype's
- * parents are known, [parent pedigree] is replaced with a string of format
- * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of
- * a genotype are the same individual (i.e. it was produced by selfing, the
- * comma and second parent pedigree are ommitted, as in the second line sample
- * in the format above.
- *
- * The parents of a genotype are identified by the two ids saved in the
- * genotype's pedigrees field in the gsc_AlleleMatrix struct.
- *
- * If a group member or parent has no name, the name will be
- * replaced in the output file with its session-unique id. If the parent
- * id of an individual is 0, the individual is printed without brackets or
- * parent pedigrees and recursion stops here.
- *
- * @shortnamed{save_group_full_pedigree}
- *
- * @param f file pointer opened for writing to put the output
- * @param d pointer to the gsc_SimData containing the group members.
- * @param group group number of the group of individuals to print the
- * pedigree of.
- */
-void gsc_save_group_full_pedigree(FILE* f, const gsc_SimData* d, const gsc_GroupNum group) {
-	int group_size = gsc_get_group_size( d, group);
-    if (group_size < 1) {
-        warning("Group %d does not exist: no data saved.\n", group.num);
-        return;
+/** Kernel for gsc_scaffold_save_genotype_info, when the goal is to save the 
+ * (phased) allele pairs of each genotype. */
+static void gsc_helper_output_genotypematrix_cell(FILE* f, gsc_GenoLocation loc, unsigned int markerix, void* NA) {
+    if (IS_VALID_LOCATION(loc)) {
+        fwrite(gsc_get_alleles(loc) + 2*markerix, sizeof(char)*2, 1, f);
     }
-
-    GSC_CREATE_BUFFER(group_contents,gsc_PedigreeID,group_size);
-    gsc_get_group_ids( d, group, group_size, group_contents );
-    GSC_CREATE_BUFFER(group_names,char*,group_size);
-    gsc_get_group_names( d, group, group_size, group_names );
-	const char newline[] = "\n";
-    GSC_CREATE_BUFFER(parent1s,gsc_PedigreeID,group_size);
-    GSC_CREATE_BUFFER(parent2s,gsc_PedigreeID,group_size);
-    gsc_get_group_parent_ids(d, group, group_size, 1, parent1s );
-    gsc_get_group_parent_ids(d, group, group_size, 2, parent2s );
-
-	for (int i = 0; i < group_size; i++) {
-		/*Group member name*/
-        fprintf(f, "%d\t", group_contents[i].id);
-		if (group_names[i] != NULL) {
-			fwrite(group_names[i], sizeof(char), strlen(group_names[i]), f);
-		}
-
-        if (parent1s[i].id != GSC_NO_PEDIGREE.id || parent2s[i].id != GSC_NO_PEDIGREE.id) {
-            gsc_save_parents_of(f, d->m, parent1s[i], parent2s[i]);
-		}
-		fwrite(newline, sizeof(char), 1, f);
-	}
-	fflush(f);
-    GSC_DELETE_BUFFER(parent1s);
-    GSC_DELETE_BUFFER(parent2s);
-    GSC_DELETE_BUFFER(group_contents);
-    GSC_DELETE_BUFFER(group_names);
 }
 
-/** Print the full known pedigree of each genotype in a single gsc_AlleleMatrix
- * to a file. The following
- * tab-separated format is used:
+/** Kernel for gsc_scaffold_save_genotype_info, when the goal is to save the 
+ * allele counts of a particular allele for each genetic marker. */
+static void gsc_helper_output_countmatrix_cell(FILE* f, gsc_GenoLocation loc, unsigned int markerix, void* data) {
+    if (IS_VALID_LOCATION(loc)) {
+        char allele = *(char*) data;
+        int count = 0;
+        if (get_alleles(loc)[2*markerix] == allele)     { ++count; }
+        if (get_alleles(loc)[2*markerix + 1] == allele) { ++count; }
+        char out = '0' + count;
+        fwrite(&out, sizeof(char), 1, f);
+    }
+}
+
+/** Prints simulated genotypes to a file
  *
- * [id]	[name]=([parent 1 pedigree],[parent 2 pedigree])
+ * For a more user-friendly interface to this function: @see gsc_save_genotypes
  *
- * [id]	[name]=([parent pedigree])
+ * The output file will contain a matrix of genetic markers by genotypes (or vice-versa), 
+ * with each cell in the body of the matrix containing the (phased) pair of alleles
+ * belonging to that genotype at that genetic marker.
+ *
+ * If the genetic markers are the columns of the matrix (i.e. @a markers_as_rows = GSC_FALSE)
+ * the output file format will be approximately:
+ *
+ * 1	[marker name]	[marker name]
+ *
+ * [pedigree id]OR[genotype name]	[allele pairs for each marker]
+ *
+ * [pedigree id]OR[genotype name]	[allele pairs for each marker] 
  *
  * ...
  *
- * Note that this pedigree is recursively constructed, so if a genotype's
- * parents are known, [parent pedigree] is replaced with a string of format
- * name=([parent1 pedigree],[parent2 pedigree]) alike. If the two parents of
- * a genotype are the same individual (i.e. it was produced by selfing, the
- * comma and second parent pedigree are ommitted, as in the second line sample
- * in the format above.
+ * The top left corner cell will be blank, if the iterator @a targets is iterating through 
+ * all genotypes. If the iterator is iterating through the members of a group, 
+ * the top left corner cell will contain the group number. 
  *
- * The parents of a genotype are identified by the two ids saved in the
- * genotype's pedigrees field in the gsc_AlleleMatrix struct.
+ * If a genetic marker does not have a name, the corresponding header row cell 
+ * will be left blank. If a genotype does not have a name, the corresponding 
+ * header column cell will contain its PedigreeID instead. If it has no name and 
+ * no allocated PedigreeID, this cell will read 0 (because NO_PEDIGREE.id = 0).
  *
- * If a group member or parent has no name, the name will be
- * replaced in the output file with its session-unique id. If the parent
- * id of an individual is 0, the individual is printed without brackets or
- * parent pedigrees and recursion stops here.
+ * If the genetic markers are the rows of the matrix (i.e. @a markers_as_rows = GSC_TRUE),
+ * the above matrix will be transposed.
  *
- * Note this does not follow through the linked list of gsc_AlleleMatrix.
+ * This function can be called with @a targets = NULL. In that case, it will 
+ * print only the marker names, as a header row or a header column, depending
+ * on the value of @a markers_as_rows.
  *
  * @param f file pointer opened for writing to put the output
- * @param m pointer to the gsc_AlleleMatrix containing the genotypes to print
- * @param parents pointer to an gsc_AlleleMatrix that heads the linked list
- * containing the parents and other ancestry of the given genotypes.
+ * @param targets iterator for the genotypes whose genotypes will be saved
+ * @param n_markers length of the vector @a marker_names
+ * @param marker_names list of marker names, ordered so that they correspond 
+ * to the order of markers in the genotypes in @a targets. This is best achieved
+ * by taking @a marker_names from a @a SimData.genome.marker_names, and the 
+ * AlleleMatrix input for @a gsc_create_bidirectional_iter for @a targets being 
+ * the same SimData's @a SimData->m. 
+ * @param markers_as_rows If GSC_TRUE, genetic markers will be rows in the output 
+ * matrix, and genotypes will be columns. If GSC_FALSE, genetic markers will be columns 
+ * in the output matrix, and genotypes will be rows.
  */
-void gsc_save_allelematrix_full_pedigree(FILE* f, const gsc_AlleleMatrix* m, const gsc_SimData* parents) {
-	const char newline[] = "\n";
-
-	for (int i = 0; i < m->n_genotypes; ++i) {
-		/*Group member name*/
-        fprintf(f, "%d\t", m->ids[i].id);
-		if (m->names[i] != NULL) {
-			fwrite(m->names[i], sizeof(char), strlen(m->names[i]), f);
-		}
-
-        if (m->pedigrees[0][i].id != GSC_NO_PEDIGREE.id || m->pedigrees[1][i].id != GSC_NO_PEDIGREE.id) {
-            gsc_save_parents_of(f, parents->m, m->pedigrees[0][i], m->pedigrees[1][i]);
-        }
-		fwrite(newline, sizeof(char), 1, f);
-	}
-	fflush(f);
+void gsc_save_utility_genotypes(FILE* f, gsc_BidirectionalIterator* targets, 
+        unsigned int n_markers, char** const marker_names, const int markers_as_rows) {
+    gsc_scaffold_save_genotype_info(f, targets, n_markers, marker_names, markers_as_rows, 
+        &gsc_helper_output_genotypematrix_cell, NULL);
 }
 
-/** Recursively save the parents of a particular id to a file.
+/** Prints allele counts of simulated genotypes to a file
  *
- * It saves using the following format:
+ * For a more user-friendly interface to this function: @see gsc_save_allele_counts
  *
- * - no characters are saved if the parents of the id are unknown/0
+ * The output file will contain a matrix of genetic markers by genotypes (or vice-versa), 
+ * with each cell in the body of the matrix containing the allele counts of a 
+ * some allele for each genetic marker.
  *
- * - if the id has one parent, repeated twice (it was produced by selfing),
- * print "=(parentname)", where parentname is the name of the parent or its
- * id if it does not have one, followed by whatever is printed by a call
- * to this function on the parent's id.
+ * If the genetic markers are the columns of the matrix (i.e. @a markers_as_rows = GSC_FALSE)
+ * the output file format will be approximately:
  *
- * - if the id has two separate parents, print "=(parent1name,parent2name)",
- * where parent1name and parent2name are the name2 of the two parents or their
- * ids if they does not have names, each name immediately followed by whatever
- * is printed by a call to this function on the corresponding parent's id.
+ * 1	[marker name]	[marker name]
+ *
+ * [pedigree id]OR[genotype name]	[allele count for each marker]
+ *
+ * [pedigree id]OR[genotype name]	[allele count for each marker] 
+ *
+ * ...
+ *
+ * The top left corner cell will be blank, if the iterator @a targets is iterating through 
+ * all genotypes. If the iterator is iterating through the members of a group, 
+ * the top left corner cell will contain the group number. 
+ *
+ * If a genetic marker does not have a name, the corresponding header row cell 
+ * will be left blank. If a genotype does not have a name, the corresponding 
+ * header column cell will contain its PedigreeID instead. If it has no name and 
+ * no allocated PedigreeID, this cell will read 0 (because NO_PEDIGREE.id = 0).
+ *
+ * If the genetic markers are the rows of the matrix (i.e. @a markers_as_rows = GSC_TRUE),
+ * the above matrix will be transposed.
+ *
+ * This function can be called with @a targets = NULL. In that case, it will 
+ * print only the marker names, as a header row or a header column, depending
+ * on the value of @a markers_as_rows.
  *
  * @param f file pointer opened for writing to put the output
- * @param m pointer to an gsc_AlleleMatrix that heads the linked list
- * containing the parents and other ancestry of the given id.
- * @param p1 the session-unique id of the first parent to be saved.
- * @param p2 the session-unique id of the second parent to be saved.
+ * @param targets iterator for the genotypes whose genotypes will be saved
+ * @param n_markers length of the vector @a marker_names
+ * @param marker_names list of marker names, ordered so that they correspond 
+ * to the order of markers in the genotypes in @a targets. This is best achieved
+ * by taking @a marker_names from a @a SimData.genome.marker_names, and the 
+ * AlleleMatrix input for @a gsc_create_bidirectional_iter for @a targets being 
+ * the same SimData's @a SimData->m. 
+ * @param markers_as_rows If GSC_TRUE, genetic markers will be rows in the output 
+ * matrix, and genotypes will be columns. If GSC_FALSE, genetic markers will be columns 
+ * in the output matrix, and genotypes will be rows.
+ * @param allele the allele to count
  */
-void gsc_save_parents_of(FILE* f, const gsc_AlleleMatrix* m, gsc_PedigreeID p1, gsc_PedigreeID p2) {
+void gsc_save_utility_allele_counts(FILE* f, gsc_BidirectionalIterator* targets,
+		unsigned int n_markers, char** const marker_names, const int markers_as_rows, const char allele) {
+    gsc_scaffold_save_genotype_info(f, targets, n_markers, marker_names, markers_as_rows, 
+        &gsc_helper_output_countmatrix_cell, (void*)&allele);
+}
+
+/** Identifies and saves (recursively) the pedigree of a pair of parents
+ *
+ * This is a generic scaffold for the following functions:
+ * @see gsc_save_utility_pedigrees with full_pedigree = true 
+ * and in future, for a function to save these pedigrees to in-memory strings
+ */
+static void gsc_scaffold_save_ancestry_of(const gsc_AlleleMatrix* m, gsc_PedigreeID p1, gsc_PedigreeID p2,
+        void (*strprinter)(char*, unsigned int, void*), void (*intprinter)(int, void*), void* printer_data) {
     gsc_PedigreeID pedigree[2];
 
 	// open brackets
-	fwrite("=(", sizeof(char), 2, f);
+	strprinter("=(", sizeof(char)*2,printer_data); 
 	char* name;
 
 	// enables us to print only the known parent if one is unknown
@@ -10560,198 +10230,238 @@ void gsc_save_parents_of(FILE* f, const gsc_AlleleMatrix* m, gsc_PedigreeID p1, 
 			// Selfed parent
             name = gsc_get_name_of_id( m, p1);
 			if (name != NULL) {
-				fwrite(name, sizeof(char), strlen(name), f);
+			    strprinter(name, sizeof(char)*strlen(name), printer_data); 
             } else if (p1.id != GSC_NO_PEDIGREE.id) {
-                fprintf(f, "%d", p1.id);
-				//fwrite(pedigree, sizeof(int), 1, f);
+                intprinter(p1.id,printer_data);
 			}
 
             if (gsc_get_parents_of_id(m, p1, pedigree) == 0) {
-				gsc_save_parents_of(f, m, pedigree[0], pedigree[1]);
+				gsc_scaffold_save_ancestry_of(m, pedigree[0], pedigree[1],strprinter,intprinter,printer_data);
 			}
 		}
 	} else {
 		// Parent 1
 		name = gsc_get_name_of_id( m, p1);
 		if (name != NULL) {
-			fwrite(name, sizeof(char), strlen(name), f);
+		    strprinter(name, sizeof(char)*strlen(name),printer_data); 
         } else if (p1.id != GSC_NO_PEDIGREE.id) {
-            fprintf(f, "%d", p1.id);
-			//fwrite(pedigree, sizeof(int), 1, f);
+            intprinter(p1.id,printer_data);
 		}
 		if (gsc_get_parents_of_id(m, p1, pedigree) == 0) {
-			gsc_save_parents_of(f, m, pedigree[0], pedigree[1]);
+			gsc_scaffold_save_ancestry_of(m, pedigree[0], pedigree[1],strprinter,intprinter,printer_data);
 		}
 
 		// separator
-		fwrite(",", sizeof(char), 1, f);
+		strprinter(",", sizeof(char),printer_data); 
 
 		// Parent 2
 		name = gsc_get_name_of_id( m, p2);
 		if (name != NULL) {
-			fwrite(name, sizeof(char), strlen(name), f);
+			strprinter(name, sizeof(char)*strlen(name),printer_data); 
         } else if (p2.id != GSC_NO_PEDIGREE.id) {
-            fprintf(f, "%d", p2.id);
-			//fwrite(pedigree + 1, sizeof(int), 1, f);
+            intprinter(p2.id,printer_data);
 		}
 
 		if (gsc_get_parents_of_id(m, p2, pedigree) == 0) {
-			gsc_save_parents_of(f, m, pedigree[0], pedigree[1]);
+			gsc_scaffold_save_ancestry_of(m, pedigree[0], pedigree[1],strprinter,intprinter,printer_data);
 		}
 
 	}
 
 	// close brackets
-	fwrite(")", sizeof(char), 1, f);
+	strprinter(")", sizeof(char),printer_data); 
 }
 
-/** Print the breeding value of each genotype in the gsc_SimData to a file. The following
- * tab-separated format is used:
+/** Kernel for scaffold functions that require printing a string to a file (as opposed to
+ * saving the string in a different place) */
+static void gsc_helper_ancestry_strprinter_file(char* str, unsigned int strlen, void* data) {
+    FILE* f = (FILE*) data;
+    fwrite(str, strlen, 1, f);
+}
+
+/** Kernel for scaffold functions that require printing an integer to a file (as opposed to
+ * saving the integer in a different place) */
+static void gsc_helper_ancestry_intprinter_file(int i, void* data) {
+    FILE* f = (FILE*) data;
+    fprintf(f, "%d", i);
+}
+
+/** Prints pedigrees to a file
  *
- * [id]	[name]	[BV]
+ * For a more user-friendly interface to this function: @see gsc_save_pedigrees
  *
- * [id]	[name]	[BV]
+ * Where genotypes and their parents have names, their names will be printed as 
+ * their identifiers within the pedigrees. When an individual in the pedigree 
+ * does not have a name, its PedigreeID will be printed in the pedigree instead.
+ * When an individual in the pedigree has no name and no PedigreeID, it is 
+ * considered equivalent to an unknown individual and nothing is printed 
+ * in the pedigree.
+ *
+ * There are two output formats available with this function.
+ *
+ * If only the immediate parents are to be printed (i.e. @a full_pedigree = false),
+ * then the output file format will be a three-column tab-delimited file, with the 
+ * genotype's identifier in the first column and its parents' identifiers in the
+ * second and third columns. The second and third columns will be blank if 
+ * no parent can be located in @a parent_pedigree_store. Example of this file format
+ * follows, where g1206 has unknown parents:
+ *
+ * g1204    g30    g31
+ *
+ * g1205    founderC    founderC
+ * 
+ * g1206
+ *
+ * ... 
+ *
+ * The alternate output format is printed if @a full_pedigree = true. In this format,
+ * the first column of the file gives the pedigree ID of the genotype. The second 
+ * column is a recursively constructed string. First, it contains the identifier 
+ * of the genotype. If the genotype's parents can be located, it then prints an 
+ * equals sign and open bracket ("=("), the (similarly generated) pedigree of the 
+ * first and second parents, separated by a comma. Finally, it adds a closing bracket (")").
+ * If the parent is repeated, its pedigree is only printed once (see second row of
+ * the example format below):
+ *
+ * 204    g1204=(g30,g31=(founderA,founderB))
+ *
+ * 205    g1205=(founderC)
+ *
+ * 206    g1206
  *
  * ...
  *
- * The gsc_SimData must have loaded marker effects for this function to succeed.
- *
- * @shortnamed{save_bvs}
+ * In the first column of this file format, a missing or untracked PedigreeID
+ * will be printed as 0. (As stated above in this documentation, elsewhere in these pedigree output 
+ * files, missing/untracked PedigreeIDs are not printed.)
  *
  * @param f file pointer opened for writing to put the output
- * @param d pointer to the gsc_SimData containing the group members.
- * @param effID Identifier of the marker effect set to be used to calculate these breeding values
- */
-void gsc_save_bvs(FILE* f, const gsc_SimData* d, const gsc_EffectID effID) {
-    const int effIndex = gsc_get_index_of_eff_set(d, effID);
-    if (effIndex == GSC_UNINIT) {
-        warning("Nonexistent effect set with id %d\n", effID.id);
-        return;
+ * @param targets iterator for the genotypes whose pedigrees will be saved
+ * @param full_pedigree If GSC_FALSE, the three-column immediate-parents-only file 
+ * format will be printed. If GSC_TRUE, the file format with the recursively 
+ * constructed full pedigrees will be printed.
+ * @param parent_pedigree_store All parents and ancestors that are to be 
+ * included in the printed pedigree must exist somewhere in this linked list of 
+ * AlleleMatrix structures. Parents or ancestors that cannot be found in here 
+ * will be deemed "unknown" and will not be printed.
+*/
+void gsc_save_utility_pedigrees(FILE* f, gsc_BidirectionalIterator* targets,
+		const int full_pedigree, const AlleleMatrix* parent_pedigree_store) {
+
+	if (targets == NULL) { return; }
+
+    gsc_GenoLocation loc;
+    switch (full_pedigree) {
+        case GSC_FALSE:
+            loc = gsc_set_bidirectional_iter_to_start(targets);
+            while (IS_VALID_LOCATION(loc)) {
+                // Offspring
+                char* n = gsc_get_name(loc);
+                if (n != NULL) {
+                    fwrite(n, sizeof(char)*strlen(n), 1, f);
+                } else {
+                    fprintf(f, "%d", gsc_get_id(loc).id);
+                }
+
+                // Parents
+                for (int parent = 0; parent < 2; ++parent) {
+                    fwrite("\t", sizeof(char), 1, f);
+                    n = NULL;
+                    gsc_PedigreeID p = (parent == 0) ? gsc_get_first_parent(loc) : gsc_get_second_parent(loc);
+                    if (p.id != GSC_NO_PEDIGREE.id && parent_pedigree_store != NULL) {
+                        n = gsc_get_name_of_id(parent_pedigree_store, p);
+                    }
+                    if (n != NULL) {
+                        fwrite(n, sizeof(char)*strlen(n), 1, f);
+                    } else if (p.id != NO_PEDIGREE.id) {
+                        fprintf(f, "%d", p.id);
+                    } 
+                }
+                
+                fwrite("\n", sizeof(char), 1, f);
+                loc = gsc_next_forwards(targets);
+            }
+            
+            break;
+        case GSC_TRUE:
+            loc = gsc_set_bidirectional_iter_to_start(targets);
+            while (IS_VALID_LOCATION(loc)) {
+                // Offspring
+                fprintf(f, "%d\t", gsc_get_id(loc).id);
+                char* n = gsc_get_name(loc);
+                if (n != NULL) {
+                    fwrite(n, sizeof(char)*strlen(n), 1, f);
+                } 
+
+                // Parents (recursively)
+                if ((gsc_get_first_parent(loc).id != GSC_NO_PEDIGREE.id || 
+                        gsc_get_second_parent(loc).id != GSC_NO_PEDIGREE.id) 
+                        && parent_pedigree_store != NULL) {
+                    gsc_scaffold_save_ancestry_of(parent_pedigree_store, 
+                                gsc_get_first_parent(loc), gsc_get_second_parent(loc),
+                                gsc_helper_ancestry_strprinter_file, gsc_helper_ancestry_intprinter_file, (void*) f); 
+                }
+                
+                fwrite("\n", sizeof(char), 1, f);
+                loc = gsc_next_forwards(targets);
+            }
+            
+            break;
     }
 
-	gsc_AlleleMatrix* am = d->m;
-	const char newline[] = "\n";
-	const char tab[] = "\t";
-	gsc_DecimalMatrix effects;
-
-	do {
-        effects = gsc_calculate_bvs(am, d->e + effIndex);
-		for (int i = 0; i < effects.cols; ++i) {
-			/*Group member name*/
-			//fwrite(group_contents + i, sizeof(int), 1, f);
-            fprintf(f, "%d", am->ids[i].id);
-			fwrite(tab, sizeof(char), 1, f);
-			if (am->names[i] != NULL) {
-				fwrite(am->names[i], sizeof(char), strlen(am->names[i]), f);
-			}
-			fwrite(tab, sizeof(char), 1, f);
-			//fwrite(effects.matrix[0], sizeof(float), 1, f);
-			fprintf(f, "%f", effects.matrix[0][i]);
-			fwrite(newline, sizeof(char), 1, f);
-		}
-		gsc_delete_dmatrix(&effects);
-	} while ((am = am->next) != NULL);
-	fflush(f);
+    fflush(f);
+    return;
 }
 
-/** Print the breeding value of each genotype in a group to a file. The following
- * tab-separated format is used:
+/** Calculate and print breeding values to a file 
  *
- * [group member id]	[group member name]	[BV]
+ * For a more user-friendly interface to this function: @see gsc_save_bvs
  *
- * [group member id]	[group member name]	[BV]
+ * The output file format will be a three-column tab-separated file. The 
+ * three columns will contain the genotype's pedigree ID in the first column,
+ * its name (if it has one; blank if it has no name) in the second column,
+ * and the calculated breeding value in the third column:
+ *
+ * [genotype's PedigreeID]    [genotype's name]     [bv]
  *
  * ...
  *
- * The gsc_SimData must have loaded marker effects for this function to succeed.
- *
- * @shortnamed{save_group_bvs}
+ * @see gsc_calculate_bvs for how breeding values are calculated.
  *
  * @param f file pointer opened for writing to put the output
- * @param d pointer to the gsc_SimData containing the group members.
- * @param group group number of the group of individuals to print the
- * breeding values of.
- * @param effID Identifier of the marker effect set to be used to calculate these breeding values
- */
-void gsc_save_group_bvs(FILE* f, const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID) {
-    const int effIndex = gsc_get_index_of_eff_set(d, effID);
-    if (effIndex == GSC_UNINIT) {
-        warning("Nonexistent effect set with id %d\n", effID.id);
-        return;
+ * @param targets iterator for the genotypes whose breeding values will be saved
+ * @param eff matrix of additive marker effects to be used to calculate the
+ * breeding values
+*/
+void gsc_save_utility_bvs(FILE* f, gsc_BidirectionalIterator* targets, const gsc_EffectMatrix* eff) {
+    if (targets == NULL || eff == NULL) { return; }
+
+    gsc_DecimalMatrix bvs = gsc_calculate_utility_bvs(targets, eff);
+    gsc_GenoLocation loc = gsc_set_bidirectional_iter_to_start(targets);
+
+    for (unsigned int i = 0; i < bvs.cols; ++i) {
+        if (IS_VALID_LOCATION(loc)) {
+            fprintf(f, "%d", gsc_get_id(loc).id);
+            fwrite("\t", sizeof(char), 1, f);
+            char* n = gsc_get_name(loc);
+            if (n != NULL) {
+                fwrite(n, sizeof(char), strlen(n), f);
+            }
+            fwrite("\t", sizeof(char), 1, f);
+        } else {
+            fwrite("\t\t", sizeof(char)*2, 1, f);
+        }
+
+        fprintf(f, "%lf", bvs.matrix[0][i]);
+		fwrite("\n", sizeof(char), 1, f);
+
+        loc = gsc_next_forwards(targets);
     }
 
-	int group_size = gsc_get_group_size( d, group);
-    if (group_size < 1) {
-        warning("Group %d does not exist: no data saved.\n", group.num);
-        return;
-    }
-    GSC_CREATE_BUFFER(group_contents,gsc_PedigreeID,group_size);
-    gsc_get_group_ids( d, group, group_size, group_contents );
-    GSC_CREATE_BUFFER(group_names,char*,group_size);
-    gsc_get_group_names( d, group, group_size, group_names );
-    gsc_DecimalMatrix effects = gsc_calculate_group_bvs(d, group, effID);
-	const char newline[] = "\n";
-	const char tab[] = "\t";
-
-	for (int i = 0; i < group_size; ++i) {
-		/*Group member name*/
-		//fwrite(group_contents + i, sizeof(int), 1, f);
-        fprintf(f, "%d", group_contents[i].id);
-		fwrite(tab, sizeof(char), 1, f);
-		if (group_names[i] != NULL) {
-			fwrite(group_names[i], sizeof(char), strlen(group_names[i]), f);
-		}
-		fwrite(tab, sizeof(char), 1, f);
-		//fwrite(effects.matrix[0], sizeof(float), 1, f);
-		fprintf(f, "%f", effects.matrix[0][i]);
-		fwrite(newline, sizeof(char), 1, f);
-	}
-
-	gsc_delete_dmatrix(&effects);
-    GSC_DELETE_BUFFER(group_contents);
-    GSC_DELETE_BUFFER(group_names);
-	fflush(f);
+    gsc_delete_dmatrix(&bvs);
+    fflush(f);
+    return;
 }
 
-/** Print the provided breeding values of each provided name and id to a file,
- * with the same format as a regular call to `gsc_save_bvs` or `gsc_save_group_bvs`.
- * The following tab-separated format is used:
- *
- * [id]	[name]	[BV]
- *
- * [id]	[name]	[BV]
- *
- * ...
- *
- * The function assumes the array of ids, array of names, and columns of the
- * gsc_DecimalMatrix are ordered the same, so a single index produces the corresponding
- * value from each. It is used by as-you-go savers within crossing functions. For
- * general use consider `gsc_save_bvs` or `gsc_save_group_bvs` instead.
- *
- * @param f file pointer opened for writing to put the output
- * @param e pointer to the gsc_DecimalMatrix containing the BVs in the first row.
- * @param ids array of ids to print alongside the BVs.
- * @param names array of names to print alongside the BVs.
- */
-void gsc_save_manual_bvs(FILE* f, const gsc_DecimalMatrix* e, const gsc_PedigreeID* ids, const char** names) {
-	char sep[] = "\t";
-	char newline[] = "\n";
-
-	for (int i = 0; i < e->cols; ++i) {
-		//fwrite(ids + i, sizeof(int), 1, f);
-        fprintf(f, "%d", ids[i].id);
-		fwrite(sep, sizeof(char), 1, f);
-		if (names != NULL && names[i] != NULL) {
-			fwrite(names[i], sizeof(char), strlen(names[i]), f);
-		}
-		fwrite(sep, sizeof(char), 1, f);
-		//fwrite(e->matrix[i], sizeof(double), 1, f);
-		fprintf(f, "%f", e->matrix[0][i]);
-
-		//print the newline
-		fwrite(newline, sizeof(char), 1, f);
-	}
-	fflush(f);
-}
 
 #endif

@@ -97,9 +97,9 @@ SEXP SXP_make_clones(SEXP exd, SEXP s_groups, SEXP s_inherit_name, SEXP s_name,
 		SEXP s_saveEffects, SEXP s_saveGenes, SEXP s_retain);
 
 /*----------------------- Printers ----------------------*/
-SEXP SXP_save_genotypes(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_type);
-SEXP SXP_save_allele_counts(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_allele);
-SEXP SXP_save_pedigrees(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_type);
+SEXP SXP_save_genotypes(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_markersasrows);
+SEXP SXP_save_allele_counts(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_allele, SEXP s_markersasrows);
+SEXP SXP_save_pedigrees(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_fullpedigree);
 SEXP SXP_save_GEBVs(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_eff_set);
 SEXP SXP_save_local_GEBVs_blocks_from_file(SEXP exd, SEXP s_filename, SEXP block_file, SEXP s_group, SEXP s_eff_set);
 SEXP SXP_save_local_GEBVs_blocks_from_chrsplit(SEXP exd, SEXP s_filename, SEXP s_nslices, SEXP s_group, SEXP s_map, SEXP s_eff_set);

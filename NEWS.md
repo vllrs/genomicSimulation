@@ -8,6 +8,7 @@
 - Added ability to observe the pedigree IDs of parents using `see.group.data`. (Previously, `see.group.data` could be used to observe the names of parents, which would fall back to the pedigree IDs of parents for parents without names. Some use cases may appreciate the ability to access pedigree IDs consistently.)
 - Added ability to override the automatically detected file layout details in `load.data` and `load.genotypes` using the new function `define.matrix.format.details`, so that files whose format is incorrectly detected are not prevented from being loaded. 
 - Make missing alleles visible in the matrix returned by `see.group.gene.data` (previously, they would cause issues with sometimes hiding non-missing alleles, due to being represented internally by the null character '\0').
+- The orientation of the output matrix of `save.allele.counts` can now be chosen, as has previously been possible only with `save.genotypes`. 
 
 ## Improvements
 
@@ -18,6 +19,8 @@
 - Column names and row names of the matrix returned by `see.group.gene.data` now reflect genotype names and genetic marker names respectively.
 - Vignette and function docs edited for better clarity around compatible input file formats and function name changes made in v0.2.5
 - Under-the-hood improvements and simplifications of the genotype matrix input file layout detection systems.
+- Under-the-hood improvements and simplifications of the file saving output functions.
+- File saving output functions with multiple possible output formats (`save.genotypes` & `save.pedigrees`) now prefer a logical/boolean parameter to select the output format, the same way as the underlying C library does, instead of needing to memorise format strings. The old string parameters will still be accepted, so no need to modify old code.
 - `break.group.into.buckets` now accepts integer bucket sizes even if they are not in R integer vector format.
 - Functions which accept vectors of integers (eg. `break.group.into.buckets`, `make.group`, `change.label.to.values`) provide more meaningful error messages when passed a character vector instead.
 

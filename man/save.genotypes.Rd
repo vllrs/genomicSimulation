@@ -2,9 +2,9 @@
 % Please edit documentation in R/sim-printers.R
 \name{save.genotypes}
 \alias{save.genotypes}
-\title{Save genotypes/lines currently tracked by the simulation.}
+\title{Save genotypes of lines in the simulation to a file}
 \usage{
-save.genotypes(filename, group = NULL, type = "R")
+save.genotypes(filename, group = NULL, type = NULL, markers.as.rows = FALSE)
 }
 \arguments{
 \item{filename}{A string containing a filename to which the output will
@@ -15,19 +15,33 @@ Otherwise, if a group of that number exists, save only lines that belong
 to that group. Non-integers and negatives raise an error. Nonexistent 
 groups result in empty files.}
 
-\item{type}{The printing format. Use a string starting with 'R' or 'r' 
+\item{type}{The printing format. It is now preferred that you use `markers.as.rows` 
+instead of `type`. For `type`, use a string starting with 'R' or 'r' 
 to save in regular format (SNPs as columns, lines as rows). Use a string
 starting with 'T' or 't' to save in transposed format (SNPs as rows, lines
 as columns). Both formats produce tab-separated matrices. The regular
 format may be slightly faster because reads from the SimData are more
 contiguous.}
+
+\item{markers.as.rows}{A logical representing the orientation of the matrix
+in the output file. If TRUE, SNP markers will be rows of the matrix, and candidate 
+lines will be columns. If FALSE, SNP markers will be columns of the matrix, and 
+candidate lines will be rows.}
 }
 \value{
 0 on success. On failure an error will be raised.
 }
 \description{
-Saves the alleles at each SNP of the
-lines stored in the SimData to a file.
+Save the genotypes of current candidates to a file, as a 
+tab-separated matrix of candidates x markers.
+}
+\details{
+From version 0.2.6 of the package, the use of parameter `markers.as.rows` 
+for defining the orientation of the matrix is preferred over use of the old 
+parameter `type`.
+
+Candidate lines are represented in the output file by their names, if they
+have names, or by their pedigree IDs if they are unnamed.
 }
 \seealso{
 Other saving functions: 

@@ -1,9 +1,9 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.2.5.04
+genomicSimulationC v0.2.5.05
 
-    Last edit: 1 October 2024
+    Last edit: 15 October 2024
 	License: MIT License
 
 Copyright (c) 2021 Kira Villiers
@@ -228,13 +228,8 @@ SOFTWARE.
 #define make_double_crosses_from_file     gsc_make_double_crosses_from_file
 
 #define split_by_bv                gsc_split_by_bv
-#define calculate_group_bvs        gsc_calculate_group_bvs
 #define calculate_bvs              gsc_calculate_bvs
-#define calculate_group_count_matrix      gsc_calculate_group_count_matrix
-#define calculate_count_matrix            gsc_calculate_count_matrix
-#define calculate_full_count_matrix       gsc_calculate_full_count_matrix 
-#define calculate_group_count_matrix_pair gsc_calculate_group_count_matrix_pair
-#define calculate_count_matrix_pair       gsc_calculate_count_matrix_pair
+#define calculate_allele_counts		gsc_calculate_allele_counts
 #define create_evenlength_blocks_each_chr gsc_create_evenlength_blocks_each_chr
 #define load_blocks                       gsc_load_blocks
 #define calculate_group_local_bvs         gsc_calculate_group_local_bvs
@@ -256,19 +251,11 @@ SOFTWARE.
 #define delete_randomaccess_iter   gsc_delete_randomaccess_iter
 
 #define save_markerblocks          gsc_save_markerblocks
-#define save_names_header          gsc_save_names_header
-#define save_allele_matrix         gsc_save_allele_matrix
-#define save_transposed_allele_matrix   gsc_save_transposed_allele_matrix
-#define save_group_genotypes       gsc_save_group_genotypes
-#define save_transposed_group_genotypes gsc_save_transposed_group_genotypes
-#define save_count_matrix          gsc_save_count_matrix
-#define save_group_count_matrix    gsc_save_group_count_matrix
-#define save_one_step_pedigree     gsc_save_one_step_pedigree 
-#define save_group_one_step_pedigree gsc_save_group_one_step_pedigree
-#define save_full_pedigree         gsc_save_full_pedigree
-#define save_group_full_pedigree   gsc_save_group_full_pedigree
+#define save_genotypes             gsc_save_genotypes
+#define save_allele_counts         gsc_save_allele_counts
+#define save_pedigrees             gsc_save_pedigrees
 #define save_bvs                   gsc_save_bvs
-#define save_group_bvs             gsc_save_group_bvs
+
 #endif
 
 /** @} */
@@ -1119,7 +1106,7 @@ typedef struct {
  *  @see gsc_create_bidirectional_iter
  */
 typedef struct {
-    gsc_SimData* d; /**< Simulation data through which to iterate */
+    gsc_AlleleMatrix* am; /**< Simulation genotypes through which to iterate */
     const gsc_GroupNum group; /**< Group through which to iterate. If it is 0,
                           * then iterate through all genotypes in the simulation.
                           * Otherwise, iterate through members of the group with
@@ -1161,7 +1148,7 @@ struct gsc_GappyIterator {
 struct gsc_EmptyListNavigator {
     gsc_SimData* d;
     gsc_GroupNum alloctogroup;
-	gsc_PedigreeID currentid;
+    gsc_PedigreeID currentid;
     gsc_AlleleMatrix* firstAM;
     gsc_AlleleMatrix* localAM;
     unsigned int localPos;
@@ -1194,6 +1181,7 @@ typedef struct {
 } gsc_RandomAccessIterator;
 
 gsc_BidirectionalIterator gsc_create_bidirectional_iter( gsc_SimData* d, const gsc_GroupNum group);
+gsc_BidirectionalIterator gsc_create_bidirectional_iter_fromAM( gsc_AlleleMatrix* am, const gsc_GroupNum group);
 gsc_RandomAccessIterator gsc_create_randomaccess_iter( gsc_SimData* d, const gsc_GroupNum group);
 
 gsc_AlleleMatrix* gsc_get_nth_AlleleMatrix( gsc_AlleleMatrix* listStart, const unsigned int n);
@@ -1509,14 +1497,12 @@ gsc_GroupNum gsc_make_double_crosses_from_file(gsc_SimData* d, const char* input
  * @{
  */
 gsc_GroupNum gsc_split_by_bv(gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID, const int top_n, const int lowIsBest);
-gsc_DecimalMatrix gsc_calculate_group_bvs(const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID);
-gsc_DecimalMatrix gsc_calculate_bvs( const gsc_AlleleMatrix* m, const gsc_EffectMatrix* e);
-int gsc_calculate_group_count_matrix( const gsc_SimData* d, const gsc_GroupNum group, const char allele, gsc_DecimalMatrix* counts);
-int gsc_calculate_group_count_matrix_pair( const gsc_SimData* d, const gsc_GroupNum group, const char allele, gsc_DecimalMatrix* counts, const char allele2, gsc_DecimalMatrix* counts2);
-int gsc_calculate_count_matrix( const gsc_AlleleMatrix* m, const char allele, gsc_DecimalMatrix* counts);
-int gsc_calculate_count_matrix_pair( const gsc_AlleleMatrix* m , const char allele, gsc_DecimalMatrix* counts, const char allele2, gsc_DecimalMatrix* counts2);
-gsc_DecimalMatrix gsc_calculate_full_count_matrix( const gsc_AlleleMatrix* m, const char allele);
-
+gsc_DecimalMatrix gsc_calculate_bvs( gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID);
+gsc_DecimalMatrix gsc_calculate_utility_bvs(gsc_BidirectionalIterator* targets, const gsc_EffectMatrix* effset);
+gsc_DecimalMatrix gsc_calculate_allele_counts( gsc_SimData* d, const gsc_GroupNum group, const char allele);
+void gsc_calculate_utility_allele_counts( const unsigned int n_markers, const unsigned int n_genotypes, const char** const genotypes,  const char allele, gsc_DecimalMatrix* counts);
+void gsc_calculate_utility_allele_counts_pair( const unsigned int n_markers, const unsigned int n_genotypes, const char** const genotypes, 
+                        const char allele, gsc_DecimalMatrix* counts, const char allele2, gsc_DecimalMatrix* counts2);
 gsc_MarkerBlocks gsc_create_evenlength_blocks_each_chr(const gsc_SimData* d, const gsc_MapID mapid, const int n);
 gsc_MarkerBlocks gsc_load_blocks(const gsc_SimData* d, const char* block_file);
 void gsc_calculate_group_local_bvs(const gsc_SimData* d, const gsc_MarkerBlocks b, const gsc_EffectID effID, const char* output_file, const gsc_GroupNum group);
@@ -1563,29 +1549,36 @@ void gsc_move_genotype(gsc_GenoLocation from, gsc_GenoLocation to, int* label_de
  * @{
  */
 
-void gsc_save_markerblocks(FILE* f, const gsc_SimData* d, const gsc_MarkerBlocks b);
+// User-facing saving functions
+void gsc_save_markerblocks(const char* fname, gsc_SimData* d, const gsc_MarkerBlocks b, const gsc_MapID labelMapID);
+void gsc_save_genotypes(const char* fname, gsc_SimData* d, const gsc_GroupNum groupID, const int markers_as_rows);
+void gsc_save_allele_counts(const char* fname, gsc_SimData* d, const gsc_GroupNum groupID, 
+											 		 const char allele, const int markers_as_rows);
+void gsc_save_pedigrees(const char* fname, gsc_SimData* d, const gsc_GroupNum groupID, const int full_pedigree);
+void gsc_save_bvs(const char* fname, gsc_SimData* d, const gsc_GroupNum groupID, const gsc_EffectID effID);
 
-void gsc_save_names_header(FILE* f, unsigned int n, const char** names);
-void gsc_save_allele_matrix(FILE* f, const gsc_AlleleMatrix* m);
-void gsc_save_transposed_allele_matrix(FILE* f, const gsc_AlleleMatrix* m, const char** markers);
+// Utility and helper saving functions
+void gsc_save_utility_markerblocks(FILE* f, const gsc_MarkerBlocks b, const unsigned int n_markers, 
+		char** const marker_names, const RecombinationMap* map);
+void gsc_save_utility_genotypes(FILE* f, gsc_BidirectionalIterator* targets, const unsigned int n_markers, char** const marker_names, const int markers_as_rows);
+void gsc_save_utility_allele_counts(FILE* f, gsc_BidirectionalIterator* targets, const unsigned int n_markers,
+		char** const marker_names, const int markers_as_rows, const char allele);
+void gsc_save_utility_pedigrees(FILE* f, gsc_BidirectionalIterator* targets,
+		const int full_pedigree, const AlleleMatrix* parent_pedigree_store);
+void gsc_save_utility_bvs(FILE* f, gsc_BidirectionalIterator* targets, const gsc_EffectMatrix* eff);
 
-void gsc_save_group_genotypes(FILE* f, gsc_SimData* d, const gsc_GroupNum group_id);
-void gsc_save_transposed_group_genotypes(FILE* f, const gsc_SimData* d, const gsc_GroupNum group_id);
+// static int gsc_helper_is_marker_in_chr(const unsigned int markerix, const gsc_LinkageGroup chr, double* pos);
 
-void gsc_save_count_matrix(FILE* f, const gsc_SimData* d, const char allele);
-void gsc_save_group_count_matrix(FILE* f, const gsc_SimData* d, const char allele, const gsc_GroupNum group);
+// static void gsc_scaffold_save_genotype_info(FILE* f, gsc_BidirectionalIterator* targets, 
+//        unsigned int n_markers, char** const marker_names, const int markers_as_rows,
+//        void (*bodycell_printer)(FILE*, gsc_GenoLocation, unsigned int, void*), void* bodycell_printer_data);
+// static void gsc_helper_output_genotypematrix_cell(FILE* f, gsc_GenoLocation loc, unsigned int markerix, void* NA);
+// static void gsc_helper_output_countmatrix_cell(FILE* f, gsc_GenoLocation loc, unsigned int markerix, void* data);
 
-void gsc_save_one_step_pedigree(FILE* f, const gsc_SimData* d);
-void gsc_save_group_one_step_pedigree(FILE* f, const gsc_SimData* d, const gsc_GroupNum group);
-void gsc_save_full_pedigree(FILE* f, const gsc_SimData* d);
-void gsc_save_group_full_pedigree(FILE* f, const gsc_SimData* d, const gsc_GroupNum group);
-void gsc_save_allelematrix_full_pedigree(FILE* f, const gsc_AlleleMatrix* m, const gsc_SimData* parents);
-void gsc_save_parents_of(FILE* f, const gsc_AlleleMatrix* m, gsc_PedigreeID p1, gsc_PedigreeID p2);
-
-void gsc_save_bvs(FILE* f, const gsc_SimData* d, const gsc_EffectID effID);
-void gsc_save_group_bvs(FILE* f, const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID);
-void gsc_save_manual_bvs(FILE* f, const gsc_DecimalMatrix* e, const gsc_PedigreeID* ids, const char** names);
-
+// static void gsc_scaffold_save_ancestry_of(const gsc_AlleleMatrix* m, gsc_PedigreeID p1, gsc_PedigreeID p2,
+//        void (*strprinter)(char*, unsigned int, void*), void (*intprinter)(int, void*), void* printer_data);
+// static void gsc_helper_ancestry_strprinter_file(char* str, unsigned int strlen, void* data);
+// static void gsc_helper_ancestry_intprinter_file(int i, void* data);
 
 /**@}*/
 

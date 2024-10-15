@@ -104,7 +104,7 @@ test_that("See.group.gene.data works", {
   expect_warning(see.group.gene.data(g2,unknown.allele='\n'))
   
   # Check counts of one allele
-  mt3 <- see.group.gene.data(1L,"A")
+  mt3 <- see.group.gene.data(1,"A")
   
   mtc <- matrix(0,nrow=dim(mt2)[1],ncol=dim(mt2)[2],dimnames=list(rownames(mt2),colnames(mt2)))
   mtc[mt2 == "AA"] <- 2

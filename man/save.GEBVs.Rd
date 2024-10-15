@@ -3,7 +3,7 @@
 \name{save.GEBVs}
 \alias{save.GEBVs}
 \alias{save.gebvs}
-\title{Save the GEBVs of genotypes currently saved to the SimData.}
+\title{Calculate and save breeding values from the simulation to a file}
 \usage{
 save.GEBVs(filename, group = NULL, eff.set = 1L)
 }
@@ -22,13 +22,8 @@ GEBVs.}
 0 on success. On failure an error will be raised.
 }
 \description{
-Calculates GEBVs for a set of genotypes using 
-the current effect values saved to the SimData, then saves those GEBVs 
-to a file.
-}
-\details{
-The function prints its results to a tab-separated file, where each
-row contains, in order, the genotype's ID, name, and calculated GEBV
+The function prints its results to a tab-separated file with three columns 
+(the genotype's ID, its name, and its calculated breeding value/GEBV).
 }
 \seealso{
 Other saving functions: 

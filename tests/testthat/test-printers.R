@@ -2,7 +2,7 @@ test_that("save.genotypes in regular format with group works", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   g <- init$groupNum
   
-  save.genotypes("imaginary2", group=g, type="R")
+  save.genotypes("imaginary2", group=g)
   f_out <- readLines("imaginary2")
   expect_identical(length(f_out), 7L)
   
@@ -18,7 +18,7 @@ test_that("save.genotypes in regular format with group works", {
 test_that("save.genotypes in regular format without group works", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
-  save.genotypes("imaginary2", type="R")
+  save.genotypes("imaginary2", markers.as.rows=FALSE)
   f_out <- readLines("imaginary2")
   expect_identical(length(f_out), 7L)
   
@@ -35,7 +35,7 @@ test_that("save.genotypes in transposed format with group works", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   g <- init$groupNum
   
-  save.genotypes("imaginary3", group=g, type="T")
+  save.genotypes("imaginary3", group=g, TRUE)
   f_out <- readLines("imaginary3")
   expect_identical(length(f_out), 4L)
   
@@ -51,7 +51,7 @@ test_that("save.genotypes in transposed format with group works", {
 test_that("save.genotypes in transposed format without group works", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
-  save.genotypes("imaginary3", type="T")
+  save.genotypes("imaginary3", markers.as.rows=TRUE)
   f_out <- readLines("imaginary3")
   expect_identical(length(f_out), 4L)
   
@@ -117,7 +117,7 @@ test_that("save.pedigrees in one-step format with group works", {
   capture_output(delete.group(g), print=F)
   capture_output(f <- cross.all.pairs(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
   
-  save.pedigrees("imaginary5", group=f, type="P")
+  save.pedigrees("imaginary5", group=f, recursive.format = FALSE)
   f_out <- readLines("imaginary5")
   expect_identical(length(f_out), 3L)
   
@@ -136,7 +136,7 @@ test_that("save.pedigrees in one-step format without group works", {
   capture_output(delete.group(g), print=F)
   capture_output(f <- cross.all.pairs(g2, give.names = T, give.ids = T, name.prefix = "F"), print=F)
   
-  save.pedigrees("imaginary5", type="P")
+  save.pedigrees("imaginary5", recursive.format=FALSE)
   f_out <- readLines("imaginary5")
   expect_identical(length(f_out), 6L)
   
@@ -160,7 +160,7 @@ test_that("save.pedigrees in recursive format with group works", {
   capture_output(fe <- cross.combinations(1L, 1L, give.names = T, give.ids = T, name.prefix = "E"), print=F)
   capture_output(f <- combine.groups(c(f,fd,fe)), print=F)
   
-  save.pedigrees("imaginary6", group=f, type="R")
+  save.pedigrees("imaginary6", group=f, recursive.format = TRUE)
   f_out <- readLines("imaginary6")
   expect_identical(length(f_out), 7L)
   
@@ -184,7 +184,7 @@ test_that("save.pedigrees in recursive format without group works", {
   capture_output(fd <- cross.all.pairs(f, give.names = T, give.ids = T, name.prefix = "D"), print=F)
   capture_output(fe <- cross.combinations(1L, 1L, give.names = T, give.ids = T, name.prefix = "E"), print=F)
   
-  save.pedigrees("imaginary6", type="R")
+  save.pedigrees("imaginary6", recursive.format=TRUE)
   f_out <- readLines("imaginary6")
   expect_identical(length(f_out), 10L)
   

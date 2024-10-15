@@ -1910,127 +1910,76 @@ SEXP SXP_make_clones(SEXP exd, SEXP s_groups, SEXP s_inherit_name, SEXP s_name,
 
 
 /*----------------------- Printers ----------------------*/
-SEXP SXP_save_genotypes(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_type) {
-	FILE* f;
+SEXP SXP_save_genotypes(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_markersasrows) {
 	const char* filename = CHAR(asChar(s_filename));
-	if ((f = fopen(filename, "w")) == NULL) {
-		error( "Failed to open file %s.\n", filename);
-	}
-
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-
-	const char t = CHAR(asChar(s_type))[0];
-	if (t == 'R' || t == 'r') {
-		if (isNull(s_group)) {
-			save_names_header(f, d->genome.n_markers, (const char**) d->genome.marker_names);
-			save_allele_matrix(f, d->m);
-		} else if (asInteger(s_group) >= 0) {
-			save_group_genotypes(f, d, GROUPNUM_IFY(asInteger(s_group)));
-		} else {
-			fclose(f);
-			error("`group` parameter is invalid");
-		}
-	} else if (t == 'T' || t == 't') {
-		if (isNull(s_group)) {
-			save_transposed_allele_matrix(f, d->m, (const char**) d->genome.marker_names);
-		} else if (asInteger(s_group) >= 0) {
-			save_transposed_group_genotypes(f, d, GROUPNUM_IFY(asInteger(s_group)));
-		} else {
-			fclose(f);
-			error("`group` parameter is invalid");
-		}
-	} else {
-		fclose(f);
-		error("`type` parameter not recognised");
+	GroupNum gr = NO_GROUP;
+	if (!isNull(s_group)) {
+	  gr = GROUPNUM_IFY(asInteger(s_group));
 	}
-
-	fclose(f);
+	int markers_as_rows;
+	if (isLogical(s_markersasrows) && asLogical(s_markersasrows) != NA_LOGICAL) {
+	  markers_as_rows = asLogical(s_markersasrows);
+	} else {
+	  error("`markers.as.rows` parameter is invalid: must be TRUE or FALSE");
+	}
+	
+	save_genotypes(filename, d, gr, markers_as_rows);
 	return ScalarInteger(0);
 }
 
-SEXP SXP_save_allele_counts(SEXP exd, SEXP s_filename, SEXP s_group, SEXP allele) {
-	FILE* f;
+SEXP SXP_save_allele_counts(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_allele, SEXP s_markersasrows) {
 	const char* filename = CHAR(asChar(s_filename));
-	if ((f = fopen(filename, "w")) == NULL) {
-		error( "Failed to open file %s\n", filename);
-	}
-
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-
-	const char t = CHAR(asChar(allele))[0];
-	if (isNull(s_group)) {
-		save_count_matrix(f, d, t);
-	} else if (asInteger(s_group) >= 0) {
-		save_group_count_matrix(f, d, t, GROUPNUM_IFY(asInteger(s_group)));
-	} else {
-		fclose(f);
-		error("`group` parameter is invalid");
+	GroupNum gr = NO_GROUP;
+	if (!isNull(s_group)) {
+	  gr = GROUPNUM_IFY(asInteger(s_group));
 	}
-
-	fclose(f);
+	const char allele = CHAR(asChar(s_allele))[0];
+	int markers_as_rows;
+	if (isLogical(s_markersasrows) && asLogical(s_markersasrows) != NA_LOGICAL) {
+	  markers_as_rows = asLogical(s_markersasrows);
+	} else {
+	  error("`markers.as.rows` parameter is invalid: must be TRUE or FALSE");
+	}
+	
+	save_allele_counts(filename, d, gr, allele, markers_as_rows);
 	return ScalarInteger(0);
 }
 
-SEXP SXP_save_pedigrees(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_type) {
-	FILE* f;
+SEXP SXP_save_pedigrees(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_fullpedigree) {
 	const char* filename = CHAR(asChar(s_filename));
-	if ((f = fopen(filename, "w")) == NULL) {
-		error( "Failed to open file %s\n", filename);
-	}
-
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-
-	const char t = CHAR(asChar(s_type))[0];
-	if (t == 'R' || t == 'r') { // full/recursive
-		if (isNull(s_group)) {
-			save_full_pedigree(f, d);
-		} else if (asInteger(s_group) >= 0) {
-			save_group_full_pedigree(f, d, GROUPNUM_IFY(asInteger(s_group)));
-		} else {
-			error("`group` parameter is invalid");
-		}
-	} else if (t == 'P' || t == 'p') { // one-step/parents
-		if (isNull(s_group)) {
-			save_one_step_pedigree(f, d);
-		} else if (asInteger(s_group) >= 0) {
-			save_group_one_step_pedigree(f, d, GROUPNUM_IFY(asInteger(s_group)));
-		} else {
-			error("`group` parameter is invalid");
-		}
+	GroupNum gr = NO_GROUP;
+	if (!isNull(s_group)) {
+	  gr = GROUPNUM_IFY(asInteger(s_group));
+	}
+	int full_pedigree;
+	if (isLogical(s_fullpedigree) && asLogical(s_fullpedigree) != NA_LOGICAL) {
+	  full_pedigree = asLogical(s_fullpedigree);
 	} else {
-		fclose(f);
-		error("`type` parameter not recognised");
+	  error("`full.pedigree` parameter is invalid: must be TRUE or FALSE");
 	}
 
-	fclose(f);
+	save_pedigrees(filename, d, gr, full_pedigree);
 	return ScalarInteger(0);
 }
 
 SEXP SXP_save_GEBVs(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_eff_set) {
-	FILE* f;
 	const char* filename = CHAR(asChar(s_filename));
-	if ((f = fopen(filename, "w")) == NULL) {
-		error( "Failed to open file %s\n", filename);
-	}
-
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	GroupNum gr = NO_GROUP;
+	if (!isNull(s_group)) {
+	  gr = GROUPNUM_IFY(asInteger(s_group));
+	}
+	
 	if (d->n_eff_sets <= 0) { error("Need to load at least one set of marker effects before requesting breeding values\n"); }
-
 	int eff_id = asInteger(s_eff_set);
 	if (eff_id == NA_INTEGER || eff_id < 0) {
 	  error("`effect.set` parameter is of invalid type\n");
 	}
 
-	if (isNull(s_group)) {
-		save_bvs(f, d, EFFECTID_IFY(eff_id));
-	} else if (asInteger(s_group) >= 0) {
-		save_group_bvs(f, d, GROUPNUM_IFY(asInteger(s_group)), EFFECTID_IFY(eff_id));
-	} else {
-		fclose(f);
-		error("`group` parameter is invalid");
-	}
-
-	fclose(f);
+  save_bvs(filename, d, gr, EFFECTID_IFY(eff_id));
 	return ScalarInteger(0);
 }
 

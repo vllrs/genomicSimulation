@@ -29,10 +29,17 @@ save.genome.model <- function(filename) {
   #return(.Call(SXP_save_simdata, sim.data$p, filename))
 }
 
-#' Save genotypes/lines currently tracked by the simulation.
+#' Save genotypes of lines in the simulation to a file
 #'
-#' Saves the alleles at each SNP of the
-#' lines stored in the SimData to a file.
+#' Save the genotypes of current candidates to a file, as a 
+#' tab-separated matrix of candidates x markers.
+#' 
+#' From version 0.2.6 of the package, the use of parameter `markers.as.rows` 
+#' for defining the orientation of the matrix is preferred over use of the old 
+#' parameter `type`.
+#' 
+#' Candidate lines are represented in the output file by their names, if they
+#' have names, or by their pedigree IDs if they are unnamed.
 #'
 #' @param filename A string containing a filename to which the output will
 #' be written
@@ -40,32 +47,54 @@ save.genome.model <- function(filename) {
 #' Otherwise, if a group of that number exists, save only lines that belong
 #' to that group. Non-integers and negatives raise an error. Nonexistent 
 #' groups result in empty files.
-#' @param type The printing format. Use a string starting with 'R' or 'r' 
+#' @param type The printing format. It is now preferred that you use `markers.as.rows` 
+#' instead of `type`. For `type`, use a string starting with 'R' or 'r' 
 #' to save in regular format (SNPs as columns, lines as rows). Use a string
 #' starting with 'T' or 't' to save in transposed format (SNPs as rows, lines
 #' as columns). Both formats produce tab-separated matrices. The regular
 #' format may be slightly faster because reads from the SimData are more
 #' contiguous.
+#' @param markers.as.rows A logical representing the orientation of the matrix
+#' in the output file. If TRUE, SNP markers will be rows of the matrix, and candidate 
+#' lines will be columns. If FALSE, SNP markers will be columns of the matrix, and 
+#' candidate lines will be rows.
 #' @return 0 on success. On failure an error will be raised.
 #' 
 #' @family saving functions
 #' @export
-save.genotypes <- function(filename, group=NULL, type="R") {
+save.genotypes <- function(filename, group=NULL, type=NULL, markers.as.rows=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_genotypes, sim.data$p, genomicSimulation:::expand.path(filename), group, type))
+	
+  if (!is.null(type)) {
+	  if (is.logical(type)) { # in this case the third parameter is intended to be markers.as.rows
+	    markers.as.rows <- type
+	  } else {
+	    .Deprecated(msg="Logical parameter `markers.as.rows` is now preferred over string parameter `type`.\ntype=\"R\" can be replaced with markers.as.rows=FALSE, and type=\"T\" with markers.as.rows=TRUE", 
+	                old="save.genotypes(filename,group,type)", new="save.genotypes(filename,group,markers.as.rows)")
+	    typeupper <- toupper(type)
+	    if (startsWith(typeupper,"T")) {
+	      markers.as.rows <- TRUE
+	    } else if (startsWith(typeupper,"R")) {
+	      markers.as.rows <- FALSE
+	    } else {
+	      stop("`type` parameter not recognised")
+	    }
+	  }
+	}
+  
+  return(.Call(SXP_save_genotypes, sim.data$p, genomicSimulation:::expand.path(filename), 
+	             group, markers.as.rows))
 }
 
-#' Generate and save count matrices for alleles in the SimData
+#' Generate and save count matrices of alleles in the simulation to a file
 #'
-#' Counts the number of occurences of a given
-#' allele at each SNP of each genotype in the selected set, and prints
-#' the output to a file.
+#' Counts the number of occurrences of a given
+#' allele at each SNP for each candidate in the simulation or for all 
+#' candidates in a group. Prints
+#' the output to a file in a tab-separated matrix.
 #'
-#' The function prints its results to a tab-separated matrix file. The first line/
-#' column header gives the name (or id if the genotype does not have a name allocated)
-#' of each genotype that is having its counts printed. After that header row, all rows 
-#' begin with the name of a SNP, followed by the number of the given allele at that
-#' marker in the corresponding genotype from the header row.
+#' Candidate lines are represented in the output file by their names, if they
+#' have names, or by their pedigree IDs if they are unnamed.
 #'
 #' @param filename A string containing a filename to which the output will
 #' be written
@@ -74,23 +103,28 @@ save.genotypes <- function(filename, group=NULL, type="R") {
 #' to that group.
 #' @param allele The first character of this string will be used as the 
 #' allele to count. 
+#' @param markers.as.rows A logical representing the orientation of the matrix
+#' in the output file. If TRUE, SNP markers will be rows of the matrix, and candidate 
+#' lines will be columns. If FALSE, SNP markers will be columns of the matrix, and 
+#' candidate lines will be rows.
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
 #' @export
-save.allele.counts <- function(filename, group=NULL, allele) {
+save.allele.counts <- function(filename, group=NULL, allele, markers.as.rows=TRUE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_allele_counts, sim.data$p, genomicSimulation:::expand.path(filename), group, allele))
+	return(.Call(SXP_save_allele_counts, sim.data$p, genomicSimulation:::expand.path(filename), 
+	             group, allele, markers.as.rows))
 }
 
-#' Save the pedigrees of genotypes currently saved to the SimData
+#' Save pedigrees from the simulation to a file
 #'
 #' Saves a record of the ancestors of genotypes
 #' for which this data was tracked. 
 #'
 #' Two formats are available for printing pedigrees. 
 #'
-#' The recursive format (type="R") recursively traces back and prints
+#' The recursive format (recursive.format=TRUE) recursively traces back and prints
 #' all known parents in the ancestry of the genotype. It first prints the
 #' ID of the genotype, followed by a tab, then recursively prints the pedigree
 #' with format [name of genotype, or ID if no name exists]=([parent1],[parent2]).
@@ -98,9 +132,9 @@ save.allele.counts <- function(filename, group=NULL, allele) {
 #' are not founder genotypes or other genotypes with unknown/untracked pedigrees.
 #' One row in the produced file corresponds to the pedigree of one line. 
 #' Genotypes produced by selfing or doubling haploids only show one parent 
-#' (eg. F2=(F1), not F2=(F1,F1)).
+#' (eg. F2=(F1), not F2=(F1,F1)). This is the default printing format.
 #' 
-#' Parents-only format (type="P") prints the line's name (or ID if it has none), 
+#' Parents-only format (recursive.format=FALSE) prints the line's name (or ID if it has none), 
 #' then the two parents' names (or IDs if they have none) to a tab-separated file.
 #' Even if both parents are the same this format prints two columns of parent names. 
 #' Each row of the produced  file is the pedigree of a different genotype. 
@@ -120,26 +154,45 @@ save.allele.counts <- function(filename, group=NULL, allele) {
 #' @param group If not set/set to NULL, will print all genotypes.
 #' Otherwise, if a group of that number exists, save only lines that belong
 #' to that group.
-#' @param type The printing format. Use a string starting with 'R' or 'r' 
+#' @param type The printing format. It is now preferred you use `recursive.format`
+#' instead of `type`. For `type`, use a string starting with 'R' or 'r' 
 #' to save in recursive format. Use a string
 #' starting with 'P' or 'p' to save in parents-only format.
+#' @param recursive.format A logical representing the format of the output pedigree.
+#' If TRUE, print the recursive pedigree that contains all ancestors that genomicSimulation 
+#' can link to a candidate in a nested-bracket formatted file. If FALSE, 
+#' print the immediate parents of the candidate in a three-column file. 
 #' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
 #' @export
-save.pedigrees <- function(filename, group=NULL, type="R") {
+save.pedigrees <- function(filename, group=NULL, type=NULL, recursive.format=TRUE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_pedigrees, sim.data$p, genomicSimulation:::expand.path(filename), group, type))
+	
+  if (!is.null(type)) {
+    if (is.logical(type)) { # in this case the third parameter is intended to be recursive.format
+      recursive.format <- type
+    } else {
+      .Deprecated(msg="Logical parameter `recursive.format` is now preferred over string parameter `type`.\ntype=\"R\" can be replaced with recursive.format=TRUE, and type=\"P\" with recursive.format=FALSE", 
+                  old="save.pedigrees(filename,group,type)", new="save.pedigrees(filename,group,recursive.format)")
+      typeupper <- toupper(type)
+      if (startsWith(typeupper,"R")) {
+        recursive.format <- TRUE
+      } else if (startsWith(typeupper,"P")) {
+        recursive.format <- FALSE
+      } else {
+        stop("`type` parameter not recognised")
+      }
+    }
+  }
+  
+  return(.Call(SXP_save_pedigrees, sim.data$p, genomicSimulation:::expand.path(filename), group, recursive.format))
 }
 
-#' Save the GEBVs of genotypes currently saved to the SimData.
+#' Calculate and save breeding values from the simulation to a file
 #'
-#' Calculates GEBVs for a set of genotypes using 
-#' the current effect values saved to the SimData, then saves those GEBVs 
-#' to a file.
-#'
-#' The function prints its results to a tab-separated file, where each
-#' row contains, in order, the genotype's ID, name, and calculated GEBV
+#' The function prints its results to a tab-separated file with three columns 
+#' (the genotype's ID, its name, and its calculated breeding value/GEBV).
 #'
 #' @param filename A string containing a filename to which the output will
 #' be written
