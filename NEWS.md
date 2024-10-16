@@ -23,14 +23,16 @@
 - File saving output functions with multiple possible output formats (`save.genotypes` & `save.pedigrees`) now prefer a logical/boolean parameter to select the output format, the same way as the underlying C library does, instead of needing to memorise format strings. The old string parameters will still be accepted, so no need to modify old code.
 - `break.group.into.buckets` now accepts integer bucket sizes even if they are not in R integer vector format.
 - Functions which accept vectors of integers (eg. `break.group.into.buckets`, `make.group`, `change.label.to.values`) provide more meaningful error messages when passed a character vector instead.
-- Use of superseded progression function names (eg. `cross.combinations` for `make.targeted.crosses`) now produce warnings. 
+- Use of superseded progression function names (eg. `cross.combinations` for `make.targeted.crosses`) now produces warnings. 
 - Superseded progression function names in tests have been replaced with their current names. 
 - Clarified in documentation which progression functions accept a vector of genetic map IDs, and which only accept a single genetic map.
+- More informative error message when calling `break.group.by.GEBV` on a nonexistent group.
 
 ## Bug Fixes
 
 - In `load.data` or `load.genotypes`, the number of markers per genotype that were successfully loaded is now accurately reflected in the printed log messages. Previously, these functions incorrectly printed out the total number of markers in the stored genetic map while claiming it was the number of markers in the genotype file that had been accurately matched to that map.
 - Patched a couple of memory leaks in the underlying C library.
+- Fixed a crash in `make.clones` with `inherit.names = TRUE` when genotypes being cloned had no names.
 
 # genomicSimulation 0.2.5
 
