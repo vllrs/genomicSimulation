@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.5.07 - last edit 16 October 2024 */
+/* genomicSimulationC v0.2.5.08 - last edit 22 October 2024 */
 
 /** Default parameter values for GenOptions, to help with quick scripts and prototypes.
  *
@@ -1233,7 +1233,9 @@ static gsc_GenoLocation gsc_nextgappy_get_nongap(struct gsc_GappyIterator* it) {
 
 
 /** A function to tidy the internal storage of genotypes after addition
- * or deletion of genotypes in the gsc_SimData. Not intended to be called by an
+ * or deletion of genotypes in the gsc_SimData. 
+ *
+ * Not intended to be called by an
  * end user - functions which require it should be calling it already.
  *
  * Ideally, we want all gsc_AlleleMatrix structs in the gsc_SimData's linked list
@@ -1241,6 +1243,9 @@ static gsc_GenoLocation gsc_nextgappy_get_nongap(struct gsc_GappyIterator* it) {
  * all gsc_AlleleMatrix structs except the last should be full (contain CONTIG_WIDTH genotypes),
  * and the last should have the remaining n genotypes at local indexes 0 to n-1
  * (so all at the start of the gsc_AlleleMatrix, with no gaps between them).
+ *
+ * This function will also clear any pre-allocated space that does not belong to
+ * any genotype (as determined by belonging to a index past AlleleMatrix->n_genotypes).
  *
  * We trust that each gsc_AlleleMatrix's n_genotypes is correct.
  *
@@ -7854,21 +7859,23 @@ gsc_GroupNum gsc_make_random_crosses(gsc_SimData* d, const gsc_GroupNum from_gro
  * the @a cap and @a noCollision conditions, or GSC_UNINIT if input parameters made it 
  * impossible to draw any number.
  */
-unsigned int gsc_randomdraw_replacementrules(gsc_SimData* d, unsigned int max, unsigned int cap, unsigned int* member_uses, unsigned int noCollision) {
+unsigned int gsc_randomdraw_replacementrules(gsc_SimData* d, unsigned int max, unsigned int cap, 
+        unsigned int* member_uses, unsigned int noCollision) {
+        
     if (max < 1 || (max == 1 && noCollision == 0)) {
-		return GSC_UNINIT;
-	}
-	unsigned int parentix = 0;
-	if (cap > 0) {  // n uses of each parent is capped at a number cap.
-		do {
+        return GSC_UNINIT;
+    }
+    unsigned int parentix = 0;
+    if (cap > 0) {  // n uses of each parent is capped at a number cap.
+        do {
             parentix = round(unif_rand() * (max - 1));
         } while (parentix == noCollision || member_uses[parentix] >= cap);
-	} else { // no cap on usage of each parent.
-		do {
+    } else { // no cap on usage of each parent.
+        do {
             parentix = round(unif_rand() * (max - 1));
         } while (parentix == noCollision);
-	}
-	return parentix;
+    }
+    return parentix;
 }
 
 /** parentChooser function parameter for gsc_make_random_crosses_between.
@@ -7884,27 +7891,27 @@ unsigned int gsc_randomdraw_replacementrules(gsc_SimData* d, unsigned int max, u
  */
 static int gsc_helper_parentchooser_cross_randomly_between(void* parentIterator, void* datastore, unsigned int* counter,
                                                            gsc_ParentChoice parents[static 2]) {
-	// caller function should guarantee that nparents is not 1. How would you make a nonselfed cross then?
-	gsc_RandomAccessIterator* it = (gsc_RandomAccessIterator*) parentIterator;
-	unsigned int* datastoreint = (unsigned int*) datastore;
+    // caller function should guarantee that nparents is not 1. How would you make a nonselfed cross then?
+    gsc_RandomAccessIterator* it = (gsc_RandomAccessIterator*) parentIterator;
+    unsigned int* datastoreint = (unsigned int*) datastore;
     unsigned int n_crosses = datastoreint[0];
     unsigned int* caps = datastoreint + 1; // caps[0], caps[1]
     unsigned int* nparents = datastoreint + 3; //nparents[0], nparents[1]
     unsigned int* map_index = datastoreint + 5; // map_index[0], map_index[1]
     unsigned int* parent_uses = datastoreint + 7; // parent_uses (nparents[0] + nparents[1] long)
-	unsigned int parentixs[2] = { 0 };
+    unsigned int parentixs[2] = { 0 };
 	
     if (*counter < n_crosses && (caps[0] == 0 || (*counter) < caps[0] * nparents[0])
                              && (caps[1] == 0 || (*counter) < caps[1] * nparents[1])) {
 		// get parents, randomly. Must not be identical or already been used too many times.
 		parentixs[0] = gsc_randomdraw_replacementrules(it[0].d, nparents[0], caps[0], parent_uses, GSC_UNINIT);
-		parentixs[1] = gsc_randomdraw_replacementrules(it[1].d, nparents[1], caps[1],  parent_uses + caps[0]*nparents[0], GSC_UNINIT);
+		parentixs[1] = gsc_randomdraw_replacementrules(it[1].d, nparents[1], caps[1],  parent_uses + nparents[0], GSC_UNINIT);
 			
 		if (caps[0] > 0) { 
 			parent_uses[parentixs[0]] += 1; 
 		} 
 		if (caps[1] > 0) {
-			parent_uses[caps[0]*nparents[0] + parentixs[1]] += 1;
+			parent_uses[nparents[0] + parentixs[1]] += 1;
 		}
 
         parents[0].loc = gsc_next_get_nth(it+0, parentixs[0]);
@@ -7912,8 +7919,8 @@ static int gsc_helper_parentchooser_cross_randomly_between(void* parentIterator,
         parents[0].mapindex = map_index[0];
         parents[1].mapindex = map_index[1];
         return GSC_IS_VALID_LOCATION(parents[0].loc) && GSC_IS_VALID_LOCATION(parents[1].loc);
-	}
-	return GSC_FALSE;
+    }
+    return GSC_FALSE;
 }
 
 /** Performs random crosses where the first parent comes from one group and the second from

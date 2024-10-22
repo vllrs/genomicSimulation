@@ -33,6 +33,7 @@
 - In `load.data` or `load.genotypes`, the number of markers per genotype that were successfully loaded is now accurately reflected in the printed log messages. Previously, these functions incorrectly printed out the total number of markers in the stored genetic map while claiming it was the number of markers in the genotype file that had been accurately matched to that map.
 - Patched a couple of memory leaks in the underlying C library.
 - Fixed a crash in `make.clones` with `inherit.names = TRUE` when genotypes being cloned had no names.
+- Fix an infinite loop in `make.random.crosses.between` when both groups had breeding usage caps and one of the {caps x group sizes} was exactly the number of requested offspring.
 
 # genomicSimulation 0.2.5
 
