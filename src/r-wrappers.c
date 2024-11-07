@@ -1530,7 +1530,11 @@ GenOptions SXP_create_genoptions(SEXP s_name, SEXP s_namePrefix, SEXP s_familySi
 	if (b == NA_LOGICAL) { error("`name` parameter is of invalid type\n"); }
 	go.will_name_offspring = b;
 
-	go.offspring_name_prefix = CHAR(asChar(s_namePrefix));
+	if (isNull(s_namePrefix)) {
+		go.offspring_name_prefix = NULL;
+	} else {
+		go.offspring_name_prefix = CHAR(asChar(s_namePrefix));
+	}
 
 	b = asInteger(s_familySize);
 	if (b == NA_INTEGER) { error("`offspring` parameter is of invalid type\n"); }
@@ -1544,13 +1548,17 @@ GenOptions SXP_create_genoptions(SEXP s_name, SEXP s_namePrefix, SEXP s_familySi
 	if (b == NA_LOGICAL) { error("`give.ids` parameter is of invalid type\n"); }
 	go.will_allocate_ids = b;
 
-	go.filename_prefix = CHAR(asChar(s_filePrefix));
+	if (isNull(s_filePrefix)) {
+		go.filename_prefix = NULL;
+	} else {
+		go.filename_prefix = CHAR(asChar(s_filePrefix));
+	}
 
 	b = asLogical(s_savePedigree);
 	if (b == NA_LOGICAL) { error("`save.pedigree` parameter is of invalid type\n"); }
 	go.will_save_pedigree_to_file = b;
-	b = asLogical(s_saveEffects);
-	if (b == NA_LOGICAL) { error("`save.gebv` parameter is of invalid type\n"); }
+	b = asInteger(s_saveEffects);
+	if (b == NA_INTEGER) { error("`save.gebv` parameter is of invalid type\n"); }
 	go.will_save_bvs_to_file = EFFECTID_IFY(b);
 	b = asLogical(s_saveGenes);
 	if (b == NA_LOGICAL) { error("`save.genotype` parameter is of invalid type\n"); }
@@ -1680,7 +1688,6 @@ SEXP SXP_make_targeted_crosses(SEXP exd, SEXP s_firstparents, SEXP s_secondparen
 			strncpy(pname, CHAR(STRING_ELT(s_secondparents, i)), sizeof(char)*NAME_LENGTH);
 			combinations[1][i] = gsc_get_index_of_name(d->m, pname);
 		}
-
 	} else if (TYPEOF(s_secondparents) == INTSXP) {
 		int* indexes = INTEGER(s_secondparents);
 		for (R_xlen_t i = 0; i < ncrosses; ++i) {
@@ -1688,6 +1695,19 @@ SEXP SXP_make_targeted_crosses(SEXP exd, SEXP s_firstparents, SEXP s_secondparen
 		}
 	} else {
 		error("second.parents must be a vector of strings or integers\n");
+	}
+	
+	R_xlen_t filleri = 0;
+	for (R_xlen_t checkeri = 0; checkeri < ncrosses; ++checkeri) {
+		if (combinations[0][checkeri] < 0 || combinations[1][checkeri] < 0) {
+			warning("Names or indexes at row %i of the crossing plan are invalid\n", checkeri);
+		} else {
+			if (checkeri != filleri) { // copy the information at "checkeri" to position "filleri"
+				combinations[0][filleri] = combinations[0][checkeri];
+				combinations[1][filleri] = combinations[1][checkeri];
+			}
+			filleri++;
+		}
 	}
 	
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {

@@ -39,22 +39,22 @@ is at the corresponding position in the vector.}
 first selfing step. After that step, exactly one selfed offspring from each
 parent will be progressed, no matter this value.}
 
-\item{retain}{A boolean, repesenting whether to save the generated
+\item{retain}{A logical value, repesenting whether to save the generated
 genotypes to memory or discard them. You may wish to discard them
 but save to file if you are generating too many crosses to save into
 memory.}
 
-\item{give.names}{A boolean representing whether or not to produce names
+\item{give.names}{A logical value representing whether or not to produce names
 for the new genotypes generated. The names produced would have format [name.prefix][id]}
 
 \item{name.prefix}{A string. If give.names is TRUE, the id is concatenated to 
 this to produce the name of each new genotype.}
 
-\item{track.pedigree}{A boolean representing whether or not to save the ids
+\item{track.pedigree}{A logical value representing whether or not to save the ids
 of the parents of each new genotype to the new genotype's pedigree. If this is 
 false, the new genotype's pedigree is unknown.}
 
-\item{give.ids}{A boolean representing whether or not to allocate each new 
+\item{give.ids}{A logical value representing whether or not to allocate each new 
 genotype an id. If this is FALSE, the new genotype is 'invisible' to pedigree trackers and
 even if the pedigree of its offspring is supposedly tracked, the pedigree trackers
 will not be able to identify the progenitors of its offspring. Furthermore, if it is
@@ -63,26 +63,32 @@ be the same. Probably you'd only have this FALSE if you were discarding the resu
 about id overflow.}
 
 \item{file.prefix}{A string representing the prefix of files produced if save.pedigree=TRUE, 
-save.gebv=TRUE, or save.genotype=TRUE.}
+save.gebv>0, or save.genotype=TRUE. If no file.prefix is provided, but at least one of 
+those settings is TRUE, the default file prefix is "out".
+save.pedigree, save.gebv, and save.genotype are known
+as the "save-as-you-go" settings, which allow you to output data on the genotypes at the same 
+time as they are being generated. The save-as-you-go settings can be used in conjunction with
+retain=FALSE, if you want to generate results from a greater number of offspring than your 
+system memory can hold.}
 
-\item{save.pedigree}{A boolean. If TRUE, saves the pedigree in recursive format of each
-generated genotype to the file with filename "[file.prefix]-pedigree". This is a text file. 
-Generated genotypes are saved progressively (up to 1000 at a time), so if the 
-full result of a crosser function call will not fit in memory, this setting can allow
-you to still get results.}
+\item{save.pedigree}{A logical value. If TRUE, saves the pedigrees of each
+generated genotype to the file with filename "[file.prefix]-pedigree.txt". 
+Pedigrees are saved progressively (1000 at a time). They are saved in recursive 
+predigree format - see @a save.pedigrees or the package vignette for more details.}
 
-\item{save.gebv}{A boolean. If TRUE, saves the GEBVs of each generated genotype to the
-file with filename "[file.prefix]-eff". This is a tab-separated text file. 
-Valuse for generated genotypes are calculated and saved progressively (up to 1000 at a 
-time), so if the full result of a crosser function call will not fit in memory, this 
-setting can allow you to still get results.}
+\item{save.gebv}{An integer representing a marker effect set identifier, or 0.
+If FALSE, 0, or negative, does not save GEBVs. If positive and corresponding to the identifier
+of a loaded set of marker effects, saves the GEBVs of each generated genotype to the
+file with filename "[file.prefix]-bv.txt". This is a tab-separated text file. 
+Breeding values for generated genotypes are calculated and saved progressively (1000 at a 
+time). See @a save.GEBVs for more details on the output format. A reminder that 
+if only one set of marker effects have been loaded, the identifier for that set of 
+marker effects is 1.}
 
-\item{save.genotype}{A boolean. If TRUE, saves the SNP/line matrix in regular format
-(generated genotypes as rows, SNPs as columns) to the file with filename 
-"[file.prefix]-genome". This is a tab-separated text file. 
-Generated genotypes are saved progressively (up to 1000 at a time), so if the 
-full result of a crosser function call will not fit in memory, this setting can allow
-you to still get results.}
+\item{save.genotype}{A logical value. If TRUE, saves the SNP matrix of the generated 
+genotypes to the file with filename "[file.prefix]-genotype.txt". 
+Generated genotypes are saved progressively (1000 at a time). The output file 
+uses genetic markers as columns and genotypes as rows. See @a save.genotypes}
 }
 \value{
 The group number of the new genotypes produced, or 0 if none could be

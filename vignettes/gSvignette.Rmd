@@ -306,7 +306,7 @@ Most commonly, if the function created or modified groups, the return value(s) a
 There are three sets of functions to get output from the simulation. The third is the most recommended, as it is the easiest to use within the R environment. 
 
 1. Calling a `save.`-prefixed function, to save data to a file. These can be called on any group or on the entire simulation, and offer a range of data types, each which has a few possible output format (see [Indexes: Output File Formats](#output-file-formats)).
-2. Saving the data about a cross at the same time as producing it (`save`-prefixed parameters in crossing functions, see [Indexes: Crossing Function Settings](#crossing-function-settings)). This enables more compact data saving, and also would allow for simulating more crosses than can be stored in working memory (by setting the parameter `retain=FALSE`). In this save-as-you-go saving, the simulation generates and saves crosses in batches of 1000. save-as-you-go is however less flexible than `save.`-prefixed functions because only the default printing format is used and only the genotypes produced by one particular crossing call are saved.
+2. Saving the data about a cross at the same time as producing it (`save`-prefixed parameters in crossing functions, see [Indexes: Crossing Function Settings](#crossing-function-settings)). This enables more compact data saving, and also would allow for simulating more crosses than can be stored in system working memory (by setting the parameter `retain=FALSE`). In this save-as-you-go saving, the simulation generates and saves crosses in batches of 1000. save-as-you-go is however less flexible than `save.`-prefixed functions because only the default printing format is used and only the genotypes produced by one particular crossing call are saved.
 3. The `see.`-prefixed functions, to pull data into R. The custom selection method interface in R is designed to work with these functions (see [Workflow: Writing Custom Selection Methods in R](#writing-custom-selection-methods-in-r)). 
 
 
@@ -706,15 +706,15 @@ Data Storage:
 All crossing functions take in a common set of settings. These are briefly described below.
 
 - `offspring` : A setting representing the number of times to do each cross.
-- `retain` : A boolean, repesenting whether to save the generated genotypes to memory or discard them. You may wish to discard them but save to file if you are generating too many crosses to save into memory.
-- `give.names` : A boolean representing whether or not to produce names for the new genotypes generated. The names produced would have format [name.prefix][id]
+- `retain` : A true/false logical value, repesenting whether to save the generated genotypes to memory or discard them. You may wish to discard them but save to file if you are generating too many crosses to save into memory.
+- `give.names` : A true/false logical value representing whether or not to produce names for the new genotypes generated. The names produced would have format [name.prefix][id]
 - `name.prefix` : A string. If give.names is TRUE, the id is concatenated to this to produce the name of each new genotype.
-- `track.pedigree` :A boolean representing whether or not to save the ids of the parents of each new genotype to the new genotype's pedigree. If this is false, the new genotype's pedigree is unknown.
-- `give.ids` : A boolean representing whether or not to allocate each new genotype an id. If this is FALSE, the new genotype is 'invisible' to pedigree trackers and even if the pedigree of its offspring is supposedly tracked, the pedigree trackers will not be able to identify the progenitors of its offspring. Furthermore, if it is false and names are generated using give.names, all names generated in the same group will be the same. Probably you'd only have this FALSE if you were discarding the results or worried about id overflow.
-- `file.prefix` : A string representing the prefix of files produced if save.pedigree=TRUE, save.gebv=TRUE, or save.genotype=TRUE.
-- `save.pedigree` : A boolean. If TRUE, saves the pedigree in recursive format of each generated genotype to the text file with filename "[file.prefix]-pedigree".
-- `save.gebv` : An integer. If 0, does not save GEBVs. If greater than 0, saves the GEBVs of each generated genotype to the tab-separated text file with filename "[file.prefix]-eff". The GEBVs will be calculated using the marker effect set whose identifier was given to this parameter.
-- `save.genotype` : A boolean. If TRUE, saves the SNP/line matrix in regular format (generated genotypes as rows, SNPs as columns) to the tab-separated text file with filename "[file.prefix]-genome".
+- `track.pedigree` :A true/false logical value representing whether or not to save the ids of the parents of each new genotype to the new genotype's pedigree. If this is false, the new genotype's pedigree is unknown.
+- `give.ids` : A true/false logical value representing whether or not to allocate each new genotype an id. If this is FALSE, the new genotype is 'invisible' to pedigree trackers and even if the pedigree of its offspring is supposedly tracked, the pedigree trackers will not be able to identify the progenitors of its offspring. Furthermore, if it is false and names are generated using give.names, all names generated in the same group will be the same. Probably you'd only have this FALSE if you were discarding the results or worried about id overflow.
+- `file.prefix` : A string representing the prefix of files produced if save.pedigree=TRUE, save.gebv=TRUE, or save.genotype=TRUE. If not specified, the default prefix is "out". save.pedigree, save.gebv, and save.genotype are known as the "save-as-you-go" settings, which allow you to output data on the genotypes at the same  time as they are being generated. The save-as-you-go settings can be used in conjunction with retain=FALSE, if you want to generate results from a greater number of offspring than your system memory can hold. 
+- `save.pedigree` : A true/false logical value. If TRUE, saves the pedigree )in recursive format) of each generated genotype to the text file with filename "[file.prefix]-pedigree.txt".
+- `save.gebv` : A marker effect set identifier, or 0 to not save GEBVs. If greater than 0, calculates the GEBVs of each generated genotype using the marker effect set with this identifier and saves them to the tab-separated text file with filename "[file.prefix]-bv.txt".
+- `save.genotype` : A true/false logical value. If TRUE, saves the SNP/line matrix (generated genotypes as rows, SNPs as columns) to the tab-separated text file with filename "[file.prefix]-genotype.txt".
 
 ## Combination crossing functions
 Two crossing functions (`make.crosses.from.file` and `make.double.crosses.from.file`) take instructions from files.
@@ -736,7 +736,7 @@ G05	G06	G01	G04
 
 ## Output File Formats
 ### Saving genotypes
-Use the function `save.genotypes` or the `save.genotype = TRUE` setting of crossing functions to save the alleles of generated genotypes across the list of SNPs.
+Use the function `save.genotypes` with `markers.as.rows = FALSE`, or the `save.genotype = TRUE` setting of crossing functions, to save the alleles of generated genotypes across the list of SNPs.
 
 It will save genotypes in the following format:
 ```
@@ -746,7 +746,9 @@ F108	TT	AA	TT
 F109	TA	AA	TT
 ```
 
-Note that this is the transpose of the usual expected input file format. Due to the linked list method used to store genotypes, it will be slower/take more passes over the data to print the transposed equivalent. However, this alternate format (shown below) is available via `save.genotypes` with `type = "T"`.
+In this example, the candidates have names ("F107", "F108" and "F109"). If candidates do not have names, their Pedigree IDs are used instead.
+
+Use of the function `save.genotypes` with `markers.as.rows = TRUE` will produce the following format, which is the transpose of the matrix above:
 ```
    F107   F108   F109
 m1 TT     TT     TA
@@ -765,14 +767,14 @@ F108	TT	AA	TT
 ### Saving pedigrees
 Pedigrees can be saved in one of two ways:
 
-- `save.pedigrees`, with `type = "P"`, which saves in the following format, even if grandparents are known:
+- `save.pedigrees`, with `recursive.format= FALSE`, which saves in the following format, even if grandparents are known:
 ```
 F2010   F107   F107
 F2011   F108   F109
 ```
-This is a tab-separated text file. The first column is the child name, and the next two columns are the names of its immediate parents (or single parent duplicated if it was produced by selfing or doubling haploids). If names are not available, IDs are used instead. If parents are unknown, the columns will be blank. 
+This is a tab-separated text file. The first column is the child name, and the next two columns are the names of its immediate parents (or single parent duplicated if it was produced by selfing or doubling haploids). If names are not available, Pedigree IDs are used instead. If parents are unknown, the columns will be blank. 
 
-- `save.pedigrees`, with `type = "R"`, or crossing with setting `save.pedigree = TRUE`, which save in the following format:
+- `save.pedigrees`, with `recursive.format = TRUE`, or crossing with setting `save.pedigree = TRUE`, which save in the following format:
 ```
 10	F2010=(F107(G01,G02))
 11	F2011=(F108(G01,G03),F109(G02,G03))
@@ -788,7 +790,7 @@ Saving GEBVs, either via the `save.GEBVs` function or the `save.gebv = TRUE` set
 2	G02	1.400000
 3	G03	1.600000
 ```
-This is a tab-separated text file. The first column is the ID, then the name of each line, then the GEBV of that line.
+This is a tab-separated text file. The first column is the ID, then the name of the candidate, then the GEBV of that candidate. If the candidate has no name, the second column is blank. If the candidate has not been allocated a PedigreeID, the first column holds the value 0.
 
 ### Saving block effect values/local GEBVs
 The effect values for each parental half of a genotype's alleles and summed up for markers in a particular block (defined in the `block.file` parameter) can be saved to a file via the `save.local.GEBVs` function.

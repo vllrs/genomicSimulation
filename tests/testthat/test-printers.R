@@ -196,3 +196,50 @@ test_that("save.pedigrees in recursive format without group works", {
   file.remove("imaginary6")
   clear.simdata()
 })
+
+test_that("save.GEBVs with group works", {
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
+  g2 <- make.clones(g, inherit.names=FALSE)
+  
+  save.GEBVs("imaginary7", group=g)
+  f_out <- readLines("imaginary7")
+  expect_identical(length(f_out), 6L)
+  
+  expect_identical(f_out[1], "1\tG01\t1.400000")
+  expect_identical(f_out[2], "2\tG02\t1.400000")
+  expect_identical(f_out[3], "3\tG03\t1.600000")
+  expect_identical(f_out[4], "4\tG04\t-0.100000")
+  expect_identical(f_out[5], "5\tG05\t0.600000")
+  expect_identical(f_out[6], "6\tG06\t-0.300000")
+  
+  file.remove("imaginary7")
+  clear.simdata()
+})
+
+test_that("save.GEBVs without group works", {
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  g <- init$groupNum
+  g2 <- make.clones(g, inherit.names=FALSE)
+  
+  save.GEBVs("imaginary8")
+  f_out <- readLines("imaginary8")
+  expect_identical(length(f_out), 12L)
+  
+  expect_identical(f_out[1], "1\tG01\t1.400000")
+  expect_identical(f_out[2], "2\tG02\t1.400000")
+  expect_identical(f_out[3], "3\tG03\t1.600000")
+  expect_identical(f_out[4], "4\tG04\t-0.100000")
+  expect_identical(f_out[5], "5\tG05\t0.600000")
+  expect_identical(f_out[6], "6\tG06\t-0.300000")
+  expect_identical(f_out[7], "7\t\t1.400000")
+  expect_identical(f_out[8], "8\t\t1.400000")
+  expect_identical(f_out[9], "9\t\t1.600000")
+  expect_identical(f_out[10], "10\t\t-0.100000")
+  expect_identical(f_out[11], "11\t\t0.600000")
+  expect_identical(f_out[12], "12\t\t-0.300000")
+  
+  file.remove("imaginary8")
+  clear.simdata()
+})
+

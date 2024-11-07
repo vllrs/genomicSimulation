@@ -32,7 +32,11 @@ save.genome.model <- function(filename) {
 #' Save genotypes of lines in the simulation to a file
 #'
 #' Save the genotypes of current candidates to a file, as a 
-#' tab-separated matrix of candidates x markers.
+#' tab-separated matrix of candidates x markers. The matrix will have row and 
+#' column headers, containing the names of markers and the names of genotypes.
+#' The first/corner cell in the table (the first number you would read from the file)
+#' will be the group number if this file is printing out the contents of a specific
+#' group, and will be blank otherwise.
 #' 
 #' From version 0.2.6 of the package, the use of parameter `markers.as.rows` 
 #' for defining the orientation of the matrix is preferred over use of the old 
@@ -47,14 +51,14 @@ save.genome.model <- function(filename) {
 #' Otherwise, if a group of that number exists, save only lines that belong
 #' to that group. Non-integers and negatives raise an error. Nonexistent 
 #' groups result in empty files.
-#' @param type The printing format. It is now preferred that you use `markers.as.rows` 
-#' instead of `type`. For `type`, use a string starting with 'R' or 'r' 
+#' @param type The printing format. USE OF `markers.as.rows` IS NOW PREFERRED OVER
+#' USE OF `type`. For `type`, use a string starting with 'R' or 'r' 
 #' to save in regular format (SNPs as columns, lines as rows). Use a string
 #' starting with 'T' or 't' to save in transposed format (SNPs as rows, lines
 #' as columns). Both formats produce tab-separated matrices. The regular
 #' format may be slightly faster because reads from the SimData are more
 #' contiguous.
-#' @param markers.as.rows A logical representing the orientation of the matrix
+#' @param markers.as.rows A logical value representing the orientation of the matrix
 #' in the output file. If TRUE, SNP markers will be rows of the matrix, and candidate 
 #' lines will be columns. If FALSE, SNP markers will be columns of the matrix, and 
 #' candidate lines will be rows.

@@ -9,6 +9,7 @@
 - Added ability to override the automatically detected file layout details in `load.data` and `load.genotypes` using the new function `define.matrix.format.details`, so that files whose format is incorrectly detected are not prevented from being loaded. 
 - Make missing alleles visible in the matrix returned by `see.group.gene.data` (previously, they would cause issues with sometimes hiding non-missing alleles, due to being represented internally by the null character '\0').
 - The orientation of the output matrix of `save.allele.counts` can now be chosen, as has previously been possible only with `save.genotypes`. 
+- Save-as-you-go saving of breeding values calculated using a non-default set of marker effects is now possible. The `save.gebv` parameter of `make.`-prefixed functions now takes the identifier for a marker effect set, instead of a logical value. The default behaviour (not saving any breeding values) has not changed.
 
 ## Improvements
 
@@ -27,6 +28,8 @@
 - Superseded progression function names in tests have been replaced with their current names. 
 - Clarified in documentation which progression functions accept a vector of genetic map IDs, and which only accept a single genetic map.
 - More informative error message when calling `break.group.by.GEBV` on a nonexistent group.
+- Added tests of the common parameters of `make.`-prefixed functions
+- Documentation of save-as-you-go parameters in `make.`-prefixed functions has been updated, as it was outdated after an update to the underlying C library. The correct output file formats and file names are now described.
 
 ## Bug Fixes
 
@@ -34,6 +37,7 @@
 - Patched a couple of memory leaks in the underlying C library.
 - Fixed a crash in `make.clones` with `inherit.names = TRUE` when genotypes being cloned had no names.
 - Fix an infinite loop in `make.random.crosses.between` when both groups had breeding usage caps and one of the {caps x group sizes} was exactly the number of requested offspring.
+- The `give.names=TRUE` setting in `make.`-prefixed functions no longer adds the unexpected prefix "NA" to names when no `name.prefix` is specified. If no `name.prefix` is specified, the names given will be identical to the pedigree IDs of the genotypes.
 
 # genomicSimulation 0.2.5
 
