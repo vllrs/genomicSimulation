@@ -517,7 +517,7 @@ get.top.10.phenotypes <- function(group, heritability) {
                      GEBV=see.group.data(group,"BV"))
   
   # simulate phenotype = genotype + environmental variation
-  # using normally distributed Ve and heritability H^2 = (Ve + Vg)/Vg
+  # using normally distributed Ve and heritability H^2 = Vg/(Vg + Ve)
   Vg <- var(info$GEBV)
   Ve <- Vg/heritability - Vg
   info$Pheno <- info$GEBV + rnorm(length(info$GEBV), mean=0, sd = sqrt(Ve))
