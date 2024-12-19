@@ -1,9 +1,9 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.2.5.08
+genomicSimulationC v0.2.5.11
 
-    Last edit: 22 October 2024
+    Last edit: 19 December 2024
 	License: MIT License
 
 Copyright (c) 2021 Kira Villiers
@@ -76,14 +76,113 @@ SOFTWARE.
 #include <R_ext/Utils.h>
 #include <Rmath.h>
 #include <ctype.h> // for isdigit etc.
+#include <stdint.h> // for SIZE_MAX etc.
 
-#define GSC_TRUE 1
-#define GSC_FALSE 0
-#define GSC_UNINIT -1  // uninitialised
+/** genomicSimulation's "logical value" type
+ *
+ * A type representing one of three possible states: true, false, or invalid/uninitialised.
+ * This type is only used when the invalid/uninitialised value is needed: otherwise, use _Bool
+ */
+typedef enum {
+    GSC_TRUE = 1,
+    GSC_FALSE = 0,
+    GSC_NA = -1
+} GSC_LOGICVAL;
+
+#ifndef GSC_ID_T
+    /** genomicSimulation's "ID" type 
+    *
+    * A type representing the maximum number of unique session IDs.
+    *
+    * It is used by the various ID types (PedigreeID, MapID, LabelID, etc.)
+    * as well as being used as the type to represent the index of the stored
+    * map/label/effect set, because the maximum potential size of these values
+    * is pinned to the size of the corresponding ID type.
+    *
+    * Can be redefined to another unsigned or signed integer type.
+    */
+    #define GSC_ID_T unsigned int
+#endif
+/** For unique session IDs, the INVALID/UNINITIALISED value is 0. */
+#define GSC_NA_ID 0
+/** When accessing the current array index of a unique session ID,
+ * the "ID not found"/failure value is -1 (for signed types) or 
+ * the maximum value of the type (for unsigned types).
+ * i.e. if GSC_ID_T is an unsigned type, the .id field of a GroupNum,
+ * PedigreeID, MapID, etc., could hold this value, but it is the 
+ * failure/NA value for an index into a list of GroupNums, PedigreeIDs, etc.
+ */
+#define GSC_NA_IDX (GSC_ID_T)-1
+// ^ Equivalent but less flexible definition: #define GSC_NA_IDX UINT_MAX
+
+#ifndef GSC_GLOBALX_T
+    /** genomicSimulation's "Candidate global index" type 
+    *
+    * A type representing the maximum number of candidates stored in simulation. 
+    *
+    * It is used to represent the maximum number of candidates that could exist
+    * or be produced in the simulation, and to represent "global" candidate indexes
+    * counted cumulatively from the first AlleleMatrix in the SimData linked list.
+    *
+    * This type should be the same size as, or larger than, GSC_LOCALX_T.
+    *
+    * Can be redefined to another unsigned or signed integer type.
+    */
+    #define GSC_GLOBALX_T unsigned int
+#endif
+/** For candidate global indexes, the INVALID/UNINITIALISED value is 
+ * -1 (for signed types) or the maximum value of the type (for unsigned types). */
+#define GSC_NA_GLOBALX (GSC_GLOBALX_T)-1
+
+#ifndef GSC_LOCALX_T
+    /** genomicSimulation's "Candidate local index" type
+    *
+    * A type at least large enough to store the number of candidates in a single
+    * AlleleMatrix (i.e., a type whose maximum value is greater than or equal to
+    * CONTIG_WIDTH).
+    *
+    * It is used to represent the index of a candidate within its current AlleleMatrix.
+    *
+    * Can be redefined to another unsigned or signed integer type.
+    */ 
+    #define GSC_LOCALX_T unsigned int
+#endif
+/** For candidate local indexes, the INVALID/UNINITIALISED value is 
+ * -1 (for signed types) or the maximum value of the type (for unsigned types). */
+#define GSC_NA_LOCALX (GSC_LOCALX_T)-1
+
+#ifndef GSC_GENOLEN_T
+    /** genomicSimulation's "Genotype length" type
+    *
+    * A type representing the maximum number of genetic markers tracked by the
+    * simulation, or the index of a particular genetic marker inside the map of 
+    * markers in the simulation.
+    *
+    * Can be redefined to another unsigned or signed integer type. 
+    */
+    #define GSC_GENOLEN_T unsigned int
+#endif
+/** For genetic marker indexes, the INVALID/UNINITIALISED value is
+ * -1 (for signed types) or the maximum value of the type (for unsigned types). */
+#define GSC_NA_GENOLEN (GSC_GENOLEN_T)-1
 
 #ifndef CONTIG_WIDTH
-	#define CONTIG_WIDTH 1000
+    #define CONTIG_WIDTH 1000
+#else
+    #if CONTIG_WIDTH > SIZE_MAX
+        #error "This C compiler cannot handle a CONTIG_WIDTH that large. Please redefine."
+    #elif CONTIG_WIDTH > UINT_MAX
+        #undef GSC_LOCALX_T
+        #undef GSC_NA_LOCALX
+        #define GSC_LOCALX_T unsigned int
+        #define GSC_NA_LOCALX SIZE_MAX
+        #undef GSC_GLOBALX_T
+        #undef GSC_NA_GLOBALX
+        #define GSC_GLOBAL_T unsigned int
+        #define GSC_NA_GLOBALX SIZE_MAX
+    #endif //else LOCALX is already defined as unsigned int
 #endif
+
 #ifndef NAME_LENGTH
 	#define NAME_LENGTH 45
 #endif
@@ -118,8 +217,19 @@ SOFTWARE.
  */
 
 #ifndef GSC_NO_SHORT_NAMES
-#define TRUE 					   GSC_TRUE
-#define FALSE 					   GSC_FALSE
+
+#define GENOLEN_T                  GSC_GENOLEN_T
+#define LOCALX_T                   GSC_LOCALX_T
+#define GLOBALX_T                  GSC_GLOBALX_T
+#define ID_T                       GSC_ID_T
+#define LOGICVAL                   GSC_LOGICVAL
+#define NA_GENOLEN                 GSC_NA_GENOLEN
+#define NA_LOCALX                  GSC_NA_LOCALX
+#define NA_GLOBALX                 GSC_NA_GLOBALX
+#define NA_IDX                     GSC_NA_IDX
+#define TRUE                       GSC_TRUE 
+#define FALSE                      GSC_FALSE
+#define NA                         GSC_NA
 
 #define PedigreeID                 gsc_PedigreeID
 #define NO_PEDIGREE                GSC_NO_PEDIGREE
@@ -223,7 +333,6 @@ SOFTWARE.
 #define make_doubled_haploids      gsc_make_doubled_haploids
 #define make_clones                gsc_make_clones
 #define make_all_unidirectional_crosses   gsc_make_all_unidirectional_crosses
-#define make_n_crosses_from_top_m_percent gsc_make_n_crosses_from_top_m_percent
 #define make_crosses_from_file            gsc_make_crosses_from_file
 #define make_double_crosses_from_file     gsc_make_double_crosses_from_file
 
@@ -389,18 +498,7 @@ n = NULL; n##cap = 0; } while (0)
 } while (0)
 
 
-/** A struct representing a single marker location. the attribute
- * `chromosome` represents the chromosome number, and `position` the
- * position on the chromosome in centiMorgans.
- *
- * @shortnamed{MarkerPosition}
- */
-typedef struct {
-	int chromosome; /**< The chromosome number */
-	float position; /**< The distance in centiMorgans along the chromosome */
-} gsc_MarkerPosition;
-
-/** A simple struct used for returning the dimensions of a matrix or table.
+/* A simple struct used for returning the dimensions of a matrix or table.
  *
  * @shortnamed{TableSize}
  */
@@ -415,30 +513,30 @@ struct gsc_TableSize {
  */
 typedef struct {
     /** The number of blocks whose details are stored here. */
-	int num_blocks;
+	GSC_GENOLEN_T num_blocks;
 
     /** Pointer to a heap array of length num_blocks
       * containing the number of markers that make up each block */
-	int* num_markers_in_block;
+	GSC_GENOLEN_T* num_markers_in_block;
 
     /** Pointer to a heap array of length num_blocks, each
      * entry in which is a pointer to a heap array with length corresponding to
      * the value of the corresponding entry in num_markers_in_block whose values
      * are the indexes in the gsc_SimData of the markers that make up that block. */
-	int** markers_in_block;
+	GSC_GENOLEN_T** markers_in_block;
 } gsc_MarkerBlocks;
 
 /** A row-major heap matrix that contains floating point numbers. `dmatrix` functions
  * are designed to act on this matrix.
  *
  * Rows make the first index of the matrix and columns the second.
-  *
+ *
  * @shortnamed{DecimalMatrix}
  */
 typedef struct {
 	double** matrix; /**< The actual matrix and contents */
-	int rows;        /**< Number of rows in the matrix */
-	int cols;        /**< number of columns in the matrix */
+	unsigned int rows;        /**< Number of rows in the matrix */
+	unsigned int cols;        /**< number of columns in the matrix */
 } gsc_DecimalMatrix;
 
 
@@ -448,12 +546,12 @@ typedef struct {
  * @shortnamed{PedigreeID}
  */
 typedef struct {
-    unsigned int id;
+    GSC_ID_T id;
 } gsc_PedigreeID;
 /** Empty/null value for pedigree fields.
  *
  * @shortnamed{NO_PEDIGREE} */
-#define GSC_NO_PEDIGREE (gsc_PedigreeID){.id=0}
+#define GSC_NO_PEDIGREE (gsc_PedigreeID){.id=GSC_NA_ID}
 
 
 /** A type representing the identifier of a group of genotypes
@@ -461,48 +559,48 @@ typedef struct {
  * @shortnamed{GroupNum}
  */
 typedef struct {
-    unsigned int num;
+    GSC_ID_T num;
 } gsc_GroupNum;
 /** Empty/null value for group allocations.
  *
  * @shortnamed{NO_GROUP} */
-#define GSC_NO_GROUP (gsc_GroupNum){.num=0}
+#define GSC_NO_GROUP (gsc_GroupNum){.num=GSC_NA_ID}
 
 /** A type representing a particular loaded set of marker effects
  *
  * @shortnamed{EffectID}
  */
 typedef struct {
-    int id;
+    GSC_ID_T id;
 } gsc_EffectID;
 /** Empty/null value for effect set identifiers.
  *
  * @shortnamed{NO_EFFECTSET} */
-#define GSC_NO_EFFECTSET (gsc_EffectID){.id=0}
+#define GSC_NO_EFFECTSET (gsc_EffectID){.id=GSC_NA_ID}
 
 /** A type representing a particular custom label
  *
  * @shortnamed{LabelID}
  */
 typedef struct {
-    int id;
+    GSC_ID_T id;
 } gsc_LabelID;
 /** Empty/null value for custom label identifiers.
  *
  * @shortnamed{NO_LABEL} */
-#define GSC_NO_LABEL (gsc_LabelID){.id=0}
+#define GSC_NO_LABEL (gsc_LabelID){.id=GSC_NA_ID}
 
 /** A type representing a particular loaded recombination map
  *
  * @shortnamed{MapID}
  */
 typedef struct {
-    int id;
+    GSC_ID_T id;
 } gsc_MapID;
 /** Empty/null value for recombination map identifiers.
  *
  * @shortnamed{NO_MAP} */
-#define GSC_NO_MAP (gsc_MapID){.id=0}
+#define GSC_NO_MAP (gsc_MapID){.id=GSC_NA_ID}
 
 /** Simple crate that stores a GroupNum, a MapID, and an EffectID.
  *
@@ -529,20 +627,20 @@ struct gsc_MultiIDSet {
  * @shortnamed{GenOptions}
 */
 typedef struct {
-	int will_name_offspring; /**< A boolean: whether generated offspring should be given names. */
+	_Bool will_name_offspring; /**< A boolean: whether generated offspring should be given names. */
     const char* offspring_name_prefix; /**< If `will_name_offspring` is true, generated
                            * offspring are named with the concatenation {offspring_name_prefix}{index}. */
 
-	int family_size; /**< The number of offspring to produce from each cross.*/
+	GSC_GLOBALX_T family_size; /**< The number of offspring to produce from each cross.*/
 
-	int will_track_pedigree; /**< A boolean: whether to track parentage of generated offspring.*/
-	int will_allocate_ids; /**< A boolean: whether to allocate generated offspring session-
+	_Bool will_track_pedigree; /**< A boolean: whether to track parentage of generated offspring.*/
+	_Bool will_allocate_ids; /**< A boolean: whether to allocate generated offspring session-
                             * unique IDs. IDs are used for pedigree tracking. The
                             * offspring of an anonymous individual (one without an ID)
                             * cannot identify that individual as their parent. */
 
     const char* filename_prefix; /**< A string used in save-as-you-go file names. */
-	int will_save_pedigree_to_file; /**< A boolean. If true, the full/recursive
+	_Bool will_save_pedigree_to_file; /**< A boolean. If true, the full/recursive
                             * pedigrees of every offspring generated in the cross
                             * are saved to "{filename_prefix}-pedigree.txt", even
                             * if `will_save_to_simdata` is false.
@@ -554,12 +652,18 @@ typedef struct {
                             * are saved to "{filename_prefix}-bv.txt", even
                             * if `will_save_to_simdata` is false.
                             * BVs are saved in the format of gsc_save_bvs() */
-	int will_save_alleles_to_file; /**< A boolean. If true, the set of alleles
+	_Bool will_save_alleles_to_file; /**< A boolean. If true, the set of alleles
                             * of every offspring generated in the cross
                             * are saved to "{filename_prefix}-genotype.txt", even
                             * if `will_save_to_simdata` is false.
                             * Genotypes are saved in the format of gsc_save_allele_matrix()*/
-	int will_save_to_simdata; /**< A boolean. If true, the generated offspring exist
+    /* _Bool will_save_recombinations_to_file; **< A boolean. If true, will log recombination
+                            * events to "{filename_prefix}-recomb.txt". This information
+                            * is not accessible by another saver function - it is only accessible
+                            * if logged by the function generating a new set of offspring.
+                            * The columns of the log file are:
+                            */
+	_Bool will_save_to_simdata; /**< A boolean. If true, the generated offspring exist
                             * in the gsc_SimData struct after the function executes.
                             * If false, they are discarded after creation. */
 } gsc_GenOptions;
@@ -576,10 +680,10 @@ typedef struct {
                                    * the number of crossovers in this linkage group will be
                                    * drawn when simulating meiosis. Probably corresponds to
                                    * the length of the chromosome/linkage group in Morgans. */
-    unsigned int n_markers; /**< The number of markers in this chromosome/linkage group. Their indexes in
+    GSC_GENOLEN_T n_markers; /**< The number of markers in this chromosome/linkage group. Their indexes in
                        * the simulation's corresponding @a gsc_KnownGenome and @a gsc_AlleleMatrix are
                        * indexes [ @a first_marker_index ] to [ @a first_marker_index + @a n_markers - 1 ] */
-    unsigned int first_marker_index; /**< The index of the first marker in this chromosome/linkage group
+    GSC_GENOLEN_T first_marker_index; /**< The index of the first marker in this chromosome/linkage group
                           * in the simulation's corresponding @a gsc_KnownGenome and @a gsc_AlleleMatrix. */
     double* dists; /**< Array with @a n_markers entries, containing at position i
                * the distance in centimorgans along the linkage group of the i-th marker,
@@ -600,8 +704,8 @@ typedef struct {
                                    * the number of crossovers in this linkage group will be
                                    * drawn when simulating meiosis. Probably corresponds to
                                    * the length of the chromosome/linkage group in Morgans. */
-    unsigned int n_markers; /**< The number of markers in this chromosome/linkage group. */
-    unsigned int* marker_indexes; /**< Array with @a n_markers entries. Each entry is the index of a marker
+    GSC_GENOLEN_T n_markers; /**< The number of markers in this chromosome/linkage group. */
+    GSC_GENOLEN_T* marker_indexes; /**< Array with @a n_markers entries. Each entry is the index of a marker
                           * in the simulation's corresponding @a gsc_KnownGenome and @a gsc_AlleleMatrix.
                           * This set may represent a different linkage group or different ordering
                           * of markers to the default gsc_KnownGenome set. Positions in @a dists correspond
@@ -613,22 +717,16 @@ typedef struct {
                * group is normalised to 1. */
 } gsc_ReorderedLinkageGroup;
 
-/** Enumerate possible types of recombination within linkage groups.
- *
- * @shortnamed{LinkageGroupType}
- */
-enum gsc_LinkageGroupType {
-    GSC_LINKAGEGROUP_SIMPLE, /**< @see gsc_SimpleLinkageGroup */
-    GSC_LINKAGEGROUP_REORDER /**< @see gsc_ReorderedLinkageGroup */
-};
-
 /** A generic store for a linkage group, used to simulate meiosis on
  *  a certain subset of markers.
  *
  * @shortnamed{LinkageGroup}
  */
 typedef struct {
-    enum gsc_LinkageGroupType type;
+    enum gsc_LinkageGroupType {
+        GSC_LINKAGEGROUP_SIMPLE, /**< @see gsc_SimpleLinkageGroup */
+        GSC_LINKAGEGROUP_REORDER /**< @see gsc_ReorderedLinkageGroup */
+    } type;
     union {
         gsc_SimpleLinkageGroup simple;
         gsc_ReorderedLinkageGroup reorder;
@@ -640,7 +738,7 @@ typedef struct {
  * @shortnamed{RecombinationMap}
  */
 typedef struct {
-    int n_chr; /**< The number of chromosomes/linkage groups represented in the map. **/
+    unsigned int n_chr; /**< The number of chromosomes/linkage groups represented in the map. **/
     gsc_LinkageGroup* chrs; /**< Vector of @a n_chr recombination maps, one for each chromosome/linkage group
               * in this recombination map. */
 
@@ -651,14 +749,14 @@ typedef struct {
  * @shortnamed{KnownGenome}
  */
 typedef struct {
-    unsigned int n_markers; /**< The total number of markers.**/
+    GSC_GENOLEN_T n_markers; /**< The total number of markers.**/
     char** marker_names; /**< A vector of @a n_markers strings containing the names of markers, ordered
                           * according to their index in an AlleleMatrix. */
     char*** names_alphabetical; /**< A vector of @a n_markers pointers to names in @a marker_names, ordered
                           * in alphabetical order of the names. For speeding up functions involving loading
                           * new genetic maps, or observing genotypes at particular markers. */
 
-    int n_maps; /**< The number of recombination maps currently stored. */
+    GSC_ID_T n_maps; /**< The number of recombination maps currently stored. */
     gsc_MapID* map_ids; /**< A vector of @a n_maps identifiers for each of the recombination maps
                          * currently stored. These IDs correspond to the map in the corresponding
                          * position in the vector @a maps. */
@@ -683,8 +781,8 @@ struct gsc_AlleleMatrix {
      * gsc_AlleleMatrix is added to the linked list when there's a need to save more.*/
 	char* alleles[CONTIG_WIDTH];
 
-	int n_genotypes; /**< Number of genotypes currently loaded in this matrix.*/
-	int n_markers; /**< Number of markers across which genotypes are tracked. This has
+	GSC_LOCALX_T n_genotypes; /**< Number of genotypes currently loaded in this matrix.*/
+	GSC_GENOLEN_T n_markers; /**< Number of markers across which genotypes are tracked. This has
                     * redundancy with gsc_SimData and other members of its linked list
                     * but it's good to know how big your own `alleles` array is.*/
 
@@ -696,7 +794,7 @@ struct gsc_AlleleMatrix {
                     * parents of this genotype (if tracked), or 0 if we don't know/care.*/
     gsc_GroupNum groups[CONTIG_WIDTH]; /**< Group allocation of each genotype. */
 
-    int n_labels; /**< Number of custom labels currently available to this gsc_AlleleMatrix. This has
+    GSC_ID_T n_labels; /**< Number of custom labels currently available to this gsc_AlleleMatrix. This has
                     * redundancy with gsc_SimData and other members of its linked list
                     * but it's good to know how big your own `labels` array is.*/
     int** labels; /**< Pointer to list of labels. Size of first dimension is n_labels,
@@ -725,7 +823,7 @@ typedef struct {
  * @shortnamed{SimData}
  */
 typedef struct {
-    int n_labels; /**< The number of custom labels in the simulation.*/
+    GSC_ID_T n_labels; /**< The number of custom labels in the simulation.*/
     gsc_LabelID* label_ids; /**< The identifier number of each label in the simulation, in order
                      * of their lookup index. */
     int* label_defaults; /**< Array containing the default (birth) value of each
@@ -739,7 +837,7 @@ typedef struct {
                       * gsc_AlleleMatrix is start of a linked list if there are
                       * many genotypes. */
 
-    int n_eff_sets; /**< The number of sets of allele effects in the simulation **/
+    GSC_ID_T n_eff_sets; /**< The number of sets of allele effects in the simulation **/
     gsc_EffectID* eff_set_ids; /**< The identifier number of each set of allele effects in the simulation,
                      * ordered by their lookup index. */
     gsc_EffectMatrix* e; /**< Array of n_eff_sets gsc_EffectMatrix, optional for the use of the simulation.
@@ -750,7 +848,7 @@ typedef struct {
     gsc_PedigreeID current_id; /**< Highest SimData-unique ID that has been generated
                               * so far. Used to track which IDs have already been
                               * given out.*/
-    unsigned int n_groups; /**< Number of groups currently existing in simulation. It is
+    GSC_ID_T n_groups; /**< Number of groups currently existing in simulation. It is
                         * guaranteed to never be less than the number of groups in simulation
                         * even if not perfectly accurate. */
 } gsc_SimData;
@@ -799,12 +897,12 @@ typedef struct {
 
 /** Represent a cell read by a @a gsc_TableFileReader */
 typedef struct {
-    int isCellShallow; /**< is the string in 'cell' a shallow copy or deep copy? */
+    _Bool isCellShallow; /**< is the string in 'cell' a shallow copy or deep copy? */
     char* cell; /**< deep copy of the cell contents, or NULL */
     unsigned int cell_len; /**< length of cell contents (because a shallow copy may not be null-terminated) */
     int predCol; /**< since last read, how many column gaps have there been? */
     int predNewline; /**< since last read, how many newlines have there been? */
-    int eof; /**< are we (this cell) at end of file */
+    _Bool eof; /**< are we (this cell) at end of file */
 } gsc_TableFileCell;
 
 
@@ -915,11 +1013,11 @@ enum gsc_GenotypeFileType {
 
 /** Variants in the format of a genotype matrix file. */
 struct gsc_GenotypeFile_MatrixFormat {
-    int has_header; /** < Boolean: Is the first row of the file a header row? (Note: genotype matrix files must have
+    GSC_LOGICVAL has_header; /** < Boolean: Is the first row of the file a header row? (Note: genotype matrix files must have
                     * row headers, so this setting only applies to the presence/absense of column headers).
                     * Set to GSC_TRUE or GSC_FALSE if this detail of the formatting is known, or a negative number like GSC_UNINIT if
                     * the detail is not known and file loaders should auto-detect headers. */
-    int markers_as_rows; /** < Boolean: Are genetic markers the rows of the matrix (GSC_TRUE) or the columns of the matrix (GSC_FALSE)?
+    GSC_LOGICVAL markers_as_rows; /** < Boolean: Are genetic markers the rows of the matrix (GSC_TRUE) or the columns of the matrix (GSC_FALSE)?
                     * Set to GSC_TRUE or GSC_FALSE if this detail of the formatting is known, or a negative number like GSC_UNINIT if
                     * the detail is not known and file loaders should auto-detect matrix orientation. */
     enum gsc_GenotypeFileCellStyle cell_style; /** < How are the alleles for a genotype and marker encoded, in the body of the matrix?
@@ -946,7 +1044,8 @@ typedef struct {
 /** File format specifier to instruct genomicSimulation loaders to auto-detect all details of the file format. */
 #define GSC_DETECT_FILE_FORMAT ((gsc_FileFormatSpec){.filetype=GSC_GENOTYPEFILE_UNKNOWN})
 
-gsc_FileFormatSpec gsc_define_matrix_format_details(const int has_header, const int markers_as_rows, const enum gsc_GenotypeFileCellStyle cell_style);
+gsc_FileFormatSpec gsc_define_matrix_format_details(const GSC_LOGICVAL has_header, 
+        const GSC_LOGICVAL markers_as_rows, const enum gsc_GenotypeFileCellStyle cell_style);
 
 /** @} */
 /** @defgroup supporters Utils/Supporting Functions
@@ -954,41 +1053,40 @@ gsc_FileFormatSpec gsc_define_matrix_format_details(const int has_header, const 
  * @{
  */
 struct gsc_TableSize gsc_get_file_dimensions(const char* filename, const char sep);
-int gsc_get_from_ordered_uint_list(const unsigned int target, const unsigned int listLen, const unsigned int* list);
-int gsc_get_from_ordered_pedigree_list(const gsc_PedigreeID target, const unsigned int listLen, const gsc_PedigreeID* list);
-int gsc_get_from_unordered_str_list(const char* target, const int listLen, const char** list);
-int gsc_get_from_ordered_str_list(const char* target, const int listLen, const char** list);
+//int gsc_get_from_ordered_uint_list(const unsigned int target, const unsigned int listLen, const unsigned int* list);
+GSC_LOCALX_T gsc_get_from_ordered_pedigree_list(const gsc_PedigreeID target, const GSC_LOCALX_T listLen, const gsc_PedigreeID* list);
+unsigned int gsc_get_from_unordered_str_list(const char* target, const unsigned int listLen, const char** list);
+unsigned int gsc_get_from_ordered_str_list(const char* target, const unsigned int listLen, const char** list);
 
 
-void gsc_shuffle_up_to( unsigned int* sequence, const unsigned int total_n, const unsigned int n_to_shuffle);
-unsigned int gsc_randomdraw_replacementrules(gsc_SimData* d, unsigned int max, unsigned int cap, unsigned int* member_uses, unsigned int noCollision);
+void gsc_shuffle_up_to( GSC_GLOBALX_T* sequence, const unsigned int total_n, const unsigned int n_to_shuffle);
+GSC_GLOBALX_T gsc_randomdraw_replacementrules(gsc_SimData* d, GSC_GLOBALX_T max, GSC_GLOBALX_T cap, 
+                                              GSC_GLOBALX_T* member_uses, GSC_GLOBALX_T noCollision);
 
 gsc_LabelID gsc_create_new_label(gsc_SimData* d, const int setTo);
 void gsc_change_label_default(gsc_SimData* d, const gsc_LabelID whichLabel, const int newDefault);
 void gsc_change_label_to(gsc_SimData* d, const gsc_GroupNum whichGroup, const gsc_LabelID whichLabel, const int setTo);
-void gsc_change_label_by_amount(gsc_SimData* d, const gsc_GroupNum whichGroup, const gsc_LabelID whichLabel, const int byValue);
-void gsc_change_label_to_values(gsc_SimData* d, const gsc_GroupNum whichGroup, const int startIndex, const gsc_LabelID whichLabel,
-                          const int n_values, const int* values);
-
-//static void gsc_get_sorted_markers(gsc_SimData* d, int actual_n_markers);
-//static void gsc_get_chromosome_locations(gsc_SimData *d);
-
-void gsc_change_names_to_values(gsc_SimData* d, const gsc_GroupNum whichGroup, const int startIndex, const int n_values, const char** values);
-void gsc_change_allele_symbol(gsc_SimData* d, const char* which_marker, char from, char to);
-//static void gsc_set_names(gsc_AlleleMatrix* a, const char* prefix, const int suffix, const int from_index);
-//static void gsc_set_ids(gsc_SimData* d, const int from_index, const int to_index);
+void gsc_change_label_by_amount(gsc_SimData* d, const gsc_GroupNum whichGroup, const gsc_LabelID whichLabel,
+                                const int byValue);
+void gsc_change_label_to_values(gsc_SimData* d, const gsc_GroupNum whichGroup, const GSC_GLOBALX_T startIndex, 
+                                const gsc_LabelID whichLabel, const unsigned int n_values, const int* values);
+void gsc_change_names_to_values(gsc_SimData* d, const gsc_GroupNum whichGroup, const GSC_GLOBALX_T startIndex, 
+                                const unsigned int n_values, const char** values);
+void gsc_change_allele_symbol(gsc_SimData* d, const char* which_marker, const char from, const char to);
+//static void gsc_set_names(gsc_AlleleMatrix* a, const char* prefix, const int suffix, const GSC_LOCALX_T from_index);
 int gsc_get_integer_digits(const int i);
-int gsc_get_index_of_label( const gsc_SimData* d, const gsc_LabelID label );
-int gsc_get_index_of_eff_set( const gsc_SimData* d, const gsc_EffectID eff_set_id );
-int gsc_get_index_of_map( const gsc_SimData* d, const gsc_MapID map );
-int gsc_get_index_of_genetic_marker(const char* target, gsc_KnownGenome g, unsigned int* out);
+GSC_ID_T gsc_get_index_of_label( const gsc_SimData* d, const gsc_LabelID label );
+GSC_ID_T gsc_get_index_of_eff_set( const gsc_SimData* d, const gsc_EffectID eff_set_id );
+GSC_ID_T gsc_get_index_of_map( const gsc_SimData* d, const gsc_MapID map );
+_Bool gsc_get_index_of_genetic_marker(const char* target, gsc_KnownGenome g, GSC_GENOLEN_T* out);
 
 gsc_LabelID gsc_get_new_label_id( const gsc_SimData* d );
 gsc_EffectID gsc_get_new_eff_set_id( const gsc_SimData* d );
 gsc_MapID gsc_get_new_map_id( const gsc_SimData* d);
-gsc_GroupNum gsc_get_next_free_group_num( const int n_existing_groups, const gsc_GroupNum* existing_groups, int* cursor,  gsc_GroupNum previous);
+gsc_GroupNum gsc_get_next_free_group_num( const unsigned int n_existing_groups, const gsc_GroupNum* existing_groups, 
+                                          unsigned int* cursor, gsc_GroupNum previous);
 gsc_GroupNum gsc_get_new_group_num( gsc_SimData* d );
-void gsc_get_n_new_group_nums( gsc_SimData* d, const int n, gsc_GroupNum* result);
+void gsc_get_n_new_group_nums( gsc_SimData* d, const unsigned int n, gsc_GroupNum* result);
 void gsc_condense_allele_matrix( gsc_SimData* d);
 //static void* gsc_malloc_wrap(const unsigned int size, char exitonfail);
 
@@ -1008,35 +1106,50 @@ void gsc_condense_allele_matrix( gsc_SimData* d);
  *
  * @{
  */
-gsc_AlleleMatrix* gsc_create_empty_allelematrix(const int n_markers, const int n_labels, const int* labelDefaults, const int n_genotypes);
+gsc_AlleleMatrix* gsc_create_empty_allelematrix(const GSC_GENOLEN_T n_markers, const GSC_ID_T n_labels, 
+                                                const int* labelDefaults, const GSC_LOCALX_T n_genotypes);
 gsc_SimData* gsc_create_empty_simdata();
 void gsc_clear_simdata(gsc_SimData* d);
 
 gsc_GroupNum gsc_load_genotypefile(SimData* d, const char* filename, const gsc_FileFormatSpec format);
-// static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detect_orientation(const SimData* d, const gsc_TableFileCell* cellqueue, const unsigned int firstrowlen, const unsigned int queuelen, struct gsc_GenotypeFile_MatrixFormat format, const char* filenameforlog);
-// static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detect_cellstyle(const gsc_TableFileCell* cellqueue, const unsigned int firstrowlen, const unsigned int queuelen, struct gsc_GenotypeFile_MatrixFormat format, const char* filenameforlog);
+// static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detect_orientation(const SimData* d, 
+        //const gsc_TableFileCell* cellqueue, const unsigned int firstrowlen, const unsigned int queuelen, 
+        //struct gsc_GenotypeFile_MatrixFormat format, const char* filenameforlog);
+// static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detect_cellstyle(
+        //const gsc_TableFileCell* cellqueue, const unsigned int firstrowlen, const unsigned int queuelen, 
+        // struct gsc_GenotypeFile_MatrixFormat format, const char* filenameforlog);
 // static enum gsc_GenotypeFileCellStyle gsc_helper_genotype_matrix_identify_cell_style(char* cell);
-// static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detect_header(const gsc_TableFileCell* cellqueue, const unsigned int firstrowlen, const unsigned int queuelen, struct gsc_GenotypeFile_MatrixFormat format, const char* filenameforlog);
-// static int gsc_helper_genotypefile_matrix_detect_cornercell_presence(const unsigned int ncellsfirstrow, const unsigned int ncellssecondrow, const int secondrowheaderisempty);
+// static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detect_header(
+    //const gsc_TableFileCell* cellqueue, const unsigned int firstrowlen, const unsigned int queuelen, 
+    // struct gsc_GenotypeFile_MatrixFormat format, const char* filenameforlog);
+// static int gsc_helper_genotypefile_matrix_detect_cornercell_presence(const unsigned int ncellsfirstrow, 
+    // const unsigned int ncellssecondrow, const int secondrowheaderisempty);
 
 
 // static struct gsc_MultiIDSet gsc_load_genotypefile_matrix(gsc_SimData* d, const char* filename, const char* mapfile)
-// static void gsc_helper_parse_genofile(char* filename, enum gsc_GenotypeFileType type, unsigned int* n_markers, char*** marker_names, unsigned int* n_lines, char*** line_names, struct gsc_GenotypeFileCell** cells)
+// static void gsc_helper_parse_genofile(char* filename, enum gsc_GenotypeFileType type, 
+        //GSC_GENOLEN_T* n_markers, char*** marker_names, GSC_GLOBALX_T* n_lines, char*** line_names, 
+        //struct gsc_GenotypeFileCell** cells)
 
-// static int gsc_helper_genotypefile_matrix_check_markers_are_rows(gsc_SimData* d, int hasheader, gsc_TableFileCell* firstrow, unsigned int firstrowlen, gsc_TableFileCell secondrowcellone)
-//static void gsc_helper_genotypecell_to_allelematrix(GenoLocation loc, unsigned int markerix, enum gsc_GenotypeFileCellStyle style, char* cell, gsc_SimData* forrng)
+// static int gsc_helper_genotypefile_matrix_check_markers_are_rows(gsc_SimData* d, int hasheader, 
+        //gsc_TableFileCell* firstrow, unsigned int firstrowlen, gsc_TableFileCell secondrowcellone)
+//static void gsc_helper_genotypecell_to_allelematrix(GenoLocation loc, GSC_GENOLEN_T markerix, 
+        //enum gsc_GenotypeFileCellStyle style, char* cell, gsc_SimData* forrng)
 
 gsc_MapID gsc_load_mapfile(gsc_SimData* d, const char* filename);
-// static unsigned int gsc_helper_sort_markerlist(unsigned int n_markers, struct gsc_MapfileUnit* markerlist) 
-// static unsigned int gsc_helper_parse_mapfile(const char* filename, struct gsc_MultiTypeUnit** out)
+// static GSC_GENOLEN_T gsc_helper_sort_markerlist(GSC_GENOLEN_T n_markers, struct gsc_MapfileUnit* markerlist) 
+// static GSC_GENOLEN_T gsc_helper_parse_mapfile(const char* filename, struct gsc_MultiTypeUnit** out)
 // static gsc_MapID gsc_helper_insert_recombmap_into_simdata(gsc_SimData* d, gsc_RecombinationMap map)
-// static unsigned int gsc_helper_str_markerlist_leftjoin(gsc_KnownGenome g, unsigned int n_markers_in_list, struct gsc_MapfileUnit** markerlist)
-gsc_MapID gsc_create_recombmap_from_markerlist(gsc_SimData* d, unsigned int n_markers, struct gsc_MapfileUnit* markerlist);
-gsc_MapID gsc_create_uniformspaced_recombmap(gsc_SimData* d, unsigned int n_markers, char** markernames, double expected_n_recombinations);
+// static GSC_GENOLEN_T gsc_helper_str_markerlist_leftjoin(gsc_KnownGenome g, GSC_GENOLEN_T n_markers_in_list, 
+        //struct gsc_MapfileUnit** markerlist)
+gsc_MapID gsc_create_recombmap_from_markerlist(gsc_SimData* d, GSC_GENOLEN_T n_markers, struct gsc_MapfileUnit* markerlist);
+gsc_MapID gsc_create_uniformspaced_recombmap(gsc_SimData* d, GSC_GENOLEN_T n_markers, char** markernames, 
+                                             double expected_n_recombinations);
 
 gsc_EffectID gsc_load_effectfile(gsc_SimData* d, const char* filename);
 
-struct gsc_MultiIDSet gsc_load_data_files(gsc_SimData* d, const char* data_file, const char* map_file, const char* effect_file, const gsc_FileFormatSpec format);
+struct gsc_MultiIDSet gsc_load_data_files(gsc_SimData* d, const char* data_file, const char* map_file, 
+                                          const char* effect_file, const gsc_FileFormatSpec format);
 /** @} */
 
 
@@ -1065,7 +1178,7 @@ struct gsc_MultiIDSet gsc_load_data_files(gsc_SimData* d, const char* data_file,
 typedef struct {
     gsc_AlleleMatrix* localAM; /**< Pointer to the gsc_AlleleMatrix in which
                             * the genotype can be found. */
-    int localPos; /**< Index in the localAM where the genotype can be
+    GSC_LOCALX_T localPos; /**< Index in the localAM where the genotype can be
                    * found (min value: 0. Max value: CONTIG_WIDTH-1). */
 } gsc_GenoLocation;
 
@@ -1073,11 +1186,11 @@ typedef struct {
  *
  * @shortnamed{INVALID_GENO_LOCATION}
  */
-#define GSC_INVALID_GENO_LOCATION (gsc_GenoLocation){.localAM=0,.localPos=-1}
+#define GSC_INVALID_GENO_LOCATION (gsc_GenoLocation){.localAM=0,.localPos=GSC_NA_LOCALX}
 /** Check if a @ref GenoLocation is @ref INVALID_GENO_LOCATION
  *
  * @shortnamed{IS_VALID_LOCATION} */
-#define GSC_IS_VALID_LOCATION(g) (g.localAM != 0 && g.localPos != -1)
+#define GSC_IS_VALID_LOCATION(g) (g.localAM != 0 && g.localPos != GSC_NA_LOCALX)
 
 /** Identify whether a gsc_GenoLocation is INVALID_GENO_LOCATION
  *
@@ -1095,7 +1208,8 @@ static inline int gsc_isValidLocation(const gsc_GenoLocation g) {
 
 typedef struct {
     gsc_GenoLocation loc; /**< Location in the simulation where this parent is stored. */
-    unsigned int mapindex; /**< Index in d->genome.maps of the recombination map to use when producing gametes from this parent. */
+    GSC_ID_T mapindex; /**< Index in d->genome.maps of the recombination map to use when producing gametes 
+                                from this parent. Stores an index, not an ID */
 } gsc_ParentChoice;
 
 /** A structure to iterate forwards and backwards through all
@@ -1111,7 +1225,7 @@ typedef struct {
                           * then iterate through all genotypes in the simulation.
                           * Otherwise, iterate through members of the group with
                           * this as their group number. */
-    unsigned int localPos; /**< Local index (index within the cachedAM) of the genotype in the linked list
+    GSC_LOCALX_T localPos; /**< Local index (index within the cachedAM) of the genotype in the linked list
                        * of gsc_AlleleMatrix beginning at `d->m` where the
                        * iterator's 'cursor' currently sits. */
 
@@ -1123,10 +1237,10 @@ typedef struct {
                                   * gsc_AlleleMatrix beginning at `d->m`. `d->m`
                                   * is considered to be index 0. */
 
-    char atEnd; /**< Boolean that is TRUE if the iterator's 'cursor' is on
+    _Bool atEnd; /**< Boolean that is TRUE if the iterator's 'cursor' is on
                   * the last genotype (genotype with the highest index in the
                   * gsc_SimData) that fulfils the `group` critera of this iterator. */
-    char atStart; /**< Boolean that is TRUE if the iterator's 'cursor' is on
+    _Bool atStart; /**< Boolean that is TRUE if the iterator's 'cursor' is on
                     * the first genotype (genotype with the lowest index in the
                     * gsc_SimData) that fulfils the `group` critera of this iterator. */
 
@@ -1151,7 +1265,7 @@ struct gsc_EmptyListNavigator {
     gsc_PedigreeID currentid;
     gsc_AlleleMatrix* firstAM;
     gsc_AlleleMatrix* localAM;
-    unsigned int localPos;
+    GSC_LOCALX_T localPos;
 };
 
 /** A structure to search and cache indexes of all
@@ -1167,15 +1281,15 @@ typedef struct {
                           * Otherwise, iterate through members of the group with
                           * this as their group number. */
 
-    unsigned int cacheSize; /**< Length in gsc_GenoLocations of `cache` */
+    GSC_GLOBALX_T cacheSize; /**< Length in gsc_GenoLocations of `cache` */
     gsc_GenoLocation* cache; /**< Array iteratively updated with the known
                            * genotypes in the simulation that fulfil the
                            * `group` criteria of the iterator as they
                            * are discovered during calls to next_ functions */
 
-    int largestCached; /**< Local/group index (that is, index in `cache`) of the
+    GSC_GLOBALX_T largestCached; /**< Local/group index (that is, index in `cache`) of the
                          * highest cell in `cache` that has been filled. */
-    int groupSize; /**< If the number of genotypes in the simulation that fulfil
+    GSC_GLOBALX_T groupSize; /**< If the number of genotypes in the simulation that fulfil
                      * the iterator's `group` criteria is known, it is saved here.
                      * This value is left uninitialised until then. */
 } gsc_RandomAccessIterator;
@@ -1190,7 +1304,7 @@ gsc_GenoLocation gsc_set_bidirectional_iter_to_start(gsc_BidirectionalIterator* 
 gsc_GenoLocation gsc_set_bidirectional_iter_to_end(gsc_BidirectionalIterator* it);
 gsc_GenoLocation gsc_next_forwards(gsc_BidirectionalIterator* it);
 gsc_GenoLocation gsc_next_backwards(gsc_BidirectionalIterator* it);
-gsc_GenoLocation gsc_next_get_nth(gsc_RandomAccessIterator* it, const unsigned int n);
+gsc_GenoLocation gsc_next_get_nth(gsc_RandomAccessIterator* it, const GSC_GLOBALX_T n);
 
 //static gsc_GenoLocation gsc_nextgappy_get_gap(struct gsc_GappyIterator* it);
 //static gsc_GenoLocation gsc_nextgappy_get_nongap(struct gsc_GappyIterator* it);
@@ -1345,12 +1459,15 @@ static inline int gsc_get_label_value(const gsc_GenoLocation loc, const int labe
      * @{
      */
 char* gsc_get_name_of_id( const gsc_AlleleMatrix* start, const gsc_PedigreeID id);
-int gsc_get_parents_of_id( const gsc_AlleleMatrix* start, const gsc_PedigreeID id, gsc_PedigreeID output[static 2]);
-void gsc_get_ids_of_names( const gsc_AlleleMatrix* start, const int n_names, const char** names, gsc_PedigreeID* output);
-int gsc_get_index_of_child( const gsc_AlleleMatrix* start, const gsc_PedigreeID parent1id, const gsc_PedigreeID parent2id);
-int gsc_get_index_of_name( const gsc_AlleleMatrix* start, const char* name);
-gsc_PedigreeID gsc_get_id_of_index( const gsc_AlleleMatrix* start, const int index);
-char* gsc_get_genes_of_index( const gsc_AlleleMatrix* start, const int index);
+int gsc_get_parents_of_id( const gsc_AlleleMatrix* start, const gsc_PedigreeID id, 
+                                    gsc_PedigreeID output[static 2]);
+void gsc_get_ids_of_names( const gsc_AlleleMatrix* start, const unsigned int n_names, const char** names, 
+                          gsc_PedigreeID* output);
+GSC_GLOBALX_T gsc_get_index_of_child( const gsc_AlleleMatrix* start, const gsc_PedigreeID parent1id, 
+                                      const gsc_PedigreeID parent2id);
+GSC_GLOBALX_T gsc_get_index_of_name( const gsc_AlleleMatrix* start, const char* name);
+gsc_PedigreeID gsc_get_id_of_index( const gsc_AlleleMatrix* start, const GSC_GLOBALX_T index);
+char* gsc_get_genes_of_index( const gsc_AlleleMatrix* start, const GSC_GLOBALX_T index);
     /**@}*/
 
     /** @defgroup collgetters Collective Data Access Functions
@@ -1364,18 +1481,22 @@ char* gsc_get_genes_of_index( const gsc_AlleleMatrix* start, const int index);
      *
      * @{
      */
-int gsc_get_group_size( const gsc_SimData* d, const gsc_GroupNum group_id);
-int gsc_get_group_genes( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, char** output);
-int gsc_get_group_names( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, char** output);
-int gsc_get_group_ids( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, gsc_PedigreeID* output);
-int gsc_get_group_indexes( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, unsigned int* output);
-int gsc_get_group_bvs( const gsc_SimData* d, const gsc_GroupNum group_id, const gsc_EffectID effID, int group_size, double* output);
-int gsc_get_group_parent_ids( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, const int whichParent, gsc_PedigreeID* output);
-int gsc_get_group_parent_names( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, const int whichParent, char** output);
-int gsc_get_group_pedigrees( const gsc_SimData* d, const gsc_GroupNum group_id, int group_size, char** output);
+GSC_GLOBALX_T gsc_get_group_size( const gsc_SimData* d, const gsc_GroupNum group_id);
+GSC_GLOBALX_T gsc_get_group_genes( const gsc_SimData* d, const gsc_GroupNum group_id, GSC_GLOBALX_T group_size, char** output);
+GSC_GLOBALX_T gsc_get_group_names( const gsc_SimData* d, const gsc_GroupNum group_id, GSC_GLOBALX_T group_size, char** output);
+GSC_GLOBALX_T gsc_get_group_ids( const gsc_SimData* d, const gsc_GroupNum group_id, GSC_GLOBALX_T group_size, gsc_PedigreeID* output);
+GSC_GLOBALX_T gsc_get_group_indexes( const gsc_SimData* d, const gsc_GroupNum group_id, 
+                                    GSC_GLOBALX_T group_size, GSC_GLOBALX_T* output);
+GSC_GLOBALX_T gsc_get_group_bvs( const gsc_SimData* d, const gsc_GroupNum group_id, const gsc_EffectID effID, 
+                       GSC_GLOBALX_T group_size, double* output);
+GSC_GLOBALX_T gsc_get_group_parent_ids( const gsc_SimData* d, const gsc_GroupNum group_id, GSC_GLOBALX_T group_size, 
+                              const int whichParent, gsc_PedigreeID* output);
+GSC_GLOBALX_T gsc_get_group_parent_names( const gsc_SimData* d, const gsc_GroupNum group_id, GSC_GLOBALX_T group_size, 
+                                const int whichParent, char** output);
+GSC_GLOBALX_T gsc_get_group_pedigrees( const gsc_SimData* d, const gsc_GroupNum group_id, GSC_GLOBALX_T group_size, char** output);
 
-int gsc_get_existing_groups( gsc_SimData* d, gsc_GroupNum* output);
-int gsc_get_existing_group_counts( gsc_SimData* d, gsc_GroupNum* out_groups, unsigned int* out_sizes);
+unsigned int gsc_get_existing_groups( gsc_SimData* d, gsc_GroupNum* output);
+unsigned int gsc_get_existing_group_counts( gsc_SimData* d, gsc_GroupNum* out_groups, GSC_GLOBALX_T* out_sizes);
     /**@}*/
 /**@}*/
 
@@ -1386,10 +1507,12 @@ int gsc_get_existing_group_counts( gsc_SimData* d, gsc_GroupNum* out_groups, uns
  *
  * @{
  */
-gsc_GroupNum gsc_combine_groups( gsc_SimData* d, const int list_len, const gsc_GroupNum* grouplist);
-gsc_GroupNum gsc_make_group_from( gsc_SimData* d, const int index_list_len, const unsigned int* genotype_indexes);
-gsc_GroupNum gsc_split_by_label_value( gsc_SimData* d, const gsc_GroupNum group, const gsc_LabelID whichLabel, const int valueToSplit);
-gsc_GroupNum gsc_split_by_label_range( gsc_SimData* d, const gsc_GroupNum group, const gsc_LabelID whichLabel, const int valueLowBound, const int valueHighBound);
+gsc_GroupNum gsc_combine_groups( gsc_SimData* d, const unsigned int list_len, const gsc_GroupNum* grouplist);
+gsc_GroupNum gsc_make_group_from( gsc_SimData* d, const unsigned int index_list_len, const GSC_GLOBALX_T* genotype_indexes);
+gsc_GroupNum gsc_split_by_label_value( gsc_SimData* d, const gsc_GroupNum group, 
+                                       const gsc_LabelID whichLabel, const int valueToSplit);
+gsc_GroupNum gsc_split_by_label_range( gsc_SimData* d, const gsc_GroupNum group, const gsc_LabelID whichLabel, 
+                                       const int valueLowBound, const int valueHighBound);
 
 // GENERIC
 unsigned int gsc_scaffold_split_by_somequality( gsc_SimData* d, const gsc_GroupNum group_id,
@@ -1397,29 +1520,45 @@ unsigned int gsc_scaffold_split_by_somequality( gsc_SimData* d, const gsc_GroupN
         gsc_GroupNum (*somequality_tester)(gsc_GenoLocation, void*, unsigned int, unsigned int, gsc_GroupNum*),
         unsigned int maxentries_results, gsc_GroupNum* results);
 // APPLICATIONS
-unsigned int gsc_split_into_individuals( gsc_SimData* d, const gsc_GroupNum group_id, unsigned int maxentries_results, gsc_GroupNum* results);
-    //static gsc_GroupNum gsc_helper_split_by_quality_individuate(gsc_GenoLocation loc, void** datastore, unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum** results);
-unsigned int gsc_split_into_families(gsc_SimData* d, const gsc_GroupNum group_id, unsigned int maxentries_results, gsc_GroupNum* results);
-    //static gsc_GroupNum gsc_helper_split_by_quality_family(gsc_GenoLocation loc, void** datastore, unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum** results);
-unsigned int gsc_split_into_halfsib_families( gsc_SimData* d, const gsc_GroupNum group_id, const int parent, unsigned int maxentries_results, gsc_GroupNum* results);
-    //static gsc_GroupNum gsc_helper_split_by_quality_halfsib1(gsc_GenoLocation loc, void** datastore, unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum* results);
-    //static gsc_GroupNum gsc_helper_split_by_quality_halfsib2(gsc_GenoLocation loc, void** datastore, unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum* results);
-    //static gsc_GroupNum gsc_helper_split_by_quality_halfsibtemplate(gsc_GenoLocation loc, void** datastore, unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum* results, gsc_PedigreeID (*getparent)(gsc_GenoLocation));
+unsigned int gsc_split_into_individuals( gsc_SimData* d, const gsc_GroupNum group_id, 
+                                        unsigned int maxentries_results, gsc_GroupNum* results);
+    //static gsc_GroupNum gsc_helper_split_by_quality_individuate(gsc_GenoLocation loc, void** datastore, 
+        //unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum** results);
+unsigned int gsc_split_into_families(gsc_SimData* d, const gsc_GroupNum group_id, unsigned int maxentries_results, 
+                                     gsc_GroupNum* results);
+    //static gsc_GroupNum gsc_helper_split_by_quality_family(gsc_GenoLocation loc, void** datastore, 
+        //unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum** results);
+unsigned int gsc_split_into_halfsib_families( gsc_SimData* d, const gsc_GroupNum group_id, 
+                                              const int parent, unsigned int maxentries_results, gsc_GroupNum* results);
+    //static gsc_GroupNum gsc_helper_split_by_quality_halfsib1(gsc_GenoLocation loc, void** datastore, 
+        // unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum* results);
+    //static gsc_GroupNum gsc_helper_split_by_quality_halfsib2(gsc_GenoLocation loc, void** datastore, 
+        // unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum* results);
+    //static gsc_GroupNum gsc_helper_split_by_quality_halfsibtemplate(gsc_GenoLocation loc, void** datastore, 
+        //unsigned int maxgroups, unsigned int groupsfound, gsc_GroupNum* results, 
+        //gsc_PedigreeID (*getparent)(gsc_GenoLocation));
 
 // GENERIC
-unsigned int gsc_scaffold_split_by_someallocation( gsc_SimData* d, const gsc_GroupNum group_id, void* someallocator_data,
+unsigned int gsc_scaffold_split_by_someallocation(gsc_SimData* d, const gsc_GroupNum group_id, void* someallocator_data,
         gsc_GroupNum (*someallocator)(gsc_GenoLocation, gsc_SimData*, void*, unsigned int, unsigned int*, gsc_GroupNum*),
         unsigned int n_outgroups, gsc_GroupNum* outgroups);
 // APPLICATIONS
 gsc_GroupNum gsc_split_evenly_into_two(gsc_SimData* d, const gsc_GroupNum group_id);
-    //static gsc_GroupNum gsc_helper_split_by_allocator_knowncounts(gsc_GenoLocation loc, gsc_SimData* d, void* datastore, unsigned int n_outgroups, unsigned int* subgroupsfound, gsc_GroupNum* outgroups)
-unsigned int gsc_split_evenly_into_n(gsc_SimData* d, const gsc_GroupNum group_id, const int n, gsc_GroupNum* results);
-unsigned int gsc_split_into_buckets(gsc_SimData* d, const gsc_GroupNum group_id, const int n, const int* counts, gsc_GroupNum* results);
+    //static gsc_GroupNum gsc_helper_split_by_allocator_knowncounts(gsc_GenoLocation loc, gsc_SimData* d, 
+        //void* datastore, unsigned int n_outgroups, unsigned int* subgroupsfound, gsc_GroupNum* outgroups)
+unsigned int gsc_split_evenly_into_n(gsc_SimData* d, const gsc_GroupNum group_id, 
+                                     const unsigned int n, gsc_GroupNum* results);
+unsigned int gsc_split_into_buckets(gsc_SimData* d, const gsc_GroupNum group_id, const unsigned int n, 
+                                    const GSC_GLOBALX_T* counts, gsc_GroupNum* results);
 gsc_GroupNum gsc_split_randomly_into_two(gsc_SimData* d, const gsc_GroupNum group_id);
-unsigned int gsc_split_randomly_into_n(gsc_SimData* d, const gsc_GroupNum group_id, const int n, gsc_GroupNum* results);
-    //static gsc_GroupNum gsc_helper_split_by_allocator_equalprob(gsc_GenoLocation loc, gsc_SimData* d, void* datastore, unsigned int n_outgroups, unsigned int* subgroupsfound, gsc_GroupNum* outgroups);
-unsigned int gsc_split_by_probabilities(gsc_SimData* d, const gsc_GroupNum group_id, const int n, const double* probs, gsc_GroupNum* results);
-    //static gsc_GroupNum gsc_helper_split_by_allocator_unequalprob(gsc_GenoLocation loc, gsc_SimData* d, void* datastore, unsigned int n_outgroups, unsigned int* subgroupsfound, gsc_GroupNum* outgroups);
+unsigned int gsc_split_randomly_into_n(gsc_SimData* d, const gsc_GroupNum group_id, 
+                                       const unsigned int n, gsc_GroupNum* results);
+    //static gsc_GroupNum gsc_helper_split_by_allocator_equalprob(gsc_GenoLocation loc, gsc_SimData* d, 
+        //void* datastore, unsigned int n_outgroups, unsigned int* subgroupsfound, gsc_GroupNum* outgroups);
+unsigned int gsc_split_by_probabilities(gsc_SimData* d, const gsc_GroupNum group_id, 
+                                        const unsigned int n, const double* probs, gsc_GroupNum* results);
+    //static gsc_GroupNum gsc_helper_split_by_allocator_unequalprob(gsc_GenoLocation loc, gsc_SimData* d, 
+        //void* datastore, unsigned int n_outgroups, unsigned int* subgroupsfound, gsc_GroupNum* outgroups);
 
 /**@}*/
 
@@ -1437,8 +1576,8 @@ unsigned int gsc_split_by_probabilities(gsc_SimData* d, const gsc_GroupNum group
      *
      * @{
      */
-void gsc_generate_gamete(gsc_SimData* d, const char* parent_genome, char* output, const unsigned int mapindex);
-void gsc_generate_doubled_haploid(gsc_SimData* d, const char* parent_genome, char* output, const unsigned int mapindex);
+void gsc_generate_gamete(gsc_SimData* d, const char* parent_genome, char* output, const GSC_ID_T mapindex);
+void gsc_generate_doubled_haploid(gsc_SimData* d, const char* parent_genome, char* output, const GSC_ID_T mapindex);
 void gsc_generate_clone(gsc_SimData* d, const char* parent_genome, char* output);
     /**@}*/
 
@@ -1447,46 +1586,66 @@ void gsc_generate_clone(gsc_SimData* d, const char* parent_genome, char* output)
 // static FILE* gsc_helper_genoptions_save_bvs_setup(const gsc_SimData* d, const gsc_GenOptions g, int* effIndexp);
 // static FILE* gsc_helper_genoptions_save_genotypes_setup(const gsc_SimData* d, const gsc_GenOptions g);
 // static void gsc_helper_genoptions_save_pedigrees(FILE* fp, gsc_SimData* d, gsc_AlleleMatrix* tosave);
-// static void gsc_helper_genoptions_save_bvs(FILE* fe, gsc_EffectMatrix* effMatrices, int effIndex, gsc_AlleleMatrix* tosave);
+// static void gsc_helper_genoptions_save_bvs(FILE* fe, gsc_EffectMatrix* effMatrices, int effIndex, 
+        //gsc_AlleleMatrix* tosave);
 // static void gsc_helper_genoptions_save_genotypes(FILE* fg, gsc_AlleleMatrix* tosave);
-// static void gsc_helper_genoptions_give_names_and_ids(gsc_AlleleMatrix* am, gsc_SimData* d, const gsc_GenOptions g);
+// static void gsc_helper_genoptions_give_names_and_ids(gsc_AlleleMatrix* am, gsc_SimData* d, 
+        //const gsc_GenOptions g);
 
 // PARAMETER FUNCTIONS FOR THE FOLLOWING GENERIC
-// static void gsc_helper_make_offspring_cross(gsc_SimData* d, void* datastore, gsc_ParentChoice parents[static 2], gsc_GenoLocation putHere);
-// static void gsc_helper_make_offspring_self_n_times(gsc_SimData* d, void* datastore, gsc_ParentChoice parents[static 2], gsc_GenoLocation putHere);
-// static void gsc_helper_make_offspring_doubled_haploids(gsc_SimData* d, void* datastore, gsc_ParentChoice parents[static 2], gsc_GenoLocation putHere);
-// static void gsc_helper_make_offspring_clones(gsc_SimData* d, void* datastore, gsc_ParentChoice parents[static 2], gsc_GenoLocation putHere);
+// static void gsc_helper_make_offspring_cross(gsc_SimData* d, union gsc_datastore_make_genotype* datastore, 
+        //gsc_ParentChoice parents[static 2], gsc_GenoLocation putHere);
+// static void gsc_helper_make_offspring_self_n_times(gsc_SimData* d, union gsc_datastore_make_genotype* datastore, 
+        //gsc_ParentChoice parents[static 2], gsc_GenoLocation putHere);
+// static void gsc_helper_make_offspring_doubled_haploids(gsc_SimData* d, union gsc_datastore_make_genotype* datastore, 
+        //gsc_ParentChoice parents[static 2], gsc_GenoLocation putHere);
+// static void gsc_helper_make_offspring_clones(gsc_SimData* d, union gsc_datastore_make_genotype* datastore, 
+        //gsc_ParentChoice parents[static 2], gsc_GenoLocation putHere);
 
-// static int gsc_helper_parentchooser_cross_randomly(void* parentIterator, void* datastore, unsigned int* counter, gsc_ParentChoice parents[static 2]);
-// static int gsc_helper_parentchooser_cross_randomly_between(void* parentIterator, void* datastore, unsigned int* counter, gsc_ParentChoice parents[static 2]);
-// static int gsc_helper_parentchooser_cross_targeted(void* parentIterator, void* datastore, unsigned int* counter, gsc_ParentChoice parents[static 2]);
-// static int gsc_helper_parentchooser_selfing(void* parentIterator, void* datastore, unsigned int* counter, gsc_ParentChoice parents[static 2]);
-// static int gsc_helper_parentchooser_cloning(void* parentIterator, void* datastore, unsigned int* counter, gsc_ParentChoice parents[static 2]);
+// static int gsc_helper_parentchooser_cross_randomly(void* parentIterator, 
+        //union gsc_datastore_make_genotype* datastore, unsigned int* counter, gsc_ParentChoice parents[static 2]);
+// static int gsc_helper_parentchooser_cross_randomly_between(void* parentIterator, 
+        //union gsc_datastore_make_genotype* datastore, unsigned int* counter, gsc_ParentChoice parents[static 2]);
+// static int gsc_helper_parentchooser_cross_targeted(void* parentIterator, 
+        //union gsc_datastore_make_genotype* datastore, unsigned int* counter, gsc_ParentChoice parents[static 2]);
+// static int gsc_helper_parentchooser_selfing(void* parentIterator, 
+        //union gsc_datastore_make_genotype* datastore, unsigned int* counter, gsc_ParentChoice parents[static 2]);
+// static int gsc_helper_parentchooser_cloning(void* parentIterator, 
+        //union gsc_datastore_make_genotype* datastore, unsigned int* counter, gsc_ParentChoice parents[static 2]);
 
-// static int gsc_helper_random_cross_checks(gsc_SimData* d, const gsc_GroupNum from_group, const int n_crosses, const int cap);
+// static int gsc_helper_random_cross_checks(gsc_SimData* d, const gsc_GroupNum from_group, 
+        // const unsigned int n_crosses, const int cap);
 
 // GENERIC
+union gsc_datastore_make_genotypes;
 gsc_GroupNum gsc_scaffold_make_new_genotypes(gsc_SimData* d, const gsc_GenOptions g,
-        void* parentIterator, void* datastore,
-        int (*parentChooser)(void*, void*, unsigned int*, gsc_ParentChoice[static 2]),
-        void (*offspringGenerator)(gsc_SimData*, void*, gsc_ParentChoice[static 2], gsc_GenoLocation) );
+        void* parentIterator, union gsc_datastore_make_genotypes* datastore,
+        int (*parentChooser)(void*, union gsc_datastore_make_genotypes*, GSC_GLOBALX_T*, gsc_ParentChoice[static 2]),
+        void (*offspringGenerator)(gsc_SimData*, union gsc_datastore_make_genotypes*, gsc_ParentChoice[static 2], 
+                                   gsc_GenoLocation));
 // APPLICATIONS
-gsc_GroupNum gsc_make_random_crosses(gsc_SimData* d, const gsc_GroupNum from_group, const int n_crosses,
-                                     const int cap, const gsc_MapID which_map, const gsc_GenOptions g);
+gsc_GroupNum gsc_make_random_crosses(gsc_SimData* d, const gsc_GroupNum from_group, const GSC_GLOBALX_T n_crosses,
+                                     const GSC_GLOBALX_T cap, const gsc_MapID which_map, const gsc_GenOptions g);
 gsc_GroupNum gsc_make_random_crosses_between(gsc_SimData*d, const gsc_GroupNum group1, const gsc_GroupNum group2,
-                                             const int n_crosses, const int cap1, const int cap2,
+                                             const GSC_GLOBALX_T n_crosses, const GSC_GLOBALX_T cap1, 
+                                             const GSC_GLOBALX_T cap2,
                                              const gsc_MapID map1, const gsc_MapID map2, const gsc_GenOptions g);
-gsc_GroupNum gsc_make_targeted_crosses(gsc_SimData* d, const int n_combinations, const int* firstParents, const int* secondParents,
+gsc_GroupNum gsc_make_targeted_crosses(gsc_SimData* d, const unsigned int n_combinations,
+                                       const GSC_GLOBALX_T* firstParents, const GSC_GLOBALX_T* secondParents,
                                        const gsc_MapID map1, const gsc_MapID map2, const gsc_GenOptions g);
-gsc_GroupNum gsc_self_n_times(gsc_SimData* d, const unsigned int n, const gsc_GroupNum group, const gsc_MapID which_map, const gsc_GenOptions g);
-gsc_GroupNum gsc_make_doubled_haploids(gsc_SimData* d, const gsc_GroupNum group, const gsc_MapID which_map, const gsc_GenOptions g);
-gsc_GroupNum gsc_make_clones(gsc_SimData* d, const gsc_GroupNum group, const int inherit_names, const gsc_GenOptions g);
+gsc_GroupNum gsc_self_n_times(gsc_SimData* d, const unsigned int n, const gsc_GroupNum group, 
+                              const gsc_MapID which_map, const gsc_GenOptions g);
+gsc_GroupNum gsc_make_doubled_haploids(gsc_SimData* d, const gsc_GroupNum group, 
+                                       const gsc_MapID which_map, const gsc_GenOptions g);
+gsc_GroupNum gsc_make_clones(gsc_SimData* d, const gsc_GroupNum group, 
+                             const _Bool inherit_names, const gsc_GenOptions g);
 
-gsc_GroupNum gsc_make_all_unidirectional_crosses(gsc_SimData* d, const gsc_GroupNum from_group, const gsc_MapID mapID, const gsc_GenOptions g);
-gsc_GroupNum gsc_make_n_crosses_from_top_m_percent(gsc_SimData* d, const int n, const int m, const gsc_GroupNum group,
-                                                   const gsc_MapID mapID, const gsc_EffectID effID, const gsc_GenOptions g);
-gsc_GroupNum gsc_make_crosses_from_file(gsc_SimData* d, const char* input_file, const gsc_MapID map1, const gsc_MapID map2, const gsc_GenOptions g);
-gsc_GroupNum gsc_make_double_crosses_from_file(gsc_SimData* d, const char* input_file, const gsc_MapID map1, const gsc_MapID map2, const gsc_GenOptions g);
+gsc_GroupNum gsc_make_all_unidirectional_crosses(gsc_SimData* d, const gsc_GroupNum from_group, 
+                                                 const gsc_MapID mapID, const gsc_GenOptions g);
+gsc_GroupNum gsc_make_crosses_from_file(gsc_SimData* d, const char* input_file, 
+                                        const gsc_MapID map1, const gsc_MapID map2, const gsc_GenOptions g);
+gsc_GroupNum gsc_make_double_crosses_from_file(gsc_SimData* d, const char* input_file, 
+                                        const gsc_MapID map1, const gsc_MapID map2, const gsc_GenOptions g);
 /**@}*/
 
 
@@ -1496,17 +1655,22 @@ gsc_GroupNum gsc_make_double_crosses_from_file(gsc_SimData* d, const char* input
  *
  * @{
  */
-gsc_GroupNum gsc_split_by_bv(gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID, const int top_n, const int lowIsBest);
+gsc_GroupNum gsc_split_by_bv(gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID,
+                             const GSC_GLOBALX_T top_n, const _Bool lowIsBest);
 gsc_DecimalMatrix gsc_calculate_bvs( const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID);
 gsc_DecimalMatrix gsc_calculate_utility_bvs(gsc_BidirectionalIterator* targets, const gsc_EffectMatrix* effset);
 gsc_DecimalMatrix gsc_calculate_allele_counts( const gsc_SimData* d, const gsc_GroupNum group, const char allele);
-void gsc_calculate_utility_allele_counts( const unsigned int n_markers, const unsigned int n_genotypes, const char** const genotypes,  const char allele, gsc_DecimalMatrix* counts);
-void gsc_calculate_utility_allele_counts_pair( const unsigned int n_markers, const unsigned int n_genotypes, const char** const genotypes, 
-                        const char allele, gsc_DecimalMatrix* counts, const char allele2, gsc_DecimalMatrix* counts2);
-gsc_MarkerBlocks gsc_create_evenlength_blocks_each_chr(const gsc_SimData* d, const gsc_MapID mapid, const int n);
+void gsc_calculate_utility_allele_counts( const GSC_GENOLEN_T n_markers, const GSC_GLOBALX_T n_genotypes, 
+                                         const char** const genotypes,  const char allele, gsc_DecimalMatrix* counts);
+void gsc_calculate_utility_allele_counts_pair( const GSC_GENOLEN_T n_markers, const GSC_GLOBALX_T n_genotypes, 
+                                              const char** const genotypes, const char allele, 
+                                              gsc_DecimalMatrix* counts, const char allele2, gsc_DecimalMatrix* counts2);
+gsc_MarkerBlocks gsc_create_evenlength_blocks_each_chr(const gsc_SimData* d, const gsc_MapID mapid, const GSC_ID_T n);
 gsc_MarkerBlocks gsc_load_blocks(const gsc_SimData* d, const char* block_file);
-void gsc_calculate_group_local_bvs(const gsc_SimData* d, const gsc_MarkerBlocks b, const gsc_EffectID effID, const char* output_file, const gsc_GroupNum group);
-void gsc_calculate_local_bvs(const gsc_SimData* d, const gsc_MarkerBlocks b, const gsc_EffectID effID, const char* output_file);
+void gsc_calculate_group_local_bvs(const gsc_SimData* d, const gsc_MarkerBlocks b, const gsc_EffectID effID,
+                                   const char* output_file, const gsc_GroupNum group);
+void gsc_calculate_local_bvs(const gsc_SimData* d, const gsc_MarkerBlocks b, const gsc_EffectID effID, 
+                             const char* output_file);
 
 char* gsc_calculate_optimal_haplotype(const gsc_SimData* d, const gsc_EffectID effID);
 char* gsc_calculate_optimal_possible_haplotype(const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID);
@@ -1550,30 +1714,34 @@ void gsc_move_genotype(gsc_GenoLocation from, gsc_GenoLocation to, int* label_de
  */
 
 // User-facing saving functions
-void gsc_save_markerblocks(const char* fname, const gsc_SimData* d, const gsc_MarkerBlocks b, const gsc_MapID labelMapID);
-void gsc_save_genotypes(const char* fname, const gsc_SimData* d, const gsc_GroupNum groupID, const int markers_as_rows);
+void gsc_save_markerblocks(const char* fname, const gsc_SimData* d, const gsc_MarkerBlocks b, 
+                           const gsc_MapID labelMapID);
+void gsc_save_genotypes(const char* fname, const gsc_SimData* d, const gsc_GroupNum groupID, 
+                        const _Bool markers_as_rows);
 void gsc_save_allele_counts(const char* fname, const gsc_SimData* d, const gsc_GroupNum groupID, 
-											 		 const char allele, const int markers_as_rows);
-void gsc_save_pedigrees(const char* fname, const gsc_SimData* d, const gsc_GroupNum groupID, const int full_pedigree);
+						    const char allele, const _Bool markers_as_rows);
+void gsc_save_pedigrees(const char* fname, const gsc_SimData* d, const gsc_GroupNum groupID, 
+                        const _Bool full_pedigree);
 void gsc_save_bvs(const char* fname, const gsc_SimData* d, const gsc_GroupNum groupID, const gsc_EffectID effID);
 
 // Utility and helper saving functions
-void gsc_save_utility_markerblocks(FILE* f, const gsc_MarkerBlocks b, const unsigned int n_markers, 
+void gsc_save_utility_markerblocks(FILE* f, const gsc_MarkerBlocks b, const GSC_GENOLEN_T n_markers, 
 		char** const marker_names, const gsc_RecombinationMap* map);
-void gsc_save_utility_genotypes(FILE* f, gsc_BidirectionalIterator* targets, const unsigned int n_markers, char** const marker_names, const int markers_as_rows);
-void gsc_save_utility_allele_counts(FILE* f, gsc_BidirectionalIterator* targets, const unsigned int n_markers,
-		char** const marker_names, const int markers_as_rows, const char allele);
+void gsc_save_utility_genotypes(FILE* f, gsc_BidirectionalIterator* targets, const GSC_GENOLEN_T n_markers,
+        char** const marker_names, const _Bool markers_as_rows);
+void gsc_save_utility_allele_counts(FILE* f, gsc_BidirectionalIterator* targets, const GSC_GENOLEN_T n_markers,
+		char** const marker_names, const _Bool markers_as_rows, const char allele);
 void gsc_save_utility_pedigrees(FILE* f, gsc_BidirectionalIterator* targets,
-		const int full_pedigree, const gsc_AlleleMatrix* parent_pedigree_store);
+		const _Bool full_pedigree, const gsc_AlleleMatrix* parent_pedigree_store);
 void gsc_save_utility_bvs(FILE* f, gsc_BidirectionalIterator* targets, const gsc_EffectMatrix* eff);
 
-// static int gsc_helper_is_marker_in_chr(const unsigned int markerix, const gsc_LinkageGroup chr, double* pos);
+// static GSC_LOGICVAL gsc_helper_is_marker_in_chr(const GSC_GENOLEN_T markerix, const gsc_LinkageGroup chr, double* pos);
 
 // static void gsc_scaffold_save_genotype_info(FILE* f, gsc_BidirectionalIterator* targets, 
-//        unsigned int n_markers, char** const marker_names, const int markers_as_rows,
+//        GSC_GENOLEN_T n_markers, char** const marker_names, const _Bool markers_as_rows,
 //        void (*bodycell_printer)(FILE*, gsc_GenoLocation, unsigned int, void*), void* bodycell_printer_data);
-// static void gsc_helper_output_genotypematrix_cell(FILE* f, gsc_GenoLocation loc, unsigned int markerix, void* NA);
-// static void gsc_helper_output_countmatrix_cell(FILE* f, gsc_GenoLocation loc, unsigned int markerix, void* data);
+// static void gsc_helper_output_genotypematrix_cell(FILE* f, gsc_GenoLocation loc, GSC_GENOLEN_T markerix, void* NA);
+// static void gsc_helper_output_countmatrix_cell(FILE* f, gsc_GenoLocation loc, GSC_GENOLEN_T markerix, void* data);
 
 // static void gsc_scaffold_save_ancestry_of(const gsc_AlleleMatrix* m, gsc_PedigreeID p1, gsc_PedigreeID p2,
 //        void (*strprinter)(char*, unsigned int, void*), void (*intprinter)(int, void*), void* printer_data);
@@ -1592,10 +1760,15 @@ void gsc_save_utility_bvs(FILE* f, gsc_BidirectionalIterator* targets, const gsc
  *
  * @{
  */
-int* gsc_calculate_min_recombinations_fw1(gsc_SimData* d, gsc_MapID mapid, char* parent1, unsigned int p1num, char* parent2,
-        unsigned int p2num, char* offspring, int certain); // forward filling, window size 1
-int* gsc_calculate_min_recombinations_fwn(gsc_SimData* d, gsc_MapID mapid, char* parent1, unsigned int p1num, char* parent2,
-        unsigned int p2num, char* offspring, int window_size, int certain); // forward filling, window size n
+int* gsc_calculate_min_recombinations_fw1(gsc_SimData* d, gsc_MapID mapid, 
+                                          char* parent1, unsigned int p1num, 
+                                          char* parent2, unsigned int p2num, 
+                                          char* offspring, int certain); // forward filling, window size 1
+int* gsc_calculate_min_recombinations_fwn(gsc_SimData* d, gsc_MapID mapid, 
+                                          char* parent1, unsigned int p1num, 
+                                          char* parent2, unsigned int p2num, 
+                                          char* offspring, int window_size, 
+                                          int certain); // forward filling, window size n
 
 /** Simple operator to determine if at marker i, two genotypes share at least
  * one allele. Checks only 3 of four possible permutations because assumes
@@ -1608,7 +1781,7 @@ int* gsc_calculate_min_recombinations_fwn(gsc_SimData* d, gsc_MapID mapid, char*
  * @param i index of the marker at which to perform the check
  * @returns boolean result of the check
  */
-static inline int gsc_has_same_alleles(const char* p1, const char* p2, const int i) {
+static inline int gsc_has_same_alleles(const char* p1, const char* p2, const unsigned int i) {
     return (p1[i<<1] == p2[i<<1] || p1[(i<<1) + 1] == p2[i] || p1[i] == p2[(i<<1) + 1]);
 }
 // w is window length, i is start value
@@ -1625,7 +1798,7 @@ static inline int gsc_has_same_alleles(const char* p1, const char* p2, const int
  * @param w length of the window over which to perform the check
  * @returns boolean result of the check
  */
-static inline int gsc_has_same_alleles_window(const char* g1, const char* g2, const int start, const int w) {
+static inline int gsc_has_same_alleles_window(const char* g1, const char* g2, const unsigned int start, const unsigned int w) {
     int same = GSC_TRUE;
     int i;
     for (int j = 0; j < w; ++j) {

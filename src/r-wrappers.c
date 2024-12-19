@@ -26,8 +26,8 @@ void init_format_as_matrix(FileFormatSpec* mformat) {
   if (mformat->filetype == GSC_GENOTYPEFILE_UNKNOWN) {
     mformat->filetype = GSC_GENOTYPEFILE_MATRIX;
     mformat->spec.matrix = (struct gsc_GenotypeFile_MatrixFormat) {
-           .has_header = GSC_UNINIT,
-           .markers_as_rows = GSC_UNINIT,
+           .has_header = GSC_NA,
+           .markers_as_rows = GSC_NA,
            .cell_style = GSC_GENOTYPECELLSTYLE_UNKNOWN
     };
     
@@ -48,7 +48,7 @@ FileFormatSpec SXP_parse_filespec_list(SEXP s_fileSpec) {
       
       int tmp = asLogical(VECTOR_ELT(s_fileSpec, i));
       if (tmp == NA_LOGICAL) {
-        mformat.spec.matrix.has_header = GSC_UNINIT;
+        mformat.spec.matrix.has_header = GSC_NA;
       } else if (tmp) {
         mformat.spec.matrix.has_header = GSC_TRUE;
       } else {
@@ -61,7 +61,7 @@ FileFormatSpec SXP_parse_filespec_list(SEXP s_fileSpec) {
       
       int tmp = asLogical(VECTOR_ELT(s_fileSpec, i));
       if (tmp == NA_LOGICAL) {
-        mformat.spec.matrix.markers_as_rows = GSC_UNINIT;
+        mformat.spec.matrix.markers_as_rows = GSC_NA;
       } else if (tmp) {
         mformat.spec.matrix.markers_as_rows = GSC_TRUE;
       } else {
@@ -549,7 +549,7 @@ SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set
 	    error("`label` parameter is of invalid type: needs to be a custom label id\n");
 	  }
 	  int label_index = get_index_of_label(d, LABELID_IFY(label_id));
-	  if (label_index == GSC_UNINIT) {
+	  if (label_index == GSC_NA) {
 	    error("`label` parameter does not match a current existing custom label id\n");
 	  }
 	  
@@ -1161,7 +1161,7 @@ SEXP SXP_break_group_into_buckets(SEXP exd, SEXP s_group, SEXP s_buckets) {
 	int* counts = INTEGER(s_buckets);
 
 	GroupNum results[n_groups];
-	split_into_buckets(d, GROUPNUM_IFY(group_id), n_groups, counts, results);
+	split_into_buckets(d, GROUPNUM_IFY(group_id), n_groups, (const unsigned int*) counts, results);
 
 	SEXP out = PROTECT(allocVector(INTSXP, n_groups));
 	int* outc = INTEGER(out);
@@ -1350,7 +1350,7 @@ SEXP SXP_change_label_to_values(SEXP exd, SEXP s_label, SEXP s_values, SEXP s_gr
 		error("`startIndex` is invalid (wrong type or negative)\n");
 	}
 
-	change_label_to_values(d, GROUPNUM_IFY(group), startIndex, LABELID_IFY(label), vlen, values);
+	change_label_to_values(d, GROUPNUM_IFY(group), (GLOBALX_T) startIndex, LABELID_IFY(label), vlen, values);
 
 	return ScalarInteger(0);
 }
@@ -1460,7 +1460,7 @@ SEXP SXP_break_group_by_GEBV_num(SEXP exd, SEXP s_groups, SEXP s_eff_set, SEXP s
 
 	int want_low = asLogical(s_bestIsLow);
 	if (want_low == NA_LOGICAL) { error("`low.score.best` parameter is of invalid type\n"); }
-
+	
 	if (len == 1) {
 		return ScalarInteger(split_by_bv(d, GROUPNUM_IFY(groups[0]), EFFECTID_IFY(eff_id), num_to_select, want_low).num);
 	} else {
@@ -1666,7 +1666,7 @@ SEXP SXP_make_targeted_crosses(SEXP exd, SEXP s_firstparents, SEXP s_secondparen
 
 	R_xlen_t ncrosses = xlength(s_firstparents);
 
-	int combinations[2][ncrosses];
+	unsigned int combinations[2][ncrosses];
 	char pname[NAME_LENGTH+1];
 
 	if (TYPEOF(s_firstparents) == STRSXP) {

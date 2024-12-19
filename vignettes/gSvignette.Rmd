@@ -600,7 +600,16 @@ This functionality is very much untested and incomplete.
 - NAME_LENGTH (default 45).
 - CONTIG_WIDTH (default 1000).
 
-Generally, these default parameter settings should be satisfactory. If you do need to change them, add a line of the format `#define CONTIG_WIDTH 2048`, with your desired variable to modify and desired value to change it to, to the first line of `src/genomicSimulation-init.c`.
+Generally, these default parameter settings should be satisfactory. If you do need to change them, add a line of the format `#define CONTIG_WIDTH 2048` (with `CONTIG_WIDTH` and `2048` replaced with your desired values) to the first line of `src/genomicSimulation-init.c`, then rebuilding the package.
+
+The following type aliases store different types of identifiers in genomicSimulation's internal library. They default to being `unsigned int`, a type which commonly is capable of storing integers between 0 and 4,294,967,295. 
+
+- GSC_ID_T is used for all unique identifiers in genomicSimulation (group numbers, pedigree IDs, genetic map IDs, and marker effect set IDs).
+- GSC_GENOLEN_T is used to store the total number of genetic markers tracked by the simulation.
+- GSC_GLOBALX_T is used to store the total number of genotypes in the simulation.
+- GSC_LOCALX_T only needs to hold values between 0 and CONTIG_WIDTH. It will be automatically resized if you resize CONTIG_WIDTH, so it is unlikely you would need to redefine this type.
+
+If you need to generate or store over 4,294,967,294 genotypes or genetic markers in a single simulation, you can redefine one or more of the type aliases to a larger type by adding lines of the format `#define GSC_ID_T long unsigned int` (with `GSC_ID_T` and `long unsigned int` replaced with your desired values) to the first line of `src/genomicSimulation-init.c`, then rebuilding the package.
 
 ## Function Index
 *Use the R documentation (eg. type `?load.data` in the RStudio console) to get descriptions of these functions.*

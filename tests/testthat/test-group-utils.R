@@ -32,9 +32,9 @@ test_that("labels can be used to split groups", {
   expect_identical(change.label.to.this(1L, 5L, indivs[3]), 0L)
   expect_identical(change.label.to.values(1L, c(2L,3L), startIndex=5), 0L)
   
-  
-  #Label should be:
-  # -1; 1; 5; 1; 2; 3
+  gnew <- combine.groups(indivs)
+  expect_identical(see.group.data(gnew,"L"),c(-1L,1L,5L,1L,2L,3L))
+
   g1 <- break.group.by.label.value(1L, -1)
   g2 <- break.group.by.label.range(1L, 3, 10)
   
