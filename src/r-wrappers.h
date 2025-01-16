@@ -53,7 +53,7 @@ SEXP SXP_break_group_by_label_range(SEXP exd, SEXP s_label, SEXP s_lowbound,
 									SEXP s_highbound, SEXP s_groups);
 
 SEXP SXP_change_label_default(SEXP exd, SEXP s_labels, SEXP s_defaults);
-SEXP SXP_change_label_to_values(SEXP exd, SEXP s_label, SEXP s_values, SEXP s_group, SEXP s_start);
+SEXP SXP_change_label_to_values(SEXP exd, SEXP s_label, SEXP s_values, SEXP s_group, SEXP s_skip);
 SEXP SXP_change_label_to_this(SEXP exd, SEXP s_label, SEXP s_const, SEXP s_groups);
 SEXP SXP_change_label_by_amount(SEXP exd, SEXP s_label, SEXP s_incr, SEXP s_groups);
 

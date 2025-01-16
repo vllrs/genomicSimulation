@@ -30,7 +30,7 @@ test_that("labels can be used to split groups", {
   
   expect_identical(change.label.by.amount(1L, -2, indivs[1]), 0L)
   expect_identical(change.label.to.this(1L, 5L, indivs[3]), 0L)
-  expect_identical(change.label.to.values(1L, c(2L,3L), startIndex=5), 0L)
+  expect_identical(change.label.to.values(1L, c(2L,3L), skip=4), 0L)
   
   gnew <- combine.groups(indivs)
   expect_identical(see.group.data(gnew,"L"),c(-1L,1L,5L,1L,2L,3L))

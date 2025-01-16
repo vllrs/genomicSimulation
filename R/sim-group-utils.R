@@ -300,38 +300,50 @@ change.label.default <- function(labels, defaults) {
 #' Changes the values of a custom label for all 
 #' genotypes or for members of group(s) to a sequence of values.
 #' 
-#' The function orders the genotypes selected by the `group` parameter by their
-#' index, finds the `startIndex`th genotype (counting up from 0), then copies
-#' the vector `values` entry-by-entry into the appropriate label of 
-#' the genotypes from there on.
+#' The function skips the first `skip` candidate genotypes in `group`, then
+#' copies each entry in `values` into the appropriate custom label of the 
+#' next sequential member of `group`.
 #' 
-#' If the vector of values provided is longer than the number of genotypes after
-#' the `startIndex`th that are selected by the `group` parameter, then trailing 
-#' values are ignored. 
-#' If the vector of values provided is shorter than the number of genotypes after
-#' the `startIndex`th that are selected by the `group` parameter, then trailing 
-#' genotypes are left unchanged. 
+#' If the number of values provided is larger than the number of candidates in 
+#' the group minus `skip`, then trailing  values are ignored. 
+#' If the number of values provided is smaller than the number of candidates in 
+#' the group minus `skip`, then extra candidates' labels are left unchanged. 
 #'
 #' @param label the label number of the label to change.
 #' @param values A vector of integer values to copy into the label. 
 #' @param group NA or 0 to apply the values to all genotypes in simulation memory,
 #' or a group number to apply the values to only members of that group.
-#' @param startIndex The position within the list of genotypes identified by `group`
-#' and sorted by their index that the first entry of `values` should be copied into.
-#' The first position in the list is considered index 1.
+#' @param skip Number of group members to skip before the member of the group who 
+#' should get the first value from the vector `values`. 
+#' @param startIndex A parameter equivalent to `skip`. Because of the potential of
+#' the name to be confusing, it is recommended you use `skip` instead (the equivalence
+#' is `skip = startIndex - 1`). `startIndex` does not refer to an internal
+#' genomicSimulation genotype index/position, it refers to the index 
+#' of the group member that should get the first value from the vector `values`
+#' if the group members were stored in an R vector and used R's 1-based indexing.
 #' @return 0 on success
 #'
 #' @family label functions
 #' @export
-change.label.to.values <- function(label, values, group=NA, startIndex=1) {
+change.label.to.values <- function(label, values, group=NA, startIndex=NA, skip=0) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   if (!is.integer(values)) {
     tmp <- values
     values <- as.integer(values)
     if (!isTRUE(all(tmp==values))) { stop("Label values must be integers.") }
   }
+  if (!is.na(startIndex)) {
+    if (skip != 0) { 
+        warning("Trying to use both `skip` and the older equivalent parameter `startIndex`. The `startIndex` value will be ignored.") 
+    } else if (!is.numeric(startIndex)) {
+        stop("`startIndex` is invalid (wrong type or negative)\n")
+    } else {
+        return(.Call(SXP_change_label_to_values, sim.data$p, label, 
+                   values, group, startIndex-1))
+    }
+  }
   return(.Call(SXP_change_label_to_values, sim.data$p, label, 
-               values, group, startIndex))    
+               values, group, skip))
 }
 
 

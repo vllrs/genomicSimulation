@@ -1325,7 +1325,7 @@ SEXP SXP_change_label_default(SEXP exd, SEXP s_labels, SEXP s_defaults) {
 	return ScalarInteger(0);
 }
 
-SEXP SXP_change_label_to_values(SEXP exd, SEXP s_label, SEXP s_values, SEXP s_group, SEXP s_start) {
+SEXP SXP_change_label_to_values(SEXP exd, SEXP s_label, SEXP s_values, SEXP s_group, SEXP s_skip) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
 	int label = asInteger(s_label);
@@ -1345,9 +1345,9 @@ SEXP SXP_change_label_to_values(SEXP exd, SEXP s_label, SEXP s_values, SEXP s_gr
 		error("`group` is invalid (wrong type or negative)\n");
 	}
 
-	int startIndex = asInteger(s_start) - 1;
+	int startIndex = asInteger(s_skip);
 	if (startIndex == NA_INTEGER || startIndex < 0) {
-		error("`startIndex` is invalid (wrong type or negative)\n");
+		error("`skip` is invalid (wrong type or negative)\n");
 	}
 
 	change_label_to_values(d, GROUPNUM_IFY(group), (GLOBALX_T) startIndex, LABELID_IFY(label), vlen, values);
