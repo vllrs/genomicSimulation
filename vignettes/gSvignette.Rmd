@@ -58,7 +58,7 @@ Contact the package maintainers at https://github.com/vllrs/genomicSimulation/ f
 
 Guides on using the package can be found in sections 4 and 5 of this vignette.
 
-[A formal summary of this tool's design and performance is available on bioRxiv. Some information (capabilities, function names) may be out of date.](https://www.biorxiv.org/content/10.1101/2021.12.12.472291v2)
+[A formal summary of this tool's design and performance is available in research paper format. Some information (capabilities, function names) may be out of date.](http://dx.doi.org/10.1093/g3journal/jkac216)
 
 ## Getting to know genomicSimulation
 
@@ -79,6 +79,8 @@ In genomicSimulation, every genotype is a member of a 'group', an abstract categ
 Using these two factors (all genotypes being allocated to reconfigurable groups, and simulation actions being able to be undertaken in any order) genomicSimulation has the flexibility to simulate a huge range of breeding programs. You can imagine repeatedly simulating crosses from a 'breeding pool' group and discarding all but a selected subset of offspring which can be merged back into the breeding pool, or simulating a nucleus breeding system with several funneled breeding pools running simultaneously, each replenished by the best offspring of their own pool and whatever trickles down from more elite pools, or simulating a breeding program with concurrent population development/improvement streams which splits off copies of certain genotypes to repeatedly self into homozygosity for commercialisation testing.
 
 As an R user, the functions `see.existing.groups()`, `see.group.data()`, and `see.group.gene.data()` are the easiest ways to access your simulation data. Other output formats are available via saving data to files.
+
+This vignette will go through the details of genomicSimulation simulations, and then show some simple simulation scripts. An alternative way to learn about the package is through the [Features and Template Guide (in the genomicSimulationC documentation)](https://vllrs.github.io/genomicSimulationC/html/templates.html), which works through a larger list of examples of breeding program simulation components
 
 
 # Package Details

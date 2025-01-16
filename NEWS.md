@@ -30,6 +30,7 @@
 - More informative error message when calling `break.group.by.GEBV` on a nonexistent group.
 - Added tests of the common parameters of `make.`-prefixed functions
 - Documentation of save-as-you-go parameters in `make.`-prefixed functions has been updated, as it was outdated after an update to the underlying C library. The correct output file formats and file names are now described.
+- Update journal paper link and add a link to the alternate package guide (the "Templates" page of C documentation) in README and vignette.
 
 ## Bug Fixes
 
