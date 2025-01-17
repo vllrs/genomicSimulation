@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kira Villiers" />
 
-<meta name="date" content="2024-09-26" />
+<meta name="date" content="2025-01-17" />
 
 <title>genomicSimulation (v0.2.6) Vignette</title>
 
@@ -340,7 +340,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <h1 class="title toc-ignore">genomicSimulation (v0.2.6) Vignette</h1>
 <h4 class="author">Kira Villiers</h4>
-<h4 class="date">2024-09-26</h4>
+<h4 class="date">2025-01-17</h4>
 
 
 <div id="TOC">
@@ -525,10 +525,10 @@ feature requests or improvement requests, or to report any bug or
 crash.</p>
 <p>Guides on using the package can be found in sections 4 and 5 of this
 vignette.</p>
-<p><a href="https://www.biorxiv.org/content/10.1101/2021.12.12.472291v2">A
-formal summary of this tool’s design and performance is available on
-bioRxiv. Some information (capabilities, function names) may be out of
-date.</a></p>
+<p><a href="http://dx.doi.org/10.1093/g3journal/jkac216">A formal
+summary of this tool’s design and performance is available in research
+paper format. Some information (capabilities, function names) may be out
+of date.</a></p>
 <div id="getting-to-know-genomicsimulation" class="section level2" number="1.1">
 <h2><span class="header-section-number">1.1</span> Getting to know
 genomicSimulation</h2>
@@ -575,6 +575,12 @@ testing.</p>
 <code>see.group.data()</code>, and <code>see.group.gene.data()</code>
 are the easiest ways to access your simulation data. Other output
 formats are available via saving data to files.</p>
+<p>This vignette will go through the details of genomicSimulation
+simulations, and then show some simple simulation scripts. An
+alternative way to learn about the package is through the <a href="https://vllrs.github.io/genomicSimulationC/html/templates.html">Features
+and Template Guide (in the genomicSimulationC documentation)</a>, which
+works through a larger list of examples of breeding program simulation
+components</p>
 </div>
 </div>
 <div id="package-details" class="section level1" number="2">
@@ -1069,8 +1075,8 @@ Formats</a>).</li>
 <li>Saving the data about a cross at the same time as producing it
 (<code>save</code>-prefixed parameters in crossing functions, see <a href="#crossing-function-settings">Indexes: Crossing Function
 Settings</a>). This enables more compact data saving, and also would
-allow for simulating more crosses than can be stored in working memory
-(by setting the parameter <code>retain=FALSE</code>). In this
+allow for simulating more crosses than can be stored in system working
+memory (by setting the parameter <code>retain=FALSE</code>). In this
 save-as-you-go saving, the simulation generates and saves crosses in
 batches of 1000. save-as-you-go is however less flexible than
 <code>save.</code>-prefixed functions because only the default printing
@@ -1127,10 +1133,10 @@ founders</h2>
 </tr>
 </tbody>
 </table>
-<p><strong>Min:</strong> 0.0126 seconds <strong>Mean:</strong> 0.0176
-seconds <strong>Max:</strong> 0.0434 seconds</p>
+<p><strong>Min:</strong> 0.0228 seconds <strong>Mean:</strong> 0.0257
+seconds <strong>Max:</strong> 0.0564 seconds</p>
 <div class="figure">
-<img src="data:image/png;base64,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" alt />
+<img src="data:image/png;base64,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" alt />
 <p class="caption">Boxplot of set-up time benchmark results</p>
 </div>
 </div>
@@ -1175,10 +1181,10 @@ crossing</h2>
 </tr>
 </tbody>
 </table>
-<p><strong>Min:</strong> 1.25 seconds <strong>Mean:</strong> 1.32
-seconds <strong>Max:</strong> 1.43 seconds</p>
+<p><strong>Min:</strong> 1.37 seconds <strong>Mean:</strong> 1.46
+seconds <strong>Max:</strong> 1.63 seconds</p>
 <div class="figure">
-<img src="data:image/png;base64,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" alt />
+<img src="data:image/png;base64,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" alt />
 <p class="caption">Boxplot of simulating crossing benchmark results</p>
 </div>
 </div>
@@ -1219,10 +1225,10 @@ values</h2>
 </tr>
 </tbody>
 </table>
-<p><strong>Min:</strong> 0.00333 seconds <strong>Mean:</strong> 0.00393
-seconds <strong>Max:</strong> 0.00692 seconds</p>
+<p><strong>Min:</strong> 0.00284 seconds <strong>Mean:</strong> 0.00300
+seconds <strong>Max:</strong> 0.00529 seconds</p>
 <div class="figure">
-<img src="data:image/png;base64,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" alt />
+<img src="data:image/png;base64,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" alt />
 <p class="caption">Boxplot of calculating breeding value benchmark
 results</p>
 </div>
@@ -1324,11 +1330,11 @@ numbers and call crossing functions.</p>
 <span id="cb11-68"><a href="#cb11-68" aria-hidden="true" tabindex="-1"></a><span class="co"># Show the save-as-you-go output file</span></span>
 <span id="cb11-69"><a href="#cb11-69" aria-hidden="true" tabindex="-1"></a><span class="fu">read.csv</span>(<span class="st">&quot;af6-genotype.txt&quot;</span>, <span class="at">sep=</span><span class="st">&#39;</span><span class="sc">\t</span><span class="st">&#39;</span>)</span>
 <span id="cb11-70"><a href="#cb11-70" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    X m1 m2 m3</span></span>
-<span id="cb11-71"><a href="#cb11-71" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 32 TT AA TT</span></span>
+<span id="cb11-71"><a href="#cb11-71" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 32 TT AA AA</span></span>
 <span id="cb11-72"><a href="#cb11-72" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 33 TT AA AA</span></span>
-<span id="cb11-73"><a href="#cb11-73" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 34 TT AA TT</span></span>
+<span id="cb11-73"><a href="#cb11-73" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 34 TT AA AA</span></span>
 <span id="cb11-74"><a href="#cb11-74" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 35 TT AA AA</span></span>
-<span id="cb11-75"><a href="#cb11-75" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 36 TT AA TT</span></span>
+<span id="cb11-75"><a href="#cb11-75" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 36 TT AA AA</span></span>
 <span id="cb11-76"><a href="#cb11-76" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-77"><a href="#cb11-77" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-78"><a href="#cb11-78" aria-hidden="true" tabindex="-1"></a><span class="co"># (cleanup)</span></span>
@@ -1461,7 +1467,7 @@ selection:</p>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>                     <span class="at">GEBV=</span><span class="fu">see.group.data</span>(group,<span class="st">&quot;BV&quot;</span>))</span>
 <span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  </span>
 <span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># simulate phenotype = genotype + environmental variation</span></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># using normally distributed Ve and heritability H^2 = (Ve + Vg)/Vg</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># using normally distributed Ve and heritability H^2 = Vg/(Vg + Ve)</span></span>
 <span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  Vg <span class="ot">&lt;-</span> <span class="fu">var</span>(info<span class="sc">$</span>GEBV)</span>
 <span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  Ve <span class="ot">&lt;-</span> Vg<span class="sc">/</span>heritability <span class="sc">-</span> Vg</span>
 <span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  info<span class="sc">$</span>Pheno <span class="ot">&lt;-</span> info<span class="sc">$</span>GEBV <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="fu">length</span>(info<span class="sc">$</span>GEBV), <span class="at">mean=</span><span class="dv">0</span>, <span class="at">sd =</span> <span class="fu">sqrt</span>(Ve))</span>
@@ -1615,9 +1621,34 @@ Index</h2>
 </ul>
 <p>Generally, these default parameter settings should be satisfactory.
 If you do need to change them, add a line of the format
-<code>#define CONTIG_WIDTH 2048</code>, with your desired variable to
-modify and desired value to change it to, to the first line of
-<code>src/genomicSimulation-init.c</code>.</p>
+<code>#define CONTIG_WIDTH 2048</code> (with <code>CONTIG_WIDTH</code>
+and <code>2048</code> replaced with your desired values) to the first
+line of <code>src/genomicSimulation-init.c</code>, then rebuilding the
+package.</p>
+<p>The following type aliases store different types of identifiers in
+genomicSimulation’s internal library. They default to being
+<code>unsigned int</code>, a type which commonly is capable of storing
+integers between 0 and 4,294,967,295.</p>
+<ul>
+<li>GSC_ID_T is used for all unique identifiers in genomicSimulation
+(group numbers, pedigree IDs, genetic map IDs, and marker effect set
+IDs).</li>
+<li>GSC_GENOLEN_T is used to store the total number of genetic markers
+tracked by the simulation.</li>
+<li>GSC_GLOBALX_T is used to store the total number of genotypes in the
+simulation.</li>
+<li>GSC_LOCALX_T only needs to hold values between 0 and CONTIG_WIDTH.
+It will be automatically resized if you resize CONTIG_WIDTH, so it is
+unlikely you would need to redefine this type.</li>
+</ul>
+<p>If you need to generate or store over 4,294,967,294 genotypes or
+genetic markers in a single simulation, you can redefine one or more of
+the type aliases to a larger type by adding lines of the format
+<code>#define GSC_ID_T long unsigned int</code> (with
+<code>GSC_ID_T</code> and <code>long unsigned int</code> replaced with
+your desired values) to the first line of
+<code>src/genomicSimulation-init.c</code>, then rebuilding the
+package.</p>
 </div>
 <div id="function-index" class="section level2" number="6.2">
 <h2><span class="header-section-number">6.2</span> Function Index</h2>
@@ -1746,42 +1777,48 @@ briefly described below.</p>
 <ul>
 <li><code>offspring</code> : A setting representing the number of times
 to do each cross.</li>
-<li><code>retain</code> : A boolean, repesenting whether to save the
-generated genotypes to memory or discard them. You may wish to discard
-them but save to file if you are generating too many crosses to save
-into memory.</li>
-<li><code>give.names</code> : A boolean representing whether or not to
-produce names for the new genotypes generated. The names produced would
-have format [name.prefix][id]</li>
+<li><code>retain</code> : A true/false logical value, repesenting
+whether to save the generated genotypes to memory or discard them. You
+may wish to discard them but save to file if you are generating too many
+crosses to save into memory.</li>
+<li><code>give.names</code> : A true/false logical value representing
+whether or not to produce names for the new genotypes generated. The
+names produced would have format [name.prefix][id]</li>
 <li><code>name.prefix</code> : A string. If give.names is TRUE, the id
 is concatenated to this to produce the name of each new genotype.</li>
-<li><code>track.pedigree</code> :A boolean representing whether or not
-to save the ids of the parents of each new genotype to the new
-genotype’s pedigree. If this is false, the new genotype’s pedigree is
-unknown.</li>
-<li><code>give.ids</code> : A boolean representing whether or not to
-allocate each new genotype an id. If this is FALSE, the new genotype is
-‘invisible’ to pedigree trackers and even if the pedigree of its
-offspring is supposedly tracked, the pedigree trackers will not be able
-to identify the progenitors of its offspring. Furthermore, if it is
-false and names are generated using give.names, all names generated in
-the same group will be the same. Probably you’d only have this FALSE if
-you were discarding the results or worried about id overflow.</li>
+<li><code>track.pedigree</code> :A true/false logical value representing
+whether or not to save the ids of the parents of each new genotype to
+the new genotype’s pedigree. If this is false, the new genotype’s
+pedigree is unknown.</li>
+<li><code>give.ids</code> : A true/false logical value representing
+whether or not to allocate each new genotype an id. If this is FALSE,
+the new genotype is ‘invisible’ to pedigree trackers and even if the
+pedigree of its offspring is supposedly tracked, the pedigree trackers
+will not be able to identify the progenitors of its offspring.
+Furthermore, if it is false and names are generated using give.names,
+all names generated in the same group will be the same. Probably you’d
+only have this FALSE if you were discarding the results or worried about
+id overflow.</li>
 <li><code>file.prefix</code> : A string representing the prefix of files
-produced if save.pedigree=TRUE, save.gebv=TRUE, or
-save.genotype=TRUE.</li>
-<li><code>save.pedigree</code> : A boolean. If TRUE, saves the pedigree
-in recursive format of each generated genotype to the text file with
-filename “[file.prefix]-pedigree”.</li>
-<li><code>save.gebv</code> : An integer. If 0, does not save GEBVs. If
-greater than 0, saves the GEBVs of each generated genotype to the
-tab-separated text file with filename “[file.prefix]-eff”. The GEBVs
-will be calculated using the marker effect set whose identifier was
-given to this parameter.</li>
-<li><code>save.genotype</code> : A boolean. If TRUE, saves the SNP/line
-matrix in regular format (generated genotypes as rows, SNPs as columns)
+produced if save.pedigree=TRUE, save.gebv=TRUE, or save.genotype=TRUE.
+If not specified, the default prefix is “out”. save.pedigree, save.gebv,
+and save.genotype are known as the “save-as-you-go” settings, which
+allow you to output data on the genotypes at the same time as they are
+being generated. The save-as-you-go settings can be used in conjunction
+with retain=FALSE, if you want to generate results from a greater number
+of offspring than your system memory can hold.</li>
+<li><code>save.pedigree</code> : A true/false logical value. If TRUE,
+saves the pedigree )in recursive format) of each generated genotype to
+the text file with filename “[file.prefix]-pedigree.txt”.</li>
+<li><code>save.gebv</code> : A marker effect set identifier, or 0 to not
+save GEBVs. If greater than 0, calculates the GEBVs of each generated
+genotype using the marker effect set with this identifier and saves them
 to the tab-separated text file with filename
-“[file.prefix]-genome”.</li>
+“[file.prefix]-bv.txt”.</li>
+<li><code>save.genotype</code> : A true/false logical value. If TRUE,
+saves the SNP/line matrix (generated genotypes as rows, SNPs as columns)
+to the tab-separated text file with filename
+“[file.prefix]-genotype.txt”.</li>
 </ul>
 </div>
 <div id="combination-crossing-functions" class="section level2" number="6.4">
@@ -1818,19 +1855,21 @@ Formats</h2>
 <div id="saving-genotypes" class="section level3" number="6.5.1">
 <h3><span class="header-section-number">6.5.1</span> Saving
 genotypes</h3>
-<p>Use the function <code>save.genotypes</code> or the
-<code>save.genotype = TRUE</code> setting of crossing functions to save
+<p>Use the function <code>save.genotypes</code> with
+<code>markers.as.rows = FALSE</code>, or the
+<code>save.genotype = TRUE</code> setting of crossing functions, to save
 the alleles of generated genotypes across the list of SNPs.</p>
 <p>It will save genotypes in the following format:</p>
 <pre><code>    m1  m2  m3
 F107    TT  AA  TT
 F108    TT  AA  TT
 F109    TA  AA  TT</code></pre>
-<p>Note that this is the transpose of the usual expected input file
-format. Due to the linked list method used to store genotypes, it will
-be slower/take more passes over the data to print the transposed
-equivalent. However, this alternate format (shown below) is available
-via <code>save.genotypes</code> with <code>type = &quot;T&quot;</code>.</p>
+<p>In this example, the candidates have names (“F107”, “F108” and
+“F109”). If candidates do not have names, their Pedigree IDs are used
+instead.</p>
+<p>Use of the function <code>save.genotypes</code> with
+<code>markers.as.rows = TRUE</code> will produce the following format,
+which is the transpose of the matrix above:</p>
 <pre><code>   F107   F108   F109
 m1 TT     TT     TA
 m2 AA     AA     AA
@@ -1848,20 +1887,22 @@ F108    TT  AA  TT</code></pre>
 pedigrees</h3>
 <p>Pedigrees can be saved in one of two ways:</p>
 <ul>
-<li><code>save.pedigrees</code>, with <code>type = &quot;P&quot;</code>, which
-saves in the following format, even if grandparents are known:</li>
+<li><code>save.pedigrees</code>, with
+<code>recursive.format= FALSE</code>, which saves in the following
+format, even if grandparents are known:</li>
 </ul>
 <pre><code>F2010   F107   F107
 F2011   F108   F109</code></pre>
 <p>This is a tab-separated text file. The first column is the child
 name, and the next two columns are the names of its immediate parents
 (or single parent duplicated if it was produced by selfing or doubling
-haploids). If names are not available, IDs are used instead. If parents
-are unknown, the columns will be blank.</p>
+haploids). If names are not available, Pedigree IDs are used instead. If
+parents are unknown, the columns will be blank.</p>
 <ul>
-<li><code>save.pedigrees</code>, with <code>type = &quot;R&quot;</code>, or
-crossing with setting <code>save.pedigree = TRUE</code>, which save in
-the following format:</li>
+<li><code>save.pedigrees</code>, with
+<code>recursive.format = TRUE</code>, or crossing with setting
+<code>save.pedigree = TRUE</code>, which save in the following
+format:</li>
 </ul>
 <pre><code>10  F2010=(F107(G01,G02))
 11  F2011=(F108(G01,G03),F109(G02,G03))</code></pre>
@@ -1887,7 +1928,9 @@ output with the following format:</p>
 2   G02 1.400000
 3   G03 1.600000</code></pre>
 <p>This is a tab-separated text file. The first column is the ID, then
-the name of each line, then the GEBV of that line.</p>
+the name of the candidate, then the GEBV of that candidate. If the
+candidate has no name, the second column is blank. If the candidate has
+not been allocated a PedigreeID, the first column holds the value 0.</p>
 </div>
 <div id="saving-block-effect-valueslocal-gebvs" class="section level3" number="6.5.4">
 <h3><span class="header-section-number">6.5.4</span> Saving block effect
@@ -1971,12 +2014,10 @@ custom label’s values are accessed. It defaults to the first-created
 custom label.</li>
 <li><strong>P1D</strong>: Pedigree ID of its first parent.</li>
 <li><strong>P1</strong>, but not followed by the letter D: Name of its
-first parent, or its first parent’s pedigree ID if the parent has no
-name.</li>
+first parent.</li>
 <li><strong>P2D</strong>: Pedigree ID of its second parent.</li>
 <li><strong>P2</strong>, but not followed by the letter D: Name of its
-second parent, or its second parent’s pedigree ID if the parent has no
-name.</li>
+second parent.</li>
 <li><strong>PED</strong>: Full/recursive known pedigree, as a
 string.</li>
 </ul>

@@ -1,40 +1,34 @@
 
-# genomicSimulation (development version)
+# genomicSimulation v0.2.6
 
 ## New Features
 
-- `see.group.data` can now be called with multiple groups. The results from each group will be concatenated. This allows you to replace lines like `c(see.group.data(group1,"BV"),see.group.data(group2,"BV"))` with `see.group.data(c(group1,group2),"BV")`.
-- `see.group.gene.data` can now be called with multiple groups. The columns from each group will be concatenated.
-- Added ability to observe the pedigree IDs of parents using `see.group.data`. (Previously, `see.group.data` could be used to observe the names of parents, which would fall back to the pedigree IDs of parents for parents without names. Some use cases may appreciate the ability to access pedigree IDs consistently.)
 - Added ability to override the automatically detected file layout details in `load.data` and `load.genotypes` using the new function `define.matrix.format.details`, so that files whose format is incorrectly detected are not prevented from being loaded. 
-- Make missing alleles visible in the matrix returned by `see.group.gene.data` (previously, they would cause issues with sometimes hiding non-missing alleles, due to being represented internally by the null character '\0').
+- `see.group.data` can now be called with multiple groups. The results from each group will be concatenated. This allows you to replace lines like `c(see.group.data(group1,"BV"),see.group.data(group2,"BV"))` with `see.group.data(c(group1,group2),"BV")`.
+- When accessing candidate names using `see.group.data` (i.e., for data.type = "N" or "P1" or "P2"), a missing name is no longer substituted with the candidate's pedigree ID. Instead, the name of a candidate with no name is rendered as an NA_character_. The old behaviour made it possible to accidentally pass string-typed pedigree IDs to `make.targeted.crosses`, and bugs could then result from `make.targeted.crosses` attempting to parse these as names.
+- Added ability to directly observe the pedigree IDs of parents using `see.group.data` using data.type = "P1D" or "P2D". 
+- `see.group.gene.data` can now be called with multiple groups. The columns from each group will be concatenated.
+- Column names and row names of the matrix returned by `see.group.gene.data` now reflect genotype names and genetic marker names respectively.
+- Missing alleles in the matrix returned by `see.group.gene.data` are now visible (previously, they would cause issues with sometimes hiding non-missing alleles, due to being represented internally by the null character '\0').
+- `make.targeted.crosses` now skips invalid pairings, instead of stopping execution at the first invalid pairing it finds. If any pairings were skipped, it will print a debug message listing the number of invalid pairings detected.
 - The orientation of the output matrix of `save.allele.counts` can now be chosen, as has previously been possible only with `save.genotypes`. 
 - Save-as-you-go saving of breeding values calculated using a non-default set of marker effects is now possible. The `save.gebv` parameter of `make.`-prefixed functions now takes the identifier for a marker effect set, instead of a logical value. The default behaviour (not saving any breeding values) has not changed.
 
 ## Improvements
 
 - No longer `Depends` on package `fs`. `fs` is only used if file paths are used that contain tildes `~` needing to be expanded to home directories.
-- Fix a potential (untested) issue when using very long R vectors, by updating vector length calculation in R wrapper functions from `length()` to `xlength()`.
+- Use of superseded progression function names (eg. `cross.combinations` for `make.targeted.crosses`) now produces warnings. The function names were superseded from v0.2.5 onwards.
 - `see.group.data` and `see.group.gene.data` now raise a warning, instead of an error, when there are no group members allocated to the group(s) they access.
 - `see.group.data`, `see.group.gene.data`, `delete.group`, and `combine.groups` no longer raise an error when the group numbers passed are of numeric type instead of integer type. Instead, as long as the numbers are whole numbers, they perform the type conversion. Likewise, `make.targeted.crosses` no longer raises an error when it is passed parent indexes that are of numeric type instead of integer type, as long as the numbers are whole numbers. Likewise, `make.random.crosses`, `make.all.unidirectional.crosses`, `self.n.times` and `make.doubled.haploids` no longer raise an error when the group numbers or map IDs passed are of numeric type instead of integer type, as long as the numbers are whole numbers. 
-- Column names and row names of the matrix returned by `see.group.gene.data` now reflect genotype names and genetic marker names respectively.
+- `break.group.into.buckets` now accepts integer bucket sizes even if they are not in R integer vector format.
+- Functions which accept vectors of integers (eg. `break.group.into.buckets`, `make.group`, `change.label.to.values`) provide more meaningful error messages when passed a character vector instead.
 - Vignette and function docs edited for better clarity around compatible input file formats and function name changes made in v0.2.5
 - Under-the-hood improvements and simplifications of the genotype matrix input file layout detection systems.
 - Under-the-hood improvements and simplifications of the file saving output functions.
 - File saving output functions with multiple possible output formats (`save.genotypes` & `save.pedigrees`) now prefer a logical/boolean parameter to select the output format, the same way as the underlying C library does, instead of needing to memorise format strings. The old string parameters will still be accepted, so no need to modify old code.
-- `break.group.into.buckets` now accepts integer bucket sizes even if they are not in R integer vector format.
-- Functions which accept vectors of integers (eg. `break.group.into.buckets`, `make.group`, `change.label.to.values`) provide more meaningful error messages when passed a character vector instead.
-- Use of superseded progression function names (eg. `cross.combinations` for `make.targeted.crosses`) now produces warnings. 
-- Superseded progression function names in tests have been replaced with their current names. 
-- Clarified in documentation which progression functions accept a vector of genetic map IDs, and which only accept a single genetic map.
+- Changed name of `startIndex` parameter of `change.label.to.values` to `skip` to avoid confusion with genomicSimulation internal indexes (`see.group.data(data.type="X")`), which are not valid inputs to this function. The old parameter name is still accepted, so no need to modify old code.
 - More informative error message when calling `break.group.by.GEBV` on a nonexistent group.
-- Added tests of the common parameters of `make.`-prefixed functions
-- Documentation of save-as-you-go parameters in `make.`-prefixed functions has been updated, as it was outdated after an update to the underlying C library. The correct output file formats and file names are now described.
-- Update journal paper link and add a link to the alternate package guide (the "Templates" page of C documentation) in README and vignette.
-- Changed name of `startIndex` parameter of `change.label.to.values` to `skip` to avoid confusion with genomicSimulation internal indexes (`see.group.data(data.type="X")`), which are not valid inputs to this function. This is a non-breaking change, all existing scripts using `startIndex` still function exactly as before. 
-- `make.targeted.crosses` now skips invalid pairings, instead of stopping execution at the first invalid pairing it finds. If any pairings were skipped, it will print a debug message listing the number of invalid pairings detected.
-- BREAKING CHANGE: When accessing candidate names using `see.group.data` (i.e., for data.type = "N" or "P1" or "P2"), a missing name is no longer substituted with the candidate's pedigree ID. Instead, the name of a candidate with no name is rendered as an NA_character_. The old behaviour made it possible to accidentally pass string-typed pedigree IDs to `make.targeted.crosses`, and bugs could then result from `make.targeted.crosses` attempting to parse these as names.
-
+- Clarified in documentation which progression functions accept a vector of genetic map IDs, and which only accept a single genetic map.
 
 ## Bug Fixes
 
