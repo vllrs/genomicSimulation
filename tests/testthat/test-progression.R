@@ -145,6 +145,16 @@ test_that("make.targeted.crosses works", {
   g2 <- make.targeted.crosses(first.parents=c(0,1), second.parents=c(3,0))
   g3 <- make.targeted.crosses(first.parents=c("G01", "G02", "G03"), second.parents=c("G06","G05","G04"))
   expect_identical(see.existing.groups(), data.frame("Group"=c(g,g2,g3),"GroupSize"=c(6L,2L,3L)))
+  expect_identical(see.group.data(c(g2,g3),"P1D"),c(1L,2L,1L,2L,3L))
+  expect_identical(see.group.data(c(g2,g3),"P2"),c("G04","G01","G06","G05","G04"))
+  
+  # And test what happens if we give it bad input
+  expect_snapshot(g4 <- make.targeted.crosses(first.parents=c(0,"abc"), second.parents=c(3,0)))
+  expect_snapshot(g5 <- make.targeted.crosses(first.parents=c(0,10,3), second.parents=c(30,100,4)))
+  expect_identical(g4, 0L)
+  expect_identical(see.existing.groups(), data.frame("Group"=c(g,g2,g3,g5),"GroupSize"=c(6L,2L,3L,1L)))
+  expect_identical(see.group.data(g5,"P1D"),c(4L))
+  expect_identical(see.group.data(g5,"P2D"),c(5L))
   
   clear.simdata()
 })

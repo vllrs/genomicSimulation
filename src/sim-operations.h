@@ -1,9 +1,9 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.2.5.11
+genomicSimulationC v0.2.5.13
 
-    Last edit: 19 December 2024
+    Last edit: 17 Jan 2025
 	License: MIT License
 
 Copyright (c) 2021 Kira Villiers
@@ -62,6 +62,14 @@ SOFTWARE.
 		names of generated genotypes, and save-as-you-go filenames.
 		
 		@TODO render this setting meaningless. 
+        
+    #define GSC_ID_T unsigned int
+    #define GSC_LOCALX_T unsigned int
+    #define GSC_GLOBALX_T unsigned int
+    #define GSC_GENOLEN_T unsigned int
+        
+        These type aliases are used for different types of internal identifiers.
+        They can be redefined to any signed or unsigned integer type, if needed.
 	
 */
 
@@ -143,7 +151,8 @@ typedef enum {
     *
     * It is used to represent the index of a candidate within its current AlleleMatrix.
     *
-    * Can be redefined to another unsigned or signed integer type.
+    * Can be redefined to another unsigned or signed integer type. This type should have a
+    * maximum value less than CONTIG_WIDTH.
     */ 
     #define GSC_LOCALX_T unsigned int
 #endif
@@ -1059,7 +1068,7 @@ unsigned int gsc_get_from_unordered_str_list(const char* target, const unsigned 
 unsigned int gsc_get_from_ordered_str_list(const char* target, const unsigned int listLen, const char** list);
 
 
-void gsc_shuffle_up_to( GSC_GLOBALX_T* sequence, const unsigned int total_n, const unsigned int n_to_shuffle);
+void gsc_shuffle_up_to( void* sequence, const unsigned int item_size, const unsigned int total_n, const unsigned int n_to_shuffle);
 GSC_GLOBALX_T gsc_randomdraw_replacementrules(gsc_SimData* d, GSC_GLOBALX_T max, GSC_GLOBALX_T cap, 
                                               GSC_GLOBALX_T* member_uses, GSC_GLOBALX_T noCollision);
 

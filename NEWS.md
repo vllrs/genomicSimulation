@@ -32,6 +32,7 @@
 - Documentation of save-as-you-go parameters in `make.`-prefixed functions has been updated, as it was outdated after an update to the underlying C library. The correct output file formats and file names are now described.
 - Update journal paper link and add a link to the alternate package guide (the "Templates" page of C documentation) in README and vignette.
 - Changed name of `startIndex` parameter of `change.label.to.values` to `skip` to avoid confusion with genomicSimulation internal indexes (`see.group.data(data.type="X")`), which are not valid inputs to this function. This is a non-breaking change, all existing scripts using `startIndex` still function exactly as before. 
+- `make.targeted.crosses` now skips invalid pairings, instead of stopping execution at the first invalid pairing it finds. If any pairings were skipped, it will print a debug message listing the number of invalid pairings detected.
 
 ## Bug Fixes
 
