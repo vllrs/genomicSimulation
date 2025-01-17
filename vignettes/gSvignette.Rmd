@@ -333,11 +333,11 @@ cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
 # Thanks https://stackoverflow.com/questions/19997242/simple-manual-rmarkdown-tables-that-look-good-in-html-pdf-and-docx
 ```
 
-**Min:** 0.0126 seconds 
-**Mean:** 0.0176 seconds 
-**Max:** 0.0434 seconds 
+**Min:** 0.0228 seconds 
+**Mean:** 0.0257 seconds 
+**Max:** 0.0564 seconds 
 
-![Boxplot of set-up time benchmark results](benchmark_gS_loading.png)
+![Boxplot of set-up time benchmark results](benchmark_gS_v0.2.6_loading.png)
 
 ## Simulate crossing
 ```{r table3, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
@@ -354,11 +354,11 @@ tabl <- "
 cat(tabl)
 ```
 
-**Min:** 1.25 seconds 
-**Mean:** 1.32 seconds 
-**Max:** 1.43 seconds 
+**Min:** 1.37 seconds 
+**Mean:** 1.46 seconds 
+**Max:** 1.63 seconds 
 
-![Boxplot of simulating crossing benchmark results](benchmark_gS_crossing.png)
+![Boxplot of simulating crossing benchmark results](benchmark_gS_v0.2.6_crossing.png)
 
 ## Calculate breeding values
 ```{r table4, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
@@ -374,11 +374,11 @@ tabl <- "
 cat(tabl)
 ```
 
-**Min:** 0.00333 seconds 
-**Mean:** 0.00393 seconds 
-**Max:** 0.00692 seconds 
+**Min:** 0.00284 seconds 
+**Mean:** 0.00300 seconds 
+**Max:** 0.00529 seconds 
 
-![Boxplot of calculating breeding value benchmark results](benchmark_gS_bvcalc.png)
+![Boxplot of calculating breeding value benchmark results](benchmark_gS_v0.2.6_bvcalc.png)
 
 Forms of output that involve writing to files will be slower than methods of output that involve extracting data to the R environment. 
 
