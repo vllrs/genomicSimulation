@@ -33,6 +33,8 @@
 - Update journal paper link and add a link to the alternate package guide (the "Templates" page of C documentation) in README and vignette.
 - Changed name of `startIndex` parameter of `change.label.to.values` to `skip` to avoid confusion with genomicSimulation internal indexes (`see.group.data(data.type="X")`), which are not valid inputs to this function. This is a non-breaking change, all existing scripts using `startIndex` still function exactly as before. 
 - `make.targeted.crosses` now skips invalid pairings, instead of stopping execution at the first invalid pairing it finds. If any pairings were skipped, it will print a debug message listing the number of invalid pairings detected.
+- BREAKING CHANGE: When accessing candidate names using `see.group.data` (i.e., for data.type = "N" or "P1" or "P2"), a missing name is no longer substituted with the candidate's pedigree ID. Instead, the name of a candidate with no name is rendered as an NA_character_. The old behaviour made it possible to accidentally pass string-typed pedigree IDs to `make.targeted.crosses`, and bugs could then result from `make.targeted.crosses` attempting to parse these as names.
+
 
 ## Bug Fixes
 

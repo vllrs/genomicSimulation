@@ -862,9 +862,9 @@ Available data types: Description (`data.type` parameter value)
 select which set of marker effects to use to calculate the breeding values. It defaults to the first loaded set of effect values.
 - **L**: values they hold for a custom label. The additional parameter `label` can be used to select which custom label's values are accessed. It defaults to the first-created custom label.
 - **P1D**: Pedigree ID of its first parent.
-- **P1**, but not followed by the letter D: Name of its first parent, or its first parent's pedigree ID if the parent has no name.
+- **P1**, but not followed by the letter D: Name of its first parent.
 - **P2D**: Pedigree ID of its second parent.
-- **P2**, but not followed by the letter D: Name of its second parent, or its second parent's pedigree ID if the parent has no name.
+- **P2**, but not followed by the letter D: Name of its second parent.
 - **PED**: Full/recursive known pedigree, as a string.
 
 ## `see.group.gene.data`

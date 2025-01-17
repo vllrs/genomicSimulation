@@ -581,20 +581,9 @@ SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set
 	    if (gsizes[i] > 0) {
 	      BidirectionalIterator it = create_bidirectional_iter(d,GROUPNUM_IFY(groups[i]));
 	      GenoLocation loc = next_forwards(&it);
-	      char buf[100];
 	      while (IS_VALID_LOCATION(loc)) {
 	        if (get_name(loc) == NULL) {
-	          int strlength = snprintf(NULL, 0,"%d",get_id(loc).id);
-	          if (strlength > 100) {
-	            char* buf2 = R_Calloc(sizeof(*buf2)*(strlength + 1),char);
-	            sprintf(buf2, "%d", get_id(loc).id);
-	            SET_STRING_ELT(out, outi, mkChar(buf2));
-	            R_Free(buf2);
-	            
-	          } else {
-	            sprintf(buf, "%d", get_id(loc).id);
-	            SET_STRING_ELT(out, outi, mkChar(buf));
-	          }
+			      SET_STRING_ELT(out, outi, NA_STRING);
 	          
 	        } else {
 	          SET_STRING_ELT(out, outi, mkChar(get_name(loc)));
@@ -665,23 +654,12 @@ SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set
 	    if (gsizes[i] > 0) {
 	      BidirectionalIterator it = create_bidirectional_iter(d,GROUPNUM_IFY(groups[i]));
 	      GenoLocation loc = next_forwards(&it);
-	      char buf[100];
 	      while (IS_VALID_LOCATION(loc)) {
 	        PedigreeID parentid = c2 == '1' ? get_first_parent(loc) : get_second_parent(loc);
 	        char* n = NULL;
 	        if (parentid.id > 0) { n = gsc_get_name_of_id(d->m, parentid); }
 	        if (n == NULL) {
-	          int strlength = snprintf(NULL, 0,"%d",parentid.id);
-	          if (strlength > 100) {
-	            char* buf2 = R_Calloc(sizeof(*buf2)*(strlength + 1),char);
-	            sprintf(buf2, "%d", parentid.id);
-	            SET_STRING_ELT(out, outi, mkChar(buf2));
-	            R_Free(buf2);
-	            
-	          } else {
-	            sprintf(buf, "%d", parentid.id);
-	            SET_STRING_ELT(out, outi, mkChar(buf));
-	          }
+	          SET_STRING_ELT(out, outi, NA_STRING);
 	          
 	        } else {
 	          SET_STRING_ELT(out, outi, mkChar(n));

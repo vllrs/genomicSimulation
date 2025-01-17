@@ -4,7 +4,7 @@
 \alias{change.label.to.values}
 \title{Set values of a custom label}
 \usage{
-change.label.to.values(label, values, group = NA, skip = 0, startIndex = NA)
+change.label.to.values(label, values, group = NA, startIndex = NA, skip = 0)
 }
 \arguments{
 \item{label}{the label number of the label to change.}
@@ -14,15 +14,15 @@ change.label.to.values(label, values, group = NA, skip = 0, startIndex = NA)
 \item{group}{NA or 0 to apply the values to all genotypes in simulation memory,
 or a group number to apply the values to only members of that group.}
 
-\item{skip}{Number of group members to skip before the member of the group who 
-should get the first value from the vector `values`.}
-
 \item{startIndex}{A parameter equivalent to `skip`. Because of the potential of
 the name to be confusing, it is recommended you use `skip` instead (the equivalence
 is `skip = startIndex - 1`). `startIndex` does not refer to an internal
 genomicSimulation genotype index/position, it refers to the index 
 of the group member that should get the first value from the vector `values`
 if the group members were stored in an R vector and used R's 1-based indexing.}
+
+\item{skip}{Number of group members to skip before the member of the group who 
+should get the first value from the vector `values`.}
 }
 \value{
 0 on success

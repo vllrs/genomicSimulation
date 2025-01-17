@@ -12,7 +12,7 @@ test_that("GenOptions works", {
   expect_identical(see.group.data(g2,"P2D"), c(2L,3L,4L)+1L)
   capture_output(delete.group(g2))
   g2 <- make.targeted.crosses(c("G01","G02","G03"), c(2,3,4), track.pedigree=FALSE)
-  expect_identical(see.group.data(g2,"P1"), c("0","0","0"))
+  expect_identical(see.group.data(g2,"P1"), rep(NA_character_,3))
   expect_identical(see.group.data(g2,"P2D"), c(0L,0L,0L))
   capture_output(delete.group(g2))
   #current_id <- 6 + 6
@@ -44,10 +44,10 @@ test_that("GenOptions works", {
   g4 <- make.random.crosses(g, 10, give.names = TRUE, name.prefix = "p")
   g5 <- make.random.crosses(g, 10, give.names = FALSE, name.prefix = "unused")
   # should modify see.group.data("N") so we can distinguish between nameless g2 and number-named g3
-  expect_identical(see.group.data(g2,"N"), as.character(59L:68L)) 
+  expect_identical(see.group.data(g2,"N"), rep(NA_character_,10)) # as.character(59L:68L)) 
   expect_identical(see.group.data(g3,"N"), as.character(69L:78L))
   expect_identical(see.group.data(g4,"N"), paste0("p",79L:88L))
-  expect_identical(see.group.data(g5,"N"), as.character(89L:98L))
+  expect_identical(see.group.data(g5,"N"), rep(NA_character_,10)) #as.character(89L:98L))
   capture_output(delete.group(c(g2,g3,g4,g5)))
   
   # save-as-you-go file settings
