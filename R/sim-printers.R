@@ -86,7 +86,7 @@ save.genotypes <- function(filename, group=NULL, type=NULL, markers.as.rows=FALS
 	  }
 	}
   
-  return(.Call(SXP_save_genotypes, sim.data$p, genomicSimulation:::expand.path(filename), 
+  return(.Call(SXP_save_genotypes, sim.data$p, my.expand.path(filename), 
 	             group, markers.as.rows))
 }
 
@@ -117,7 +117,7 @@ save.genotypes <- function(filename, group=NULL, type=NULL, markers.as.rows=FALS
 #' @export
 save.allele.counts <- function(filename, group=NULL, allele, markers.as.rows=TRUE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_allele_counts, sim.data$p, genomicSimulation:::expand.path(filename), 
+	return(.Call(SXP_save_allele_counts, sim.data$p, my.expand.path(filename), 
 	             group, allele, markers.as.rows))
 }
 
@@ -190,7 +190,7 @@ save.pedigrees <- function(filename, group=NULL, type=NULL, recursive.format=TRU
     }
   }
   
-  return(.Call(SXP_save_pedigrees, sim.data$p, genomicSimulation:::expand.path(filename), group, recursive.format))
+  return(.Call(SXP_save_pedigrees, sim.data$p, my.expand.path(filename), group, recursive.format))
 }
 
 #' Calculate and save breeding values from the simulation to a file
@@ -212,7 +212,7 @@ save.pedigrees <- function(filename, group=NULL, type=NULL, recursive.format=TRU
 #' @aliases save.gebvs
 save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_GEBVs, sim.data$p, genomicSimulation:::expand.path(filename), group, eff.set))
+	return(.Call(SXP_save_GEBVs, sim.data$p, my.expand.path(filename), group, eff.set))
 }
 
 #' Save the local GEBVs of each block in each selected line's haplotypes to a file, using
@@ -241,8 +241,8 @@ save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 #' @aliases save.local.gebvs.blocks.from.file
 save.local.GEBVs.blocks.from.file <- function(filename, block.file, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_local_GEBVs_blocks_from_file, sim.data$p, genomicSimulation:::expand.path(filename), 
-	             genomicSimulation:::expand.path(block.file), group, eff.set))
+	return(.Call(SXP_save_local_GEBVs_blocks_from_file, sim.data$p, my.expand.path(filename), 
+	             my.expand.path(block.file), group, eff.set))
 }
 
 #' OLD NAME | Save the local GEBVs of each block in each selected line's 
@@ -290,7 +290,7 @@ save.local.GEBVs.by.file <- function(filename, block.file, group=NULL, eff.set=1
 save.local.GEBVs.blocks.from.chrsplit <- function(filename, n.blocks.per.chr, group=NULL, map=0L, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	return(.Call(SXP_save_local_GEBVs_blocks_from_chrsplit, sim.data$p, 
-	             genomicSimulation:::expand.path(filename), n.blocks.per.chr, group, map, eff.set))
+	             my.expand.path(filename), n.blocks.per.chr, group, map, eff.set))
 }
 
 #' OLD NAME | Save the local GEBVs of each block in each selected line's haplotypes to a file,

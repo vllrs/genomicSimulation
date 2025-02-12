@@ -1,5 +1,5 @@
 #' @noRd
-expand.path <- function(name) {
+my.expand.path <- function(name) {
   if (name != "" && is.character(name)) { #nonempty name
     
     if (grepl("~",name,fixed=TRUE)) {
