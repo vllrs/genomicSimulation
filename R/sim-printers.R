@@ -17,7 +17,6 @@
 #'
 #' @param filename A string containing a filename to which the output will
 #' be written
-#' @return 0 on success. On failure an error will be raised.
 #'
 #' @rdname genomicSimulation-defunct
 #' @family saving functions
@@ -62,7 +61,6 @@ save.genome.model <- function(filename) {
 #' in the output file. If TRUE, SNP markers will be rows of the matrix, and candidate 
 #' lines will be columns. If FALSE, SNP markers will be columns of the matrix, and 
 #' candidate lines will be rows.
-#' @return 0 on success. On failure an error will be raised.
 #' 
 #' @family saving functions
 #' @export
@@ -86,8 +84,7 @@ save.genotypes <- function(filename, group=NULL, type=NULL, markers.as.rows=FALS
 	  }
 	}
   
-  return(.Call(SXP_save_genotypes, sim.data$p, my.expand.path(filename), 
-	             group, markers.as.rows))
+  .Call(SXP_save_genotypes, sim.data$p, my.expand.path(filename), group, markers.as.rows)
 }
 
 #' Generate and save count matrices of alleles in the simulation to a file
@@ -111,14 +108,13 @@ save.genotypes <- function(filename, group=NULL, type=NULL, markers.as.rows=FALS
 #' in the output file. If TRUE, SNP markers will be rows of the matrix, and candidate 
 #' lines will be columns. If FALSE, SNP markers will be columns of the matrix, and 
 #' candidate lines will be rows.
-#' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
 #' @export
 save.allele.counts <- function(filename, group=NULL, allele, markers.as.rows=TRUE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_allele_counts, sim.data$p, my.expand.path(filename), 
-	             group, allele, markers.as.rows))
+	.Call(SXP_save_allele_counts, sim.data$p, my.expand.path(filename), 
+	             group, allele, markers.as.rows)
 }
 
 #' Save pedigrees from the simulation to a file
@@ -166,7 +162,6 @@ save.allele.counts <- function(filename, group=NULL, allele, markers.as.rows=TRU
 #' If TRUE, print the recursive pedigree that contains all ancestors that genomicSimulation 
 #' can link to a candidate in a nested-bracket formatted file. If FALSE, 
 #' print the immediate parents of the candidate in a three-column file. 
-#' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
 #' @export
@@ -190,7 +185,7 @@ save.pedigrees <- function(filename, group=NULL, type=NULL, recursive.format=TRU
     }
   }
   
-  return(.Call(SXP_save_pedigrees, sim.data$p, my.expand.path(filename), group, recursive.format))
+  .Call(SXP_save_pedigrees, sim.data$p, my.expand.path(filename), group, recursive.format)
 }
 
 #' Calculate and save breeding values from the simulation to a file
@@ -205,14 +200,13 @@ save.pedigrees <- function(filename, group=NULL, type=NULL, recursive.format=TRU
 #' to that group.
 #' @param eff.set identifier for the set of marker effects with which to calculate
 #' GEBVs.
-#' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
 #' @export
 #' @aliases save.gebvs
 save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_GEBVs, sim.data$p, my.expand.path(filename), group, eff.set))
+	.Call(SXP_save_GEBVs, sim.data$p, my.expand.path(filename), group, eff.set)
 }
 
 #' Save the local GEBVs of each block in each selected line's haplotypes to a file, using
@@ -234,15 +228,14 @@ save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 #' @param group Save only lines that belong to this group.
 #' @param eff.set identifier for the set of marker effects with which to calculate 
 #' local GEBVs.
-#' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
 #' @export
 #' @aliases save.local.gebvs.blocks.from.file
 save.local.GEBVs.blocks.from.file <- function(filename, block.file, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_local_GEBVs_blocks_from_file, sim.data$p, my.expand.path(filename), 
-	             my.expand.path(block.file), group, eff.set))
+	.Call(SXP_save_local_GEBVs_blocks_from_file, sim.data$p, my.expand.path(filename), 
+	             my.expand.path(block.file), group, eff.set)
 }
 
 #' OLD NAME | Save the local GEBVs of each block in each selected line's 
@@ -282,15 +275,14 @@ save.local.GEBVs.by.file <- function(filename, block.file, group=NULL, eff.set=1
 #' currently active in simulation.
 #' @param eff.set identifier for the set of marker effects with which to calculate 
 #' local GEBVs. By default uses the first loaded set of effect values.
-#' @return 0 on success. On failure an error will be raised.
 #'
 #' @family saving functions
 #' @export
 #' @aliases save.local.gebvs.blocks.from.chrsplit
 save.local.GEBVs.blocks.from.chrsplit <- function(filename, n.blocks.per.chr, group=NULL, map=0L, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_save_local_GEBVs_blocks_from_chrsplit, sim.data$p, 
-	             my.expand.path(filename), n.blocks.per.chr, group, map, eff.set))
+	.Call(SXP_save_local_GEBVs_blocks_from_chrsplit, sim.data$p, 
+	             my.expand.path(filename), n.blocks.per.chr, group, map, eff.set)
 }
 
 #' OLD NAME | Save the local GEBVs of each block in each selected line's haplotypes to a file,

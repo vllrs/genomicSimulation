@@ -148,13 +148,12 @@ see.existing.groups <- function() {
 #' or a group number to apply the names to only members of that group.
 #' @param startIndex The position within the list of genotypes identified by `group`
 #' and sorted by their index that the first entry of `values` should be copied into.
-#' @return 0 on success
 #'
 #' @family label functions
 #' @export
 change.names.to.values <- function(values, group=NA, startIndex=0) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_change_name_to_values, sim.data$p, values, group, startIndex))    
+  .Call(SXP_change_name_to_values, sim.data$p, values, group, startIndex)   
 }
 
 
@@ -180,5 +179,5 @@ change.names.to.values <- function(values, group=NA, startIndex=0) {
 #' @export
 change.allele.symbol <- function(from, to, marker=NA) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_change_allele_symbol, sim.data$p, marker, from, to))  
+  .Call(SXP_change_allele_symbol, sim.data$p, marker, from, to) 
 } 

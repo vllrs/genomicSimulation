@@ -285,13 +285,12 @@ make.group.from.label.range <- function(label, rangeLowEnd, rangeHighEnd, group=
 #' generated in future will have this value for this label. If there are multiple
 #' labels, then `defaults` should be a vector of the same length, with the new
 #' defaults for each label in `labels` at corresponding positions.
-#' @return 0 on success
 #'
 #' @family grouping functions
 #' @export
 change.label.default <- function(labels, defaults) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_change_label_default, sim.data$p, labels, defaults))
+  .Call(SXP_change_label_default, sim.data$p, labels, defaults)
 }
 
 
@@ -321,7 +320,6 @@ change.label.default <- function(labels, defaults) {
 #' genomicSimulation genotype index/position, it refers to the index 
 #' of the group member that should get the first value from the vector `values`
 #' if the group members were stored in an R vector and used R's 1-based indexing.
-#' @return 0 on success
 #'
 #' @family label functions
 #' @export
@@ -342,8 +340,7 @@ change.label.to.values <- function(label, values, group=NA, startIndex=NA, skip=
                    values, group, startIndex-1))
     }
   }
-  return(.Call(SXP_change_label_to_values, sim.data$p, label, 
-               values, group, skip))
+  .Call(SXP_change_label_to_values, sim.data$p, label, values, group, skip)
 }
 
 
@@ -360,13 +357,12 @@ change.label.to.values <- function(label, values, group=NA, startIndex=NA, skip=
 #' @param group NA or 0 to change all genotypes in simulation memory,
 #' or a group number or vector of group numbers to change only
 #' members of those groups.
-#' @return 0 on success
 #'
 #' @family label functions
 #' @export
 change.label.to.this <- function(label, value, group=NA) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_change_label_to_this, sim.data$p, label, value, group))  
+  .Call(SXP_change_label_to_this, sim.data$p, label, value, group) 
 }
 
 
@@ -385,13 +381,12 @@ change.label.to.this <- function(label, value, group=NA) {
 #' @param group NA or 0 to apply this increment to all genotypes in simulation memory,
 #' or a group number or vector of group numbers to apply the incrememnt to only
 #' members of those groups.
-#' @return 0 on success
 #'
 #' @family label functions
 #' @export
 change.label.by.amount <- function(label, amount, group=NA) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_change_label_by_amount, sim.data$p, label, amount, group))
+  .Call(SXP_change_label_by_amount, sim.data$p, label, amount, group)
 }
 
 

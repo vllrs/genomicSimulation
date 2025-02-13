@@ -10,7 +10,6 @@ clear.simdata <- function() {
 	if (is.null(sim.data$p)) { return(0L) }
 	sim.data$p <- NULL
 	gc()
-	return(0L)
 }
 
 
@@ -23,7 +22,6 @@ clear.simdata <- function() {
 #' Multiple group input supported.
 #'
 #' @param groups an vector containing the group numbers of the groups to be deleted
-#' @return 0 on success. An error is raised on failure.
 #'
 #' @family grouping functions
 #' @family deletor functions
@@ -35,7 +33,7 @@ delete.group <- function(groups) {
     groups <- as.integer(groups)
     if (!isTRUE(all(tmp==groups))) { stop("Group identifiers must be integers.") }
   }
-	return(.Call(SXP_delete_group, sim.data$p, groups))
+	.Call(SXP_delete_group, sim.data$p, groups)
 }
 
 
@@ -45,7 +43,6 @@ delete.group <- function(groups) {
 #' and deletes them from simulation memory.
 #'
 #' @param labels an vector containing the label numbers of the labels to be deleted
-#' @return 0 on success. An error is raised on failure.
 #'
 #' @family label functions
 #' @family deletor functions
@@ -57,7 +54,7 @@ delete.label <- function(labels) {
     labels <- as.integer(labels)
     if (!isTRUE(all(tmp==labels))) { stop("Label identifiers must be integers.") }
   }
-  return(.Call(SXP_delete_label, sim.data$p, labels))
+  .Call(SXP_delete_label, sim.data$p, labels)
 }
 
 
@@ -68,7 +65,6 @@ delete.label <- function(labels) {
 #'
 #' @param effect.sets an vector containing the effect set identifiers of the 
 #' effect sets to be deleted
-#' @return 0 on success. An error is raised on failure.
 #'
 #' @family deletor functions
 #' @export
@@ -79,7 +75,7 @@ delete.effect.set <- function(effect.sets) {
     effect.sets <- as.integer(effect.sets)
     if (!isTRUE(all(tmp==effect.sets))) { stop("Effect set identifiers must be integers.") }
   }
-  return(.Call(SXP_delete_eff_set, sim.data$p, effect.sets))
+  .Call(SXP_delete_eff_set, sim.data$p, effect.sets)
 }
 
 
@@ -89,7 +85,6 @@ delete.effect.set <- function(effect.sets) {
 #' from simulation memory.
 #'
 #' @param maps an vector containing the map identifiers of the maps to be deleted
-#' @return 0 on success. An error is raised on failure.
 #'
 #' @family deletor functions
 #' @export
@@ -100,5 +95,5 @@ delete.recombination.map <- function(maps) {
     maps <- as.integer(maps)
     if (!isTRUE(all(tmp==maps))) { stop("Map identifiers must be integers.") }
   }
-  return(.Call(SXP_delete_recombination_map, sim.data$p, maps))
+  .Call(SXP_delete_recombination_map, sim.data$p, maps)
 }

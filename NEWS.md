@@ -1,3 +1,9 @@
+# genomicSimulation (development version)
+
+## Improvements
+
+- `save.`, `change.` and `delete.` functions no longer return anything. They used to return 0L.
+
 
 # genomicSimulation v0.2.6
 
