@@ -306,20 +306,23 @@ SEXP SXP_send_map(SEXP exd, SEXP s_map) {
 	double* cchr = REAL(chr);
 	double* cpos = REAL(pos);
 
+	GSC_GENOLEN_T m_ix = 0;
 	for (int chr = 0; chr < d->genome.maps[mapix].n_chr; ++chr) {
 	  if (d->genome.maps[mapix].chrs[chr].type == GSC_LINKAGEGROUP_SIMPLE) {
 	    for (int i = 0; i < d->genome.maps[mapix].chrs[chr].map.simple.n_markers; ++i) {
-	      SET_STRING_ELT(snp, i, mkChar(d->genome.marker_names[i + d->genome.maps[mapix].chrs[chr].map.simple.first_marker_index]));
-	      cchr[i] = chr;
-	      cpos[i] = d->genome.maps[mapix].chrs[chr].map.simple.dists[i] * 
+	      SET_STRING_ELT(snp, m_ix, mkChar(d->genome.marker_names[i + d->genome.maps[mapix].chrs[chr].map.simple.first_marker_index]));
+	      cchr[m_ix] = chr;
+	      cpos[m_ix] = d->genome.maps[mapix].chrs[chr].map.simple.dists[i] * 
 	        d->genome.maps[mapix].chrs[chr].map.simple.expected_n_crossovers * 100;
+		  ++m_ix;
 	    }
 	  } else if (d->genome.maps[mapix].chrs[chr].type == GSC_LINKAGEGROUP_REORDER) {
 	    for (int i = 0; i < d->genome.maps[mapix].chrs[chr].map.reorder.n_markers; ++i) {
-	      SET_STRING_ELT(snp, i, mkChar(d->genome.marker_names[d->genome.maps[mapix].chrs[chr].map.reorder.marker_indexes[i]]));
-	      cchr[i] = chr;
-	      cpos[i] = d->genome.maps[mapix].chrs[chr].map.reorder.dists[i] * 
+	      SET_STRING_ELT(snp, m_ix, mkChar(d->genome.marker_names[d->genome.maps[mapix].chrs[chr].map.reorder.marker_indexes[i]]));
+	      cchr[m_ix] = chr;
+	      cpos[m_ix] = d->genome.maps[mapix].chrs[chr].map.reorder.dists[i] * 
 	        d->genome.maps[mapix].chrs[chr].map.reorder.expected_n_crossovers * 100;
+		  ++m_ix;
 	    }
 	  }
 	}
