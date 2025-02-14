@@ -17,10 +17,10 @@ install.packages('genomicSimulation_0.2.6.tar.gz', repos=NULL)
 
 The binary (.zip) install is compiled for Windows and R version 4.3, and may not be compatible with all systems. If the binary package cannot be installed on your system, use the source package (.tar.gz). Installing the source package requires C compilers.
 
-If you are from UQ and installing the package on bunya, there is a specific guide for that [at this link.](doc/gSinstallguide-bunya.md)
+If you are from UQ and installing the package on bunya, there is a specific guide for that [in the file doc/gSinstallguide-bunya.md](doc/gSinstallguide-bunya.md)
 
 #### The Very Latest Features
-Alternatively, install the development version from [Github](https://github.com/vllrs/genomicSimulation). This also requires C compilers. 
+Alternatively, install the current development version found on [Github](https://github.com/vllrs/genomicSimulation). This also requires C compilers. 
 
 ```r
 remotes::install_github('vllrs/genomicSimulation')
