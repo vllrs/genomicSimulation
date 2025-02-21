@@ -4,11 +4,15 @@
 \alias{see.optimal.haplotype}
 \title{Get a string containing the ultimate/highest-scoring set of alleles.}
 \usage{
-see.optimal.haplotype(eff.set = 1L)
+see.optimal.haplotype(eff.set = 1L, unknown.allele = "-")
 }
 \arguments{
 \item{eff.set}{identifier for the set of marker effects to use to calculate the
 haplotypes and haplotype scores.}
+
+\item{unknown.allele}{The character that will appear in the haplotype at markers
+where there are no known marker effects. If you pass a string to this, only its 
+first character will be used.}
 }
 \value{
 A string containing the allele out of available alleles at that
@@ -22,10 +26,22 @@ according to the current loaded effect values as an R string. An error is
 raised if no effect values have been loaded. The optimal genotype (assuming
 only additive allele effects) is just the doubled version of this haplotype.
 }
+\details{
+Note: it assumes missing alleles (stored as '\0' in the underlying table) 
+will never have associated marker effects. If you do have marker effects associated
+with missing alleles, use \code{change.allele.symbol(from="",to="?")} before
+running this function for the first time (replace the question mark with however 
+you'd like missing alleles to be visually represented). If the string this function 
+returns is shorter than expected, check that you do not have any marker effects
+associated with missing alleles. A '\0' missing allele in the optimal haplotype
+will truncate the string.
+}
 \seealso{
 Other data access functions: 
+\code{\link{see.genetic.map}()},
 \code{\link{see.group.data}()},
 \code{\link{see.group.gene.data}()},
+\code{\link{see.marker.effects}()},
 \code{\link{see.minimal.GEBV}()},
 \code{\link{see.optimal.GEBV}()},
 \code{\link{see.optimal.possible.GEBV}()},

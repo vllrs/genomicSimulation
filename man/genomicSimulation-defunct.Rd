@@ -10,9 +10,6 @@ save.genome.model(filename)
 \item{filename}{A string containing a filename to which the output will
 be written}
 }
-\value{
-0 on success. On failure an error will be raised.
-}
 \description{
 **DEFUNCT**
 > This function was never correctly implemented. 

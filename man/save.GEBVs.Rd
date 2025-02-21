@@ -18,9 +18,6 @@ to that group.}
 \item{eff.set}{identifier for the set of marker effects with which to calculate
 GEBVs.}
 }
-\value{
-0 on success. On failure an error will be raised.
-}
 \description{
 The function prints its results to a tab-separated file with three columns 
 (the genotype's ID, its name, and its calculated breeding value/GEBV).

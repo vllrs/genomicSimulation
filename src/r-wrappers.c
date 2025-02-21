@@ -298,8 +298,8 @@ SEXP SXP_find_crossovers(SEXP exd, SEXP s_parentFile, SEXP s_outFile, SEXP s_win
 	return ScalarInteger(gsc_calculate_recombinations_from_file(d, load_fname, save_fname, win, cert));
 }
 
-SEXP SXP_send_map(SEXP exd, SEXP s_map) {
-	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+SEXP SXP_see_map(SEXP exd, SEXP s_map) {
+  SimData* d = (SimData*) R_ExternalPtrAddr(exd);
   
   int mapid = asInteger(s_map);
   int mapix = 0;
@@ -339,8 +339,92 @@ SEXP SXP_send_map(SEXP exd, SEXP s_map) {
 	SET_VECTOR_ELT(map, 0, snp);
 	SET_VECTOR_ELT(map, 1, chr);
 	SET_VECTOR_ELT(map, 2, pos);
+	
 	UNPROTECT(4);
 	return map;
+}
+
+
+SEXP SXP_see_effects(SEXP exd, SEXP s_effset, SEXP s_format) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+
+	int effID = asInteger(s_effset);
+	int effix = 0;
+	if (effID > 0) { effix = get_index_of_eff_set(d, EFFECTID_IFY(effID)); }
+	if (effix < 0 || effix >= d->n_eff_sets) {
+		error("Invalid marker effect set identifier");
+	}
+	MarkerEffects e = d->e[effix];
+	
+	if (asChar(s_format) == NA_STRING) { error("Parameter 'format' needs to be a string"); }
+	int format;
+	switch (CHAR(asChar(s_format))[0]) {
+		case 'L': format = 1; break;
+		case 'S': format = 2; break;
+		default: if (e.centre != NULL) { error("Format string is invalid"); }
+	}
+	
+	// 1. create the main dataframe (marker/allele/eff)
+	SEXP effset = PROTECT(allocVector(VECSXP, 3));
+	
+	GSC_GENOLEN_T len = e.cumn_alleles[e.n_markers - 1];
+	if (e.centre != NULL && format == 1) { len += e.n_markers; }
+	SEXP marker = PROTECT(allocVector(STRSXP, len));
+	SEXP allele = PROTECT(allocVector(STRSXP, len));
+	SEXP eff = PROTECT(allocVector(REALSXP, len));
+	double* ceff = REAL(eff);
+	
+	char an_allele[2] = {'?', '\0'};
+	GSC_GENOLEN_T e_ix = 0;
+	for (GSC_GENOLEN_T m_ix = 0; m_ix < e.n_markers; ++m_ix) {
+		while (e_ix < e.cumn_alleles[m_ix]) {
+			SET_STRING_ELT(marker, e_ix, mkChar(d->genome.marker_names[m_ix]));
+			
+			an_allele[0] = e.allele[e_ix];
+			SET_STRING_ELT(allele, e_ix, mkChar(an_allele));
+			
+			ceff[e_ix] = e.eff[e_ix];
+			
+			++e_ix;
+		}
+	}
+	
+	if (e.centre != NULL && format == 1) {
+		GSC_GENOLEN_T last = e.cumn_alleles[e.n_markers - 1];
+		for (GSC_GENOLEN_T m_ix = 0; m_ix < e.n_markers; ++m_ix) {
+			SET_STRING_ELT(marker, last + m_ix, mkChar(d->genome.marker_names[m_ix]));
+			SET_STRING_ELT(allele, last + m_ix, mkChar("(centre)"));
+			ceff[last + m_ix] = e.centre[m_ix];
+		}
+	}
+	
+	SET_VECTOR_ELT(effset, 0, marker);
+	SET_VECTOR_ELT(effset, 1, allele);
+	SET_VECTOR_ELT(effset, 2, eff);
+	
+	// 2a. Return that alone, if we weren't asked for split format
+	if (e.centre == NULL || format == 1) {
+		UNPROTECT(4);
+		return effset;
+	}
+
+	// 2b. If we were asked for split format, create the second dataframe (marker/centre)
+	SEXP centreset = PROTECT(allocVector(VECSXP, 2));
+	SEXP marker2 = PROTECT(allocVector(STRSXP, e.n_markers));
+	SEXP centre = PROTECT(allocVector(REALSXP, e.n_markers));
+	double* ccentre = REAL(centre);
+	for (GSC_GENOLEN_T m_ix = 0; m_ix < e.n_markers; ++m_ix) {
+		SET_STRING_ELT(marker2, m_ix, mkChar(d->genome.marker_names[m_ix]));
+		ccentre[m_ix] = e.centre[m_ix];
+	}
+	SET_VECTOR_ELT(centreset, 0, marker2);
+	SET_VECTOR_ELT(centreset, 1, centre);
+	
+	SEXP outlist = PROTECT(allocVector(VECSXP, 2));
+	SET_VECTOR_ELT(outlist, 0, effset);
+	SET_VECTOR_ELT(outlist, 1, centreset);
+	UNPROTECT(8);
+	return outlist;
 }
 
 /*----------------------- Data Access ---------------------*/

@@ -3,6 +3,7 @@
 ## New Features
 
 - `see.optimal.haplotype` and `see.optimal.possible.haplotype` now accept an extra optional parameter `unknown.allele`, which will be used to represent the optimal allele at markers where there are no known marker effects and so no way to judge which allele is optimal. 
+- Added functions `see.genetic.map` and `see.marker.effects` which allow the user to view the data behind a MapID or an EffectID as a dataframe in the R environment. (genomicSimulation used to have a private function called `send.map`. It has been converted into `see.genetic.map`)
 
 ## Improvements
 

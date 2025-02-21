@@ -16,9 +16,6 @@ by the `group` parameter will be changed.}
 or a group number or vector of group numbers to change only
 members of those groups.}
 }
-\value{
-0 on success
-}
 \description{
 Changes the value of a custom label for all 
 genotypes or for members of group(s) to a certain value.

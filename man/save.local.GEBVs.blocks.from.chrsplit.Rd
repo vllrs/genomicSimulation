@@ -30,9 +30,6 @@ currently active in simulation.}
 \item{eff.set}{identifier for the set of marker effects with which to calculate 
 local GEBVs. By default uses the first loaded set of effect values.}
 }
-\value{
-0 on success. On failure an error will be raised.
-}
 \description{
 \code{save.local.GEBVs.blocks.from.chrsplit} calculates GEBVs for each block of markers created by
 splitting each chromosome into `n.blocks.per.chr` same-length blocks for the maternal

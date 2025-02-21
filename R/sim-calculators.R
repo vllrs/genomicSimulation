@@ -219,7 +219,7 @@ find.plot.crossovers <- function(parentage.file, out.file, window.size=1, certai
 	crossovers <- merge(crossovers, families)
 	
 	#load the map
-	map <- send.map()
+	map <- see.genetic.map()
 	
 	# Melt the crossovers and match cells in the matrix to genome linkage map positions
 	crossovers <- crossovers[ , ! colnames(crossovers) == "P"]
@@ -238,11 +238,4 @@ find.plot.crossovers <- function(parentage.file, out.file, window.size=1, certai
 	  ggplot2::labs(x ="Chromosome", y = "", fill="Origin") + #Titles
 	  ggplot2::scale_fill_gradientn(colors=my.palette, guide = ggplot2::guide_legend(),
 						breaks=sort(unique(crossovers$parent)))
-}
-
-send.map <- function(mapID=0L) {
-	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	m <- data.frame(.Call(SXP_send_map, sim.data$p,mapID))
-	colnames(m) <- c("SNP","chr","pos")
-	return(m)
 }

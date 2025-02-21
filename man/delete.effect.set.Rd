@@ -10,9 +10,6 @@ delete.effect.set(effect.sets)
 \item{effect.sets}{an vector containing the effect set identifiers of the 
 effect sets to be deleted}
 }
-\value{
-0 on success. An error is raised on failure.
-}
 \description{
 Removes the given marker effect set(s) 
 from simulation memory.

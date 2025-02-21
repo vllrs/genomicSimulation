@@ -17,9 +17,6 @@ all label values.}
 or a group number or vector of group numbers to apply the incrememnt to only
 members of those groups.}
 }
-\value{
-0 on success
-}
 \description{
 Changes the values of a custom
 label for all genotypes or for members of group(s) by a given increment amount, 

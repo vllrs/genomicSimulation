@@ -28,9 +28,6 @@ the only columns that will be used. Designed for the output of the function
 \item{eff.set}{identifier for the set of marker effects with which to calculate 
 local GEBVs.}
 }
-\value{
-0 on success. On failure an error will be raised.
-}
 \description{
 Calculates GEBVs for each block of markers listed in 
 `block.file` for the maternal and paternal halves of its genotype. The results

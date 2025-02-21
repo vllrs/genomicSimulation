@@ -53,7 +53,9 @@ Other grouping functions:
 \code{\link{see.group.data}()}
 
 Other data access functions: 
+\code{\link{see.genetic.map}()},
 \code{\link{see.group.data}()},
+\code{\link{see.marker.effects}()},
 \code{\link{see.minimal.GEBV}()},
 \code{\link{see.optimal.GEBV}()},
 \code{\link{see.optimal.haplotype}()},

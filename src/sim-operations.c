@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.6.03 - last edit 21 Feb 2025 */
+/* genomicSimulationC v0.2.6.04 - last edit 21 Feb 2025 */
 
 /** Default parameter values for GenOptions, to help with quick scripts and prototypes.
  *
@@ -7274,7 +7274,7 @@ struct gsc_MultiIDSet gsc_load_data_files(gsc_SimData* d,
     // Parse file suffix for file type, if it was not already provided
     enum gsc_GenotypeFileType type = format.filetype;
 
-    if (type == GSC_GENOTYPEFILE_UNKNOWN) {
+    if (type == GSC_GENOTYPEFILE_UNKNOWN && genotype_file != NULL) {
         type = GSC_GENOTYPEFILE_MATRIX;
         char* suffix = strrchr(genotype_file,'.');
         if (suffix != NULL) {

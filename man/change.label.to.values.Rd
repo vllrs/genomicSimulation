@@ -24,9 +24,6 @@ if the group members were stored in an R vector and used R's 1-based indexing.}
 \item{skip}{Number of group members to skip before the member of the group who 
 should get the first value from the vector `values`.}
 }
-\value{
-0 on success
-}
 \description{
 Changes the values of a custom label for all 
 genotypes or for members of group(s) to a sequence of values.

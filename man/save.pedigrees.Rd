@@ -24,9 +24,6 @@ If TRUE, print the recursive pedigree that contains all ancestors that genomicSi
 can link to a candidate in a nested-bracket formatted file. If FALSE, 
 print the immediate parents of the candidate in a three-column file.}
 }
-\value{
-0 on success. On failure an error will be raised.
-}
 \description{
 Saves a record of the ancestors of genotypes
 for which this data was tracked.

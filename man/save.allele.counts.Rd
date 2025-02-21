@@ -22,9 +22,6 @@ in the output file. If TRUE, SNP markers will be rows of the matrix, and candida
 lines will be columns. If FALSE, SNP markers will be columns of the matrix, and 
 candidate lines will be rows.}
 }
-\value{
-0 on success. On failure an error will be raised.
-}
 \description{
 Counts the number of occurrences of a given
 allele at each SNP for each candidate in the simulation or for all 

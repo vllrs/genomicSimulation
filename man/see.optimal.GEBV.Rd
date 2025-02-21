@@ -21,8 +21,10 @@ raised if no effect values have been loaded.
 }
 \seealso{
 Other data access functions: 
+\code{\link{see.genetic.map}()},
 \code{\link{see.group.data}()},
 \code{\link{see.group.gene.data}()},
+\code{\link{see.marker.effects}()},
 \code{\link{see.minimal.GEBV}()},
 \code{\link{see.optimal.haplotype}()},
 \code{\link{see.optimal.possible.GEBV}()},

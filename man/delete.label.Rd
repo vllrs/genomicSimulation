@@ -9,9 +9,6 @@ delete.label(labels)
 \arguments{
 \item{labels}{an vector containing the label numbers of the labels to be deleted}
 }
-\value{
-0 on success. An error is raised on failure.
-}
 \description{
 Removes the given custom label(s) from all genotypes
 and deletes them from simulation memory.

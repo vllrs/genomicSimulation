@@ -9,9 +9,6 @@ delete.group(groups)
 \arguments{
 \item{groups}{an vector containing the group numbers of the groups to be deleted}
 }
-\value{
-0 on success. An error is raised on failure.
-}
 \description{
 Finds the genotypes of the given group and removes
 them from the SimData object's storage. A message is printed explaining

@@ -126,6 +126,104 @@ see.existing.groups <- function() {
 }
 
 
+#' View one of the genetic maps being used by the simulation
+#'
+#' Access the list of markers of one of the genetic maps loaded in 
+#' the simulation. The row order of the returned dataframe will 
+#' match the order of the markers as stored by the simulation (eg.
+#' will match the marker order in genotypes from see.group.data(data.type="G")).
+#' 
+#' Note that genomicSimulation does not store chromosome names after initial
+#' import. The "chr" column of the output contains the index of a chromosome
+#' as stored in the simulation. 
+#' 
+#' Similarly, genomicSimulation does not store the marker positions exactly as 
+#' they were in the input file. The first marker in a chromosome is designated 
+#' to be at position 0, and the other markers are stored as their cM offset 
+#' from the first marker's position. Chromosomes containing only one marker
+#' do not track that marker's position, so that marker's position will be NaN 
+#' in the output dataframe.
+#'
+#' @param mapID the identifier of the specific genetic map to view, or zero to 
+#' view the first-loaded/default genetic map.
+#' @return A dataframe containing three columns: the first, named "marker", 
+#' containing marker names; the second, named "chr", containing chromosome numbers;
+#' and the third, named "pos", containing positions in cM.
+#'
+#' @family data access functions
+#' @export
+see.genetic.map <- function(mapID=0L) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  m <- data.frame(.Call(SXP_see_map, sim.data$p,mapID))
+  colnames(m) <- c("marker","chr","pos")
+  return(m)
+}
+
+
+#' View one of the sets of marker effects being used by the simulation
+#'
+#' Access the list of markers effects of one of the marker effect sets loaded  
+#' in the simulation. 
+#' 
+#' The row order of the returned dataframe will 
+#' match the order of the markers as stored by the simulation (eg.
+#' will match the marker order in genotypes from see.group.data(data.type="G")).
+#' 
+#' If the set of marker effects has no marker centre values, then the function 
+#' will return a dataframe with three columns: 
+#' the first, named "marker", containing marker names; 
+#' the second, named "allele", containing an allele symbol;
+#' and the third, named "eff", containing the contribution of that allele at
+#' that marker to the estimated breeding value.
+#' 
+#' If the set of marker effects has marker centre values, then there are one of 
+#' two formats in which they can be returned. In the first format, obtained if
+#' the function is called with format="long", the function will return a 
+#' dataframe similar in format to the no-centre case. The dataframe will have
+#' three columns:
+#' the first, named "marker", containing marker names; 
+#' the second, named "allele", containing an allele symbol, or the string "(centre)";
+#' and the third, named "eff", containing the contribution of that allele at
+#' that marker to the estimated breeding value, or, if the "allele" column holds
+#' "(centre)", the scalar value to be subtracted from the breeding value 
+#' contributions of that marker.
+#' 
+#' Alternatively, if the set of marker effects has marker centre values but 
+#' the function is called with format="split", it will return a list with two 
+#' elements. The first element will be the dataframe that would be returned if 
+#' the set of marker effects had no marker centres, and the second element will 
+#' be a dataframe with two columns, "marker" and "centre", containing marker name
+#' and corresponding centring value respectively.
+#'
+#' @param effectID the identifier of the specific marker effect set to view, or 
+#' zero to view the first-loaded/default marker effect set.
+#' @param format Has no effect if the set of marker effects has no marker centres
+#' loaded. If the set of marker effects does have marker centres, then a format 
+#' string beginning with "L" or "l" (eg "long") will mean the returned data frame has
+#' some rows with "(centre)" in the allele column and the marker centre value in 
+#' the eff column, and a format string beginning with "S" or "s" (eg "split") will return
+#' a list with two elements, the first of which is a dataframe with columns 
+#' marker/allele/eff, and the second of which is a dataframe with columns
+#' marker/centre.
+#' @return Either a dataframe or a pair of dataframes in a list, depending on 
+#' whether the set of marker effects uses centring values or not, and on the
+#' value of the "format" parameter. 
+#'
+#' @family data access functions
+#' @export
+see.marker.effects <- function(effectID=0L, format="long") {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  m <- data.frame(.Call(SXP_see_effects, sim.data$p, effectID, toupper(format)))
+  if (is.data.frame(m)) {
+    colnames(m) <- c("marker","allele","eff")
+  } else { # is list
+    colnames(m[[1]]) <- c("marker","allele","eff")
+    colnames(m[[2]]) <- c("marker","centre")
+  }
+  return(m)
+}
+
+
 #' Set the names of genotypes in simulation memory
 #'
 #' Changes the names of members of group(s) or

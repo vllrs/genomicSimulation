@@ -9,9 +9,6 @@ delete.recombination.map(maps)
 \arguments{
 \item{maps}{an vector containing the map identifiers of the maps to be deleted}
 }
-\value{
-0 on success. An error is raised on failure.
-}
 \description{
 Removes the given recombination map(s)
 from simulation memory.

@@ -1,0 +1,3 @@
+marker chr pos
+a1 1B 15
+and&a2 1a 8.3

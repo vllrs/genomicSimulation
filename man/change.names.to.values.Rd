@@ -15,9 +15,6 @@ or a group number to apply the names to only members of that group.}
 \item{startIndex}{The position within the list of genotypes identified by `group`
 and sorted by their index that the first entry of `values` should be copied into.}
 }
-\value{
-0 on success
-}
 \description{
 Changes the names of members of group(s) or
 genotypes in general to a sequence of values.

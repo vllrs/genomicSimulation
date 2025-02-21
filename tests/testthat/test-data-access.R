@@ -126,3 +126,29 @@ test_that("See.group.gene.data works", {
   expect_equal(dim(see.group.gene.data(c(g,g2))), c(3,13+6))
   
 })
+
+test_that("see.genetic.map works", {
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  truth <- data.frame("marker"=c("m1","m2","m3"), "chr"=c(0,0,1), "pos"=c(0,8.3-5.2,NaN))
+  expect_equal(see.genetic.map(), truth)
+  
+  clear.simdata()
+  capture_output(init2 <- load.data(map.file="helper_map2.txt"))
+  truth2 <- data.frame("marker"=c("and&a2","a1"), "chr"=c(0,1), "pos"=c(NaN,NaN))
+  expect_equal(see.genetic.map(init2$map), truth2)
+  
+})
+
+test_that("see.marker.effects works", {
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  truth <- data.frame("marker"=c("m1","m1","m2","m2","m3","m3"), 
+                      "allele"=c("T","A","T","A","T","A"), 
+                      "eff"=c(0.9,-0.8,-0.5,-0.1,-0.1,0.1))
+  expect_equal(see.marker.effects(), truth)
+  expect_equal(see.marker.effects(init$effSet, format="S"), truth)
+  expect_equal(see.marker.effects(format="whatever. ignored."), truth)
+  
+})
+

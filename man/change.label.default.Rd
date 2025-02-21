@@ -14,9 +14,6 @@ generated in future will have this value for this label. If there are multiple
 labels, then `defaults` should be a vector of the same length, with the new
 defaults for each label in `labels` at corresponding positions.}
 }
-\value{
-0 on success
-}
 \description{
 Changes the default (birth) value of a custom
 label(s) to the given integer value(s).

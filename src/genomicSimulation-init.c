@@ -25,6 +25,8 @@ R_CallMethodDef calledMethods[] = {
 	{"SXP_see_marker_names", (DL_FUNC) &SXP_see_marker_names, 1},
 	{"SXP_see_group_gene_data", (DL_FUNC) &SXP_see_group_gene_data, 4},
 	{"SXP_see_existing_groups", (DL_FUNC) &SXP_see_existing_groups, 1},
+	{"SXP_see_map", (DL_FUNC) &SXP_see_map, 2},
+	{"SXP_see_effects", (DL_FUNC) &SXP_see_effects, 3},
 	{"SXP_save_GEBVs", (DL_FUNC) &SXP_save_GEBVs, 4},
 	{"SXP_save_local_GEBVs_blocks_from_chrsplit", (DL_FUNC) &SXP_save_local_GEBVs_blocks_from_chrsplit, 6},
 	{"SXP_save_allele_counts", (DL_FUNC) &SXP_save_allele_counts, 5},
@@ -57,7 +59,6 @@ R_CallMethodDef calledMethods[] = {
 	{"SXP_load_genotypes", (DL_FUNC) &SXP_load_genotypes, 3},
 	{"SXP_load_effects", (DL_FUNC) &SXP_load_effects, 2},
 	{"SXP_load_map", (DL_FUNC) &SXP_load_map, 2},
-	{"SXP_send_map", (DL_FUNC) &SXP_send_map, 2},
 	{NULL}
 };
 
