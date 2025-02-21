@@ -13,8 +13,8 @@ SEXP SXP_load_map(SEXP exd, SEXP s_mapFile);
 SEXP SXP_create_new_label(SEXP exd, SEXP s_default);
 
 /*----------------------- Calculators ---------------------*/
-SEXP SXP_see_optimal_haplotype(SEXP exd, SEXP s_eff_set);
-SEXP SXP_get_optimal_possible_haplotype(SEXP exd, SEXP s_groups, SEXP s_eff_set);
+SEXP SXP_see_optimal_haplotype(SEXP exd, SEXP s_eff_set, SEXP s_unknown_char);
+SEXP SXP_get_optimal_possible_haplotype(SEXP exd, SEXP s_groups, SEXP s_eff_set, SEXP s_unknown_char);
 SEXP SXP_get_optimal_GEBV(SEXP exd, SEXP s_eff_set);
 SEXP SXP_get_optimal_possible_GEBV(SEXP exd, SEXP s_groups, SEXP s_eff_set);
 SEXP SXP_get_minimal_GEBV(SEXP exd, SEXP s_eff_set);

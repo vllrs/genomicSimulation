@@ -4,9 +4,21 @@
 #' according to the current loaded effect values as an R string. An error is 
 #' raised if no effect values have been loaded. The optimal genotype (assuming
 #' only additive allele effects) is just the doubled version of this haplotype.
+#' 
+#' Note: it assumes missing alleles (stored as '\0' in the underlying table) 
+#' will never have associated marker effects. If you do have marker effects associated
+#' with missing alleles, use \code{change.allele.symbol(from="",to="?")} before
+#' running this function for the first time (replace the question mark with however 
+#' you'd like missing alleles to be visually represented). If the string this function 
+#' returns is shorter than expected, check that you do not have any marker effects
+#' associated with missing alleles. A '\0' missing allele in the optimal haplotype
+#' will truncate the string.
 #'
 #' @param eff.set identifier for the set of marker effects to use to calculate the
 #' haplotypes and haplotype scores.
+#' @param unknown.allele The character that will appear in the haplotype at markers
+#' where there are no known marker effects. If you pass a string to this, only its 
+#' first character will be used.
 #' @return A string containing the allele out of available alleles at that
 #' marker that has the highest effect value. The string will be ordered in
 #' genome order (lowest chromosome and lowest position to highest) according
@@ -14,9 +26,9 @@
 #'
 #' @family data access functions
 #' @export
-see.optimal.haplotype <- function(eff.set=1L) {
+see.optimal.haplotype <- function(eff.set=1L,unknown.allele="-") {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_see_optimal_haplotype, sim.data$p, eff.set))
+	return(.Call(SXP_see_optimal_haplotype, sim.data$p, eff.set, unknown.allele))
 }
 
 #' Get a string containing the ultimate/highest-scoring set of alleles available
@@ -26,12 +38,24 @@ see.optimal.haplotype <- function(eff.set=1L) {
 #' and take the highest-scoring allele at each locus.
 #'
 #' An error is raised if no effect values have been loaded.
+#' 
+#' Note: it assumes missing alleles (stored as '\0' in the underlying table) 
+#' will never have associated marker effects. If you do have marker effects associated
+#' with missing alleles, use \code{change.allele.symbol(from="",to="?")} before
+#' running this function for the first time (replace the question mark with however 
+#' you'd like missing alleles to be visually represented). If the string this function 
+#' returns is shorter than expected, check that you do not have any marker effects
+#' associated with missing alleles. A '\0' missing allele in the optimal haplotype
+#' will truncate the string.
 #'
 #' @param group an integer: the group number of the group to have a look at. 
 #' Can be a vector of groups, in which case the calculation will be run independently
 #' for each group.
 #' @param eff.set identifier for the set of marker effects to use to calculate the
 #' optimal haplotype and haplotype breeding values
+#' @param unknown.allele The character that will appear in the haplotype at markers
+#' where there are no known marker effects. If you pass a string to this, only its 
+#' first character will be used.
 #' @return A string containing the allele out of all alleles in the group
 #' that has the highest effect value at that locus. The string will be ordered in
 #' genome order (lowest chromosome and lowest position to highest) according
@@ -39,14 +63,14 @@ see.optimal.haplotype <- function(eff.set=1L) {
 #'
 #' @family data access functions
 #' @export
-see.optimal.possible.haplotype <- function(group, eff.set=1L) {
+see.optimal.possible.haplotype <- function(group, eff.set=1L,unknown.allele="-") {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   if (!is.integer(group)) {
     tmp <- group
     group <- as.integer(group)
     if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
   }
-  return(.Call(SXP_get_optimal_possible_haplotype, sim.data$p, group, eff.set))  
+  return(.Call(SXP_get_optimal_possible_haplotype, sim.data$p, group, eff.set, unknown.allele))  
 }
 
 #' Get the ultimate/highest-possible GEBV given the current loaded effect values.

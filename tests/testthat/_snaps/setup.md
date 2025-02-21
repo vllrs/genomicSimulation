@@ -10,7 +10,7 @@
       (Loading helper_genotypes_long.txt) Format: genotype matrix with header row
       (Loading helper_genotypes_long.txt) 1003 genotype(s) of 3 marker(s) were loaded.
       (Loading helper_eff_2.txt) Format: effect file without header
-      (Loading helper_eff_2.txt) 6 effect value(s) spanning 2 allele(s) were loaded. Failed to parse 0 line(s).
+      (Loading helper_eff_2.txt) 6 effect value(s) were loaded. Failed to parse 0 line(s).
       $groupNum
       [1] 1
       
@@ -54,7 +54,7 @@
       (Loading helper_genotypes.txt) Format: genotype matrix with header row
       (Loading helper_genotypes.txt) 6 genotype(s) of 3 marker(s) were loaded.
       (Loading helper_eff.txt) Format: effect file without header
-      (Loading helper_eff.txt) 6 effect value(s) spanning 2 allele(s) were loaded. Failed to parse 0 line(s).
+      (Loading helper_eff.txt) 6 effect value(s) were loaded. Failed to parse 0 line(s).
       $groupNum
       [1] 1
       
@@ -93,7 +93,7 @@
       load.effects("helper_eff_2.txt")
     Output
       (Loading helper_eff_2.txt) Format: effect file without header
-      (Loading helper_eff_2.txt) 6 effect value(s) spanning 2 allele(s) were loaded. Failed to parse 0 line(s).
+      (Loading helper_eff_2.txt) 6 effect value(s) were loaded. Failed to parse 0 line(s).
       [1] 2
 
 # package can load files with manually-specified formats

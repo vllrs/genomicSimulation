@@ -149,7 +149,7 @@ SEXP SXP_create_new_label(SEXP exd, SEXP s_default) {
 /*----------------------- Calculators ---------------------*/
 
 
-SEXP SXP_see_optimal_haplotype(SEXP exd, SEXP s_eff_set) {
+SEXP SXP_see_optimal_haplotype(SEXP exd, SEXP s_eff_set, SEXP s_unknown_char) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->n_eff_sets <= 0) { error("Need to load effect values before running this function\n"); }
 
@@ -157,17 +157,21 @@ SEXP SXP_see_optimal_haplotype(SEXP exd, SEXP s_eff_set) {
 	if (eff_id == NA_INTEGER || eff_id < 0) {
 		error("`effect.set` parameter is of invalid type\n");
 	}
+	
+	if (asChar(s_unknown_char) == NA_STRING) { error("`unknown.allele` parameter is of invalid type"); }
+	char na_char = CHAR(asChar(s_unknown_char))[0];
 
-	char* best_genotype = calculate_optimal_haplotype(d, EFFECTID_IFY(eff_id));
+	char* best_genotype = (char*)R_alloc(d->genome.n_markers+1, sizeof(char));
+	calculate_optimal_haplotype(d, EFFECTID_IFY(eff_id), na_char, best_genotype);
 
 	SEXP out = PROTECT(allocVector(STRSXP, 1));
 	SET_STRING_ELT(out, 0, mkChar(best_genotype));
-	free(best_genotype);
+	//free(best_genotype); // R_alloc does not need free
 	UNPROTECT(1);
 	return out;
 }
 
-SEXP SXP_get_optimal_possible_haplotype(SEXP exd, SEXP s_groups, SEXP s_eff_set) {
+SEXP SXP_get_optimal_possible_haplotype(SEXP exd, SEXP s_groups, SEXP s_eff_set, SEXP s_unknown_char) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->n_eff_sets <= 0) { error("Need to load effect values before running this function\n"); }
 
@@ -175,6 +179,9 @@ SEXP SXP_get_optimal_possible_haplotype(SEXP exd, SEXP s_groups, SEXP s_eff_set)
 	if (eff_id == NA_INTEGER || eff_id < 0) {
 	  error("`effect.set` parameter is of invalid type\n");
 	}
+	
+	if (asChar(s_unknown_char) == NA_STRING) { error("`unknown.allele` parameter is of invalid type"); }
+	char na_char = CHAR(asChar(s_unknown_char))[0];
 
 	R_xlen_t len = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
@@ -183,11 +190,12 @@ SEXP SXP_get_optimal_possible_haplotype(SEXP exd, SEXP s_groups, SEXP s_eff_set)
 	}
 
 	if (len == 1) {
-		char* best_genotype = calculate_optimal_possible_haplotype(d, GROUPNUM_IFY(groups[0]), EFFECTID_IFY(eff_id));
+		char* best_genotype = (char*)R_alloc(d->genome.n_markers+1, sizeof(char));
+		calculate_optimal_possible_haplotype(d, GROUPNUM_IFY(groups[0]), EFFECTID_IFY(eff_id), na_char, best_genotype);
 
 		SEXP out = PROTECT(allocVector(STRSXP, 1));
 		SET_STRING_ELT(out, 0, mkChar(best_genotype));
-		free(best_genotype);
+		//free(best_genotype); // R_alloc does not need free
 		UNPROTECT(1);
 		return out;
 
@@ -195,9 +203,10 @@ SEXP SXP_get_optimal_possible_haplotype(SEXP exd, SEXP s_groups, SEXP s_eff_set)
 		// Get an R vector of the same length as the number of new size 1 groups created
 		SEXP out = PROTECT(allocVector(STRSXP, len));
 		for (int i = 0; i < len; ++i) {
-			char* best_genotype = calculate_optimal_possible_haplotype(d, GROUPNUM_IFY(groups[i]), EFFECTID_IFY(eff_id));
+			char* best_genotype = (char*)R_alloc(d->genome.n_markers+1, sizeof(char));
+			calculate_optimal_possible_haplotype(d, GROUPNUM_IFY(groups[i]), EFFECTID_IFY(eff_id), na_char, best_genotype);
 			SET_STRING_ELT(out, i, mkChar(best_genotype));
-			free(best_genotype);
+			//free(best_genotype); // R_alloc does not need free
 		}
 		UNPROTECT(1);
 		return out;
@@ -1985,6 +1994,8 @@ SEXP SXP_save_GEBVs(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_eff_set) {
 }
 
 SEXP SXP_save_local_GEBVs_blocks_from_file(SEXP exd, SEXP s_filename, SEXP block_file, SEXP s_group, SEXP s_eff_set) {
+	error("This function is currently nonfunctional. Please upgrade or downgrade genomicSimulation. Sorry.");
+	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->n_eff_sets <= 0) { error("Need to load at least one set of marker effects before requesting breeding values\n"); }
 
@@ -1995,12 +2006,18 @@ SEXP SXP_save_local_GEBVs_blocks_from_file(SEXP exd, SEXP s_filename, SEXP block
 
 	if (isNull(s_group)) {
 		MarkerBlocks b = load_blocks(d, CHAR(asChar(block_file)));
-		calculate_local_bvs(d, b, EFFECTID_IFY(eff_id), CHAR(asChar(s_filename)));
+		DecimalMatrix dec = calculate_local_bvs(d, NO_GROUP, b, EFFECTID_IFY(eff_id));
+		// TODO: save to: CHAR(asChar(s_filename))
+		
 		delete_markerblocks(&b);
+		delete_dmatrix(&dec);
 	} else if (asInteger(s_group) > 0) {
 		MarkerBlocks b = load_blocks(d, CHAR(asChar(block_file)));
-		calculate_group_local_bvs(d, b, EFFECTID_IFY(eff_id), CHAR(asChar(s_filename)), GROUPNUM_IFY(asInteger(s_group)));
+		DecimalMatrix dec = calculate_local_bvs(d, GROUPNUM_IFY(asInteger(s_group)), b, EFFECTID_IFY(eff_id));
+		// TODO: save to: CHAR(asChar(s_filename))
+		
 		delete_markerblocks(&b);
+		delete_dmatrix(&dec);
 	} else {
 		error("`group` parameter is invalid");
 	}
@@ -2009,6 +2026,8 @@ SEXP SXP_save_local_GEBVs_blocks_from_file(SEXP exd, SEXP s_filename, SEXP block
 }
 
 SEXP SXP_save_local_GEBVs_blocks_from_chrsplit(SEXP exd, SEXP s_filename, SEXP s_nslices, SEXP s_group, SEXP s_map, SEXP s_eff_set) {
+	error("This function is currently nonfunctional. Please upgrade or downgrade genomicSimulation. Sorry.");
+	
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->n_eff_sets <= 0) { error("Need to load at least one set of marker effects before requesting breeding values\n"); }
 
@@ -2019,12 +2038,18 @@ SEXP SXP_save_local_GEBVs_blocks_from_chrsplit(SEXP exd, SEXP s_filename, SEXP s
 
 	if (isNull(s_group)) {
 		MarkerBlocks b = create_evenlength_blocks_each_chr(d, MAPID_IFY(asInteger(s_map)),asInteger(s_nslices));
-		calculate_local_bvs(d, b, EFFECTID_IFY(eff_id), CHAR(asChar(s_filename)));
+		DecimalMatrix dec = calculate_local_bvs(d, NO_GROUP, b, EFFECTID_IFY(eff_id));
+		// TODO: save to: CHAR(asChar(s_filename))
+		
 		delete_markerblocks(&b);
+		delete_dmatrix(&dec);
 	} else if (asInteger(s_group) > 0) {
 		MarkerBlocks b = create_evenlength_blocks_each_chr(d, MAPID_IFY(asInteger(s_map)), asInteger(s_nslices));
-		calculate_group_local_bvs(d, b, EFFECTID_IFY(eff_id), CHAR(asChar(s_filename)), GROUPNUM_IFY(asInteger(s_group)));
+		DecimalMatrix dec = calculate_local_bvs(d, GROUPNUM_IFY(asInteger(s_group)), b, EFFECTID_IFY(eff_id));
+		// TODO: save to: CHAR(asChar(s_filename))
+		
 		delete_markerblocks(&b);
+		delete_dmatrix(&dec);
 	} else {
 		error("`group` parameter is invalid");
 	}

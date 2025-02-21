@@ -1,5 +1,9 @@
 # genomicSimulation (development version)
 
+## New Features
+
+- `see.optimal.haplotype` and `see.optimal.possible.haplotype` now accept an extra optional parameter `unknown.allele`, which will be used to represent the optimal allele at markers where there are no known marker effects and so no way to judge which allele is optimal. 
+
 ## Improvements
 
 - `save.`, `change.` and `delete.` functions no longer return anything. They used to return 0L.

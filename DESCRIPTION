@@ -1,5 +1,5 @@
 Package: genomicSimulation
-Version: 0.2.6.002
+Version: 0.2.6.003
 Title: Simulate Selection And Crossing On SNP Markers
 Authors@R: c(person("Kira", "Villiers", role = c("aut", "cre"), email="k.villiers@uq.edu.au"))
 Description: Fast functions to simulate breeding programs on SNP markers. 

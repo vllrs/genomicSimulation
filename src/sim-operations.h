@@ -1,10 +1,10 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.2.5.13
+genomicSimulationC v0.2.6.03
 
-    Last edit: 17 Jan 2025
-	License: MIT License
+    Last edit: 21 Feb 2025
+    License: MIT License
 
 Copyright (c) 2021 Kira Villiers
 
@@ -26,42 +26,42 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-	Project repository: https://github.com/vllrs/genomicSimulationC
+    Project repository: https://github.com/vllrs/genomicSimulationC
 
 */
 
 /* Compile-time options:
 
-	#define GSC_NO_SHORT_NAMES
-		
-		If simple names (eg `make_group_from`) might cause namespace conflicts, 
-		then add the above definition before the import, and only module-prefixed 
-		names (eg `gsc_make_group_from`) will be exposed. 
-		
-	#define GSC_MALLOC(ptr,size)  better_malloc
-	#define GSC_FREE(ptr)         better_free
-	
-		By default, genomicSimulation uses stdlib malloc() and free(). These can
-		be replaced with other equivalent memory management functions by redefining
-		both GSC_MALLOC and GSC_FREE. Do not redefine only one of the pair.
-	
-	#define CONTIG_WIDTH 1000	
-	
-		The largest contiguous block of memory that could be requested in the 
-		process of simulation is CONTIG_WIDTH integers. This setting's default
-		value is 1000 if not redefined.
-		
-		This could be decreased to help long simulations or lower-end machines.
-		Increasing this may provide some speed gain (likely very minor. I haven't
-		tested).
-		
-	#define NAME_LENGTH 45
-	
-		The maximum number of characters allowed in a name field.
-		These include names of SNPs, names of genotypes loaded from files,
-		names of generated genotypes, and save-as-you-go filenames.
-		
-		@TODO render this setting meaningless. 
+    #define GSC_NO_SHORT_NAMES
+        
+        If simple names (eg `make_group_from`) might cause namespace conflicts, 
+        then add the above definition before the import, and only module-prefixed 
+        names (eg `gsc_make_group_from`) will be exposed. 
+        
+    #define GSC_MALLOC(ptr,size)  better_malloc
+    #define GSC_FREE(ptr)         better_free
+    
+        By default, genomicSimulation uses stdlib malloc() and free(). These can
+        be replaced with other equivalent memory management functions by redefining
+        both GSC_MALLOC and GSC_FREE. Do not redefine only one of the pair.
+    
+    #define CONTIG_WIDTH 1000   
+    
+        The largest contiguous block of memory that could be requested in the 
+        process of simulation is CONTIG_WIDTH integers. This setting's default
+        value is 1000 if not redefined.
+        
+        This could be decreased to help long simulations or lower-end machines.
+        Increasing this may provide some speed gain (likely very minor. I haven't
+        tested).
+        
+    #define NAME_LENGTH 45
+    
+        The maximum number of characters allowed in a name field.
+        These include names of SNPs, names of genotypes loaded from files,
+        names of generated genotypes, and save-as-you-go filenames.
+        
+        @TODO render this setting meaningless. 
         
     #define GSC_ID_T unsigned int
     #define GSC_LOCALX_T unsigned int
@@ -70,7 +70,7 @@ SOFTWARE.
         
         These type aliases are used for different types of internal identifiers.
         They can be redefined to any signed or unsigned integer type, if needed.
-	
+    
 */
 
 #ifdef SIM_OPERATIONS
@@ -193,15 +193,15 @@ typedef enum {
 #endif
 
 #ifndef NAME_LENGTH
-	#define NAME_LENGTH 45
+    #define NAME_LENGTH 45
 #endif
 
 #if defined(GSC_MALLOC) && !defined(GSC_FREE) || !defined(GSC_MALLOC) && defined(GSC_FREE)
 #error "You must define both GSC_MALLOC and GSC_FREE, or neither."
 #endif
 #if !defined(GSC_MALLOC) && !defined(GSC_FREE)
-	#define GSC_MALLOC(size) malloc(size)
-	#define GSC_FREE(ptr) free(ptr)
+    #define GSC_MALLOC(size) malloc(size)
+    #define GSC_FREE(ptr) free(ptr)
 #endif
 
 /** @defgroup shortnames Functions with Short Names Available
@@ -260,7 +260,7 @@ typedef enum {
 #define KnownGenome                gsc_KnownGenome
 #define RecombinationMap           gsc_RecombinationMap
 #define AlleleMatrix               gsc_AlleleMatrix
-#define EffectMatrix               gsc_EffectMatrix
+#define MarkerEffects              gsc_MarkerEffects
 #define SimData                    gsc_SimData
 #define GenoLocation               gsc_GenoLocation
 #define INVALID_GENO_LOCATION      GSC_INVALID_GENO_LOCATION
@@ -275,10 +275,13 @@ typedef enum {
 #define change_label_to_values     gsc_change_label_to_values
 #define change_names_to_values     gsc_change_names_to_values
 #define change_allele_symbol       gsc_change_allele_symbol
+#define change_eff_set_centres_to_values        gsc_change_eff_set_centres_to_values
+#define change_eff_set_centre_of_markers        gsc_change_eff_set_centre_of_markers
+#define change_eff_set_centre_of_allele_count   gsc_change_eff_set_centre_of_allele_count
 
 #define create_empty_simdata       gsc_create_empty_simdata
 #define clear_simdata              gsc_clear_simdata
-#define load_mapfile			         gsc_load_mapfile
+#define load_mapfile               gsc_load_mapfile
 #define load_effectfile            gsc_load_effectfile
 #define load_genotypefile          gsc_load_genotypefile
 #define load_data_files            gsc_load_data_files
@@ -304,7 +307,7 @@ typedef enum {
 #define get_label_value            gsc_get_label_value
 #define get_index_of_label         gsc_get_index_of_label
 #define get_index_of_eff_set       gsc_get_index_of_eff_set
-#define get_index_of_map		   gsc_get_index_of_map
+#define get_index_of_map           gsc_get_index_of_map
 #define get_index_of_genetic_marker gsc_get_index_of_genetic_marker
 #define get_existing_groups        gsc_get_existing_groups
 #define get_existing_group_counts  gsc_get_existing_group_counts
@@ -347,10 +350,9 @@ typedef enum {
 
 #define split_by_bv                gsc_split_by_bv
 #define calculate_bvs              gsc_calculate_bvs
-#define calculate_allele_counts		gsc_calculate_allele_counts
+#define calculate_allele_counts    gsc_calculate_allele_counts
 #define create_evenlength_blocks_each_chr gsc_create_evenlength_blocks_each_chr
 #define load_blocks                       gsc_load_blocks
-#define calculate_group_local_bvs         gsc_calculate_group_local_bvs
 #define calculate_local_bvs               gsc_calculate_local_bvs
 #define calculate_optimal_haplotype          gsc_calculate_optimal_haplotype
 #define calculate_optimal_possible_haplotype gsc_calculate_optimal_possible_haplotype
@@ -391,8 +393,8 @@ typedef enum {
  * gsc_SimData is the central state/data
  * storage struct, and so is a required parameter to most user-facing functions.
  * It contains pointers to a gsc_KnownGenome (storing the loaded markers and any
- * recombination maps), an
- * gsc_EffectMatrix (storing the loaded allele effects), and an gsc_AlleleMatrix
+ * recombination maps), a
+ * gsc_MarkerEffects (storing the loaded allele effects), and an gsc_AlleleMatrix
  * (storing metadata and genotypes of founders and simulated offspring).
  *
  * Other structs in this group (gsc_TableSize, gsc_MarkerBlocks, gsc_GenOptions) represented
@@ -493,11 +495,11 @@ n = NULL; n##cap = 0; } while (0)
  * n{cap} >= newlen )
  */
 #define GSC_STRETCH_BUFFER(n,newlen) do {    \
-	if (newlen < n##cap) { } \
-	else if (n##cap >= sizeof(n##stack)/sizeof(n##stack[0])) { \
+    if (newlen < n##cap) { } \
+    else if (n##cap >= sizeof(n##stack)/sizeof(n##stack[0])) { \
         void* tmp = gsc_malloc_wrap(sizeof(n##stack[0])*newlen,GSC_FALSE); \
-		if (tmp != NULL) { \
-		memcpy(tmp,n,sizeof(n[0])*n##cap); \
+        if (tmp != NULL) { \
+        memcpy(tmp,n,sizeof(n[0])*n##cap); \
         GSC_FREE(n); n = tmp; n##cap = newlen; }} \
     else if (newlen >= sizeof(n##stack)/sizeof(n##stack[0])) { \
         n = gsc_malloc_wrap(sizeof(n##stack[0])*newlen,GSC_FALSE); \
@@ -512,8 +514,8 @@ n = NULL; n##cap = 0; } while (0)
  * @shortnamed{TableSize}
  */
 struct gsc_TableSize {
-	int num_columns;
-	int num_rows;
+    int num_columns;
+    int num_rows;
 };
 
 /** A struct used to store a set of blocks of markers.
@@ -522,30 +524,29 @@ struct gsc_TableSize {
  */
 typedef struct {
     /** The number of blocks whose details are stored here. */
-	GSC_GENOLEN_T num_blocks;
+    GSC_GENOLEN_T num_blocks;
 
     /** Pointer to a heap array of length num_blocks
       * containing the number of markers that make up each block */
-	GSC_GENOLEN_T* num_markers_in_block;
+    GSC_GENOLEN_T* num_markers_in_block;
 
     /** Pointer to a heap array of length num_blocks, each
      * entry in which is a pointer to a heap array with length corresponding to
      * the value of the corresponding entry in num_markers_in_block whose values
      * are the indexes in the gsc_SimData of the markers that make up that block. */
-	GSC_GENOLEN_T** markers_in_block;
+    GSC_GENOLEN_T** markers_in_block;
 } gsc_MarkerBlocks;
 
-/** A row-major heap matrix that contains floating point numbers. `dmatrix` functions
- * are designed to act on this matrix.
+/** A row-major heap matrix that contains floating point numbers.
  *
  * Rows make the first index of the matrix and columns the second.
  *
  * @shortnamed{DecimalMatrix}
  */
 typedef struct {
-	double** matrix; /**< The actual matrix and contents */
-	unsigned int rows;        /**< Number of rows in the matrix */
-	unsigned int cols;        /**< number of columns in the matrix */
+    double** matrix; /**< The actual matrix and contents */
+    unsigned int dim1;        /**< Number of rows in the matrix */
+    unsigned int dim2;        /**< number of columns in the matrix */
 } gsc_DecimalMatrix;
 
 
@@ -636,20 +637,20 @@ struct gsc_MultiIDSet {
  * @shortnamed{GenOptions}
 */
 typedef struct {
-	_Bool will_name_offspring; /**< A boolean: whether generated offspring should be given names. */
+    _Bool will_name_offspring; /**< A boolean: whether generated offspring should be given names. */
     const char* offspring_name_prefix; /**< If `will_name_offspring` is true, generated
                            * offspring are named with the concatenation {offspring_name_prefix}{index}. */
 
-	GSC_GLOBALX_T family_size; /**< The number of offspring to produce from each cross.*/
+    GSC_GLOBALX_T family_size; /**< The number of offspring to produce from each cross.*/
 
-	_Bool will_track_pedigree; /**< A boolean: whether to track parentage of generated offspring.*/
-	_Bool will_allocate_ids; /**< A boolean: whether to allocate generated offspring session-
+    _Bool will_track_pedigree; /**< A boolean: whether to track parentage of generated offspring.*/
+    _Bool will_allocate_ids; /**< A boolean: whether to allocate generated offspring session-
                             * unique IDs. IDs are used for pedigree tracking. The
                             * offspring of an anonymous individual (one without an ID)
                             * cannot identify that individual as their parent. */
 
     const char* filename_prefix; /**< A string used in save-as-you-go file names. */
-	_Bool will_save_pedigree_to_file; /**< A boolean. If true, the full/recursive
+    _Bool will_save_pedigree_to_file; /**< A boolean. If true, the full/recursive
                             * pedigrees of every offspring generated in the cross
                             * are saved to "{filename_prefix}-pedigree.txt", even
                             * if `will_save_to_simdata` is false.
@@ -661,7 +662,7 @@ typedef struct {
                             * are saved to "{filename_prefix}-bv.txt", even
                             * if `will_save_to_simdata` is false.
                             * BVs are saved in the format of gsc_save_bvs() */
-	_Bool will_save_alleles_to_file; /**< A boolean. If true, the set of alleles
+    _Bool will_save_alleles_to_file; /**< A boolean. If true, the set of alleles
                             * of every offspring generated in the cross
                             * are saved to "{filename_prefix}-genotype.txt", even
                             * if `will_save_to_simdata` is false.
@@ -672,7 +673,7 @@ typedef struct {
                             * if logged by the function generating a new set of offspring.
                             * The columns of the log file are:
                             */
-	_Bool will_save_to_simdata; /**< A boolean. If true, the generated offspring exist
+    _Bool will_save_to_simdata; /**< A boolean. If true, the generated offspring exist
                             * in the gsc_SimData struct after the function executes.
                             * If false, they are discarded after creation. */
 } gsc_GenOptions;
@@ -788,10 +789,10 @@ struct gsc_AlleleMatrix {
      * first allele and `alleles[genotype index][marker index * 2 + 1]` to
      * get the second. If CONTIG_WIDTH lines are saved here, another
      * gsc_AlleleMatrix is added to the linked list when there's a need to save more.*/
-	char* alleles[CONTIG_WIDTH];
+    char* alleles[CONTIG_WIDTH];
 
-	GSC_LOCALX_T n_genotypes; /**< Number of genotypes currently loaded in this matrix.*/
-	GSC_GENOLEN_T n_markers; /**< Number of markers across which genotypes are tracked. This has
+    GSC_LOCALX_T n_genotypes; /**< Number of genotypes currently loaded in this matrix.*/
+    GSC_GENOLEN_T n_markers; /**< Number of markers across which genotypes are tracked. This has
                     * redundancy with gsc_SimData and other members of its linked list
                     * but it's good to know how big your own `alleles` array is.*/
 
@@ -809,20 +810,49 @@ struct gsc_AlleleMatrix {
     int** labels; /**< Pointer to list of labels. Size of first dimension is n_labels,
                            * of second dimension is arrays of labels of length CONTIG_WIDTH*/
 
-	gsc_AlleleMatrix* next; /**< Pointer to the next gsc_AlleleMatrix in the linked list,
+    gsc_AlleleMatrix* next; /**< Pointer to the next gsc_AlleleMatrix in the linked list,
                          * or NULL if this entry is the last. */
 };
 
-/** A type that stores a matrix of effect values and their names.
+/** A type that stores the information needed to calculate breeding values from 
+ * alleles at markers.
  *
- * @shortnamed{EffectMatrix}
+ * The equation to calculate breeding values for a genotype g across markers m
+ * using the marker effects in this struct is:
+ *
+ * \f$\sum_{m}\left[\sum_{a_m}\left(c_{g,m,a_m} \cdot eff_{m,a_m}\right) - centre_{m}\right]\f$
+ *
+ * where this struct stores effects for a set of alleles \f$a_m\f$ for each marker m, 
+ * \f$c_[g,m,a_m}$\f$ is the number of copies of allele \f$a_m\f$ that genotype g has
+ * at marker m, \f$eff_{m,a_m}\f$ is the effect of that allele at that marker (stored in .eff), 
+ * and \f$centre_{m}\f$ is a centring value applied per marker (stored in .centre).
+ *
+ * The formula for calculating the breeding value of a haplotype is the same, except 
+ * \f$c_[g,m,a_m}$\f$ will have possible values 0 or 1 instead of 0, 1 or 2. 
+ *
+ * @shortnamed{MarkerEffects}
  */
 typedef struct {
-	gsc_DecimalMatrix effects; /**< Effect on breeding value of alleles at markers.
-        * Rows correspond to `effect_names`/alleles, columns to markers. */
-	char* effect_names; /**< Character array containing allele characters ordered
-        * to match rows of `effects`. */
-} gsc_EffectMatrix;
+    GSC_GENOLEN_T n_markers; /**< Number of markers across which genotypes are tracked. 
+                              * This number has redundancy with gsc_SimData. */
+    double* centre; /**< Vector of length @a n_markers, containing a value for each marker 
+        * which represents the value to subtract from the breeding value
+        * contribution of the alleles at that marker. 
+        * Markers are ordered according to the SimData's KnownGenome.marker_names.
+        * If this value is NULL, no values are to be subtracted
+        * from the products of allele count and allele effect.
+        */
+
+    GSC_GENOLEN_T* cumn_alleles; /**< A vector of length @a n_markers holding the 
+        * cumulative number of alleles that have effects on breeding values at each marker.
+        * Markers are ordered according to the SimData's KnownGenome.marker_names.
+        * At position i, contains the number of alleles with effects at the ith marker
+        * plus the number of alleles at previous markers. So at index 0, it will have a nonzero value. */
+    char* allele; /**< A vector holding the symbol/character representing each allele at each marker.
+        * Index into with (MarkerEffects.n_markers * markerix + alleleix). */
+    double* eff; /**< A vector holding the effect on breeding value of each allele at each marker.
+        * Index into with (MarkerEffects.n_markers * markerix + alleleix). */
+} gsc_MarkerEffects;
 
 /** Composite type that is used to run crossing simulations.
  *
@@ -841,7 +871,7 @@ typedef struct {
     gsc_KnownGenome genome; /**< A gsc_KnownGenome, which stores the information of
                              * known markers and linkage groups, as well as one or more
                              * recombination maps for use in simulating meiosis.*/
-	gsc_AlleleMatrix* m; /**< Pointer to an gsc_AlleleMatrix, which stores data and
+    gsc_AlleleMatrix* m; /**< Pointer to an gsc_AlleleMatrix, which stores data and
                       * metadata of founders and simulated offspring. The
                       * gsc_AlleleMatrix is start of a linked list if there are
                       * many genotypes. */
@@ -849,9 +879,8 @@ typedef struct {
     GSC_ID_T n_eff_sets; /**< The number of sets of allele effects in the simulation **/
     gsc_EffectID* eff_set_ids; /**< The identifier number of each set of allele effects in the simulation,
                      * ordered by their lookup index. */
-    gsc_EffectMatrix* e; /**< Array of n_eff_sets gsc_EffectMatrix, optional for the use of the simulation.
-                     * Used for calculating breeding values from which alleles
-                     * a genotype has at each marker.*/
+    gsc_MarkerEffects* e; /**< Array of n_eff_sets gsc_MarkerEffects, optional for the use 
+                     * of the simulation. Used for calculating breeding values for genotypes. */
 
     //CRANDOMGENERATOR /**< Random number generator working memory. */
     gsc_PedigreeID current_id; /**< Highest SimData-unique ID that has been generated
@@ -940,6 +969,14 @@ struct gsc_MapfileUnit {
     char* name;
     unsigned long chr;
     double pos;
+};
+
+/** Unprocessed data for one marker effect loaded from an effect file. */
+struct gsc_EffectfileUnit {
+    GSC_GENOLEN_T markerix;
+    char allele;
+    double centre;
+    double eff;
 };
 
 /** Enumerate types of genotype files that the simulation knows how to load.
@@ -1082,6 +1119,24 @@ void gsc_change_label_to_values(gsc_SimData* d, const gsc_GroupNum whichGroup, c
 void gsc_change_names_to_values(gsc_SimData* d, const gsc_GroupNum whichGroup, const GSC_GLOBALX_T startIndex, 
                                 const unsigned int n_values, const char** values);
 void gsc_change_allele_symbol(gsc_SimData* d, const char* which_marker, const char from, const char to);
+
+_Bool gsc_change_eff_set_centres_to_values(gsc_SimData* d,
+                                           const gsc_EffectID effset,
+                                           const GSC_GENOLEN_T n_values,
+                                           const double* values);
+GSC_GENOLEN_T gsc_change_eff_set_centre_of_markers(gsc_SimData* d,
+                                                   const gsc_EffectID effset,
+                                                   const GSC_GENOLEN_T n_markers,
+                                                   const char** marker_names,
+                                                   const double* centres);
+GSC_GENOLEN_T gsc_change_eff_set_centre_of_allele_count(gsc_SimData* d,
+                                                        const gsc_EffectID effset,
+                                                        const GSC_GENOLEN_T n_markers,
+                                                        const char** marker_names,
+                                                        const double* centres,
+                                                        const char allele,
+                                                        const _Bool reset_centres);
+
 //static void gsc_set_names(gsc_AlleleMatrix* a, const char* prefix, const int suffix, const GSC_LOCALX_T from_index);
 int gsc_get_integer_digits(const int i);
 GSC_ID_T gsc_get_index_of_label( const gsc_SimData* d, const gsc_LabelID label );
@@ -1595,7 +1650,7 @@ void gsc_generate_clone(gsc_SimData* d, const char* parent_genome, char* output)
 // static FILE* gsc_helper_genoptions_save_bvs_setup(const gsc_SimData* d, const gsc_GenOptions g, int* effIndexp);
 // static FILE* gsc_helper_genoptions_save_genotypes_setup(const gsc_SimData* d, const gsc_GenOptions g);
 // static void gsc_helper_genoptions_save_pedigrees(FILE* fp, gsc_SimData* d, gsc_AlleleMatrix* tosave);
-// static void gsc_helper_genoptions_save_bvs(FILE* fe, gsc_EffectMatrix* effMatrices, int effIndex, 
+// static void gsc_helper_genoptions_save_bvs(FILE* fe, gsc_MarkerEffects* effMatrices, int effIndex, 
         //gsc_AlleleMatrix* tosave);
 // static void gsc_helper_genoptions_save_genotypes(FILE* fg, gsc_AlleleMatrix* tosave);
 // static void gsc_helper_genoptions_give_names_and_ids(gsc_AlleleMatrix* am, gsc_SimData* d, 
@@ -1667,22 +1722,28 @@ gsc_GroupNum gsc_make_double_crosses_from_file(gsc_SimData* d, const char* input
 gsc_GroupNum gsc_split_by_bv(gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID,
                              const GSC_GLOBALX_T top_n, const _Bool lowIsBest);
 gsc_DecimalMatrix gsc_calculate_bvs( const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID);
-gsc_DecimalMatrix gsc_calculate_utility_bvs(gsc_BidirectionalIterator* targets, const gsc_EffectMatrix* effset);
-gsc_DecimalMatrix gsc_calculate_allele_counts( const gsc_SimData* d, const gsc_GroupNum group, const char allele);
-void gsc_calculate_utility_allele_counts( const GSC_GENOLEN_T n_markers, const GSC_GLOBALX_T n_genotypes, 
-                                         const char** const genotypes,  const char allele, gsc_DecimalMatrix* counts);
-void gsc_calculate_utility_allele_counts_pair( const GSC_GENOLEN_T n_markers, const GSC_GLOBALX_T n_genotypes, 
-                                              const char** const genotypes, const char allele, 
-                                              gsc_DecimalMatrix* counts, const char allele2, gsc_DecimalMatrix* counts2);
+gsc_DecimalMatrix gsc_calculate_utility_bvs(gsc_BidirectionalIterator* targets, const gsc_MarkerEffects* effset);
+gsc_DecimalMatrix gsc_calculate_utility_local_bvs(gsc_BidirectionalIterator* targets, 
+                                                  gsc_MarkerBlocks b,
+                                                  gsc_MarkerEffects e);
+gsc_DecimalMatrix gsc_calculate_allele_counts(const gsc_SimData* d, 
+                                              const gsc_GroupNum group, 
+                                              const char allele);
 gsc_MarkerBlocks gsc_create_evenlength_blocks_each_chr(const gsc_SimData* d, const gsc_MapID mapid, const GSC_ID_T n);
 gsc_MarkerBlocks gsc_load_blocks(const gsc_SimData* d, const char* block_file);
-void gsc_calculate_group_local_bvs(const gsc_SimData* d, const gsc_MarkerBlocks b, const gsc_EffectID effID,
-                                   const char* output_file, const gsc_GroupNum group);
-void gsc_calculate_local_bvs(const gsc_SimData* d, const gsc_MarkerBlocks b, const gsc_EffectID effID, 
-                             const char* output_file);
-
-char* gsc_calculate_optimal_haplotype(const gsc_SimData* d, const gsc_EffectID effID);
-char* gsc_calculate_optimal_possible_haplotype(const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID);
+gsc_DecimalMatrix gsc_calculate_local_bvs(const gsc_SimData* d, 
+                                                const gsc_GroupNum group,
+                                                const gsc_MarkerBlocks b, 
+                                                const gsc_EffectID effID);
+void gsc_calculate_optimal_haplotype(const gsc_SimData* d, 
+                                      const gsc_EffectID effID, 
+                                      const char symbol_na,
+                                      char* opt_haplotype);
+void gsc_calculate_optimal_possible_haplotype(const gsc_SimData* d, 
+                                               const gsc_GroupNum group, 
+                                               const gsc_EffectID effID,
+                                               const char symbol_na,
+                                               char* opt_haplotype);
 double gsc_calculate_optimal_bv(const gsc_SimData* d, const gsc_EffectID effID);
 double gsc_calculate_optimal_possible_bv(const gsc_SimData* d, const gsc_GroupNum group, const gsc_EffectID effID);
 double gsc_calculate_minimal_bv(const gsc_SimData* d, const gsc_EffectID effID);
@@ -1702,7 +1763,7 @@ void gsc_delete_genome(gsc_KnownGenome* g);
 void gsc_delete_recombination_map(SimData* d, const gsc_MapID whichMap);
 void gsc_delete_recombination_map_nointegrity(gsc_RecombinationMap* m);
 void gsc_delete_allele_matrix(gsc_AlleleMatrix* m);
-void gsc_delete_effect_matrix(gsc_EffectMatrix* m);
+void gsc_delete_effects_table(gsc_MarkerEffects* m);
 void gsc_delete_eff_set(gsc_SimData* d, gsc_EffectID whichID);
 void gsc_delete_simdata(gsc_SimData* m);
 void gsc_delete_markerblocks(gsc_MarkerBlocks* b);
@@ -1727,22 +1788,29 @@ void gsc_save_markerblocks(const char* fname, const gsc_SimData* d, const gsc_Ma
                            const gsc_MapID labelMapID);
 void gsc_save_genotypes(const char* fname, const gsc_SimData* d, const gsc_GroupNum groupID, 
                         const _Bool markers_as_rows);
-void gsc_save_allele_counts(const char* fname, const gsc_SimData* d, const gsc_GroupNum groupID, 
-						    const char allele, const _Bool markers_as_rows);
+void gsc_save_allele_counts(const char* fname, 
+                            const gsc_SimData* d, 
+                            const gsc_GroupNum groupID, 
+                            const char allele, 
+                            const _Bool markers_as_rows);
 void gsc_save_pedigrees(const char* fname, const gsc_SimData* d, const gsc_GroupNum groupID, 
                         const _Bool full_pedigree);
 void gsc_save_bvs(const char* fname, const gsc_SimData* d, const gsc_GroupNum groupID, const gsc_EffectID effID);
 
 // Utility and helper saving functions
 void gsc_save_utility_markerblocks(FILE* f, const gsc_MarkerBlocks b, const GSC_GENOLEN_T n_markers, 
-		char** const marker_names, const gsc_RecombinationMap* map);
+        char** const marker_names, const gsc_RecombinationMap* map);
 void gsc_save_utility_genotypes(FILE* f, gsc_BidirectionalIterator* targets, const GSC_GENOLEN_T n_markers,
         char** const marker_names, const _Bool markers_as_rows);
-void gsc_save_utility_allele_counts(FILE* f, gsc_BidirectionalIterator* targets, const GSC_GENOLEN_T n_markers,
-		char** const marker_names, const _Bool markers_as_rows, const char allele);
+void gsc_save_utility_allele_counts(FILE* f, 
+                                    gsc_BidirectionalIterator* targets,
+                                    GSC_GENOLEN_T n_markers, 
+                                    char** const marker_names, 
+                                    const _Bool markers_as_rows, 
+                                    const char allele);
 void gsc_save_utility_pedigrees(FILE* f, gsc_BidirectionalIterator* targets,
-		const _Bool full_pedigree, const gsc_AlleleMatrix* parent_pedigree_store);
-void gsc_save_utility_bvs(FILE* f, gsc_BidirectionalIterator* targets, const gsc_EffectMatrix* eff);
+        const _Bool full_pedigree, const gsc_AlleleMatrix* parent_pedigree_store);
+void gsc_save_utility_bvs(FILE* f, gsc_BidirectionalIterator* targets, const gsc_MarkerEffects* eff);
 
 // static GSC_LOGICVAL gsc_helper_is_marker_in_chr(const GSC_GENOLEN_T markerix, const gsc_LinkageGroup chr, double* pos);
 
