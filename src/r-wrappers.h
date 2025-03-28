@@ -11,6 +11,8 @@ SEXP SXP_load_genotypes(SEXP exd, SEXP s_alleleFile, SEXP s_fileSpec);
 SEXP SXP_load_effects(SEXP exd, SEXP s_effectFile);
 SEXP SXP_load_map(SEXP exd, SEXP s_mapFile);
 SEXP SXP_create_new_label(SEXP exd, SEXP s_default);
+SEXP SXP_change_eff_set_centres(SEXP exd, SEXP s_values, SEXP s_eff_set);
+SEXP SXP_change_eff_set_centres_of_allele(SEXP exd, SEXP s_allele, SEXP s_values, SEXP s_eff_set, SEXP s_reset);
 
 /*----------------------- Calculators ---------------------*/
 SEXP SXP_see_optimal_haplotype(SEXP exd, SEXP s_eff_set, SEXP s_unknown_char);
@@ -21,7 +23,7 @@ SEXP SXP_get_minimal_GEBV(SEXP exd, SEXP s_eff_set);
 
 SEXP SXP_find_crossovers(SEXP exd, SEXP s_parentFile, SEXP s_outFile, SEXP s_windowSize, SEXP s_certainty);
 SEXP SXP_see_map(SEXP exd, SEXP s_map);
-SEXP SXP_see_effects(SEXP exd, SEXP s_effset, SEXP s_format);
+SEXP SXP_see_effects(SEXP exd, SEXP s_effset);
 
 /*----------------------- Data Access ---------------------*/
 SEXP SXP_see_group_data(SEXP exd, SEXP s_group, SEXP s_whatData, SEXP s_eff_set_id, SEXP s_label_id);

@@ -15,18 +15,65 @@ test_that("package can load files", {
 
 #test_that("package is loading genotypes correctly", {})
 
-#test_that("package is loading genetic map correctly", {})
 
-#test_that("package is loading allele effects correctly", {})
+test_that("package is loading genetic map correctly", {
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  # what was literally read from the file
+  capture_output(map.df <- read.table("helper_map.txt",header=TRUE), print=F)
+  # convert chromosome numbers to chromosome indexes
+  chr.conversions <- chr.names.to.genomicSimulation.numbering(map.df$chr)
+  map.df$chr <- chr.conversions$genomicSimulation.chr.number[match(map.df$chr,chr.conversions$chr)]
+  # Chromosome's first marker's position is "0"
+  chrdata <- data.frame(chr=unique(map.df$chr))
+  chrdata$min <- sapply(chrdata$chr, function(chr) min(map.df$pos[map.df$chr == chr]))
+  chrdata$count <- sapply(chrdata$chr, function(chr) sum(map.df$chr == chr))
+  map.df$pos <- map.df$pos - chrdata$min[match(map.df$chr,chrdata$chr)] # set first pos to zero
+  map.df$pos[chrdata$count[match(map.df$chr,chrdata$chr)] == 1] <- NaN # set single-marker linkage groups to not have relative positions
+  # order
+  map.df <- map.df[order(map.df$chr,map.df$pos),]
+  rownames(map.df) <- NULL
+  
+  expect_identical(see.genetic.map(init$mapID), map.df)
+  #and also check this manually
+  expect_identical(see.genetic.map(init$mapID)$marker, c("m1","m2","m3"))
+  expect_equal(see.genetic.map(init$mapID)$chr, c(0,0,1))
+  expect_equal(see.genetic.map(init$mapID)$pos, c(0,3.1,NaN))
+})
 
-#test_that("package can be set up without an effect file", {})
-
-#test_that("package effect file can be swapped out for another", {})
-
-#test_that("data can be deleted on completion", {
-#  load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt")
-#  clear_simdata()
-#})
+test_that("package is loading allele effects (with and without centring) correctly", {
+  capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
+  
+  capture_output(eff.df <- read.table("helper_eff.txt"), print=F)
+  colnames(eff.df) <- c("marker","allele","eff")
+  # Order correctly (I know that in helper_eff.txt, alphabetical order of marker names is same as genome order, and T is before A)
+  eff.df <- eff.df[order(eff.df$marker,eff.df$allele,decreasing=c(FALSE,TRUE),method="radix"),]
+  rownames(eff.df) <- NULL
+  
+  expect_identical(see.marker.effects(),eff.df)
+  
+  # And with centering?
+  ctable <- data.frame(marker=c("m1","m2","m3"),allele="(centre)",eff=c(0.7,0,0.23))
+  change.eff.set.centres(data.frame(markers=c("m1","m3"),cents=c(0.7,0.23)))
+  eff.df2 <- rbind(eff.df,ctable)
+  expect_identical(see.marker.effects(),eff.df2)
+  
+  ctable$eff <- c(0.9,0.99,0.999)
+  change.eff.set.centres(ctable$eff, init$effectID)
+  eff.df2 <- rbind(eff.df,ctable)
+  expect_identical(see.marker.effects(init$effectID),eff.df2)
+  
+  change.eff.set.centres.of.allele("A", data.frame(markers=c("m1","m3"),cents=c(0.6,0.13)))
+  ctable$eff <- c(0.6*-0.8,0,0.13*0.1)
+  eff.df2 <- rbind(eff.df,ctable)
+  expect_identical(see.marker.effects(init$effectID),eff.df2)
+  
+  change.eff.set.centres.of.allele("T", data.frame(markers=c("m1","m2"),cents=c(0.2,0.2)),reset.centres=F)
+  ctable$eff <- c(0.6*-0.8 + 0.2*0.9, 0 + 0.2*-0.5, 0.13*0.1)
+  eff.df2 <- rbind(eff.df,ctable)
+  expect_identical(see.marker.effects(init$effectID),eff.df2)
+  
+})
 
 test_that("package can load files with manually-specified formats", {
   # Goal is not to test that automatic file format detection works as expected. That's covered in C tests

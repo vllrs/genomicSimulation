@@ -12,6 +12,8 @@ package's internal SimData struct (sim.data$p). Returns 0 on success.
 }
 \seealso{
 Other loader functions: 
+\code{\link{change.eff.set.centres.of.allele}()},
+\code{\link{change.eff.set.centres}()},
 \code{\link{load.data}()},
 \code{\link{load.effects}()},
 \code{\link{load.genotypes}()},

@@ -113,6 +113,8 @@ into genomicSimulation. genomicSimulation will then randomise the phase of each 
 }
 \seealso{
 Other loader functions: 
+\code{\link{change.eff.set.centres.of.allele}()},
+\code{\link{change.eff.set.centres}()},
 \code{\link{clear.simdata}()},
 \code{\link{load.data}()},
 \code{\link{load.effects}()},

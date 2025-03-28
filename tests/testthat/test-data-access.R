@@ -147,8 +147,7 @@ test_that("see.marker.effects works", {
                       "allele"=c("T","A","T","A","T","A"), 
                       "eff"=c(0.9,-0.8,-0.5,-0.1,-0.1,0.1))
   expect_equal(see.marker.effects(), truth)
-  expect_equal(see.marker.effects(init$effSet, format="S"), truth)
-  expect_equal(see.marker.effects(format="whatever. ignored."), truth)
+  expect_equal(see.marker.effects(init$effSet), truth)
   
 })
 

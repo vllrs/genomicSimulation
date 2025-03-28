@@ -74,6 +74,8 @@ Cell spacers do not need to be consistent across the file.
 }
 \seealso{
 Other loader functions: 
+\code{\link{change.eff.set.centres.of.allele}()},
+\code{\link{change.eff.set.centres}()},
 \code{\link{clear.simdata}()},
 \code{\link{load.data}()},
 \code{\link{load.genotypes}()},

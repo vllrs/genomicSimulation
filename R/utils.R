@@ -17,3 +17,10 @@ my.expand.path <- function(name) {
     return(NULL)
   }
 }
+
+#' @noRd
+chr.names.to.genomicSimulation.numbering <- function(chr.names) {
+  chr.uniqnames <- unique(chr.names)
+  data.frame("chr.names"=chr.uniqnames,
+             "genomicSimulation.chr.number"=rank(strtoi(chr.uniqnames,36))-1)
+}

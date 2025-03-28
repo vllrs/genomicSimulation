@@ -4,60 +4,27 @@
 \alias{see.marker.effects}
 \title{View one of the sets of marker effects being used by the simulation}
 \usage{
-see.marker.effects(effectID = 0L, format = "long")
+see.marker.effects(effectID = 0L)
 }
 \arguments{
 \item{effectID}{the identifier of the specific marker effect set to view, or 
 zero to view the first-loaded/default marker effect set.}
-
-\item{format}{Has no effect if the set of marker effects has no marker centres
-loaded. If the set of marker effects does have marker centres, then a format 
-string beginning with "l" (eg "long") will mean the returned data frame has
-some rows with "(centre)" in the allele column and the marker centre value in 
-the eff column, and a format string beginning with "s" (eg "split") will return
-a list with two elements, the first of which is a dataframe with columns 
-marker/allele/eff, and the second of which is a dataframe with columns
-marker/centre.}
 }
 \value{
-Either a dataframe or a pair of dataframes in a list, depending on 
-whether the set of marker effects uses centring values or not, and on the
-value of the "format" parameter.
+A dataframe with columns "marker", "allele" and "eff"
 }
 \description{
-Access the list of markers effects of one of the marker effect sets loaded  
-in the simulation.
-}
-\details{
-The row order of the returned dataframe will 
-match the order of the markers as stored by the simulation (eg.
-will match the marker order in genotypes from see.group.data(data.type="G")).
-
-If the set of marker effects has no marker centre values, then the function 
+The function 
 will return a dataframe with three columns: 
 the first, named "marker", containing marker names; 
 the second, named "allele", containing an allele symbol;
 and the third, named "eff", containing the contribution of that allele at
 that marker to the estimated breeding value.
-
-If the set of marker effects has marker centre values, then there are one of 
-two formats in which they can be returned. In the first format, obtained if
-the function is called with format="long", the function will return a 
-dataframe similar in format to the no-centre case. The dataframe will have
-three columns:
-the first, named "marker", containing marker names; 
-the second, named "allele", containing an allele symbol, or the string "(centre)";
-and the third, named "eff", containing the contribution of that allele at
-that marker to the estimated breeding value, or, if the "allele" column holds
-"(centre)", the scalar value to be subtracted from the breeding value 
-contributions of that marker.
-
-Alternatively, if the set of marker effects has marker centre values but 
-the function is called with format="split", it will return a list with two 
-elements. The first element will be the dataframe that would be returned if 
-the set of marker effects had no marker centres, and the second element will 
-be a dataframe with two columns, "marker" and "centre", containing marker name
-and corresponding centring value respectively.
+}
+\details{
+If the set of marker effects has centering values, then rows containing the
+special value "(centre)" in the allele column will contain that marker's 
+centring value.
 }
 \seealso{
 Other data access functions: 

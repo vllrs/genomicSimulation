@@ -58,6 +58,8 @@ sets can be loaded after this call using @seealso \link{load.genotypes},
 See package vignette for file formats that the package can load.
 
 Other loader functions: 
+\code{\link{change.eff.set.centres.of.allele}()},
+\code{\link{change.eff.set.centres}()},
 \code{\link{clear.simdata}()},
 \code{\link{load.effects}()},
 \code{\link{load.genotypes}()},

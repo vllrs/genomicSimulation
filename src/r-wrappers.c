@@ -146,6 +146,107 @@ SEXP SXP_create_new_label(SEXP exd, SEXP s_default) {
 	return ScalarInteger(create_new_label(d, lblDefault).id);
 }
 
+SEXP SXP_change_eff_set_centres(SEXP exd, SEXP s_values, SEXP s_eff_set) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	int eff_id = asInteger(s_eff_set);
+	if (eff_id == NA_INTEGER || eff_id < 0) {
+		error("`effect.set` parameter is of invalid type\n");
+	}
+	
+	// s_values: if is vector, extract as vector and call change_eff_set_centres_to_values
+	//           if is list, check it has two entries of same length and right type, and call change_eff_set_centres_of_markers
+	if (TYPEOF(s_values) == REALSXP) {
+		double* dvalues = REAL(s_values);
+		R_xlen_t n_values = xlength(s_values);
+		
+		gsc_change_eff_set_centres_to_values(d, EFFECTID_IFY(eff_id), n_values, dvalues);
+		
+	} else if (isNewList(s_values)) {
+		if (xlength(s_values) != 2) {
+			error("A list input for parameter `to` must have two entries, one a list of marker names, and the second a list of corresponding centring values.");
+		}
+		SEXP s_marker_names = VECTOR_ELT(s_values, 0);
+		if (xlength(s_marker_names) != xlength(VECTOR_ELT(s_values, 1))) {
+			error("A list input for parameter `to` must have two entries/two columns of equal length.");
+		}
+		R_xlen_t n_values = xlength(s_marker_names);
+		
+		char** marker_names = R_Calloc(n_values, char*);
+		for (R_xlen_t i = 0; i < n_values; ++i) {
+			// casting away const but promise it is still being used as readonly.
+			marker_names[i] = (char*) CHAR(STRING_ELT(s_marker_names, i));
+		}
+		
+		double* centre_values = REAL(VECTOR_ELT(s_values, 1));
+		
+		GSC_GENOLEN_T n_successes = gsc_change_eff_set_centre_of_markers(d, EFFECTID_IFY(eff_id), n_values, 
+                                                                   (const char**) marker_names, 
+                                                                   centre_values);
+		
+		R_Free(marker_names);
+		
+		if (n_successes != n_values) {
+			Rprintf("%d of the %d markers in the input could not be located in the genetic map\n", n_values - n_successes, n_values);
+		}
+		
+	} else {
+		error("`to` parameter is of invalid type");
+	}
+	
+	return ScalarInteger(0);
+}
+
+SEXP SXP_change_eff_set_centres_of_allele(SEXP exd, SEXP s_allele, SEXP s_values, SEXP s_eff_set, SEXP s_reset) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	int eff_id = asInteger(s_eff_set);
+	if (eff_id == NA_INTEGER || eff_id < 0) {
+		error("`effect.set` parameter is of invalid type\n");
+	}
+	
+	if (asChar(s_allele) == NA_STRING) { error("`allele` parameter is of invalid type"); }
+	char allele = CHAR(asChar(s_allele))[0];
+	
+	int reset = asLogical(s_reset);
+	if (reset == NA_LOGICAL) { error("`reset.centres` parameter is of invalid type\n"); }
+
+	// s_values: check it has two entries of same length and right type
+	if (isNewList(s_values)) {
+		if (xlength(s_values) != 2) {
+			error("A list input for parameter `to` must have two entries, one a list of marker names, and the second a list of corresponding centring values.");
+		}
+		SEXP s_marker_names = VECTOR_ELT(s_values, 0);
+		if (xlength(s_marker_names) != xlength(VECTOR_ELT(s_values, 1))) {
+		  error("A list input for parameter `to` must have two entries/two columns of equal length.");
+		}
+		R_xlen_t n_values = xlength(s_marker_names);
+		
+		char** marker_names = R_Calloc(n_values, char*);
+		for (R_xlen_t i = 0; i < n_values; ++i) {
+		  // casting away const but promise it is still being used as readonly.
+		  marker_names[i] = (char*) CHAR(STRING_ELT(s_marker_names, i));
+		}
+		
+		double* centre_values = REAL(VECTOR_ELT(s_values, 1));
+		
+		GSC_GENOLEN_T n_successes = gsc_change_eff_set_centre_of_allele_count(d, EFFECTID_IFY(eff_id), n_values, 
+                                                                        (const char**) marker_names, centre_values, 
+                                                                        allele, reset);
+		
+		R_Free(marker_names);
+		
+		if (n_successes != n_values) {
+			Rprintf("%d of the %d markers in the input could not be located in the genetic map\n", n_values - n_successes, n_values);
+		}
+		
+	} else {
+		error("`to` parameter is of invalid type");
+	}
+	
+	return ScalarInteger(0);
+}
+
 /*----------------------- Calculators ---------------------*/
 
 
@@ -345,7 +446,7 @@ SEXP SXP_see_map(SEXP exd, SEXP s_map) {
 }
 
 
-SEXP SXP_see_effects(SEXP exd, SEXP s_effset, SEXP s_format) {
+SEXP SXP_see_effects(SEXP exd, SEXP s_effset) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
 	int effID = asInteger(s_effset);
@@ -356,19 +457,11 @@ SEXP SXP_see_effects(SEXP exd, SEXP s_effset, SEXP s_format) {
 	}
 	MarkerEffects e = d->e[effix];
 	
-	if (asChar(s_format) == NA_STRING) { error("Parameter 'format' needs to be a string"); }
-	int format;
-	switch (CHAR(asChar(s_format))[0]) {
-		case 'L': format = 1; break;
-		case 'S': format = 2; break;
-		default: if (e.centre != NULL) { error("Format string is invalid"); }
-	}
-	
 	// 1. create the main dataframe (marker/allele/eff)
 	SEXP effset = PROTECT(allocVector(VECSXP, 3));
 	
 	GSC_GENOLEN_T len = e.cumn_alleles[e.n_markers - 1];
-	if (e.centre != NULL && format == 1) { len += e.n_markers; }
+	if (e.centre != NULL) { len += e.n_markers; }
 	SEXP marker = PROTECT(allocVector(STRSXP, len));
 	SEXP allele = PROTECT(allocVector(STRSXP, len));
 	SEXP eff = PROTECT(allocVector(REALSXP, len));
@@ -389,7 +482,7 @@ SEXP SXP_see_effects(SEXP exd, SEXP s_effset, SEXP s_format) {
 		}
 	}
 	
-	if (e.centre != NULL && format == 1) {
+	if (e.centre != NULL) {
 		GSC_GENOLEN_T last = e.cumn_alleles[e.n_markers - 1];
 		for (GSC_GENOLEN_T m_ix = 0; m_ix < e.n_markers; ++m_ix) {
 			SET_STRING_ELT(marker, last + m_ix, mkChar(d->genome.marker_names[m_ix]));
@@ -402,29 +495,8 @@ SEXP SXP_see_effects(SEXP exd, SEXP s_effset, SEXP s_format) {
 	SET_VECTOR_ELT(effset, 1, allele);
 	SET_VECTOR_ELT(effset, 2, eff);
 	
-	// 2a. Return that alone, if we weren't asked for split format
-	if (e.centre == NULL || format == 1) {
-		UNPROTECT(4);
-		return effset;
-	}
-
-	// 2b. If we were asked for split format, create the second dataframe (marker/centre)
-	SEXP centreset = PROTECT(allocVector(VECSXP, 2));
-	SEXP marker2 = PROTECT(allocVector(STRSXP, e.n_markers));
-	SEXP centre = PROTECT(allocVector(REALSXP, e.n_markers));
-	double* ccentre = REAL(centre);
-	for (GSC_GENOLEN_T m_ix = 0; m_ix < e.n_markers; ++m_ix) {
-		SET_STRING_ELT(marker2, m_ix, mkChar(d->genome.marker_names[m_ix]));
-		ccentre[m_ix] = e.centre[m_ix];
-	}
-	SET_VECTOR_ELT(centreset, 0, marker2);
-	SET_VECTOR_ELT(centreset, 1, centre);
-	
-	SEXP outlist = PROTECT(allocVector(VECSXP, 2));
-	SET_VECTOR_ELT(outlist, 0, effset);
-	SET_VECTOR_ELT(outlist, 1, centreset);
-	UNPROTECT(8);
-	return outlist;
+	UNPROTECT(4);
+	return effset;	
 }
 
 /*----------------------- Data Access ---------------------*/
