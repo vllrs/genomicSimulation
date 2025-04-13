@@ -1,9 +1,10 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.2.6.04
+genomicSimulationC v0.2.6.07
+// Converted using Rconversion.sh v2
 
-    Last edit: 21 Feb 2025
+    Last edit: 28 Mar 2025
     License: MIT License
 
 Copyright (c) 2021 Kira Villiers
@@ -375,6 +376,7 @@ typedef enum {
 #define save_allele_counts         gsc_save_allele_counts
 #define save_pedigrees             gsc_save_pedigrees
 #define save_bvs                   gsc_save_bvs
+#define save_local_bvs             gsc_save_local_bvs
 
 #endif
 
@@ -1093,7 +1095,7 @@ typedef struct {
 gsc_FileFormatSpec gsc_define_matrix_format_details(const GSC_LOGICVAL has_header, 
         const GSC_LOGICVAL markers_as_rows, const enum gsc_GenotypeFileCellStyle cell_style);
 
-/** @} */
+
 /** @defgroup supporters Utils/Supporting Functions
  *
  * @{
@@ -1209,6 +1211,7 @@ gsc_MapID gsc_load_mapfile(gsc_SimData* d, const char* filename);
 gsc_MapID gsc_create_recombmap_from_markerlist(gsc_SimData* d, GSC_GENOLEN_T n_markers, struct gsc_MapfileUnit* markerlist);
 gsc_MapID gsc_create_uniformspaced_recombmap(gsc_SimData* d, GSC_GENOLEN_T n_markers, char** markernames, 
                                              double expected_n_recombinations);
+gsc_MapID gsc_create_unlinked_recombmap(gsc_SimData* d, GSC_GENOLEN_T n_markers, char** markernames);
 
 gsc_EffectID gsc_load_effectfile(gsc_SimData* d, const char* filename);
 
@@ -1734,7 +1737,7 @@ gsc_MarkerBlocks gsc_load_blocks(const gsc_SimData* d, const char* block_file);
 gsc_DecimalMatrix gsc_calculate_local_bvs(const gsc_SimData* d, 
                                                 const gsc_GroupNum group,
                                                 const gsc_MarkerBlocks b, 
-                                                const gsc_EffectID effID);
+                                                const gsc_EffectID effID); 
 void gsc_calculate_optimal_haplotype(const gsc_SimData* d, 
                                       const gsc_EffectID effID, 
                                       const char symbol_na,
@@ -1796,6 +1799,12 @@ void gsc_save_allele_counts(const char* fname,
 void gsc_save_pedigrees(const char* fname, const gsc_SimData* d, const gsc_GroupNum groupID, 
                         const _Bool full_pedigree);
 void gsc_save_bvs(const char* fname, const gsc_SimData* d, const gsc_GroupNum groupID, const gsc_EffectID effID);
+void gsc_save_local_bvs(const char* fname, 
+						const gsc_SimData* d, 
+						const gsc_GroupNum groupID, 
+						const gsc_MarkerBlocks b,
+						const gsc_EffectID effID, 
+						const _Bool headers);
 
 // Utility and helper saving functions
 void gsc_save_utility_markerblocks(FILE* f, const gsc_MarkerBlocks b, const GSC_GENOLEN_T n_markers, 
@@ -1811,6 +1820,8 @@ void gsc_save_utility_allele_counts(FILE* f,
 void gsc_save_utility_pedigrees(FILE* f, gsc_BidirectionalIterator* targets,
         const _Bool full_pedigree, const gsc_AlleleMatrix* parent_pedigree_store);
 void gsc_save_utility_bvs(FILE* f, gsc_BidirectionalIterator* targets, const gsc_MarkerEffects* eff);
+
+void gsc_save_utility_dmatrix(FILE* f, DecimalMatrix* dec, char** row_headers, char** col_headers, _Bool dim1_is_columns);
 
 // static GSC_LOGICVAL gsc_helper_is_marker_in_chr(const GSC_GENOLEN_T markerix, const gsc_LinkageGroup chr, double* pos);
 

@@ -1,7 +1,8 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.6.04 - last edit 21 Feb 2025 */
+/* genomicSimulationC v0.2.6.07 - last edit 28 Mar 2025 */
+// Converted using Rconversion.sh v2
 
 /** Default parameter values for GenOptions, to help with quick scripts and prototypes.
  *
@@ -33,7 +34,7 @@ const gsc_GenOptions GSC_BASIC_OPT = {
  */
 static void* gsc_malloc_wrap(const unsigned int size, char exitonfail) {
     if (size == 0) {
-        warning( "0 memory allocation requested.\n");
+        Rprintf("NOTE! 0 memory allocation requested.\n");
         return NULL;
     }
     void* v = GSC_MALLOC(size);
@@ -41,7 +42,7 @@ static void* gsc_malloc_wrap(const unsigned int size, char exitonfail) {
         if (exitonfail) {
             error( "Memory allocation failed. Exiting.\n");
         } else {
-            warning( "Memory allocation failed.\n");
+            Rprintf("NOTE! Memory allocation failed.\n");
         }
     }
     return v;
@@ -87,7 +88,7 @@ gsc_AlleleMatrix* gsc_create_empty_allelematrix(const GSC_GENOLEN_T n_markers,
     } else if (n_labels == 0) {
         m->labels = NULL;
     } else {
-        warning( "Invalid negative number of labels provided to gsc_create_empty_allelematrix");
+        Rprintf("NOTE! Invalid negative number of labels provided to gsc_create_empty_allelematrix");
         m->labels = NULL;
     }
 
@@ -624,7 +625,7 @@ gsc_LabelID gsc_create_new_label(gsc_SimData* d, const int setTo) {
         d->label_defaults = new_label_defaults;
 
     } else {
-        warning( "Labels malformed; gsc_SimData may be corrupted\n");
+        Rprintf("NOTE! Labels malformed; gsc_SimData may be corrupted\n");
         return (gsc_LabelID){.id=GSC_NA_ID};
     }
     d->n_labels += 1;
@@ -682,7 +683,7 @@ gsc_LabelID gsc_create_new_label(gsc_SimData* d, const int setTo) {
             }
 
         } else if (!warned) {
-            warning( "Unable to create new label for all genotypes; gsc_SimData may be corrupted\n");
+            Rprintf("NOTE! Unable to create new label for all genotypes; gsc_SimData may be corrupted\n");
             warned = GSC_TRUE;
         }
 
@@ -706,7 +707,7 @@ void gsc_change_label_default(gsc_SimData* d,
                               const int newDefault) {
     GSC_ID_T labelIndex;
     if (whichLabel.id == GSC_NO_LABEL.id || (labelIndex = gsc_get_index_of_label(d, whichLabel)) == GSC_NA_IDX) {
-        warning( "Nonexistent label %lu\n", (long unsigned int) whichLabel.id);
+        Rprintf("NOTE! Nonexistent label %lu\n", (long unsigned int) whichLabel.id);
         return;
     }
     d->label_defaults[labelIndex] = newDefault;
@@ -733,7 +734,7 @@ void gsc_change_label_to(gsc_SimData* d,
                          const int setTo) {
     GSC_ID_T labelIndex;
     if (whichLabel.id == GSC_NO_LABEL.id || (labelIndex = gsc_get_index_of_label(d, whichLabel)) == GSC_NA_IDX) {
-        warning( "Nonexistent label %lu\n", (long unsigned int) whichLabel.id);
+        Rprintf("NOTE! Nonexistent label %lu\n", (long unsigned int) whichLabel.id);
         return;
     }
     // Risks: if m->labels or m->labels[i] don't exist for labels where they should,
@@ -789,7 +790,7 @@ void gsc_change_label_by_amount(gsc_SimData* d,
                                 const int byValue) {
     GSC_ID_T labelIndex;
     if (whichLabel.id == GSC_NO_LABEL.id || (labelIndex = gsc_get_index_of_label(d, whichLabel)) == GSC_NA_IDX) {
-        warning( "Nonexistent label %lu\n", (long unsigned int) whichLabel.id);
+        Rprintf("NOTE! Nonexistent label %lu\n", (long unsigned int) whichLabel.id);
         return;
     }
     // Risks: if m->labels or m->labels[i] don't exist for labels where they should,
@@ -850,7 +851,7 @@ void gsc_change_label_to_values(gsc_SimData* d,
                                 const int* values) {
     GSC_ID_T labelIndex;
     if (whichLabel.id == GSC_NO_LABEL.id || (labelIndex = gsc_get_index_of_label(d, whichLabel)) == GSC_NA_IDX) {
-        warning( "Nonexistent label %lu\n", (long unsigned int) whichLabel.id);
+        Rprintf("NOTE! Nonexistent label %lu\n", (long unsigned int) whichLabel.id);
         return;
     }
 
@@ -1101,12 +1102,12 @@ _Bool gsc_change_eff_set_centres_to_values(gsc_SimData* d,
                                            const double* values) {
     const GSC_ID_T effIndex = gsc_get_index_of_eff_set(d, effset);
     if (effIndex == GSC_NA_IDX) {
-        warning("Nonexistent effect set with id %lu\n", (long unsigned int) effset.id);
+        Rprintf("NOTE! Nonexistent effect set with id %lu\n", (long unsigned int) effset.id);
         return 0;
     }
     
     if (n_values != d->e[effIndex].n_markers) {
-        warning("Cannot use these values as marker effect centres because the number of values is not equal to the number of markers in the effect set\n");
+        Rprintf("NOTE! Cannot use these values as marker effect centres because the number of values is not equal to the number of markers in the effect set\n");
         return 0;
     }
 
@@ -1145,7 +1146,7 @@ GSC_GENOLEN_T gsc_change_eff_set_centre_of_markers(gsc_SimData* d,
                                                    const double* centres) {
     const GSC_ID_T effIndex = gsc_get_index_of_eff_set(d, effset);
     if (effIndex == GSC_NA_IDX) {
-        warning("Nonexistent effect set with id %lu\n", (long unsigned int) effset.id);
+        Rprintf("NOTE! Nonexistent effect set with id %lu\n", (long unsigned int) effset.id);
         return 0;
     }
     
@@ -1163,7 +1164,7 @@ GSC_GENOLEN_T gsc_change_eff_set_centre_of_markers(gsc_SimData* d,
         if (gsc_get_index_of_genetic_marker(marker_names[ix], d->genome, &markerix)) {
             ++successes;
         } else {
-            warning("Could not find marker named %s in the list of tracked markers\n", marker_names[ix]);
+            Rprintf("NOTE! Could not find marker named %s in the list of tracked markers\n", marker_names[ix]);
             continue;
         }
         e->centre[markerix] = centres[ix]; // the significant line
@@ -1217,7 +1218,7 @@ GSC_GENOLEN_T gsc_change_eff_set_centre_of_allele_count(gsc_SimData* d,
                                                         const _Bool reset_centres) {
     const GSC_ID_T effIndex = gsc_get_index_of_eff_set(d, effset);
     if (effIndex == GSC_NA_IDX) {
-        warning("Nonexistent effect set with id %lu\n", (long unsigned int) effset.id);
+        Rprintf("NOTE! Nonexistent effect set with id %lu\n", (long unsigned int) effset.id);
         return 0;
     }
     
@@ -1251,12 +1252,12 @@ GSC_GENOLEN_T gsc_change_eff_set_centre_of_allele_count(gsc_SimData* d,
                 }
             }
             if (!found) {
-                warning("Could not find effect value for allele %c at marker %s\n", allele, marker_names[ix]);
+                Rprintf("NOTE! Could not find effect value for allele %c at marker %s\n", allele, marker_names[ix]);
             } else {
                 ++successes;
             }
         } else {
-            warning("Could not find marker named %s in the list of tracked markers\n", marker_names[ix]);
+            Rprintf("NOTE! Could not find marker named %s in the list of tracked markers\n", marker_names[ix]);
             continue;
         }
     }
@@ -1386,7 +1387,7 @@ void gsc_move_genotype(gsc_GenoLocation from,
         return;
     }
     if (to.localAM->groups[to.localPos].num != GSC_NO_GROUP.num) {
-        warning("In moving a genotype from %p:%lu to %p:%lu, the genotype at %p:%lu will be overwritten\n",
+        Rprintf("NOTE! In moving a genotype from %p:%lu to %p:%lu, the genotype at %p:%lu will be overwritten\n",
                 from.localAM, (long unsigned int)from.localPos, to.localAM, (long unsigned int)to.localPos, 
                 to.localAM, (long unsigned int)to.localPos);
         --to.localAM->n_genotypes;
@@ -1409,11 +1410,11 @@ void gsc_move_genotype(gsc_GenoLocation from,
     from.localAM->groups[from.localPos] = GSC_NO_GROUP;
 
     if (to.localAM->n_labels != from.localAM->n_labels) {
-        warning("Origin and destination when copying genotype do not have the same number of custom"
+        Rprintf("NOTE! Origin and destination when copying genotype do not have the same number of custom"
                        " labels (n_labels). The genotype now at %p:%lu will have lost its label data\n", 
                        to.localAM, (long unsigned int)to.localPos);
     } else if (to.localAM->n_labels != 0 && label_defaults == NULL) {
-        warning("Label defaults must be supplied to gsc_move_genotypes or there is risk of "
+        Rprintf("NOTE! Label defaults must be supplied to gsc_move_genotypes or there is risk of "
                        "corrupted label values in further use of the simulation");
     } else {
         for (GSC_ID_T i = 0; i < to.localAM->n_labels; ++i) {
@@ -1662,7 +1663,18 @@ gsc_RandomAccessIterator gsc_create_randomaccess_iter( gsc_SimData* d, const gsc
     // - is this group empty? (randomAccess should know if group size is 0)
     // - what is the first genotype index in this group?
 
-    if (group.num == GSC_NO_GROUP.num) { // scanning all genotypes
+    if (firstAM == NULL) {
+        return (gsc_RandomAccessIterator) {
+            .d = d,
+            .group = group,
+
+            .largestCached = 0,
+            .groupSize = 0, // NA represents unknown, 0 represents empty
+            .cacheSize = 0,
+            .cache = NULL
+        };
+
+    } else if (group.num == GSC_NO_GROUP.num) { // scanning all genotypes
         while (firstAM->n_genotypes == 0) {
             if (firstAM->next == NULL) {
                 // gsc_SimData is empty. Nowhere to go.
@@ -1734,6 +1746,7 @@ gsc_RandomAccessIterator gsc_create_randomaccess_iter( gsc_SimData* d, const gsc
 gsc_AlleleMatrix* gsc_get_nth_AlleleMatrix(gsc_AlleleMatrix* listStart, const unsigned int n) {
     unsigned int currentIndex = 0;
     gsc_AlleleMatrix* am = listStart;
+    if (am == NULL) return NULL;
     while (currentIndex < n) {
         if (am->next == NULL) {
             return NULL;
@@ -1764,8 +1777,10 @@ gsc_GenoLocation gsc_set_bidirectional_iter_to_start(gsc_BidirectionalIterator* 
     // Want to know:
     // - is this group empty? (iterator should know if it is at the end as well as at the start)
     // - what is the first genotype index in this group?
-
-    if (it->group.num == GSC_NO_GROUP.num) {
+    if (firstAM == NULL) {
+        return GSC_INVALID_GENO_LOCATION;
+        
+    } else if (it->group.num == GSC_NO_GROUP.num) {
         while (firstAM->n_genotypes == 0) {
             if (firstAM->next == NULL) {
                 anyExist = 0; // gsc_SimData is empty.
@@ -1843,7 +1858,10 @@ gsc_GenoLocation gsc_set_bidirectional_iter_to_end(gsc_BidirectionalIterator* it
     // - is this group empty? (iterator should know if it is at the end as well as at the start)
     // - what is the first genotype index in this group?
 
-    if (it->group.num == GSC_NO_GROUP.num) {
+    if (lastAM == NULL) {
+        return GSC_INVALID_GENO_LOCATION;
+        
+    } if (it->group.num == GSC_NO_GROUP.num) {
         while (lastAM->next != NULL && lastAM->next->n_genotypes != 0) {
             lastAM = lastAM->next;
             lastAMIndex++;
@@ -2285,7 +2303,7 @@ gsc_GenoLocation gsc_next_get_nth(gsc_RandomAccessIterator* it, const GSC_GLOBAL
  */
 char* gsc_get_name_of_id(const gsc_AlleleMatrix* start, const gsc_PedigreeID id) {
     if (id.id == GSC_NO_PEDIGREE.id) {
-        warning( "Invalid ID %lu\n", (long unsigned int)id.id);
+        Rprintf("NOTE! Invalid ID %lu\n", (long unsigned int)id.id);
         return NULL;
     }
     if (start == NULL) {
@@ -2305,7 +2323,7 @@ char* gsc_get_name_of_id(const gsc_AlleleMatrix* start, const gsc_PedigreeID id)
             if (index > m->n_genotypes) {
                 // search failed
                 if (m->next == NULL) {
-                    warning( "Could not find the ID %lu: did you prematurely delete this genotype?\n", (long unsigned int)id.id);
+                    Rprintf("NOTE! Could not find the ID %lu: did you prematurely delete this genotype?\n", (long unsigned int)id.id);
                     return NULL;
                 } else {
                     m = m->next;
@@ -2318,7 +2336,7 @@ char* gsc_get_name_of_id(const gsc_AlleleMatrix* start, const gsc_PedigreeID id)
         }
 
         if (m->next == NULL) {
-            warning( "Could not find the ID %lu: did you prematurely delete this genotype?\n", (long unsigned int)id.id);
+            Rprintf("NOTE! Could not find the ID %lu: did you prematurely delete this genotype?\n", (long unsigned int)id.id);
             return NULL;
         } else {
             m = m->next;
@@ -2368,7 +2386,7 @@ int gsc_get_parents_of_id(const gsc_AlleleMatrix* start,
             if (index == GSC_NA_LOCALX) {
                 // search failed
                 /*if (m->next == NULL) {
-                    warning( "Unable to locate ID %d in simulation memory (genotype has likely been deleted): pedigree past this point cannot be determined\n", id.id);
+                    Rprintf("NOTE! Unable to locate ID %d in simulation memory (genotype has likely been deleted): pedigree past this point cannot be determined\n", id.id);
                     return 2;
                 } else {
                     m = m->next;
@@ -2387,7 +2405,7 @@ int gsc_get_parents_of_id(const gsc_AlleleMatrix* start,
         }
 
         if (m->next == NULL) {
-            warning( "Unable to locate ID %lu in simulation memory (genotype has likely been deleted): pedigree past this point cannot be determined\n", (long unsigned int)id.id);
+            Rprintf("NOTE! Unable to locate ID %lu in simulation memory (genotype has likely been deleted): pedigree past this point cannot be determined\n", (long unsigned int)id.id);
             return 2;
         } else {
             m = m->next;
@@ -2415,11 +2433,11 @@ void gsc_get_ids_of_names(const gsc_AlleleMatrix* start,
                           const char** names, 
                           gsc_PedigreeID* output) {
     if (start == NULL || (start->n_genotypes <= 0 && start->next == NULL)) {
-        warning("Invalid start parameter: gsc_AlleleMatrix* `start` must exist\n");
+        Rprintf("NOTE! Invalid start parameter: gsc_AlleleMatrix* `start` must exist\n");
         return;
     }
     if (n_names < 1) {
-        warning("Invalid n_names parameter: Search list length must be positive\n");
+        Rprintf("NOTE! Invalid n_names parameter: Search list length must be positive\n");
         return;
     }
 
@@ -2444,7 +2462,7 @@ void gsc_get_ids_of_names(const gsc_AlleleMatrix* start,
                 break;
             }
             if ((m = m->next) == NULL) {
-                warning( "Didn't find the name %s\n", names[i]);
+                Rprintf("NOTE! Didn't find the name %s\n", names[i]);
             }
         }
     }
@@ -2468,7 +2486,7 @@ GSC_GLOBALX_T gsc_get_index_of_child(const gsc_AlleleMatrix* start,
                            const gsc_PedigreeID parent1id, 
                            const gsc_PedigreeID parent2id) {
     if (start == NULL || (start->n_genotypes <= 0 && start->next == NULL)) {
-        warning("Invalid start parameter: gsc_AlleleMatrix* `start` must exist\n");
+        Rprintf("NOTE! Invalid start parameter: gsc_AlleleMatrix* `start` must exist\n");
         return GSC_NA_GLOBALX;
     }
     const gsc_AlleleMatrix* m = start;
@@ -2484,7 +2502,7 @@ GSC_GLOBALX_T gsc_get_index_of_child(const gsc_AlleleMatrix* start,
         }
 
         if ((m = m->next) == NULL) {
-            warning( "Didn't find the child of %lu & %lu\n", 
+            Rprintf("NOTE! Didn't find the child of %lu & %lu\n", 
                     (long unsigned int)parent1id.id, (long unsigned int)parent2id.id);
             return GSC_NA_GLOBALX;
         }
@@ -2509,7 +2527,7 @@ GSC_GLOBALX_T gsc_get_index_of_name(const gsc_AlleleMatrix* start, const char* n
         return GSC_NA_GLOBALX;
     }
     if (start == NULL || (start->n_genotypes <= 0 && start->next == NULL)) {
-        warning("Invalid start parameter: gsc_AlleleMatrix* `start` must exist\n");
+        Rprintf("NOTE! Invalid start parameter: gsc_AlleleMatrix* `start` must exist\n");
         return GSC_NA_GLOBALX;
     }
     const gsc_AlleleMatrix* m = start;
@@ -2524,7 +2542,7 @@ GSC_GLOBALX_T gsc_get_index_of_name(const gsc_AlleleMatrix* start, const char* n
         }
 
         if ((m = m->next) == NULL) {
-            warning( "Didn't find the name %s\n", name);
+            Rprintf("NOTE! Didn't find the name %s\n", name);
             return GSC_NA_GLOBALX;
         }
     }
@@ -2544,7 +2562,7 @@ GSC_GLOBALX_T gsc_get_index_of_name(const gsc_AlleleMatrix* start, const char* n
 gsc_PedigreeID gsc_get_id_of_index(const gsc_AlleleMatrix* start, 
                                    const GSC_GLOBALX_T index) {
     if (start == NULL) {
-        warning("Invalid start parameter: gsc_AlleleMatrix* `start` must exist\n");
+        Rprintf("NOTE! Invalid start parameter: gsc_AlleleMatrix* `start` must exist\n");
         return GSC_NO_PEDIGREE;
     }
     const gsc_AlleleMatrix* m = start;
@@ -2559,7 +2577,7 @@ gsc_PedigreeID gsc_get_id_of_index(const gsc_AlleleMatrix* start,
         total_j += m->n_genotypes;
 
         if ((m = m->next) == NULL) {
-            warning( "Didn't find the index %lu\n", (long unsigned int) index);
+            Rprintf("NOTE! Didn't find the index %lu\n", (long unsigned int) index);
             return GSC_NO_PEDIGREE;
         }
     }
@@ -2583,7 +2601,7 @@ gsc_PedigreeID gsc_get_id_of_index(const gsc_AlleleMatrix* start,
 char* gsc_get_genes_of_index(const gsc_AlleleMatrix* start, 
                              const GSC_GLOBALX_T index) {
     if (start == NULL) {
-        warning( "Invalid nonexistent allelematrix\n");
+        Rprintf("NOTE! Invalid nonexistent allelematrix\n");
         return NULL;
     }
     const gsc_AlleleMatrix* m = start;
@@ -2598,7 +2616,7 @@ char* gsc_get_genes_of_index(const gsc_AlleleMatrix* start,
         total_j += m->n_genotypes;
 
         if ((m = m->next) == NULL) {
-            warning( "Didn't find the index %lu\n", (long unsigned int) index);
+            Rprintf("NOTE! Didn't find the index %lu\n", (long unsigned int) index);
             return NULL;
         }
     }
@@ -2731,7 +2749,7 @@ gsc_GroupNum gsc_make_group_from(gsc_SimData* d,
                                  const unsigned int index_list_len, 
                                  const GSC_GLOBALX_T* genotype_indexes) {
     if (index_list_len < 1) {
-        warning("Invalid index_list_len value: length of allocation list must be at least 1\n");
+        Rprintf("NOTE! Invalid index_list_len value: length of allocation list must be at least 1\n");
         return GSC_NO_GROUP;
     }
     
@@ -2748,14 +2766,16 @@ gsc_GroupNum gsc_make_group_from(gsc_SimData* d,
     }
 
     if (invalidLocations > 0) {
-        warning("%lu indexes were invalid\n",(long unsigned int)invalidLocations);
+        Rprintf("NOTE! %lu indexes were invalid\n",(long unsigned int)invalidLocations);
     }
+    gsc_delete_randomaccess_iter(&it);
+    
     if (invalidLocations < index_list_len) {
         d->n_groups++;
+        return newGroup;
+    } else {
+        return GSC_NO_GROUP;
     }
-
-    gsc_delete_randomaccess_iter(&it);
-    return newGroup;
 }
 
 /** Allocates the genotypes with a particular value of a label to a new group.
@@ -2785,7 +2805,7 @@ gsc_GroupNum gsc_split_by_label_value(gsc_SimData* d,
                                       const int valueToSplit) {
     GSC_ID_T labelix;
     if (whichLabel.id == GSC_NO_LABEL.id || (labelix = gsc_get_index_of_label(d, whichLabel)) == GSC_NA_IDX) {
-        warning( "Nonexistent label %lu\n", (long unsigned int)whichLabel.id);
+        Rprintf("NOTE! Nonexistent label %lu\n", (long unsigned int)whichLabel.id);
         return GSC_NO_GROUP;
     }
     
@@ -2842,11 +2862,11 @@ gsc_GroupNum gsc_split_by_label_range(gsc_SimData* d,
                                       const int valueHighBound) {
     GSC_ID_T labelix;
     if (whichLabel.id == GSC_NO_LABEL.id || (labelix = gsc_get_index_of_label(d, whichLabel)) == GSC_NA_IDX) {
-        warning( "Nonexistent label %lu\n", (long unsigned int)whichLabel.id);
+        Rprintf("NOTE! Nonexistent label %lu\n", (long unsigned int)whichLabel.id);
         return GSC_NO_GROUP;
     }
     if (valueLowBound > valueHighBound) {
-        warning( "Empty range %d to %d: no group created\n", valueLowBound, valueHighBound);
+        Rprintf("NOTE! Empty range %d to %d: no group created\n", valueLowBound, valueHighBound);
         return GSC_NO_GROUP;
     }
 
@@ -2956,7 +2976,7 @@ unsigned int gsc_scaffold_split_by_somequality(gsc_SimData* d,
     
     if (maxentries_results < subgroupsfound) { 
         memcpy(results,outgroups,sizeof(gsc_GroupNum)*maxentries_results);
-        warning("Output vector size is not large enough to hold all created groups: "
+        Rprintf("NOTE! Output vector size is not large enough to hold all created groups: "
                 " output list of gsc_GroupNums has been truncated\n");
     } else {
         memcpy(results,outgroups,sizeof(gsc_GroupNum)*subgroupsfound);
@@ -2980,7 +3000,7 @@ static gsc_GroupNum gsc_helper_split_by_quality_halfsibtemplate(gsc_GenoLocation
     }
     
     if (groupsfound > maxgroups) {
-        warning( "Attempted to split into more groups than caller deemed possible. "
+        Rprintf("NOTE! Attempted to split into more groups than caller deemed possible. "
             "There is a bug in the simulation tool if you can reach this state.");
         return results[maxgroups-1]; // allocate all to the last group, possibly incorrectly.
     }
@@ -3046,7 +3066,7 @@ unsigned int gsc_split_into_halfsib_families(gsc_SimData* d,
                                        unsigned int maxentries_results, 
                                        gsc_GroupNum* results) {
     if (!(parent == 1 || parent == 2)) {
-        warning( "Value error: `parent` must be 1 or 2.");
+        Rprintf("NOTE! Value error: `parent` must be 1 or 2.");
         results = NULL;
         return 0;
     }
@@ -3085,7 +3105,7 @@ static gsc_GroupNum gsc_helper_split_by_quality_family(gsc_GenoLocation loc,
     }
     
     if (groupsfound > maxgroups) {
-        warning( "Attempted to split into more groups than caller deemed possible. "
+        Rprintf("NOTE! Attempted to split into more groups than caller deemed possible. "
             "There is a bug in the simulation tool if you can reach this state.");
         return results[maxgroups-1]; // allocate all to the last group, possibly incorrectly.
     }
@@ -3219,9 +3239,9 @@ gsc_GroupNum gsc_split_evenly_into_two(gsc_SimData* d,
     GSC_GLOBALX_T size = gsc_get_group_size(d, group_id);
     if (size < 2) {
         if (size < 1) {
-            warning("Group %lu does not exist\n", (long unsigned int) group_id.num);
+            Rprintf("NOTE! Group %lu does not exist\n", (long unsigned int) group_id.num);
         } else {
-            warning("Group %lu has only one member so can't be split\n", (long unsigned int) group_id.num);
+            Rprintf("NOTE! Group %lu has only one member so can't be split\n", (long unsigned int) group_id.num);
         }
         return GSC_NO_GROUP;
     }
@@ -3304,7 +3324,7 @@ unsigned int gsc_scaffold_split_by_someallocation(gsc_SimData* d,
         d->n_groups += subgroupsfound - 1;
     }
     if (allocationfailures > 0) {
-        warning("While splitting group %lu, %lu allocations to new groups failed so they remain"
+        Rprintf("NOTE! While splitting group %lu, %lu allocations to new groups failed so they remain"
                        " in the original group\n",
                 (long unsigned int) group_id.num, (long unsigned int) allocationfailures);
     }
@@ -3364,7 +3384,7 @@ unsigned int gsc_split_evenly_into_n(gsc_SimData* d,
                                const unsigned int n, 
                                gsc_GroupNum* results) {
     if (n <= 1) {
-        warning( "Invalid n value: number of fractions into which to split group must be at least 2\n");
+        Rprintf("NOTE! Invalid n value: number of fractions into which to split group must be at least 2\n");
         return 0;
     }
 
@@ -3442,7 +3462,7 @@ unsigned int gsc_split_into_buckets(gsc_SimData* d,
                               const GSC_GLOBALX_T* counts, 
                               gsc_GroupNum* results) {
     if (n <= 1) {
-        warning( "Invalid n value: number of fractions into which to split group must be at least 2\n");
+        Rprintf("NOTE! Invalid n value: number of fractions into which to split group must be at least 2\n");
         return 0;
     }
 
@@ -3454,7 +3474,7 @@ unsigned int gsc_split_into_buckets(gsc_SimData* d,
         cumulative_counts[j] = sum;
     }
     if (cumulative_counts[n-2] > cumulative_counts[n-1]) {
-        warning( "Provided capacities are larger than actual group: some buckets will not be filled\n");
+        Rprintf("NOTE! Provided capacities are larger than actual group: some buckets will not be filled\n");
     }
 
     unsigned int gcount;
@@ -3565,7 +3585,7 @@ unsigned int gsc_split_randomly_into_n(gsc_SimData* d,
                                  const unsigned int n, 
                                  gsc_GroupNum* results) {
     if (n <= 1) {
-        warning( "Invalid n value: number of fractions in which to split group must be at least 2\n");
+        Rprintf("NOTE! Invalid n value: number of fractions in which to split group must be at least 2\n");
         return 0;
     }
 
@@ -3641,7 +3661,7 @@ unsigned int gsc_split_by_probabilities(gsc_SimData* d,
                                   const double* probs, 
                                   gsc_GroupNum* results) {
     if (n <= 1) {
-        warning( "Invalid n value: number of fractions in which to split group must be at least 2\n");
+        Rprintf("NOTE! Invalid n value: number of fractions in which to split group must be at least 2\n");
         return 0;
     }
 
@@ -3653,7 +3673,7 @@ unsigned int gsc_split_by_probabilities(gsc_SimData* d,
         sum += probs[j];
         cumulative_probs[j] = sum;
         if (cumulative_probs[j] >= 1) {
-            warning( "Provided probabilities add up to 1 or more: some buckets will not be filled\n");
+            Rprintf("NOTE! Provided probabilities add up to 1 or more: some buckets will not be filled\n");
             for (; j < n-1; ++j) {
                 cumulative_probs[j] = 1;
             }
@@ -3739,7 +3759,7 @@ unsigned int gsc_get_existing_group_counts( gsc_SimData* d, gsc_GroupNum* out_gr
             }
             GSC_STRETCH_BUFFER(buckets,newbucketcapacity);
             if (g.num >= bucketscap) {
-                warning("Memory allocation failed. Not all groups found\n");
+                Rprintf("NOTE! Memory allocation failed. Not all groups found\n");
                 break;
             }
             memset(buckets+oldcap,0,sizeof(GSC_GLOBALX_T)*(bucketscap-oldcap));
@@ -3757,7 +3777,7 @@ unsigned int gsc_get_existing_group_counts( gsc_SimData* d, gsc_GroupNum* out_gr
     // Now save to output and sort.
     unsigned int capacity = filledbuckets;
     if (capacity > d->n_groups) {
-        warning("Found more groups than expected - gsc_SimData.n_groups is outdated somewhere."
+        Rprintf("NOTE! Found more groups than expected - gsc_SimData.n_groups is outdated somewhere."
                 " Trimming output of get_existing_group_ to avoid a crash: not all groups may be shown\n");
         capacity = d->n_groups;
     }
@@ -3765,7 +3785,7 @@ unsigned int gsc_get_existing_group_counts( gsc_SimData* d, gsc_GroupNum* out_gr
     for (unsigned int i = 1; i < bucketscap; ++i) {
         if (buckets[i]) {
             /*if (g_index >= capacity) {
-                warning("Found more groups than just a moment ago.");
+                Rprintf("NOTE! Found more groups than just a moment ago.");
                 --g_index;
                 break;
             }*/
@@ -4350,7 +4370,7 @@ GSC_GLOBALX_T gsc_get_group_parent_ids(const gsc_SimData* d,
                                        const int whichParent, 
                                        gsc_PedigreeID* output) {
     if (!(whichParent == 1 || whichParent == 2)) {
-        warning( "Value error: `parent` must be 1 or 2.");
+        Rprintf("NOTE! Value error: `parent` must be 1 or 2.");
         return GSC_NA_GLOBALX;
     }
     int parent = whichParent - 1;
@@ -4401,7 +4421,7 @@ GSC_GLOBALX_T gsc_get_group_parent_names(const gsc_SimData* d,
                                          const int whichParent, 
                                          char** output) {
     if (!(whichParent == 1 || whichParent == 2)) {
-        warning( "Value error: `parent` must be 1 or 2.");
+        Rprintf("NOTE! Value error: `parent` must be 1 or 2.");
         return GSC_NA_GLOBALX;
     }
     int parent = whichParent - 1;
@@ -4469,7 +4489,7 @@ GSC_GLOBALX_T gsc_get_group_pedigrees(const gsc_SimData* d,
 
     FILE* fp2;
     if ((fp2 = fopen(fname, "r")) == NULL) {
-        warning( "Failed to use temporary file\n");
+        Rprintf("NOTE! Failed to use temporary file\n");
         return GSC_NA_GLOBALX;
     }
 
@@ -4509,7 +4529,7 @@ GSC_GLOBALX_T gsc_get_group_pedigrees(const gsc_SimData* d,
                 char* temp = realloc(output[i], sizeof(char) * size);
                 if (temp == NULL) {
                     GSC_FREE(output[i]);
-                    warning( "Memory allocation of size %u failed.\n", size);
+                    Rprintf("NOTE! Memory allocation of size %u failed.\n", size);
                     output[i] = NULL;
                 } else {
                     output[i] = temp;
@@ -4641,7 +4661,7 @@ void gsc_delete_group(gsc_SimData* d, const gsc_GroupNum group_id) {
 void gsc_delete_eff_set(gsc_SimData* d, gsc_EffectID effID) {
     GSC_ID_T which_ix = gsc_get_index_of_eff_set(d, effID);
     if (which_ix == GSC_NA_LOCALX) {
-        warning( "Nonexistent effect set %lu\n", (long unsigned int) effID.id);
+        Rprintf("NOTE! Nonexistent effect set %lu\n", (long unsigned int) effID.id);
         return;
     }
 
@@ -4696,7 +4716,7 @@ void gsc_delete_label(gsc_SimData* d, const gsc_LabelID which_label) {
     GSC_ID_T label_ix;
     if (which_label.id == GSC_NO_LABEL.id || 
             (label_ix = gsc_get_index_of_label(d, which_label)) == GSC_NA_LOCALX) {
-        warning( "Nonexistent label %lu\n", (long unsigned int)which_label.id);
+        Rprintf("NOTE! Nonexistent label %lu\n", (long unsigned int)which_label.id);
         return;
     }
 
@@ -4815,7 +4835,7 @@ void gsc_delete_genome(gsc_KnownGenome* g) {
 void gsc_delete_recombination_map(gsc_SimData* d, const gsc_MapID which_map) {
     GSC_ID_T map_ix;
     if (which_map.id == GSC_NO_LABEL.id || (map_ix = gsc_get_index_of_map(d, which_map)) == GSC_NA_IDX) {
-        warning( "Nonexistent recombination map %lu\n", (long unsigned int) which_map.id);
+        Rprintf("NOTE! Nonexistent recombination map %lu\n", (long unsigned int) which_map.id);
         return;
     }
 
@@ -5082,7 +5102,7 @@ void gsc_delete_randomaccess_iter(gsc_RandomAccessIterator* it) {
 gsc_TableFileReader gsc_tablefilereader_create(const char* filename) {
     FILE* fp;
     if ((fp = fopen(filename, "r")) == NULL) {
-        warning( "Failed to open file %s.\n", filename);
+        Rprintf("NOTE! Failed to open file %s.\n", filename);
     }
 
     gsc_TableFileReader tfr = { .fp = fp,
@@ -5234,7 +5254,7 @@ gsc_TableFileCell gsc_tablefilereader_get_next_cell(gsc_TableFileReader* tbl) {
 
                 if (!warned && tblbuf_len > 8192) {
                     warned = 1;
-                    warning("Warning: very long cell identified beginning %c%c%c%c%c%c. Column separators may have failed to be recognised\n",
+                    Rprintf("NOTE! Warning: very long cell identified beginning %c%c%c%c%c%c. Column separators may have failed to be recognised\n",
                             tmpcell[0],tmpcell[1],tmpcell[2],tmpcell[3],tmpcell[4],tmpcell[5]);
                 }
 
@@ -5605,7 +5625,7 @@ static unsigned int gsc_helper_parse_mapfile(const char* filename, struct gsc_Ma
                 chr = strtoul(ncell.cell,&conversionflag,36);
                 ncell.cell[ncell.cell_len] = tmp;
                 if (conversionflag != ncell.cell + ncell.cell_len) { // unsuccessful read
-                    //warning("Entry at row %i column %i of file %s could not be parsed as an integer or alphanumeric string\n", row, chr_colnum, filename);
+                    //Rprintf("NOTE! Entry at row %i column %i of file %s could not be parsed as an integer or alphanumeric string\n", row, chr_colnum, filename);
                     goodrow = 0;
                 }
 
@@ -5615,7 +5635,7 @@ static unsigned int gsc_helper_parse_mapfile(const char* filename, struct gsc_Ma
                 ncell.cell[ncell.cell_len] = tmp;
                 if (conversionflag != ncell.cell + ncell.cell_len) { // unsuccessful read
                     goodrow = 0;
-                    //warning("Entry at row %i column %i of file %s could not be parsed as a numeric value\n", row, pos_colnum, filename);
+                    //Rprintf("NOTE! Entry at row %i column %i of file %s could not be parsed as a numeric value\n", row, pos_colnum, filename);
                 }
 
             } else {
@@ -5939,14 +5959,18 @@ gsc_MapID gsc_create_uniformspaced_recombmap(gsc_SimData* d,
                                              GSC_GENOLEN_T n_markers, 
                                              char** markernames, 
                                              double expected_n_recombinations) {
+    if (d->genome.n_markers == 0) { 
+        Rprintf("NOTE! Cannot create a recombination map if there is no genome\n");
+        return NO_MAP;
+    } 
+    
     gsc_RecombinationMap map = {.n_chr=1, .chrs=gsc_malloc_wrap(sizeof(gsc_LinkageGroup)*1, GSC_TRUE) };
 
     if (markernames == NULL) {
-        if (d->genome.n_markers == 0) return NO_MAP;
-
         double* lgdists = gsc_malloc_wrap(sizeof(double)*d->genome.n_markers,GSC_TRUE);
-        double lgdist = 1./d->genome.n_markers;
-        for (GSC_GENOLEN_T i = 0; i < d->genome.n_markers; ++i) { lgdists[i] = lgdist; }
+        double lgdist = 1./(d->genome.n_markers-1);
+        lgdists[0] = 0;
+        for (GSC_GENOLEN_T i = 1; i < d->genome.n_markers; ++i) { lgdists[i] = lgdists[i-1] + lgdist; }
 
         map.chrs[0].type = GSC_LINKAGEGROUP_SIMPLE;
         map.chrs[0].map.simple.expected_n_crossovers = expected_n_recombinations;
@@ -5958,7 +5982,7 @@ gsc_MapID gsc_create_uniformspaced_recombmap(gsc_SimData* d,
 
         // markernames could still be simple or reordered compared to the d->genome, so need to check that first.
         _Bool found_first = 0;
-        GSC_GENOLEN_T could_not_match;
+        GSC_GENOLEN_T could_not_match = 0;
         GSC_GENOLEN_T firsts_coord_in_genome = d->genome.n_markers;
         GSC_GENOLEN_T chrmarker_ix = 0;
 
@@ -6004,8 +6028,9 @@ gsc_MapID gsc_create_uniformspaced_recombmap(gsc_SimData* d,
         }
 
         double* lgdists = gsc_malloc_wrap(sizeof(double)*chrmarker_ix,GSC_TRUE);
-        double lgdist = 1./n_markers;
-        for (GSC_GENOLEN_T i = 0; i < chrmarker_ix; ++i) { lgdists[i] = lgdist; }
+        double lgdist = 1./(chrmarker_ix-1);
+        lgdists[0] = 0;
+        for (GSC_GENOLEN_T i = 1; i < chrmarker_ix; ++i) { lgdists[i] = lgdists[i-1] + lgdist; }
 
         if (marker_coords == NULL) {
             map.chrs[0].type = GSC_LINKAGEGROUP_SIMPLE;
@@ -6020,10 +6045,96 @@ gsc_MapID gsc_create_uniformspaced_recombmap(gsc_SimData* d,
             map.chrs[0].map.reorder.marker_indexes = marker_coords;
             map.chrs[0].map.reorder.dists = lgdists;
         }
+        
+        if (could_not_match > 0) {
+            Rprintf("NOTE! %d of the marker names do not appear in the genome", could_not_match);
+        }
+        
     }
 
     return gsc_helper_insert_recombmap_into_simdata(d,map);
 }
+
+
+/** Create a gsc_RecombinationMap with independent assortment of alleles across a list of marker names,
+ * and save it to SimData
+ *
+ * The recombination map produced has the same number of chromosomes/linkage groups as the total 
+ * number of markers, therefore the allele inherited for each marker is independent of the 
+ * allele inherited for the other markers. Alternatively, chance of crossover between two "adjacent"
+ * markers is exactly 0.5. 
+ *
+ * If @a markernames is NULL, @a n_markers is ignored and the single-marker-per-linkage-group
+ * recombination map is created from all markers listed in @a d->genome.
+ *
+ * @param d SimData into which to load this RecombinationMap
+ * @param n_markers length of @a markernames
+ * @param markernames names of the markers to create this simple recombination map from.
+ * @return gsc_MapID of the gsc_RecombinationMap that was just loaded into the simulation.
+ */
+gsc_MapID gsc_create_unlinked_recombmap(gsc_SimData* d, GSC_GENOLEN_T n_markers, char** markernames) {
+    if (d->genome.n_markers == 0) { 
+        Rprintf("NOTE! Cannot create a recombination map if there is no genome\n");
+        return NO_MAP;
+    } 
+    
+    if (markernames == NULL) {
+        n_markers = d->genome.n_markers;
+        //markernames = d->genome.marker_names;
+        
+        gsc_RecombinationMap map = {.n_chr=n_markers, 
+                                    .chrs=gsc_malloc_wrap(sizeof(gsc_LinkageGroup)*n_markers, GSC_TRUE) };
+        
+        for (GSC_GENOLEN_T i = 0; i < n_markers; ++i) {
+            map.chrs[i].type = GSC_LINKAGEGROUP_SIMPLE;
+            map.chrs[i].map.simple.n_markers = 1;
+            map.chrs[i].map.simple.first_marker_index = i;
+ 
+            // Lines below are dependent on pulling crossover counts from Poisson dist in generate_gamete, 
+            // so that .expected_n_crossovers = 0 means .dists will never be accessed
+            map.chrs[i].map.simple.expected_n_crossovers = 0; 
+            map.chrs[i].map.simple.dists = NULL;
+        }
+        return gsc_helper_insert_recombmap_into_simdata(d,map);
+        
+    } else { // we've been given a list of markers. Our task is slightly more complex. 
+        
+        // First find all marker name indexes:
+        GSC_CREATE_BUFFER(m_ix, GSC_GENOLEN_T, n_markers);
+        GSC_GENOLEN_T n_good = 0;
+        GSC_GENOLEN_T could_not_match = 0;
+        for (GSC_GENOLEN_T m = 0; m < n_markers; ++m) {
+             if (markernames[m] == NULL) {
+                could_not_match++;
+            } else if (!gsc_get_index_of_genetic_marker(markernames[m], d->genome, &m_ix[n_good] )) {
+                could_not_match++;
+            } else {
+                ++n_good;
+            }
+        }
+        if (could_not_match > 0) {
+            Rprintf("NOTE! %d of the marker names do not appear in the genome", could_not_match);
+        }
+        
+        // Then create and populate the map 
+        gsc_RecombinationMap map = {.n_chr=n_good, 
+                                    .chrs=gsc_malloc_wrap(sizeof(gsc_LinkageGroup)*n_good, GSC_TRUE) };
+        for (GSC_GENOLEN_T i = 0; i < n_good; ++i) {
+            map.chrs[i].type = GSC_LINKAGEGROUP_SIMPLE;
+            map.chrs[i].map.simple.n_markers = 1;
+            map.chrs[i].map.simple.first_marker_index = m_ix[i];
+ 
+            // Lines below are dependent on pulling crossover counts from Poisson dist in generate_gamete, 
+            // so that .expected_n_crossovers = 0 means .dists will never be accessed
+            map.chrs[i].map.simple.expected_n_crossovers = 0;
+            map.chrs[i].map.simple.dists = NULL;
+        }
+        
+        GSC_DELETE_BUFFER(m_ix);
+        return gsc_helper_insert_recombmap_into_simdata(d,map);
+    }
+}
+
 
 /** Load a genetic map to a gsc_SimData object.
  *
@@ -6233,13 +6344,13 @@ gsc_EffectID gsc_load_effectfile(gsc_SimData* d, const char* filename) {
                 ncell.cell[ncell.cell_len] = tmp;
                 if (!validmarker) {
                     goodrow = 0;
-                    //warning("Entry at row %i column %i of file %s does not match the name of a tracked marker\n", row, marker_colnum, filename);
+                    //Rprintf("NOTE! Entry at row %i column %i of file %s does not match the name of a tracked marker\n", row, marker_colnum, filename);
                 }
 
             } else if (col == allele_colnum) {
                 if (ncell.cell_len > 1) {
                     goodrow = 0;
-                    //warning("Entry at row %i column %i of file %s was too long to represent a single allele\n", row, allele_colnum, filename);
+                    //Rprintf("NOTE! Entry at row %i column %i of file %s was too long to represent a single allele\n", row, allele_colnum, filename);
                 } else {
                     raweffects[n_effects].allele = ncell.cell[0];
                 }
@@ -6250,7 +6361,7 @@ gsc_EffectID gsc_load_effectfile(gsc_SimData* d, const char* filename) {
                 ncell.cell[ncell.cell_len] = tmp;
                 if (conversionflag != ncell.cell + ncell.cell_len) { // unsuccessful read
                     goodrow = 0;
-                    //warning("Entry at row %i column %i of file %s could not be parsed as a numeric value\n", row, eff_colnum, filename);
+                    //Rprintf("NOTE! Entry at row %i column %i of file %s could not be parsed as a numeric value\n", row, eff_colnum, filename);
                 }
                 
             } else if (col == centre_colnum) {
@@ -6259,7 +6370,7 @@ gsc_EffectID gsc_load_effectfile(gsc_SimData* d, const char* filename) {
                 ncell.cell[ncell.cell_len] = tmp;
                 if (conversionflag != ncell.cell + ncell.cell_len) { // unsuccessful read
                     goodrow = 0;
-                    //warning("Entry at row %i column %i of file %s could not be parsed as a numeric value\n", row, eff_colnum, filename);
+                    //Rprintf("NOTE! Entry at row %i column %i of file %s could not be parsed as a numeric value\n", row, eff_colnum, filename);
                 }
             
             } else {
@@ -6554,7 +6665,7 @@ static gsc_GenoLocation gsc_emptylistnavigator_get_next(struct gsc_EmptyListNavi
 
     if (it->localAM->n_genotypes <= it->localPos) {
         if (1 < it->localPos - it->localAM->n_genotypes) {
-            warning("EmptyListNavigator invalid\n");
+            Rprintf("NOTE! EmptyListNavigator invalid\n");
             return INVALID_GENO_LOCATION;
         }
         ++(it->localAM->n_genotypes);
@@ -6629,7 +6740,7 @@ static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detec
         // Default to markers being rows
 
         Rprintf("(Loading %s) Format axis: genetic markers are -rows-, founder lines are |columns| (by assumption when no genetic map is loaded)\n", filenameforlog);
-        Rprintf("(Loading %s) No genetic map is loaded, will invent a map with equal spacing of these genetic markers (1cM apart)\n", filenameforlog);
+        Rprintf("(Loading %s) No genetic map is loaded, will invent a map where all markers are unlinked/show independent assortment\n", filenameforlog);
         format.markers_as_rows = GSC_TRUE;
 
     } else if (format.has_header == GSC_FALSE) {
@@ -6739,7 +6850,7 @@ static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detec
                         (firstrowlen + 1 == queuelen && cellqueue[firstrowlen].eof && cellqueue[firstrowlen].cell_len == 0)) {
                     Rprintf("(Loading %s) Warning: empty genotype matrix. No genotypes will be loaded.\n", filenameforlog);
                 } else {
-                    warning("(Loading %s) Failure: Unable to determine the formatting of pairs of alleles."
+                    Rprintf("NOTE! (Loading %s) Failure: Unable to determine the formatting of pairs of alleles."
                     " Check genomicSimulation manual for accepted allele pair encodings\n", filenameforlog);
                 }
         }
@@ -6815,7 +6926,7 @@ static struct gsc_GenotypeFile_MatrixFormat gsc_helper_genotypefile_matrix_detec
         switch (format.has_header) {
             case GSC_FALSE: Rprintf("(Loading %s) Format: genotype matrix without header row\n", filenameforlog); break;
             case GSC_TRUE: Rprintf("(Loading %s) Format: genotype matrix with header row\n", filenameforlog); break;
-            default: warning("(Loading %s) Failure: Unable to determine whether file has header row\n", filenameforlog); break;
+            default: Rprintf("NOTE! (Loading %s) Failure: Unable to determine whether file has header row\n", filenameforlog); break;
         }
     }
 
@@ -6910,7 +7021,7 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
                                                  const gsc_FileFormatSpec format) {
     if (filename == NULL) return NO_GROUP;
     if (format.filetype != GSC_GENOTYPEFILE_MATRIX && format.filetype != GSC_GENOTYPEFILE_UNKNOWN) {
-        warning("Non-genotype-matrix format specification provided to genotype matrix file loader function\n");
+        Rprintf("NOTE! Non-genotype-matrix format specification provided to genotype matrix file loader function\n");
         return NO_GROUP;
     }
 
@@ -6976,7 +7087,7 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
         unsigned int ncellssecondrow = ncellsread - ncellsfirstrow - 1;
         format_has_corner_cell = gsc_helper_genotypefile_matrix_detect_cornercell_presence(ncellsfirstrow, ncellssecondrow, cellsread[ncellsfirstrow].predCol > 0);
         if (format_has_corner_cell == GSC_NA) {
-            warning( "(Loading %s) Failure: Header row length and second row length do not align\n", filename);
+            Rprintf("NOTE! (Loading %s) Failure: Header row length and second row length do not align\n", filename);
             goto failure_exit;
         }
     }
@@ -7010,11 +7121,11 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
             d->genome.n_markers = nmarkersread;
             d->genome.marker_names = gsc_malloc_wrap(sizeof(*d->genome.marker_names)*d->genome.n_markers, GSC_TRUE);
             d->genome.names_alphabetical = gsc_malloc_wrap(sizeof(*d->genome.names_alphabetical)*d->genome.n_markers, GSC_TRUE);
-            gsc_create_uniformspaced_recombmap(d,0,NULL,d->genome.n_markers);
+            gsc_create_unlinked_recombmap(d,0,NULL); // create based on the markers we've saved in 'genome'
             
         } else { // markers as columns
             if (!format_detected.has_header) { // you should not be able to get here. // assert(format_detected.has_header == GSC_TRUE);
-                warning( "(Loading %s) Failure: Genotype matrix with markers as columns but no header row is an unsupported file type (there is no way to tell which column is which marker)\n", filename);
+                Rprintf("NOTE! (Loading %s) Failure: Genotype matrix with markers as columns but no header row is an unsupported file type (there is no way to tell which column is which marker)\n", filename);
                 goto failure_exit;
             }
             
@@ -7029,7 +7140,7 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
                 d->genome.names_alphabetical[j] = &d->genome.marker_names[j];
             }
             qsort(d->genome.names_alphabetical,d->genome.n_markers,sizeof(*d->genome.names_alphabetical),gsc_helper_indirect_alphabetical_str_comparer);
-            gsc_create_uniformspaced_recombmap(d,0,NULL,d->genome.n_markers); // create based on the markers we've saved in 'genome'
+            gsc_create_unlinked_recombmap(d,0,NULL); // create based on the markers we've saved in 'genome'
         }
     }
 
@@ -7053,10 +7164,10 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
 
             if (ncell.cell != NULL) {
                 if (ncell.predNewline || first) {
-                    char tmp = ncell.cell[ncell.cell_len]; ncell.cell[ncell.cell_len] = '\0';
+                    
                     
                     if (build_map_from_rows) {
-                        have_valid_marker = 1;
+                        ++nvalidmarker;
                         if (first) {
                             markerix = 0;
                         } else {
@@ -7066,15 +7177,19 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
                         d->genome.marker_names[markerix] = ncell.cell;
                         ncell.isCellShallow = GSC_TRUE; // prevent deletion
                     } else {
+						char tmp = ncell.cell[ncell.cell_len]; ncell.cell[ncell.cell_len] = '\0';
+						
                         have_valid_marker = gsc_get_index_of_genetic_marker(ncell.cell, d->genome, &markerix);
+						
+						nvalidmarker += have_valid_marker;
+						ncell.cell[ncell.cell_len] = tmp;
                     }
                     
-                    nvalidmarker += have_valid_marker;
-                    ncell.cell[ncell.cell_len] = tmp;
+                    
                     // Then, after reading first row, detect what our expected row length is, if defaults don't suit.
                     if (row == 1 && format_detected.has_header) { 
                         if (column + 1 != ncellsfirstrow && column + 1 != ncellsfirstrow + 1) {
-                            warning( "(Loading %s) Failure: Header row length and second row length do not align\n", filename);
+                            Rprintf("NOTE! (Loading %s) Failure: Header row length and second row length do not align\n", filename);
                             goto failure_exit;
                         } else {
                             n_cols = column + 1;
@@ -7097,7 +7212,7 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
         } while (!ncell.eof);
         if (row == 1 && format_detected.has_header) {
             if (column + 1 != ncellsfirstrow && column + 1 != ncellsfirstrow + 1) {
-                warning( "(Loading %s) Failure: Header row length and second row length do not align\n", filename);
+                Rprintf("NOTE! (Loading %s) Failure: Header row length and second row length do not align\n", filename);
                 goto failure_exit;
             } else {
                 n_cols = column + 1;
@@ -7127,7 +7242,7 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
         
     } else { // markers as columns
         if (!format_detected.has_header) { // you should not be able to get here.
-            warning( "(Loading %s) Failure: Genotype matrix with markers as columns but no header row is an unsupported file type (there is no way to tell which column is which marker)\n", filename);
+            Rprintf("NOTE! (Loading %s) Failure: Genotype matrix with markers as columns but no header row is an unsupported file type (there is no way to tell which column is which marker)\n", filename);
             goto failure_exit;
         }
 
@@ -7293,13 +7408,13 @@ struct gsc_MultiIDSet gsc_load_data_files(gsc_SimData* d,
     switch (type) {
     case GSC_GENOTYPEFILE_BED:
         //if (detectedtype) { Rprintf("Will attempt to parse %s as a plink .bed file\n", filename); }
-        warning("plink .bed file parsing not yet implemented\n");
+        Rprintf("NOTE! plink .bed file parsing not yet implemented\n");
         break;
     case GSC_GENOTYPEFILE_PED:
-        warning("plink .ped file parsing not yet implemented\n");
+        Rprintf("NOTE! plink .ped file parsing not yet implemented\n");
         break;
     case GSC_GENOTYPEFILE_VCF:
-        warning("vcf file parsing not yet implemented\n");
+        Rprintf("NOTE! vcf file parsing not yet implemented\n");
         break;
     default:
         //Rprintf("(Loading files) Will treat %s as a genotype matrix (see genomicSimulation's default input file types)\n", genotype_file);
@@ -7350,13 +7465,13 @@ struct gsc_MultiIDSet gsc_load_data_files(gsc_SimData* d,
 int* gsc_calculate_min_recombinations_fw1(gsc_SimData* d, gsc_MapID mapid, char* parent1, unsigned int p1num, char* parent2,
         unsigned int p2num, char* offspring, int certain) {
     if (d->genome.n_maps < 1) {
-        warning("Need at least one recombination map loaded to estimate recombinations\n");
+        Rprintf("NOTE! Need at least one recombination map loaded to estimate recombinations\n");
         return NULL;
     }
     int mapix = 0;
     if (mapid.id != NO_MAP.id) { mapix = gsc_get_index_of_map(d, mapid); }
     if (mapix >= d->genome.n_maps) {
-        warning("We don't have that recombination maps loaded\n");
+        Rprintf("NOTE! We don't have that recombination maps loaded\n");
         return NULL;
     }
     gsc_RecombinationMap map = d->genome.maps[mapix];
@@ -7459,13 +7574,13 @@ int* gsc_calculate_min_recombinations_fw1(gsc_SimData* d, gsc_MapID mapid, char*
 int* gsc_calculate_min_recombinations_fwn(gsc_SimData* d, gsc_MapID mapid, char* parent1, unsigned int p1num, char* parent2,
         unsigned int p2num, char* offspring, int window_size, int certain) {
     if (d->genome.n_maps < 1) {
-        warning("Need at least one recombination map loaded to estimate recombinations\n");
+        Rprintf("NOTE! Need at least one recombination map loaded to estimate recombinations\n");
         return NULL;
     }
     int mapix = 0;
     if (mapid.id != NO_MAP.id) { mapix = gsc_get_index_of_map(d, mapid); }
     if (mapix >= d->genome.n_maps) {
-        warning("We don't have that recombination maps loaded\n");
+        Rprintf("NOTE! We don't have that recombination maps loaded\n");
         return NULL;
     }
     gsc_RecombinationMap map = d->genome.maps[mapix];
@@ -7603,7 +7718,7 @@ int gsc_calculate_recombinations_from_file(gsc_SimData* d, const char* input_fil
         combin_i[1] = gsc_get_index_of_name(d->m, buffer[1]);
         combin_i[2] = gsc_get_index_of_name(d->m, buffer[2]);
         if (combin_i[0] < 0 || combin_i[1] < 0 || combin_i[2] < 0) {
-            warning( "Genotypes at file %s line %lu could not be found\n", input_file, (long unsigned int) i);
+            Rprintf("NOTE! Genotypes at file %s line %lu could not be found\n", input_file, (long unsigned int) i);
             continue;
         }
         combin_genes[0] = gsc_get_genes_of_index(d->m, combin_i[0]);
@@ -7669,11 +7784,11 @@ void gsc_generate_gamete(gsc_SimData* d,
                          const GSC_ID_T map_index) {
     // assumes rand is already seeded
     if (parent_genome == NULL) {
-        warning( "Could not generate this gamete: no parent provided\n");
+        Rprintf("NOTE! Could not generate this gamete: no parent provided\n");
         return;
     }
     if (map_index >= d->genome.n_maps) {
-        warning( "Could not generate this gamete: invalid map provided\n");
+        Rprintf("NOTE! Could not generate this gamete: invalid map provided\n");
         return;
     }
     gsc_RecombinationMap map = d->genome.maps[map_index];
@@ -7692,7 +7807,7 @@ void gsc_generate_gamete(gsc_SimData* d,
                 num_crossovers = Rf_rpois( map.chrs[chr].map.reorder.expected_n_crossovers);
                 break;
             default:
-                warning( "Linkage group type of linkage group with index %lu of map with index %lu is corrupted\n", 
+                Rprintf("NOTE! Linkage group type of linkage group with index %lu of map with index %lu is corrupted\n", 
                         (long unsigned int) chr, (long unsigned int) map_index);
                 num_crossovers = 0;
         }
@@ -7772,11 +7887,11 @@ void gsc_generate_doubled_haploid(gsc_SimData* d,
 
     // assumes rand is already seeded
     if (parent_genome == NULL) {
-        warning( "Could not make this doubled haploid\n");
+        Rprintf("NOTE! Could not make this doubled haploid\n");
         return;
     }
     if (map_index >= d->genome.n_maps) {
-        warning( "Could not generate this gamete: invalid map provided\n");
+        Rprintf("NOTE! Could not generate this gamete: invalid map provided\n");
         return;
     }
     gsc_RecombinationMap map = d->genome.maps[map_index];
@@ -7795,7 +7910,7 @@ void gsc_generate_doubled_haploid(gsc_SimData* d,
                 num_crossovers = Rf_rpois( map.chrs[chr].map.reorder.expected_n_crossovers);
                 break;
             default:
-                warning( "Linkage group type of group with index %lu of map with index %lu is corrupted\n", 
+                Rprintf("NOTE! Linkage group type of group with index %lu of map with index %lu is corrupted\n", 
                         (long unsigned int) chr, (long unsigned int) map_index);
                 num_crossovers = 0;
         }
@@ -8245,21 +8360,21 @@ static GSC_GLOBALX_T gsc_helper_random_cross_checks(gsc_SimData* d,
                                                     const GSC_GLOBALX_T cap) {
     GSC_GLOBALX_T g_size = gsc_get_group_size(d, from_group); // might be a better way to do this using the iterator.
     if (g_size == 0) {
-        warning("Group %lu does not exist\n", (long unsigned int) from_group.num);
+        Rprintf("NOTE! Group %lu does not exist\n", (long unsigned int) from_group.num);
         return 0;
     }
     
     if (n_crosses < 1) {
-        warning("Invalid n_crosses value provided: n_crosses must be greater than 0\n");
+        Rprintf("NOTE! Invalid n_crosses value provided: n_crosses must be greater than 0\n");
         return 0;
     }
 
     if (cap < 0) {
-        warning("Invalid cap value provided: cap can't be negative\n");
+        Rprintf("NOTE! Invalid cap value provided: cap can't be negative\n");
         return 0;
     }
     if (cap > 0 && cap*g_size < n_crosses) {
-        warning("Invalid cap value provided: cap of %lu uses on %lu parents too small to make %lu crosses\n",
+        Rprintf("NOTE! Invalid cap value provided: cap of %lu uses on %lu parents too small to make %lu crosses\n",
                 (long unsigned int) cap, (long unsigned int) g_size, (long unsigned int) n_crosses);
         return 0;
     }
@@ -8302,12 +8417,12 @@ gsc_GroupNum gsc_make_random_crosses(gsc_SimData* d,
     if (g_size == 0) {
         return GSC_NO_GROUP;
     } else if (g_size == 1) {
-        warning("Group %lu must contain multiple individuals to be able to perform random crossing\n", 
+        Rprintf("NOTE! Group %lu must contain multiple individuals to be able to perform random crossing\n", 
                 (long unsigned int) from_group.num);
         return GSC_NO_GROUP;
     }
     if (d->genome.n_maps < 1) {
-        warning("Crossing requires at least one recombination map loaded\n");
+        Rprintf("NOTE! Crossing requires at least one recombination map loaded\n");
         return GSC_NO_GROUP;
     }
     
@@ -8327,7 +8442,7 @@ gsc_GroupNum gsc_make_random_crosses(gsc_SimData* d,
         paramstore.rand.map_index = gsc_get_index_of_map(d, which_map); 
     }
     if (paramstore.rand.map_index == GSC_NA_IDX) {
-        warning("Could not find recombination map with identifier %lu\n", (long unsigned int) which_map.id);
+        Rprintf("NOTE! Could not find recombination map with identifier %lu\n", (long unsigned int) which_map.id);
         return GSC_NO_GROUP;
     }
     
@@ -8374,7 +8489,7 @@ GSC_GLOBALX_T gsc_randomdraw_replacementrules(gsc_SimData* d,
         return GSC_NA_GLOBALX;
     }
     if (max > INT_MAX) {
-        warning( "Drawing a random number with a max of %lu is not supported on the C version"
+        Rprintf("NOTE! Drawing a random number with a max of %lu is not supported on the C version"
                 "with the rnd library. If the max is greater than %d, probabilistic uniformity may be lost"
                 "or an infinite loop may occur.", (long unsigned int) max, INT_MAX);
     }
@@ -8493,7 +8608,7 @@ gsc_GroupNum gsc_make_random_crosses_between(gsc_SimData*d,
         return GSC_NO_GROUP;
     }
     if (d->genome.n_maps < 1) {
-        warning("Crossing requires at least one recombination map loaded\n");
+        Rprintf("NOTE! Crossing requires at least one recombination map loaded\n");
         return GSC_NO_GROUP;
     }
     
@@ -8524,14 +8639,14 @@ gsc_GroupNum gsc_make_random_crosses_between(gsc_SimData*d,
         paramstore.rand_btwn.map1_index = gsc_get_index_of_map(d, map1); 
     }
     if (paramstore.rand_btwn.map1_index == GSC_NA_IDX) {
-        warning("Could not find recombination map with identifier %lu\n", (long unsigned int) map1.id);
+        Rprintf("NOTE! Could not find recombination map with identifier %lu\n", (long unsigned int) map1.id);
         return GSC_NO_GROUP;
     }
     if (map2.id != NO_MAP.id) { 
         paramstore.rand_btwn.map2_index = gsc_get_index_of_map(d, map2); 
     }
     if (paramstore.rand_btwn.map2_index == GSC_NA_IDX) {
-        warning("Could not find recombination map with identifier %lu\n", (long unsigned int) map2.id);
+        Rprintf("NOTE! Could not find recombination map with identifier %lu\n", (long unsigned int) map2.id);
         return GSC_NO_GROUP;
     }
 
@@ -8627,11 +8742,11 @@ gsc_GroupNum gsc_make_targeted_crosses(gsc_SimData* d,
                                        const gsc_MapID map2, 
                                        const gsc_GenOptions g) {
     if (n_combinations < 1) {
-        warning("Invalid n_combinations value provided: n_combinations must be greater than 0\n");
+        Rprintf("NOTE! Invalid n_combinations value provided: n_combinations must be greater than 0\n");
         return GSC_NO_GROUP;
     }
     if (d->genome.n_maps < 1) {
-        warning("Crossing requires at least one recombination map loaded\n");
+        Rprintf("NOTE! Crossing requires at least one recombination map loaded\n");
         return GSC_NO_GROUP;
     }
     
@@ -8648,14 +8763,14 @@ gsc_GroupNum gsc_make_targeted_crosses(gsc_SimData* d,
         paramstore.targeted.map1_index = gsc_get_index_of_map(d, map1); 
     }
     if (paramstore.targeted.map1_index == GSC_NA_IDX) {
-        warning("Could not find recombination map with identifier %lu\n", (long unsigned int) map1.id);
+        Rprintf("NOTE! Could not find recombination map with identifier %lu\n", (long unsigned int) map1.id);
         return GSC_NO_GROUP;
     }
     if (map2.id != NO_MAP.id) { 
         paramstore.targeted.map2_index = gsc_get_index_of_map(d, map2); 
     }
     if (paramstore.targeted.map2_index == GSC_NA_IDX) {
-        warning("Could not find recombination map with identifier %lu\n", (long unsigned int) map2.id);
+        Rprintf("NOTE! Could not find recombination map with identifier %lu\n", (long unsigned int) map2.id);
         return GSC_NO_GROUP;
     }
     
@@ -8668,7 +8783,7 @@ gsc_GroupNum gsc_make_targeted_crosses(gsc_SimData* d,
 
     gsc_delete_randomaccess_iter(&parentit);
     if (paramstore.targeted.bad_pairings > 0) {
-        warning("Targeted crossing failed for %lu out of the %lu requested pairings due to one or both genotype indexes being invalid\n", (long unsigned int) paramstore.targeted.bad_pairings, (long unsigned int) n_combinations);
+        Rprintf("NOTE! Targeted crossing failed for %lu out of the %lu requested pairings due to one or both genotype indexes being invalid\n", (long unsigned int) paramstore.targeted.bad_pairings, (long unsigned int) n_combinations);
     }
     if (n_combinations - paramstore.targeted.bad_pairings == 0) {
         return GSC_NO_GROUP;
@@ -8767,15 +8882,15 @@ gsc_GroupNum gsc_self_n_times(gsc_SimData* d,
                               const gsc_GenOptions g) {
     /*int group_size = gsc_get_group_size( d, group);
     if (group_size < 1) {
-        warning("Group %d does not exist.\n", group.num);
+        Rprintf("NOTE! Group %d does not exist.\n", group.num);
         return GSC_NO_GROUP;
     }*/
     if (n < 1) {
-        warning("Invalid n value provided: Number of generations must be greater than 0\n");
+        Rprintf("NOTE! Invalid n value provided: Number of generations must be greater than 0\n");
         return GSC_NO_GROUP;
     }
     if (d->genome.n_maps == 0) {
-        warning("Selfing requires at least one recombination map loaded\n");
+        Rprintf("NOTE! Selfing requires at least one recombination map loaded\n");
         return GSC_NO_GROUP;
     }
         
@@ -8787,7 +8902,7 @@ gsc_GroupNum gsc_self_n_times(gsc_SimData* d,
         paramstore.selfing.map_index = gsc_get_index_of_map(d, which_map); 
     }
     if (paramstore.selfing.map_index == GSC_NA_IDX) {
-        warning("Could not find recombination map with identifier %lu\n", (long unsigned int) which_map.id);
+        Rprintf("NOTE! Could not find recombination map with identifier %lu\n", (long unsigned int) which_map.id);
         return GSC_NO_GROUP;                          
     }
     
@@ -8842,11 +8957,11 @@ gsc_GroupNum gsc_make_doubled_haploids(gsc_SimData* d,
                                        const gsc_GenOptions g) {
     /*int group_size = gsc_get_group_size( d, group);
     if (group_size < 1) {
-        warning("Group %d does not exist.\n", group.num);
+        Rprintf("NOTE! Group %d does not exist.\n", group.num);
         return GSC_NO_GROUP;
     }*/
     if (d->genome.n_maps == 0) {
-        warning("Crossing requires at least one recombination map loaded\n");
+        Rprintf("NOTE! Crossing requires at least one recombination map loaded\n");
         return GSC_NO_GROUP;
     }
     
@@ -8856,7 +8971,7 @@ gsc_GroupNum gsc_make_doubled_haploids(gsc_SimData* d,
         paramstore.doub_haps.map_index = gsc_get_index_of_map(d, which_map); 
     }
     if (paramstore.doub_haps.map_index == GSC_NA_IDX) {
-        warning("Could not find recombination map with identifier %lu\n", (long unsigned int) which_map.id);
+        Rprintf("NOTE! Could not find recombination map with identifier %lu\n", (long unsigned int) which_map.id);
         return GSC_NO_GROUP;
     }                                    
     
@@ -8950,7 +9065,7 @@ gsc_GroupNum gsc_make_clones(gsc_SimData* d,
                              gsc_GenOptions g) {
     /*int group_size = gsc_get_group_size( d, group);
     if (group_size < 1) {
-        warning("Group %d does not exist.\n", group.num);
+        Rprintf("NOTE! Group %d does not exist.\n", group.num);
         return GSC_NO_GROUP;
     }*/
     
@@ -8989,9 +9104,9 @@ gsc_GroupNum gsc_make_all_unidirectional_crosses(gsc_SimData* d,
     GSC_GLOBALX_T group_size = gsc_get_group_size( d, from_group );
     if (group_size < 2) {
         if (group_size == 1) {
-            warning("Group %lu does not have enough members to perform crosses\n", (long unsigned int) from_group.num);
+            Rprintf("NOTE! Group %lu does not have enough members to perform crosses\n", (long unsigned int) from_group.num);
         } else {
-            warning("Group %lu does not exist\n", (long unsigned int) from_group.num);
+            Rprintf("NOTE! Group %lu does not exist\n", (long unsigned int) from_group.num);
         }
         return GSC_NO_GROUP;
     }
@@ -9025,7 +9140,7 @@ gsc_GroupNum gsc_make_all_unidirectional_crosses(gsc_SimData* d,
 
 gsc_GroupNum gsc_make_n_crosses_from_top_m_percent(gsc_SimData* d, const int n, const int m, const gsc_GroupNum group,
                                                    const gsc_MapID mapID, const gsc_EffectID effID, const gsc_GenOptions g) {
-    warning( "Function gsc_make_n_crosses_from_top_m_percent is deprecated."
+    Rprintf("NOTE! Function gsc_make_n_crosses_from_top_m_percent is deprecated."
             "It behaved unintuitively and goes against genomicSimulation principles on division of functionality\n");
 
     return NO_GROUP;
@@ -9064,7 +9179,7 @@ gsc_GroupNum gsc_make_crosses_from_file(gsc_SimData* d,
                                         const gsc_GenOptions g) {
     struct gsc_TableSize t = gsc_get_file_dimensions(input_file, '\t');
     if (t.num_rows < 1) {
-        warning( "No crosses exist in that file\n");
+        Rprintf("NOTE! No crosses exist in that file\n");
         return GSC_NO_GROUP;
     }
 
@@ -9086,7 +9201,7 @@ gsc_GroupNum gsc_make_crosses_from_file(gsc_SimData* d,
         combinations[0][bufferi] = gsc_get_index_of_name(d->m, buffer[0]);
         combinations[1][bufferi] = gsc_get_index_of_name(d->m, buffer[1]);
         if (combinations[0][bufferi] < 0 || combinations[1][bufferi] < 0) {
-            warning( "Parents on file %s line %lu could not be found\n", input_file, (long unsigned int) filei);
+            Rprintf("NOTE! Parents on file %s line %lu could not be found\n", input_file, (long unsigned int) filei);
         } else {
             ++bufferi;
         }
@@ -9138,7 +9253,7 @@ gsc_GroupNum gsc_make_double_crosses_from_file(gsc_SimData* d,
                                                const gsc_GenOptions g) {
     struct gsc_TableSize t = gsc_get_file_dimensions(input_file, '\t');
     if (t.num_rows < 1) {
-        warning( "No crosses exist in that file\n");
+        Rprintf("NOTE! No crosses exist in that file\n");
         return GSC_NO_GROUP;
     }
 
@@ -9161,7 +9276,7 @@ gsc_GroupNum gsc_make_double_crosses_from_file(gsc_SimData* d,
         fscanf(fp, "%s %s %s %s \n", buffer[0], buffer[1], buffer[2], buffer[3]);
         gsc_get_ids_of_names(d->m, 4, to_buffer, g0_id);
         if (g0_id[0].id == GSC_NO_PEDIGREE.id || g0_id[1].id == GSC_NO_PEDIGREE.id || g0_id[2].id == GSC_NO_PEDIGREE.id || g0_id[3].id == GSC_NO_PEDIGREE.id) {
-            warning( "Could not go ahead with the line %lu cross - g0 names not in records\n", 
+            Rprintf("NOTE! Could not go ahead with the line %lu cross - g0 names not in records\n", 
                     (long unsigned int) i);
             combinations[0][i] = GSC_NA_GLOBALX;
             combinations[1][i] = GSC_NA_GLOBALX;
@@ -9179,7 +9294,7 @@ gsc_GroupNum gsc_make_double_crosses_from_file(gsc_SimData* d,
                 f1_i[0] = gsc_get_index_of_child(d->m, g0_id[0], g0_id[3]);
                 f1_i[1] = gsc_get_index_of_child(d->m, g0_id[1], g0_id[2]);
                 if (f1_i[0] < 0 || f1_i[1] < 0) {
-                    warning( "Could not go ahead with the line %lu cross - f1 children do not exist for this quartet\n", 
+                    Rprintf("NOTE! Could not go ahead with the line %lu cross - f1 children do not exist for this quartet\n", 
                              (long unsigned int) i);
                     combinations[0][i] = GSC_NA_GLOBALX;
                     combinations[1][i] = GSC_NA_GLOBALX;
@@ -9226,13 +9341,13 @@ gsc_GroupNum gsc_split_by_bv(gsc_SimData* d,
                              const _Bool lowIsBest) {
     const GSC_ID_T effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex == GSC_NA_IDX) {
-        warning("Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
+        Rprintf("NOTE! Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
         return GSC_NO_GROUP;
     }
 
     GSC_GLOBALX_T group_size = gsc_get_group_size( d, group );
     if (group_size == 0) {
-        warning("Group %lu does not exist\n", (long unsigned int) group.num);
+        Rprintf("NOTE! Group %lu does not exist\n", (long unsigned int) group.num);
         return GSC_NO_GROUP;
     }
     GSC_CREATE_BUFFER(group_indexes,GSC_GLOBALX_T,group_size);
@@ -9297,7 +9412,7 @@ gsc_DecimalMatrix gsc_calculate_bvs(const gsc_SimData* d,
                                     const gsc_EffectID effID) {
     const GSC_ID_T effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex == GSC_NA_IDX) {
-        warning("Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
+        Rprintf("NOTE! Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
         return gsc_generate_zero_dmatrix(0, 0);
     }
 
@@ -9325,7 +9440,7 @@ gsc_DecimalMatrix gsc_calculate_bvs(const gsc_SimData* d,
 gsc_DecimalMatrix gsc_calculate_utility_bvs(gsc_BidirectionalIterator* targets, 
                                             const gsc_MarkerEffects* effset) {
     if (targets == NULL || effset == NULL) {
-        warning( "Either targets or marker effects were not provided\n"); 
+        Rprintf("NOTE! Either targets or marker effects were not provided\n"); 
         return gsc_generate_zero_dmatrix(0, 0);
     }
     gsc_MarkerEffects e = *effset; // trivial line. just for easier typing
@@ -9460,23 +9575,23 @@ gsc_MarkerBlocks gsc_create_evenlength_blocks_each_chr(const gsc_SimData* d,
     blocks.num_blocks = 0;
 
     if (d->genome.n_maps < 1) {
-        warning("Creating blocks by chromosome length requires at least one recombination map loaded\n");
+        Rprintf("NOTE! Creating blocks by chromosome length requires at least one recombination map loaded\n");
         return blocks;
     }
     GSC_ID_T mapix = 0;
     if (mapid.id != NO_MAP.id) { mapix = gsc_get_index_of_map(d, mapid); }
     if (mapix >= d->genome.n_maps) {
-        warning("We don't have that recombination maps loaded. Using default map\n");
+        Rprintf("NOTE! We don't have that recombination maps loaded. Using default map\n");
         mapix = 0;
     }
     gsc_RecombinationMap map = d->genome.maps[mapix];
 
     if (n < 1) {
-        warning("Invalid n value: number of blocks must be positive\n");
+        Rprintf("NOTE! Invalid n value: number of blocks must be positive\n");
         return blocks;
     }
     if (map.n_chr < 1) {
-        warning("Map has no chromosomes, so it cannot be divided into blocks\n");
+        Rprintf("NOTE! Map has no chromosomes, so it cannot be divided into blocks\n");
     }
 
     blocks.num_blocks = n * map.n_chr;
@@ -9707,7 +9822,7 @@ gsc_DecimalMatrix gsc_calculate_local_bvs(const gsc_SimData* d,
                                                 const gsc_EffectID effID) {
     const GSC_ID_T effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex == GSC_NA_IDX) {
-        warning("Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
+        Rprintf("NOTE! Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
         return gsc_generate_zero_dmatrix(0, 0);
     }
     gsc_MarkerEffects e = d->e[effIndex];
@@ -9867,7 +9982,7 @@ void gsc_calculate_optimal_haplotype(const gsc_SimData* d,
                                       char* opt_haplotype) {
     const GSC_ID_T effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex == GSC_NA_IDX) {
-        warning("Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
+        Rprintf("NOTE! Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
         memset(opt_haplotype, 0, sizeof(char)*(d->genome.n_markers + 1));
         return;
     }
@@ -9927,7 +10042,7 @@ void gsc_calculate_optimal_possible_haplotype(const gsc_SimData* d,
                                                char* opt_haplotype) {
     const GSC_ID_T effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex == GSC_NA_IDX) {
-        warning("Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
+        Rprintf("NOTE! Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
         memset(opt_haplotype, 0, sizeof(char)*(d->genome.n_markers + 1));
         return;
     }
@@ -9991,7 +10106,7 @@ void gsc_calculate_optimal_possible_haplotype(const gsc_SimData* d,
 double gsc_calculate_optimal_bv(const gsc_SimData* d, const gsc_EffectID effID) {
     const GSC_ID_T effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex == GSC_NA_IDX) {
-        warning("Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
+        Rprintf("NOTE! Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
         return 0;
     }
     gsc_MarkerEffects e = d->e[effIndex];
@@ -10039,7 +10154,7 @@ double gsc_calculate_optimal_possible_bv(const gsc_SimData* d,
                                          const gsc_EffectID effID) {
     const GSC_ID_T effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex == GSC_NA_IDX) {
-        warning("Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
+        Rprintf("NOTE! Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
         return 0;
     }
     gsc_MarkerEffects e = d->e[effIndex];
@@ -10110,7 +10225,7 @@ double gsc_calculate_optimal_possible_bv(const gsc_SimData* d,
 double gsc_calculate_minimal_bv(const gsc_SimData* d, const gsc_EffectID effID) {
     const GSC_ID_T effIndex = gsc_get_index_of_eff_set(d, effID);
     if (effIndex == GSC_NA_IDX) {
-        warning("Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
+        Rprintf("NOTE! Nonexistent effect set with id %lu\n", (long unsigned int) effID.id);
         return 0;
     }
     gsc_MarkerEffects e = d->e[effIndex];
@@ -10168,7 +10283,7 @@ void gsc_save_markerblocks(const char* fname,
                            const gsc_MapID labelMapID) {
     FILE* f;
     if ((f = fopen(fname, "w")) == NULL) {
-        warning( "Failed to open file %s for writing output\n", fname); return;
+        Rprintf("NOTE! Failed to open file %s for writing output\n", fname); return;
     }
 
     GSC_ID_T mapix;
@@ -10204,7 +10319,7 @@ void gsc_save_genotypes(const char* fname,
                         const _Bool markers_as_rows) {
     FILE* f;
     if ((f = fopen(fname, "w")) == NULL) {
-        warning( "Failed to open file %s for writing output\n", fname); return;
+        Rprintf("NOTE! Failed to open file %s for writing output\n", fname); return;
     }
 
     // casing away const but I promise not to use the iterator to change anything
@@ -10243,7 +10358,7 @@ void gsc_save_allele_counts(const char* fname,
                             const _Bool markers_as_rows) {
     FILE* f;
     if ((f = fopen(fname, "w")) == NULL) {
-        warning( "Failed to open file %s for writing output\n", fname); return;
+        Rprintf("NOTE! Failed to open file %s for writing output\n", fname); return;
     }
 
     // casing away const but I promise not to use the iterator to change anything
@@ -10283,7 +10398,7 @@ void gsc_save_pedigrees(const char* fname,
                         const _Bool full_pedigree) { 
     FILE* f;
     if ((f = fopen(fname, "w")) == NULL) {
-        warning( "Failed to open file %s for writing output\n", fname); return;
+        Rprintf("NOTE! Failed to open file %s for writing output\n", fname); return;
     }
 
     // casing away const but I promise not to use the iterator to change anything
@@ -10316,21 +10431,102 @@ void gsc_save_bvs(const char* fname,
                   const gsc_EffectID effID) {
     FILE* f;
     if ((f = fopen(fname, "w")) == NULL) {
-        warning( "Failed to open file %s for writing output\n", fname); return;
+        Rprintf("NOTE! Failed to open file %s for writing output\n", fname); return;
     }
 
     GSC_ID_T effix = gsc_get_index_of_eff_set(d, effID);
     if (effix == GSC_NA_IDX) {
-        warning( "Marker effect set %lu does not exist: cannot calculate breeding values\n", (long unsigned int) effID.id); return;
+        Rprintf("NOTE! Marker effect set %lu does not exist: cannot calculate breeding values\n", (long unsigned int) effID.id); return;
     }
 
-    // casing away const but I promise not to use the iterator to change anything
+    // casting away const but I promise not to use the iterator to change anything
     gsc_BidirectionalIterator it = gsc_create_bidirectional_iter((gsc_SimData*) d, groupID);
 
     gsc_save_utility_bvs(f, &it, &d->e[effix]);
 
     delete_bidirectional_iter(&it);
     fclose(f);
+}
+
+/** Prints local breeding values of candidates to a file 
+ *
+ * The output is a space-separated table, with columns representing blocks of markers
+ * (ordered as they appear in the input @a b), and pairs of rows representing the first
+ * and second haplotype of each candidate in the group, or in the entire simulation if 
+ * @a groupID is @a NO_GROUP. Optionally, there will be a header column, containing the 
+ * candidate name followed by _1 for its first haplotype, and its name followed by _2 
+ * for its second haplotype.
+ *
+ * @shortnamed{save_local_bvs}
+ *
+ * @param fname name of the file to which the output will be saved. Any prior 
+ * file contents will be overwritten.
+ * @param d pointer to the gsc_SimData in which the genotypes whose local breeding values
+ * will be calculated can be found.
+ * @param groupID group number of the group of genotypes whose local breeding values will be saved, 
+ * or NO_GROUP to save local breeding values of all genotypes in the simulation.
+ * @param effID identifier of the set of marker effects in @a d that will be 
+ * used to calculate the local breeding values.
+ * @param b Set of chromosome blocks over which local breeding values should be calculated
+ * @param headers true if a header column containing candidate names with suffixes _1 and _2
+ * should be included in the output file, false if no header column should be printed.
+*/
+void gsc_save_local_bvs(const char* fname, 
+						const gsc_SimData* d, 
+						const gsc_GroupNum groupID, 
+						const gsc_MarkerBlocks b,
+						const gsc_EffectID effID, 
+						const _Bool headers) {
+	FILE* f;
+    if ((f = fopen(fname, "w")) == NULL) {
+        Rprintf("NOTE! Failed to open file %s for writing output\n", fname); return;
+    }
+
+	gsc_DecimalMatrix dec = gsc_calculate_local_bvs(d, groupID, b, effID);
+
+	if (headers) {
+		// Re: headers:
+		// 1. rows shall be genotype names with _1 or _2 appended
+		// 2. blocks don't have names right now. They shall remain nameless.
+		GSC_CREATE_BUFFER(ghapnames,char*,dec.dim1);
+		GSC_GLOBALX_T i = 0;
+		// casting away const but I promise not to use the iterator to change anything
+		gsc_BidirectionalIterator it = gsc_create_bidirectional_iter((gsc_SimData*) d, groupID);
+		gsc_GenoLocation loc = gsc_set_bidirectional_iter_to_start(&it);
+		while (IS_VALID_LOCATION(loc)) {
+			char* name = gsc_get_name(loc);
+			int len = (name == NULL) ? 0 : strlen(name); // if name is null, the header will just be "_1" and "_2".
+			ghapnames[i] = gsc_malloc_wrap(sizeof(char)*(len+3), GSC_TRUE);
+			ghapnames[i+1] = gsc_malloc_wrap(sizeof(char)*(len+3), GSC_TRUE);
+
+			strncpy(ghapnames[i], name, sizeof(char)*len);
+			ghapnames[i][len] = '_'; ghapnames[i][len+1] = '1'; ghapnames[i][len+2] = '\0';
+			strncpy(ghapnames[i+1], name, sizeof(char)*len);
+			ghapnames[i+1][len] = '_'; ghapnames[i+1][len+1] = '2'; ghapnames[i+1][len+2] = '\0';
+
+			i += 2;
+			if (i >= dec.dim1) {
+				break;
+			}
+
+			loc = gsc_next_forwards(&it);
+		}
+		for (; i < dec.dim1; ++i) { // zero trailing entries if something went wrong.
+			ghapnames[i] = NULL;
+		}
+		gsc_save_utility_dmatrix(f, &dec, ghapnames, NULL, 0);
+		for (unsigned int i = 0; i < dec.dim1; ++i) {
+            if (ghapnames[i] != NULL) {
+                GSC_FREE(ghapnames[i]);
+            }
+        }
+        GSC_DELETE_BUFFER(ghapnames);
+	} else {
+		gsc_save_utility_dmatrix(f, &dec, NULL, NULL, 0);
+	}
+
+	gsc_delete_dmatrix(&dec);
+	fclose(f);
 }
 
 /** Check if a marker index is found in a particular LinkageGroup, and provide 
@@ -11026,6 +11222,60 @@ void gsc_save_utility_bvs(FILE* f,
     }
 
     gsc_delete_dmatrix(&bvs);
+    fflush(f);
+    return;
+}
+
+
+void gsc_save_utility_dmatrix(FILE* f,
+							  DecimalMatrix* dec,
+							  char** row_headers,
+							  char** col_headers,
+                              _Bool dim1_is_columns) {
+	// TODO
+	// also check your tabs and spaces mate. Go back to using floweditor
+    if (dec == NULL || dec->dim1 == 0 || dec->dim2 == 0) { return; }
+    
+    if (col_headers) {
+        unsigned int ncols = (dim1_is_columns) ? dec->dim1 : dec->dim2;
+        fwrite(col_headers[0], sizeof(char), strlen(col_headers[0]), f);
+        for (unsigned int col = 1; col < ncols; ++col) {
+            fwrite("\t", sizeof(char), 1, f);
+            fwrite(col_headers[col], sizeof(char), strlen(col_headers[col]), f);
+        }
+        fwrite("\n", sizeof(char), 1, f);
+    }
+
+    if (dim1_is_columns) {
+        for (unsigned int row = 0; row < dec->dim2; ++row) {
+            if (row_headers) {
+                fwrite(row_headers[row], sizeof(char), strlen(row_headers[row]), f);
+                fwrite("\t", sizeof(char), 1, f);
+            }
+            
+            fprintf(f,"%lf",dec->matrix[0][row]);
+            for (unsigned int col = 1; col < dec->dim1; ++col) {
+                fwrite("\t", sizeof(char), 1, f);
+                fprintf(f,"%lf",dec->matrix[col][row]);
+            }
+            fwrite("\n", sizeof(char), 1, f);
+        }
+    } else {
+        for (unsigned int row = 0; row < dec->dim1; ++row) {
+            if (row_headers) {
+                fwrite(row_headers[row], sizeof(char), strlen(row_headers[row]), f);
+                fwrite("\t", sizeof(char), 1, f);
+            }
+            
+            fprintf(f,"%lf",dec->matrix[row][0]);
+            for (unsigned int col = 1; col < dec->dim2; ++col) {
+                fwrite("\t", sizeof(char), 1, f);
+                fprintf(f,"%lf",dec->matrix[row][col]);
+            }
+            fwrite("\n", sizeof(char), 1, f);
+        }
+    }
+    
     fflush(f);
     return;
 }

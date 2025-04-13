@@ -162,8 +162,8 @@ test_that("break.group.with.probabilities runs successfully", {
   #does not check that the groups are shuffled properly
   
   # does-not-crash test:
-  expect_warning(break.group.with.probabilities(df$Group[[3]], c(0.1,0.6,0.7)),
-                 "Provided probabilities add up to 1 or more: some buckets will not be filled")
+  expect_output(break.group.with.probabilities(df$Group[[3]], c(0.1,0.6,0.7)),
+                 "NOTE! Provided probabilities add up to 1 or more: some buckets will not be filled")
   
 })
 
@@ -198,8 +198,8 @@ test_that("break.group.into.buckets runs successfully", {
   #does not check that the groups are shuffled properly
   
   #does-not-crash test
-  expect_warning(break.group.into.buckets(fs[[2]], c(2L,2L,2L,20L)), 
-                 "Provided capacities are larger than actual group: some buckets will not be filled")
+  expect_output(break.group.into.buckets(fs[[2]], c(2L,2L,2L,20L)), 
+                 "NOTE! Provided capacities are larger than actual group: some buckets will not be filled")
 })
 
 
