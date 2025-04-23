@@ -3,7 +3,7 @@
 \name{save.local.GEBVs.blocks.from.file}
 \alias{save.local.GEBVs.blocks.from.file}
 \alias{save.local.gebvs.blocks.from.file}
-\title{Save the local GEBVs of each block in each selected line's haplotypes to a file, using
+\title{OLD NAME | Save the local GEBVs of each block in each selected line's haplotypes to a file, using
 blocks taken from a file.}
 \usage{
 save.local.GEBVs.blocks.from.file(
@@ -29,6 +29,11 @@ the only columns that will be used. Designed for the output of the function
 local GEBVs.}
 }
 \description{
+#' From genomicSimulation v0.2.7,
+it is recommended you read in the block file, then call \link{create.markerblocks} followed by
+\link{save.local.GEBVs}, to replicate the functionality of this function.
+}
+\details{
 Calculates GEBVs for each block of markers listed in 
 `block.file` for the maternal and paternal halves of its genotype. The results
 are saved to a file. The output file is formatted with the blocks as unlabelled columns
@@ -42,7 +47,7 @@ Other saving functions:
 \code{\link{save.allele.counts}()},
 \code{\link{save.genome.model}()},
 \code{\link{save.genotypes}()},
-\code{\link{save.local.GEBVs.blocks.from.chrsplit}()},
+\code{\link{save.local.GEBVs}()},
 \code{\link{save.pedigrees}()}
 }
 \concept{saving functions}

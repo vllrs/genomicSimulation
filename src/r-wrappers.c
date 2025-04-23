@@ -21,6 +21,26 @@ void convertVECSXP_to_GroupNum(SEXP container, GroupNum* output) {
 	}
 }
 
+SEXP register_markerblocksEXPTR(void* b) {
+	SEXP bptr = PROTECT(R_MakeExternalPtr(b, Rf_install("MarkerBlocks"), R_NilValue));
+	R_RegisterCFinalizerEx(bptr, SXP_delete_markerblocks, 1);
+	
+	/*MarkerBlocks* b2 = (MarkerBlocks*) R_ExternalPtrAddr(bptr);
+	Rprintf("Post-registration: n_blocks = %d\n", b2->num_blocks);
+	Rprintf("p: %p\n", R_ExternalPtrAddr(bptr));*/
+	
+	UNPROTECT(1);
+	return bptr;
+}
+
+void check_if_is_markerblocks(SEXP exptr) {
+	SEXP btag = R_ExternalPtrTag(exptr);
+	if (strcmp(CHAR(asChar(btag)), "MarkerBlocks") != 0) {
+		error("The pointer is not a MarkerBlocks object");
+	}
+}
+
+
 /*-------------------------- Setup -------------------------*/
 void init_format_as_matrix(FileFormatSpec* mformat) {
   if (mformat->filetype == GSC_GENOTYPEFILE_UNKNOWN) {
@@ -245,6 +265,95 @@ SEXP SXP_change_eff_set_centres_of_allele(SEXP exd, SEXP s_allele, SEXP s_values
 	}
 	
 	return ScalarInteger(0);
+}
+
+
+SEXP SXP_create_markerblocks_df(SEXP exd, SEXP s_markernames, SEXP s_markerallocs) {
+	// Assumes markernames/markerallocs are sorted according to allocation number. So blocks are always sequential 
+	
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	// Check lengths of the two vcectors are equal
+	if (xlength(s_markernames) != xlength(s_markerallocs)) {
+		error("Columns passed to create.markerblocks are not the same length\n");
+	} else if (xlength(s_markernames) == 0) {
+		error("Empty inputs provided\n");
+	}
+	
+	// First, convert marker names to indexes and remove missing markers
+	int* c_markerallocs = INTEGER(s_markerallocs);
+	
+	GSC_GENOLEN_T* filt_markerix = R_Calloc(xlength(s_markernames), GSC_GENOLEN_T);
+	int* filt_markerallocs = R_Calloc(xlength(s_markernames), int);
+	R_xlen_t filt_ix = 0;
+	
+	GSC_GENOLEN_T nblocks = 1;
+	int currentblock = c_markerallocs[0];
+	
+	for (R_xlen_t i = 0; i < xlength(s_markernames); ++i) {
+		const char* markername = CHAR(STRING_ELT(s_markernames,i));
+		GSC_GENOLEN_T markerix = NA_GENOLEN;
+		if (get_index_of_genetic_marker(markername, d->genome, &markerix)) {
+			filt_markerix[filt_ix] = markerix;
+			filt_markerallocs[filt_ix] = c_markerallocs[i];
+			++filt_ix;
+			
+			if (c_markerallocs[i] != currentblock) {
+				++nblocks;
+				currentblock = c_markerallocs[i];
+			}
+		}
+	}
+	
+	
+	// Then, save in correct MarkerBlocks struct format.
+	MarkerBlocks* b = R_Calloc(1, MarkerBlocks);
+	b->num_blocks=nblocks;
+	b->num_markers_in_block=R_Calloc(nblocks, GSC_GENOLEN_T);
+	b->markers_in_block=R_Calloc(nblocks, GSC_GENOLEN_T*);
+
+	GSC_GENOLEN_T blockix = 0;
+	GSC_GENOLEN_T startix = 0;
+	while (startix < filt_ix) {
+		int blockident = filt_markerallocs[startix];
+		GSC_GENOLEN_T endix = startix + 1;
+		while (filt_markerallocs[endix] == blockident) { ++endix; }
+		GSC_GENOLEN_T nmembers = endix - startix;
+		
+		b->num_markers_in_block[blockix] = nmembers;
+		b->markers_in_block[blockix] = R_Calloc(nmembers, GSC_GENOLEN_T);
+		for (GSC_GENOLEN_T j = 0; j < nmembers; ++j) {
+			b->markers_in_block[blockix][j] = filt_markerix[startix+j];
+		}
+		
+		startix = endix;
+		++blockix;
+	}
+	
+	R_Free(filt_markerix);
+	R_Free(filt_markerallocs);
+	
+	return register_markerblocksEXPTR(b);
+}
+
+SEXP SXP_create_markerblocks_nperchr(SEXP exd, SEXP s_nperchr, SEXP s_mapid) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	int nperchr = asInteger(s_nperchr);
+	if (nperchr == NA_INTEGER || nperchr <= 0) {
+		error("`n.blocks.per.chr` parameter must be a positive number\n");
+	}
+	
+	int mapid = asInteger(s_mapid);
+	if (mapid == NA_INTEGER || mapid < 0) {
+		error("`map` must be a positive number\n");
+	}
+	
+	MarkerBlocks b = create_evenlength_blocks_each_chr(d, MAPID_IFY(mapid), nperchr);
+	MarkerBlocks* bcopy = R_Calloc(1, MarkerBlocks);
+	memcpy(bcopy, &b, sizeof(b));
+	
+	return register_markerblocksEXPTR(bcopy);
 }
 
 /*----------------------- Calculators ---------------------*/
@@ -884,6 +993,101 @@ SEXP SXP_see_marker_names(SEXP exd) {
   return out;
 }
 
+SEXP SXP_see_markerblocks(SEXP exd, SEXP exb) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	check_if_is_markerblocks(exb);
+	MarkerBlocks* b = (MarkerBlocks*) R_ExternalPtrAddr(exb);
+	if (b->num_blocks == NA_GENOLEN) {
+		error("Invalid number of blocks");
+	}
+	
+	GSC_GENOLEN_T nrows = 0;
+	for (GSC_GENOLEN_T i = 0; i < b->num_blocks; ++i) {
+		nrows += b->num_markers_in_block[i];
+	}
+	
+	SEXP out = PROTECT(allocVector(VECSXP, 2));
+	SEXP col1 = PROTECT(allocVector(STRSXP, nrows));
+	SEXP col2 = PROTECT(allocVector(INTSXP, nrows));
+	int* c_col2 = INTEGER(col2);
+	GSC_GENOLEN_T i_overall = 0;
+	for (GSC_GENOLEN_T i = 0; i < b->num_blocks; ++i) {
+		for (GSC_GENOLEN_T j = 0; j < b->num_markers_in_block[i]; ++j) {
+			GSC_GENOLEN_T markerix = b->markers_in_block[i][j];
+			if (markerix < d->genome.n_markers && markerix >= 0) {
+				SET_STRING_ELT(col1, i_overall, mkChar(d->genome.marker_names[markerix]));
+			} else {
+				SET_STRING_ELT(col1, i_overall, mkChar(""));
+			}
+			c_col2[i_overall] = i+1;
+			++i_overall;
+		}
+	}
+
+	SET_VECTOR_ELT(out, 0, col1);
+	SET_VECTOR_ELT(out, 1, col2);
+	UNPROTECT(3);
+	return out;
+}
+
+SEXP SXP_see_local_gebvs(SEXP exd, SEXP exblocks, SEXP s_groups, SEXP s_eff_set_id) {
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
+	check_if_is_markerblocks(exblocks);
+	MarkerBlocks* b = (MarkerBlocks*) R_ExternalPtrAddr(exblocks);
+	
+	if (d->n_eff_sets <= 0) { error("Need to load at least one set of marker effects before requesting breeding values\n"); }
+	int eff_id = asInteger(s_eff_set_id);
+	if (eff_id == NA_INTEGER || eff_id < 0) {
+		error("`effect.set` parameter is of invalid type: needs to be effect set id\n");
+	} else if (eff_id == 0) {
+		//if (d->n_eff_sets > 0) {
+			eff_id = d->eff_set_ids[0].id;
+		//} else {
+		//	error("No effect sets loaded: cannot calculate GEBVs");
+		//}
+	}
+	
+	if (isNull(s_groups)) {
+		gsc_DecimalMatrix m = gsc_calculate_local_bvs(d, NO_GROUP, *b, EFFECTID_IFY(eff_id));
+		SEXP out = PROTECT(allocMatrix(REALSXP, m.dim1, m.dim2));
+		double* outc = REAL(out);
+		for (size_t d1 = 0; d1 < m.dim1; ++d1) {
+			for (size_t d2 = 0; d2 < m.dim2; ++d2) {
+				outc[d1 + m.dim1*d2] = m.matrix[d1][d2];
+			}
+		}
+		gsc_delete_dmatrix(&m);
+		UNPROTECT(1);
+		return(out);
+		
+	} else {
+		R_xlen_t glen = xlength(s_groups);
+		int *groups = INTEGER(s_groups);
+		size_t* gsizes = (size_t*)R_alloc(glen, sizeof(size_t));
+		size_t cumulativesize = check_group_sizes(d, glen, groups, gsizes);
+	
+		SEXP out = PROTECT(allocMatrix(REALSXP, 2*cumulativesize, b->num_blocks));
+		double* outc = REAL(out);
+		R_xlen_t outi = 0;
+		for (R_xlen_t i = 0; i < glen; ++i) {
+		  if (gsizes[i] > 0) {
+			gsc_DecimalMatrix m = gsc_calculate_local_bvs(d, GROUPNUM_IFY(groups[i]), *b, EFFECTID_IFY(eff_id));
+			for (size_t d1 = 0; d1 < m.dim1; ++d1,++outi) {
+				for (size_t d2 = 0; d2 < m.dim2; ++d2) {
+					outc[outi + 2*cumulativesize*d2] = m.matrix[d1][d2];
+				}
+			}
+			gsc_delete_dmatrix(&m);
+		  }
+		}
+		
+		UNPROTECT(1);
+		return(out);
+	}
+}
+
 
 SEXP SXP_see_group_gene_data(SEXP exd, SEXP s_groups, SEXP s_countAllele, SEXP s_unknownAllele) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
@@ -1035,6 +1239,15 @@ SEXP SXP_clear_simdata(SEXP exd) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	delete_simdata(d);
 	return ScalarInteger(0);
+}
+
+void SXP_delete_markerblocks(SEXP sd) {
+	//Rprintf("Garbage collecting MarkerBlocks...\n");
+	//check_if_is_markerblocks(sd);
+	MarkerBlocks* b = (MarkerBlocks*) R_ExternalPtrAddr(sd);
+	delete_markerblocks(b);
+	R_ClearExternalPtr(sd);
+	return;
 }
 
 SEXP SXP_delete_group(SEXP exd, SEXP s_groups) {
@@ -2149,67 +2362,30 @@ SEXP SXP_save_GEBVs(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_eff_set) {
 	return ScalarInteger(0);
 }
 
-SEXP SXP_save_local_GEBVs_blocks_from_file(SEXP exd, SEXP s_filename, SEXP block_file, SEXP s_group, SEXP s_eff_set) {
-	error("This function is currently nonfunctional. Please upgrade or downgrade genomicSimulation. Sorry.");
-	
+SEXP SXP_save_local_GEBVs(SEXP exd, SEXP s_filename, SEXP s_blocks, SEXP s_group, SEXP s_eff_set) {
+	const char* filename = CHAR(asChar(s_filename));
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	GroupNum gr = NO_GROUP;
+	if (!isNull(s_group)) {
+	  gr = GROUPNUM_IFY(asInteger(s_group));
+	}
+	
 	if (d->n_eff_sets <= 0) { error("Need to load at least one set of marker effects before requesting breeding values\n"); }
-
 	int eff_id = asInteger(s_eff_set);
 	if (eff_id == NA_INTEGER || eff_id < 0) {
-	  error("`effect.set` parameter is of invalid type\n");
+		error("`effect.set` parameter is of invalid type\n");
+	} else if (eff_id == 0) {
+		//if (d->n_eff_sets > 0) {
+			eff_id = d->eff_set_ids[0].id;
+		//} else {
+		//	error("No effect sets loaded: cannot calculate GEBVs");
+		//}
 	}
-
-	if (isNull(s_group)) {
-		MarkerBlocks b = load_blocks(d, CHAR(asChar(block_file)));
-		DecimalMatrix dec = calculate_local_bvs(d, NO_GROUP, b, EFFECTID_IFY(eff_id));
-		// TODO: save to: CHAR(asChar(s_filename))
-		
-		delete_markerblocks(&b);
-		delete_dmatrix(&dec);
-	} else if (asInteger(s_group) > 0) {
-		MarkerBlocks b = load_blocks(d, CHAR(asChar(block_file)));
-		DecimalMatrix dec = calculate_local_bvs(d, GROUPNUM_IFY(asInteger(s_group)), b, EFFECTID_IFY(eff_id));
-		// TODO: save to: CHAR(asChar(s_filename))
-		
-		delete_markerblocks(&b);
-		delete_dmatrix(&dec);
-	} else {
-		error("`group` parameter is invalid");
-	}
-
-	return ScalarInteger(0);
-}
-
-SEXP SXP_save_local_GEBVs_blocks_from_chrsplit(SEXP exd, SEXP s_filename, SEXP s_nslices, SEXP s_group, SEXP s_map, SEXP s_eff_set) {
-	error("This function is currently nonfunctional. Please upgrade or downgrade genomicSimulation. Sorry.");
 	
-	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	if (d->n_eff_sets <= 0) { error("Need to load at least one set of marker effects before requesting breeding values\n"); }
-
-	int eff_id = asInteger(s_eff_set);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-	  error("`effect.set` parameter is of invalid type\n");
-	}
-
-	if (isNull(s_group)) {
-		MarkerBlocks b = create_evenlength_blocks_each_chr(d, MAPID_IFY(asInteger(s_map)),asInteger(s_nslices));
-		DecimalMatrix dec = calculate_local_bvs(d, NO_GROUP, b, EFFECTID_IFY(eff_id));
-		// TODO: save to: CHAR(asChar(s_filename))
-		
-		delete_markerblocks(&b);
-		delete_dmatrix(&dec);
-	} else if (asInteger(s_group) > 0) {
-		MarkerBlocks b = create_evenlength_blocks_each_chr(d, MAPID_IFY(asInteger(s_map)), asInteger(s_nslices));
-		DecimalMatrix dec = calculate_local_bvs(d, GROUPNUM_IFY(asInteger(s_group)), b, EFFECTID_IFY(eff_id));
-		// TODO: save to: CHAR(asChar(s_filename))
-		
-		delete_markerblocks(&b);
-		delete_dmatrix(&dec);
-	} else {
-		error("`group` parameter is invalid");
-	}
-
+	check_if_is_markerblocks(s_blocks);
+	MarkerBlocks* b = (MarkerBlocks*) R_ExternalPtrAddr(s_blocks);
+	
+	save_local_bvs(filename, d, gr, *b, EFFECTID_IFY(eff_id), 1);
 	return ScalarInteger(0);
 }
 

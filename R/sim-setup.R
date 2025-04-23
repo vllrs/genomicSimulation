@@ -442,6 +442,87 @@ make.label <- function(default) {
   return(create.new.label(default))
 }
 
+
+#' Create a set of marker blocks from a table of allocations
+#' 
+#' This function is for defining what markers are grouped together when calculating 
+#' local GEBVs with \link{see.local.GEBVs} or \link{save.local.GEBVs}. The user 
+#' defines the allocations of individual markers to blocks. The list of markers 
+#' in the genetic map which can be allocated can be accessed via \link{see.genetic.map}.
+#' 
+#' @param marker.allocations a dataframe or list with two columns, the first 
+#' containing marker names, the second containing a number representing the block
+#' to which the marker should belong. The table does not need to contain every 
+#' marker from the genetic map in the first column, and marker names can be repeated.
+#' Unknown marker names will be ignored.
+#' Block numbers in the second column can be 
+#' any integers (they do not need to be sequential), as long as it is understood that 
+#' markers with the same block number will be grouped together.
+#' @returns a genomicSimulation MarkerBlocks handle that can be passed to 
+#' \code{see.local.GEBVs} or \code{save.local.GEBVs}
+#' 
+#' @seealso \link{create.markerblocks.by.chrlength}
+#' 
+#' @export
+create.markerblocks <- function(marker.allocations) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (length(marker.allocations) != 2 || 
+      length(marker.allocations[[1]]) != length(marker.allocations[[2]])) {
+    stop("marker.allocations must be two columns of equal length.")
+  }
+  marker.allocations <- as.data.frame(marker.allocations)
+  marker.allocations <- marker.allocations[order(marker.allocations[[2]]),]
+  return(.Call(SXP_create_markerblocks_df, sim.data$p,
+               marker.allocations[[1]], as.factor(marker.allocations[[2]])))
+}
+
+#' Create marker blocks by splitting chromosomes by length
+#' 
+#' This function is for defining what markers are grouped together when calculating 
+#' local GEBVs with \link{see.local.GEBVs} or \link{save.local.GEBVs}. Whereas 
+#' \link{create.markerblocks} gives you freedom to group markers however you want,
+#' this function provides a simpler interface to creating blocks where blocks 
+#' are created based on lengths of distance in a chromosome.
+#' 
+#' It divides each chromosome in the map into a certain number of equal-length
+#' segments (equal length according to centimorgan distances), and from each 
+#' segment creates a block representing all the markers that appear in that chromosome region.
+#' It is therefore possible that some blocks will have no markers in them, if there
+#' are 'gaps' in the distribution of markers across the chromosome. The total number
+#' of blocks created will be `number of chromosomes times n.blocks.per.chr`
+#' 
+#' @param n.blocks.per.chr Number of blocks into which each chromosome should be split.
+#' If this is 1, then each block corresponds to one chromosome. If it is more than 1, 
+#' then each chromosome is divided into this many equal-length segments, and a block
+#' created containing the markers that appear in each of those segments.
+#' @param map identifier of a genetic map that defines the chromosomes/linkage groups 
+#' that are to be split by length to make the blocks. By default, it will use the 
+#' oldest map that exists in the simulation.
+#' @returns a genomicSimulation MarkerBlocks handle that can be passed to 
+#' \code{see.local.GEBVs} or \code{save.local.GEBVs}
+#' 
+#' @export
+create.markerblocks.from.chrsplit <- function(n.blocks.per.chr, map=0L) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (length(n.blocks.per.chr) > 1) {
+    stop("n.blocks.per.chr must be a single integer value.")
+  }
+  if (length(map) > 1) {
+    stop("Please provide only one map.")
+  }
+  if (!is.integer(n.blocks.per.chr)) {
+    tmp <- n.blocks.per.chr
+    n.blocks.per.chr <- as.integer(n.blocks.per.chr)
+    if (!isTRUE(all(tmp==n.blocks.per.chr))) { stop("n.blocks.per.chr must be an integer.") }
+  }
+  if (!is.integer(map)) {
+    tmp <- map
+    map <- as.integer(map)
+    if (!isTRUE(all(tmp==map))) { stop("Map identifier must be an integer.") }
+  }
+  return(.Call(SXP_create_markerblocks_nperchr, sim.data$p, n.blocks.per.chr, map))
+}
+
 #' Manually specify the format for a genotype matrix file that will be loaded
 #' 
 #' For use in generating the \code{format} parameter of

@@ -156,6 +156,52 @@ see.minimum.GEBV <- function(eff.set=1L) {
   return(see.minimal.GEBV(eff.set))
 }
 
+#' Get local GEBVs of candidates in the simulation
+#' 
+#' Calculates GEBVs for the maternal and paternal halves of each candidate's genotype
+#' in each of a set of block of markers (for some set of marker blocks 
+#' created by \code{create.markerblocks}).
+#' 
+#' @param blocks external pointer for a marker blocks object created by \code{create.markerblocks}
+#' @param group a vector of integers: the group number(s) of the group(s) to
+#' return breeding values for. 
+#' @param eff.set identifier for the set of marker effects to be used to calculate breeding values.
+#' By default is 0, to use the oldest currently-loaded set of marker effects
+#' 
+#' @return A matrix containing the local breeding values for each haplotype of 
+#' each member of each group. Columns correspond to blocks, each pair of rows 
+#' corresponds to a candidate's two haplotypes. Candidates are ordered the same 
+#' as their ordering in the output of \code{see.group.data}.
+#' @family data access functions 
+#' @export 
+see.local.GEBVs <- function(blocks, group=NULL, eff.set=0L) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (!is.null(group) && !is.integer(group)) {
+    tmp <- group
+    group <- as.integer(group)
+    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
+  }
+  m <- .Call(SXP_see_local_gebvs, sim.data$p, blocks, group, eff.set)
+  return(m)
+}
+
+#' Get breeding values of candidates in the simulation
+#' 
+#' This is an alternate name for \code{see.group.data(..., data.type="B")}. Therefore, 
+#' it can return the breeding values of one or more groups, but does not work with 
+#' \code{group=0L} to get the breeding values of all candidates in the simulation.
+#' You can get the breeding values of all candidates in the simulation by running
+#' \code{see.GEBVs(see.existing.groups()$Group)}.
+#' 
+#' @param group a vector of integers: the group number(s) of the group(s) to
+#' return breeding values for
+#' @param eff.set identifier for the set of marker effects to be used to calculate breeding values.
+#' @return A vector containing the breeding values for each member of each group.
+#' @family data access functions
+#' @export 
+see.GEBVs <- function(group, eff.set=0L) {
+  see.group.data(group,"B",effect.set=eff.set)
+}
 
 #' Identify historical crossover events
 #'

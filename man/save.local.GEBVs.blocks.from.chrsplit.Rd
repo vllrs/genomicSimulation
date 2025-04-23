@@ -3,7 +3,7 @@
 \name{save.local.GEBVs.blocks.from.chrsplit}
 \alias{save.local.GEBVs.blocks.from.chrsplit}
 \alias{save.local.gebvs.blocks.from.chrsplit}
-\title{Save the local GEBVs of each block in each selected line's haplotypes to a file,
+\title{OLD NAME | Save the local GEBVs of each block in each selected line's haplotypes to a file,
 using blocks created by slicing chromosomes into segments.}
 \usage{
 save.local.GEBVs.blocks.from.chrsplit(
@@ -31,6 +31,11 @@ currently active in simulation.}
 local GEBVs. By default uses the first loaded set of effect values.}
 }
 \description{
+From genomicSimulation v0.2.7,
+it is recommended you use \link{create.markerblocks.by.chrlength}, followed by
+\link{save.local.GEBVs}, to replicate the functionality of this function.
+}
+\details{
 \code{save.local.GEBVs.blocks.from.chrsplit} calculates GEBVs for each block of markers created by
 splitting each chromosome into `n.blocks.per.chr` same-length blocks for the maternal
 and paternal halves of its genotype. The results are saved to a file. The output file 
@@ -38,14 +43,4 @@ is formatted with the blocks as unlabelled columns and two rows for each genotyp
 [line name]_1 and [line name]_2. The entries in this matrix are the calculated local 
 GEBVs/block effects.
 }
-\seealso{
-Other saving functions: 
-\code{\link{change.allele.symbol}()},
-\code{\link{save.GEBVs}()},
-\code{\link{save.allele.counts}()},
-\code{\link{save.genome.model}()},
-\code{\link{save.genotypes}()},
-\code{\link{save.local.GEBVs.blocks.from.file}()},
-\code{\link{save.pedigrees}()}
-}
-\concept{saving functions}
+\keyword{internal}

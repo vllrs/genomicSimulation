@@ -41,7 +41,7 @@ This parameter is only used if the data.type corresponds to a request for breedi
 if the data.type corresponds to a request for viewing custom label values.}
 }
 \value{
-A vector containing the desired data output for each member of the group.
+A vector containing the desired data output for each member of each group.
 }
 \description{
 \code{see.group.data} allows you to extract the names, IDs, indexes, 
@@ -88,9 +88,12 @@ Other grouping functions:
 \code{\link{see.group.gene.data}()}
 
 Other data access functions: 
+\code{\link{see.GEBVs}()},
 \code{\link{see.genetic.map}()},
 \code{\link{see.group.gene.data}()},
+\code{\link{see.local.GEBVs}()},
 \code{\link{see.marker.effects}()},
+\code{\link{see.markerblocks}()},
 \code{\link{see.minimal.GEBV}()},
 \code{\link{see.optimal.GEBV}()},
 \code{\link{see.optimal.haplotype}()},

@@ -50,7 +50,7 @@
 #' This parameter is only used if the data.type corresponds to a request for breeding values/GEBVs.
 #' @param label identifier for the custom label to be viewed. This parameter is only used 
 #' if the data.type corresponds to a request for viewing custom label values.
-#' @return A vector containing the desired data output for each member of the group.
+#' @return A vector containing the desired data output for each member of each group.
 #'
 #' @family grouping functions
 #' @family data access functions
@@ -104,7 +104,6 @@ see.group.gene.data <- function(group, count.allele=NA_character_, unknown.allel
   rownames(m) <- .Call(SXP_see_marker_names, sim.data$p)
   return(m)
 } 
-
 
 #' Get a list of the groups currently existing in the SimData
 #'
@@ -188,6 +187,26 @@ see.marker.effects <- function(effectID=0L) {
   return(m)
 }
 
+
+#' View the allocations of markers to blocks in one MarkerBlocks object.
+#' 
+#' @param b An external pointer to a MarkerBlocks object (eg. the pointer returned
+#' by create.markerblocks)
+#' @return A dataframe with columns "marker" and "block". The former contains marker 
+#' names, the latter contains the corresponding block index.
+#' 
+#' @family data access functions
+#' @export 
+see.markerblocks <- function(b) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  if (is.null(b)) { stop("The pointer does not exist.") }
+  if (typeof(b) != "externalptr") { stop("Input must be an external pointer.") }
+  m <- data.frame(.Call(SXP_see_markerblocks, sim.data$p, b))
+  if (is.data.frame(m)) {
+    colnames(m) <- c("marker","block")
+  }
+  return(m)
+}
 
 #' Set the names of genotypes in simulation memory
 #'

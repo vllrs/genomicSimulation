@@ -63,7 +63,7 @@ Other saving functions:
 \code{\link{save.allele.counts}()},
 \code{\link{save.genome.model}()},
 \code{\link{save.genotypes}()},
-\code{\link{save.local.GEBVs.blocks.from.chrsplit}()},
-\code{\link{save.local.GEBVs.blocks.from.file}()}
+\code{\link{save.local.GEBVs.blocks.from.file}()},
+\code{\link{save.local.GEBVs}()}
 }
 \concept{saving functions}

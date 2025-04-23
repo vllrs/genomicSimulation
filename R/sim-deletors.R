@@ -97,3 +97,4 @@ delete.recombination.map <- function(maps) {
   }
   .Call(SXP_delete_recombination_map, sim.data$p, maps)
 }
+

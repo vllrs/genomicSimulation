@@ -188,7 +188,7 @@ save.pedigrees <- function(filename, group=NULL, type=NULL, recursive.format=TRU
   .Call(SXP_save_pedigrees, sim.data$p, my.expand.path(filename), group, recursive.format)
 }
 
-#' Calculate and save breeding values from the simulation to a file
+#' Calculate and save breeding values of candidates in the simulation to a file
 #'
 #' The function prints its results to a tab-separated file with three columns 
 #' (the genotype's ID, its name, and its calculated breeding value/GEBV).
@@ -203,14 +203,41 @@ save.pedigrees <- function(filename, group=NULL, type=NULL, recursive.format=TRU
 #'
 #' @family saving functions
 #' @export
-#' @aliases save.gebvs
 save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	.Call(SXP_save_GEBVs, sim.data$p, my.expand.path(filename), group, eff.set)
 }
 
-#' Save the local GEBVs of each block in each selected line's haplotypes to a file, using
+#' Calculate and save local breeding values of candidates in the simulation to a file
+#' 
+#' Calculates GEBVs for the maternal and paternal halves of each candidate's genotype
+#' in each of a set of block of markers (for some set of marker blocks 
+#' created by \code{create.markerblocks}). The output is saved as a tab-separated
+#' file, where the marker blocks correspond to columns, and each pair of rows 
+#' corresponds to a candidate's two haplotypes. Each entry in the matrix contains the
+#' local breeding value/local GEBV of that candidate's haplotype for that block of 
+#' markers.
+#' 
+#' @param filename A string containing a filename to which the output will
+#' be written
+#' @param group If not set/set to NULL, will print all genotypes.
+#' Otherwise, if a group of that number exists, save only local GEBVs of haplotypes
+#' that belong to that group.
+#' @param eff.set identifier for the set of marker effects to be used to calculate breeding values.
+#' 
+#' @family saving functions
+#' @export
+save.local.GEBVs <- function(filename, blocks, group=NULL, eff.set=1L) {
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  .Call(SXP_save_local_GEBVs, sim.data$p, my.expand.path(filename), blocks, group, eff.set)
+}
+
+#' OLD NAME | Save the local GEBVs of each block in each selected line's haplotypes to a file, using
 #' blocks taken from a file.
+#' 
+#' #' From genomicSimulation v0.2.7,
+#' it is recommended you read in the block file, then call \link{create.markerblocks} followed by
+#' \link{save.local.GEBVs}, to replicate the functionality of this function. 
 #'
 #' Calculates GEBVs for each block of markers listed in 
 #' `block.file` for the maternal and paternal halves of its genotype. The results
@@ -234,8 +261,15 @@ save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 #' @aliases save.local.gebvs.blocks.from.file
 save.local.GEBVs.blocks.from.file <- function(filename, block.file, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	.Call(SXP_save_local_GEBVs_blocks_from_file, sim.data$p, my.expand.path(filename), 
-	             my.expand.path(block.file), group, eff.set)
+  
+  block.df <- read.csv2(block.file,sep="")
+  markers.in.blocks <- strsplit(block.df[,5],";")
+  
+  block.allocs <- do.call(rbind,lapply(1:length(markers.in.blocks),
+                                       function(x) data.frame(markers=markers.in.blocks[[x]],blocks=x)))
+  
+  blocks <- create.markerblocks(block.allocs)
+  save.local.GEBVs(my.expand.path(filename), blocks, group, eff.set)
 }
 
 #' OLD NAME | Save the local GEBVs of each block in each selected line's 
@@ -255,8 +289,12 @@ save.local.GEBVs.by.file <- function(filename, block.file, group=NULL, eff.set=1
   return(save.local.GEBVs.blocks.from.file(filename,block.file,group,eff.set))
 }
 
-#' Save the local GEBVs of each block in each selected line's haplotypes to a file,
+#' OLD NAME | Save the local GEBVs of each block in each selected line's haplotypes to a file,
 #' using blocks created by slicing chromosomes into segments. 
+#'
+#' From genomicSimulation v0.2.7,
+#' it is recommended you use \link{create.markerblocks.by.chrlength}, followed by
+#' \link{save.local.GEBVs}, to replicate the functionality of this function. 
 #'
 #' \code{save.local.GEBVs.blocks.from.chrsplit} calculates GEBVs for each block of markers created by
 #' splitting each chromosome into `n.blocks.per.chr` same-length blocks for the maternal
@@ -276,13 +314,13 @@ save.local.GEBVs.by.file <- function(filename, block.file, group=NULL, eff.set=1
 #' @param eff.set identifier for the set of marker effects with which to calculate 
 #' local GEBVs. By default uses the first loaded set of effect values.
 #'
-#' @family saving functions
+#' @keywords internal
 #' @export
 #' @aliases save.local.gebvs.blocks.from.chrsplit
 save.local.GEBVs.blocks.from.chrsplit <- function(filename, n.blocks.per.chr, group=NULL, map=0L, eff.set=1L) {
-	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	.Call(SXP_save_local_GEBVs_blocks_from_chrsplit, sim.data$p, 
-	             my.expand.path(filename), n.blocks.per.chr, group, map, eff.set)
+  if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  blocks <- create.markerblocks.from.chrsplit(n.blocks.per.chr, map)
+  save.local.GEBVs(my.expand.path(filename), blocks, group, eff.set)
 }
 
 #' OLD NAME | Save the local GEBVs of each block in each selected line's haplotypes to a file,

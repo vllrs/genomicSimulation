@@ -13,6 +13,8 @@ SEXP SXP_load_map(SEXP exd, SEXP s_mapFile);
 SEXP SXP_create_new_label(SEXP exd, SEXP s_default);
 SEXP SXP_change_eff_set_centres(SEXP exd, SEXP s_values, SEXP s_eff_set);
 SEXP SXP_change_eff_set_centres_of_allele(SEXP exd, SEXP s_allele, SEXP s_values, SEXP s_eff_set, SEXP s_reset);
+SEXP SXP_create_markerblocks_df(SEXP exd, SEXP s_markernames, SEXP s_markerallocs);
+SEXP SXP_create_markerblocks_nperchr(SEXP exd, SEXP s_nperchr, SEXP s_mapid);
 
 /*----------------------- Calculators ---------------------*/
 SEXP SXP_see_optimal_haplotype(SEXP exd, SEXP s_eff_set, SEXP s_unknown_char);
@@ -33,9 +35,12 @@ SEXP SXP_see_existing_groups(SEXP exd);
 SEXP SXP_change_name_to_values(SEXP exd, SEXP s_values, SEXP s_group, SEXP s_start);
 SEXP SXP_change_allele_symbol(SEXP exd, SEXP s_markername, SEXP s_from, SEXP s_to);
 
+SEXP SXP_see_markerblocks(SEXP exd, SEXP exb);
+SEXP SXP_see_local_gebvs(SEXP exd, SEXP exblocks, SEXP s_groups, SEXP s_eff_set_id);
 /*------------------------ Deletors ------------------------*/
 SEXP SXP_clear_simdata(SEXP exd);
 void SXP_delete_simdata(SEXP sd);
+void SXP_delete_markerblocks(SEXP sd);
 SEXP SXP_delete_group(SEXP exd, SEXP s_groups);
 SEXP SXP_delete_label(SEXP exd, SEXP s_labels);
 SEXP SXP_delete_eff_set(SEXP exd, SEXP s_eff_sets);
@@ -104,6 +109,4 @@ SEXP SXP_save_genotypes(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_markersa
 SEXP SXP_save_allele_counts(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_allele, SEXP s_markersasrows);
 SEXP SXP_save_pedigrees(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_fullpedigree);
 SEXP SXP_save_GEBVs(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_eff_set);
-SEXP SXP_save_local_GEBVs_blocks_from_file(SEXP exd, SEXP s_filename, SEXP block_file, SEXP s_group, SEXP s_eff_set);
-SEXP SXP_save_local_GEBVs_blocks_from_chrsplit(SEXP exd, SEXP s_filename, SEXP s_nslices, SEXP s_group, SEXP s_map, SEXP s_eff_set);
-
+SEXP SXP_save_local_GEBVs(SEXP exd, SEXP s_filename, SEXP s_blocks, SEXP s_group, SEXP s_eff_set);
