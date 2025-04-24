@@ -4,7 +4,13 @@
 \alias{change.eff.set.centres.of.allele}
 \title{Add or replace centring values for one allele in a set of marker effects}
 \usage{
-change.eff.set.centres.of.allele(allele, to, eff.set = 1L, reset.centres = T)
+change.eff.set.centres.of.allele(
+  allele,
+  to,
+  effect.set = 0L,
+  reset.centres = T,
+  eff.set = 0L
+)
 }
 \arguments{
 \item{allele}{Character symbol of the allele whose effects across these markers
@@ -23,8 +29,6 @@ should contain the centring values corresponding to those markers. Centring valu
 corresponding to markers names in the first column will be overwritten; centring
 values of makrers not in the first column will be unchanged.}
 
-\item{eff.set}{The ID of the effect set to be modified. Return value of load.data or load.effects}
-
 \item{reset.centres}{If true, the centring values of the marker effect set after 
 running this function will be exactly equal to the allele centring value times the allele effect. 
 If false, the centring values after running this function will be equal
@@ -32,6 +36,11 @@ to their previous values plus the product of the new allele centring value and t
 This can be useful when you want to add centring values for multiple alleles:
 run the function with reset.centres=T for the first allele, and reset.centres=F for 
 the next alleles.}
+
+\item{eff.set}{The ID of the effect set to be modified. Return value of load.data or load.effects.
+If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
+For legacy reasons, this parameter can be referred to as either `effect.set` or `eff.set`.
+If `effect.set` is set to a non-default value, it takes precedence over `eff.set`.}
 }
 \description{
 The simulation can store a centring value for each marker in a set of 

@@ -6,15 +6,17 @@
 \title{Get the ultimate/highest-possible GEBV given the pool of alleles available in
 the current group.}
 \usage{
-see.optimal.possible.GEBV(group, eff.set = 1L)
+see.optimal.possible.GEBV(group, effect.set = 0L, eff.set = 0L)
 }
 \arguments{
 \item{group}{an integer: the group number of the group to have a look at.
 Can be a vector of groups, in which case the calculation will be run independently
 for each group.}
 
-\item{eff.set}{identifier for the set of marker effects to use to calculate the
-optimal possible GEBV}
+\item{effect.set}{identifier for the set of marker effects to use to calculate the
+optimal possible GEBV. If not otherwise specified, uses the earliest-loaded 
+marker effect set in this simulation.
+For legacy reasons, you can also set this parameter using the name `eff.set`.}
 }
 \value{
 The highest possible GEBV that can be created from alleles available

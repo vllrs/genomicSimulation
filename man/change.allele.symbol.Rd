@@ -9,7 +9,7 @@ change.allele.symbol(from, to, marker = NA)
 \arguments{
 \item{from}{Character symbol that will be replaced. eg. "A"}
 
-\item{to}{Character symbol that @a from will be replaced with. eg. "b"}
+\item{to}{Character symbol that \code{from} will be replaced with. eg. "b"}
 
 \item{marker}{Name of the genetic marker across which to perform this
 replacement operation, or NA if the allele should be replaced
@@ -24,8 +24,8 @@ or across all markers.
 \details{
 All genotypes present in simulation will be affected.
 
-If @a to is an allele that already exists, all distinction between 
-alleles @a from and @a to will be irreversibly lost.
+If \code{to} is an allele that already exists, all distinction between 
+alleles \code{from} and \code{to} will be irreversibly lost.
 }
 \seealso{
 Other saving functions: 

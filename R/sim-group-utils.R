@@ -12,11 +12,7 @@
 #' @export
 combine.groups <- function(groups) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  if (!is.integer(groups)) {
-    tmp <- groups
-    groups <- as.integer(groups)
-    if (!isTRUE(all(tmp==groups))) { stop("Group identifiers must be integers.") }
-  }
+  groups <- convert.to.integer(groups,"Group identifiers")
 	return(.Call(SXP_combine_groups, sim.data$p, groups))
 }
 
@@ -125,11 +121,7 @@ break.group.evenly <- function(group, into.n=2) {
 #' @export
 break.group.into.buckets <- function(group, buckets) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  if (!is.integer(buckets)) {
-    tmp <- buckets
-    buckets <- as.integer(buckets)
-    if (!isTRUE(all(tmp==buckets))) { stop("Bucket sizes must be integers.") }
-  }
+  buckets <- convert.to.integer(buckets,"Bucket sizes")
   return(.Call(SXP_break_group_into_buckets, sim.data$p, group, buckets))  
 }
 
@@ -181,11 +173,7 @@ break.group.with.probabilities <- function(group, probabilities) {
 #' @export
 make.group <- function(indexes) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  if (!is.integer(indexes)) {
-    tmp <- indexes
-    indexes <- as.integer(indexes)
-    if (!isTRUE(all(tmp==indexes))) { stop("Genotype indexes must be integers.") }
-  }
+  indexes <- convert.to.integer(indexes,"Genotype indexes")
 	return(.Call(SXP_make_group_from, sim.data$p, indexes))
 }
 
@@ -325,11 +313,8 @@ change.label.default <- function(labels, defaults) {
 #' @export
 change.label.to.values <- function(label, values, group=NA, startIndex=NA, skip=0) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  if (!is.integer(values)) {
-    tmp <- values
-    values <- as.integer(values)
-    if (!isTRUE(all(tmp==values))) { stop("Label values must be integers.") }
-  }
+  values <- convert.to.integer(values,"Label values")
+
   if (!is.na(startIndex)) {
     if (skip != 0) { 
         warning("Trying to use both `skip` and the older equivalent parameter `startIndex`. The `startIndex` value will be ignored.") 
@@ -412,24 +397,27 @@ change.label.by.amount <- function(label, amount, group=NA) {
 #' this is a whole-number percentage, i.e. for 5\%, set percentage=5 not 0.05.
 #' @param number If this is an integer and percentage and threshold are NULL, then
 #' the [number] with the best GEBVs will be selected into the new group.
-#' @param eff.set identifier for the set of marker effects to use to calculate the
-#' GEBVs.
+#' @param effect.set identifier for the set of marker effects to use to calculate the
+#' GEBVs. If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
+#' For legacy reasons, you can also set this parameter using the name `eff.set`.
 #' @return the group number of the new group, containing the genotypes that were 
 #' positively selected.
 #'
 #' @family grouping functions
 #' @export
 #' @aliases break.group.by.gebv
-break.group.by.GEBV <- function(from.group, low.score.best=FALSE, percentage=NULL, number=NULL, eff.set=1L) {
+break.group.by.GEBV <- function(from.group, low.score.best=FALSE, percentage=NULL, number=NULL, 
+                                effect.set=0L, eff.set=0L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
+  effect.set <- fallback.param.names(0L, c(effect.set, eff.set))
 	if (sum(is.null(percentage), is.null(number)) == 1) {
 		if (is.null(percentage)) {
 			# we are selecting a certain number
-			return(.Call(SXP_break_group_by_GEBV_num, sim.data$p, from.group, eff.set,
+			return(.Call(SXP_break_group_by_GEBV_num, sim.data$p, from.group, effect.set,
 						number, low.score.best))
 		} else {
 			# we are selecting the top percentage
-			return(.Call(SXP_break_group_by_GEBV_percent, sim.data$p, from.group, eff.set,
+			return(.Call(SXP_break_group_by_GEBV_percent, sim.data$p, from.group, effect.set,
 			             percentage, low.score.best))
 		}
 	}

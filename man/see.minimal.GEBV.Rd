@@ -5,11 +5,13 @@
 \alias{see.minimal.gebv}
 \title{Get the lowest-possible GEBV given the current loaded effect values.}
 \usage{
-see.minimal.GEBV(eff.set = 1L)
+see.minimal.GEBV(effect.set = 0L, eff.set = 0L)
 }
 \arguments{
-\item{eff.set}{identifier for the set of marker effects to use to calculate the
-minimum GEBV.}
+\item{effect.set}{identifier for the set of marker effects to use to calculate the
+minimum GEBV. If not otherwise specified, uses the earliest-loaded marker effect set 
+in this simulation.
+For legacy reasons, you can also set this parameter using the name `eff.set`.}
 }
 \value{
 The lowest possible GEBV

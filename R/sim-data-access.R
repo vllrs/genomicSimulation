@@ -48,6 +48,7 @@
 #' }
 #' @param effect.set identifier for the set of marker effects to be used to calculate breeding values.
 #' This parameter is only used if the data.type corresponds to a request for breeding values/GEBVs.
+#' If it is not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
 #' @param label identifier for the custom label to be viewed. This parameter is only used 
 #' if the data.type corresponds to a request for viewing custom label values.
 #' @return A vector containing the desired data output for each member of each group.
@@ -55,13 +56,9 @@
 #' @family grouping functions
 #' @family data access functions
 #' @export
-see.group.data <- function(group, data.type, effect.set=1L, label=1L) {
+see.group.data <- function(group, data.type, effect.set=0L, label=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  if (!is.integer(group)) {
-    tmp <- group
-    group <- as.integer(group)
-    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
-  }
+  group <- convert.to.integer(group,"Group identifiers",T)
 	return(.Call(SXP_see_group_data, sim.data$p, group, toupper(data.type), effect.set, label))
 }
 
@@ -84,7 +81,7 @@ see.group.data <- function(group, data.type, effect.set=1L, label=1L) {
 #' If it is a character, then return the count of that allele eg. 'A' -> 0 if 
 #' no copies of A at that marker, 1 if heterozygous for A, 2 if "AA" at that marker.
 #' @param unknown.allele The single character that will be used to represent alleles with 
-#' the value '\0' in the table, if @a count.allele is NA. It is unused if @a count.allele
+#' the value '\0' in the table, if \code{count.allele} is NA. It is unused if \code{count.allele}
 #' is not NA. '\0' alleles represent genetic marker/candidate combinations that were 
 #' missing data/failed to load data in the original input file. They propagate 
 #' through the generations the same as non-missing alleles. 
@@ -94,11 +91,7 @@ see.group.data <- function(group, data.type, effect.set=1L, label=1L) {
 #' @export
 see.group.gene.data <- function(group, count.allele=NA_character_, unknown.allele="-") {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  if (!is.integer(group)) {
-    tmp <- group
-    group <- as.integer(group)
-    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
-  }
+  group <- convert.to.integer(group,"Group identifiers",T)
   m <- .Call(SXP_see_group_gene_data, sim.data$p, group, count.allele, unknown.allele)
   colnames(m) <- suppressWarnings(see.group.data(group,"Names"))
   rownames(m) <- .Call(SXP_see_marker_names, sim.data$p)
@@ -143,8 +136,8 @@ see.existing.groups <- function() {
 #' do not track that marker's position, so that marker's position will be NaN 
 #' in the output dataframe.
 #'
-#' @param mapID the identifier of the specific genetic map to view, or zero to 
-#' view the first-loaded/default genetic map.
+#' @param mapID the identifier of the specific genetic map to view. 
+#' If not specified, uses the earliest-loaded genetic map in this simulation.
 #' @return A dataframe containing three columns: the first, named "marker", 
 #' containing marker names; the second, named "chr", containing chromosome numbers;
 #' and the third, named "pos", containing positions in cM.
@@ -172,15 +165,17 @@ see.genetic.map <- function(mapID=0L) {
 #' special value "(centre)" in the allele column will contain that marker's 
 #' centring value.
 #'
-#' @param effectID the identifier of the specific marker effect set to view, or 
-#' zero to view the first-loaded/default marker effect set.
+#' @param effect.set the identifier of the specific marker effect set to view. 
+#' If not specified, uses the first-loaded marker effect set in this simulation.
+#' For legacy reasons, you can also set this parameter using the name `effectID`.
 #' @return A dataframe with columns "marker", "allele" and "eff"
 #'
 #' @family data access functions
 #' @export
-see.marker.effects <- function(effectID=0L) {
+see.marker.effects <- function(effect.set=0L, effectID=0L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  m <- data.frame(.Call(SXP_see_effects, sim.data$p, effectID))
+  effect.set <- fallback.param.names(0L, c(effect.set, effectID))
+  m <- data.frame(.Call(SXP_see_effects, sim.data$p, effect.set))
   if (is.data.frame(m)) {
     colnames(m) <- c("marker","allele","eff")
   }
@@ -248,11 +243,11 @@ change.names.to.values <- function(values, group=NA, startIndex=0) {
 #' 
 #' All genotypes present in simulation will be affected.
 #' 
-#' If @a to is an allele that already exists, all distinction between 
-#' alleles @a from and @a to will be irreversibly lost.
+#' If \code{to} is an allele that already exists, all distinction between 
+#' alleles \code{from} and \code{to} will be irreversibly lost.
 #' 
 #' @param from Character symbol that will be replaced. eg. "A"
-#' @param to Character symbol that @a from will be replaced with. eg. "b"
+#' @param to Character symbol that \code{from} will be replaced with. eg. "b"
 #' @param marker Name of the genetic marker across which to perform this
 #' replacement operation, or NA if the allele should be replaced
 #' across all genetic markers. 

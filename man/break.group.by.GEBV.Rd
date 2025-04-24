@@ -10,7 +10,8 @@ break.group.by.GEBV(
   low.score.best = FALSE,
   percentage = NULL,
   number = NULL,
-  eff.set = 1L
+  effect.set = 0L,
+  eff.set = 0L
 )
 }
 \arguments{
@@ -26,8 +27,9 @@ this is a whole-number percentage, i.e. for 5\%, set percentage=5 not 0.05.}
 \item{number}{If this is an integer and percentage and threshold are NULL, then
 the [number] with the best GEBVs will be selected into the new group.}
 
-\item{eff.set}{identifier for the set of marker effects to use to calculate the
-GEBVs.}
+\item{effect.set}{identifier for the set of marker effects to use to calculate the
+GEBVs. If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
+For legacy reasons, you can also set this parameter using the name `eff.set`.}
 }
 \value{
 the group number of the new group, containing the genotypes that were 

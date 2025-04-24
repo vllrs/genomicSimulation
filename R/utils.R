@@ -24,3 +24,24 @@ chr.names.to.genomicSimulation.numbering <- function(chr.names) {
   data.frame("chr.names"=chr.uniqnames,
              "genomicSimulation.chr.number"=rank(strtoi(chr.uniqnames,36))-1)
 }
+
+
+#' @noRd
+fallback.param.names <- function(emptydefault, params.in.order) {
+  for (param in params.in.order) {
+    if (param != emptydefault) {
+      return(param)
+    }
+  }
+  return(emptydefault)
+}
+
+#' @noRd
+convert.to.integer <- function(values, param.name, allow.na=F) {
+  if (!is.integer(values)) {
+    ivalues <- as.integer(values)
+    if (!isTRUE(all(ivalues==values, na.rm=allow.na))) { stop(param.name, " must be integers.") }
+    values <- ivalues
+  }
+  return(values)
+}

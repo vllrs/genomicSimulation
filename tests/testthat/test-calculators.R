@@ -135,7 +135,7 @@ test_that("Functions to calculate local GEBVs work", {
   expect_equal(b2.dt$marker, c("m1","m2","m1","m3","m1","m3","m2","m1","m3"))
   expect_equal(b2.dt$block, c(1L,1L,1L,2L,3L,3L,4L,4L,4L))
   
-  b2.scores <- see.local.GEBVs(b2)
+  b2.scores <- see.local.GEBVs(b2,1L)
   expect_equal(dim(b2.scores), c(2*6,4))
   for (ii in 1:12) {
     expect_equal(b2.scores[ii,], c(sum(markerscores[ii,c(1,2,1)]), markerscores[ii,3],
@@ -227,9 +227,10 @@ test_that("Functions to calculate local GEBVs of multiple groups work", {
   
   # --------------------
   
-  b1.scores <- see.local.GEBVs(b1, eff.set=init$effectID)
+  b1.scores <- see.local.GEBVs(b1, group=c(init$groupNum,trio,g2,g3), eff.set=init$effectID)
   expect_equal(dim(b1.scores), c(2*(6+3+1),2*3))
-  expect_equal(b1.scores[1:18,], rbind(g_expected_scores,g2_expected_scores))
+  expect_equal(b1.scores[1:18,], rbind(g_expected_scores[c(5,6,7,8,11,12),],
+                                       trio_expected_scores,g2_expected_scores))
   expect_equal(sum(apply(g3_1_possible_scores,1,function(x) all(x == b1.scores[19,]))), 1)
   expect_equal(sum(apply(g3_2_possible_scores,1,function(x) all(x == b1.scores[20,]))), 1)
   

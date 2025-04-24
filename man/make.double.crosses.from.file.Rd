@@ -18,7 +18,8 @@ make.double.crosses.from.file(
   file.prefix = "",
   save.pedigree = FALSE,
   save.gebv = FALSE,
-  save.genotype = FALSE
+  save.genotype = FALSE,
+  map = 0L
 )
 }
 \arguments{
@@ -73,21 +74,25 @@ system memory can hold.}
 \item{save.pedigree}{A logical value. If TRUE, saves the pedigrees of each
 generated genotype to the file with filename "[file.prefix]-pedigree.txt". 
 Pedigrees are saved progressively (1000 at a time). They are saved in recursive 
-predigree format - see @a save.pedigrees or the package vignette for more details.}
+predigree format - see function \code{save.pedigrees} or the package vignette for more details.}
 
 \item{save.gebv}{An integer representing a marker effect set identifier, or 0.
 If FALSE, 0, or negative, does not save GEBVs. If positive and corresponding to the identifier
 of a loaded set of marker effects, saves the GEBVs of each generated genotype to the
 file with filename "[file.prefix]-bv.txt". This is a tab-separated text file. 
 Breeding values for generated genotypes are calculated and saved progressively (1000 at a 
-time). See @a save.GEBVs for more details on the output format. A reminder that 
+time). See function \code{save.GEBVs} for more details on the output format. A reminder that 
 if only one set of marker effects have been loaded, the identifier for that set of 
 marker effects is 1.}
 
 \item{save.genotype}{A logical value. If TRUE, saves the SNP matrix of the generated 
 genotypes to the file with filename "[file.prefix]-genotype.txt". 
 Generated genotypes are saved progressively (1000 at a time). The output file 
-uses genetic markers as columns and genotypes as rows. See @a save.genotypes}
+uses genetic markers as columns and genotypes as rows. See \code{save.genotypes}}
+
+\item{map}{If \code{map1} and \code{map2} are not specified 
+but \code{map} is, then the map specified by parameter \code{map} will be used for 
+both map1 and map2.}
 }
 \value{
 The group number of the new crosses produced

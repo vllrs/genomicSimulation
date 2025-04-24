@@ -4,13 +4,14 @@
 \alias{see.GEBVs}
 \title{Get breeding values of candidates in the simulation}
 \usage{
-see.GEBVs(group, eff.set = 0L)
+see.GEBVs(group, effect.set = 0L, eff.set = 0L)
 }
 \arguments{
 \item{group}{a vector of integers: the group number(s) of the group(s) to
 return breeding values for}
 
-\item{eff.set}{identifier for the set of marker effects to be used to calculate breeding values.}
+\item{effect.set}{identifier for the set of marker effects to be used to calculate breeding values.
+For legacy reasons, you can also set this parameter using the name `eff.set`.}
 }
 \value{
 A vector containing the breeding values for each member of each group.

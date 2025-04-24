@@ -4,18 +4,19 @@
 \alias{save.GEBVs}
 \title{Calculate and save breeding values of candidates in the simulation to a file}
 \usage{
-save.GEBVs(filename, group = NULL, eff.set = 1L)
+save.GEBVs(filename, group = NA, effect.set = 0L, eff.set = 0L)
 }
 \arguments{
 \item{filename}{A string containing a filename to which the output will
 be written}
 
-\item{group}{If not set/set to NULL, will print all genotypes.
+\item{group}{If not set/set to NA or 0, will print all genotypes.
 Otherwise, if a group of that number exists, save only lines that belong
 to that group.}
 
-\item{eff.set}{identifier for the set of marker effects with which to calculate
-GEBVs.}
+\item{effect.set}{identifier for the set of marker effects with which to calculate
+GEBVs. If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
+For legacy reasons, you can also set this parameter using the name `eff.set`.}
 }
 \description{
 The function prints its results to a tab-separated file with three columns 

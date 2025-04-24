@@ -7,8 +7,8 @@
 see.genetic.map(mapID = 0L)
 }
 \arguments{
-\item{mapID}{the identifier of the specific genetic map to view, or zero to 
-view the first-loaded/default genetic map.}
+\item{mapID}{the identifier of the specific genetic map to view. 
+If not specified, uses the earliest-loaded genetic map in this simulation.}
 }
 \value{
 A dataframe containing three columns: the first, named "marker", 

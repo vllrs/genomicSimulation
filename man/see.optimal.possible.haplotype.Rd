@@ -5,15 +5,22 @@
 \title{Get a string containing the ultimate/highest-scoring set of alleles available
 in the current group.}
 \usage{
-see.optimal.possible.haplotype(group, eff.set = 1L, unknown.allele = "-")
+see.optimal.possible.haplotype(
+  group,
+  effect.set = 0L,
+  unknown.allele = "-",
+  eff.set = 0L
+)
 }
 \arguments{
 \item{group}{an integer: the group number of the group to have a look at. 
 Can be a vector of groups, in which case the calculation will be run independently
 for each group.}
 
-\item{eff.set}{identifier for the set of marker effects to use to calculate the
-optimal haplotype and haplotype breeding values}
+\item{effect.set}{identifier for the set of marker effects to use to calculate the
+optimal haplotype and haplotype breeding values. If not otherwise specified, 
+uses the earliest-loaded marker effect set in this simulation.
+For legacy reasons, you can also set this parameter using the name `eff.set`.}
 
 \item{unknown.allele}{The character that will appear in the haplotype at markers
 where there are no known marker effects. If you pass a string to this, only its 

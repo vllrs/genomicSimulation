@@ -4,17 +4,19 @@
 \alias{save.local.GEBVs}
 \title{Calculate and save local breeding values of candidates in the simulation to a file}
 \usage{
-save.local.GEBVs(filename, blocks, group = NULL, eff.set = 1L)
+save.local.GEBVs(filename, blocks, group = NA, effect.set = 0L, eff.set = 0L)
 }
 \arguments{
 \item{filename}{A string containing a filename to which the output will
 be written}
 
-\item{group}{If not set/set to NULL, will print all genotypes.
+\item{group}{If not set/set to NA or 0, will print all genotypes.
 Otherwise, if a group of that number exists, save only local GEBVs of haplotypes
 that belong to that group.}
 
-\item{eff.set}{identifier for the set of marker effects to be used to calculate breeding values.}
+\item{effect.set}{identifier for the set of marker effects to be used to calculate breeding values.
+If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
+For legacy reasons, you can also set this parameter using the name `eff.set`.}
 }
 \description{
 Calculates GEBVs for the maternal and paternal halves of each candidate's genotype

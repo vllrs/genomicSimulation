@@ -17,7 +17,7 @@ If it is a character, then return the count of that allele eg. 'A' -> 0 if
 no copies of A at that marker, 1 if heterozygous for A, 2 if "AA" at that marker.}
 
 \item{unknown.allele}{The single character that will be used to represent alleles with 
-the value '\0' in the table, if @a count.allele is NA. It is unused if @a count.allele
+the value '\0' in the table, if \code{count.allele} is NA. It is unused if \code{count.allele}
 is not NA. '\0' alleles represent genetic marker/candidate combinations that were 
 missing data/failed to load data in the original input file. They propagate 
 through the generations the same as non-missing alleles.}

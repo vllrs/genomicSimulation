@@ -12,6 +12,7 @@
 ## Improvements
 
 - `save.`, `change.` and `delete.` functions no longer return anything. They used to return 0L.
+- Improved consistency in default parameters for group numbers, map IDs, and effect set IDs. The default value for map ID and effect ID parameters everywhere is now 0, which is interpreted as the oldest currently-active genetic map/marker effect set in the simulation. The default value for group numbers is NA, and (across all functions that take group numbers) NA and 0 are both interpreted as requesting all candidates in the simulation rather than only a specific group. (Not all functions accept requests to use all candidates in the simulation. For those that do not, a 0 or NA group number will still throw an error.) 
 
 
 # genomicSimulation v0.2.6

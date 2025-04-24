@@ -4,11 +4,12 @@
 \alias{see.marker.effects}
 \title{View one of the sets of marker effects being used by the simulation}
 \usage{
-see.marker.effects(effectID = 0L)
+see.marker.effects(effect.set = 0L, effectID = 0L)
 }
 \arguments{
-\item{effectID}{the identifier of the specific marker effect set to view, or 
-zero to view the first-loaded/default marker effect set.}
+\item{effect.set}{the identifier of the specific marker effect set to view. 
+If not specified, uses the first-loaded marker effect set in this simulation.
+For legacy reasons, you can also set this parameter using the name `effectID`.}
 }
 \value{
 A dataframe with columns "marker", "allele" and "eff"

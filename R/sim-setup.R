@@ -355,13 +355,17 @@ load.different.effects <- function(effect.file) {
 #' should contain the centring values corresponding to those markers. Centring values 
 #' corresponding to markers names in the first column will be overwritten; centring
 #' values of makrers not in the first column will be unchanged.
-#' @param eff.set The ID of the effect set to be modified. Return value of load.data or load.effects
+#' @param eff.set The ID of the effect set to be modified. Return value of load.data or load.effects.
+#' If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
+#' For legacy reasons, this parameter can be referred to as either `effect.set` or `eff.set`.
+#' If `effect.set` is set to a non-default value, it takes precedence over `eff.set`.
 #' 
 #' @family loader functions
 #' @export
-change.eff.set.centres <- function(to, eff.set=1L) {
+change.eff.set.centres <- function(to, effect.set=0L, eff.set=0L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  .Call(SXP_change_eff_set_centres, sim.data$p, to, eff.set)
+  effect.set <- fallback.param.names(0L, c(effect.set, eff.set))
+  .Call(SXP_change_eff_set_centres, sim.data$p, to, effect.set)
 }
 
 #' Add or replace centring values for one allele in a set of marker effects
@@ -407,9 +411,10 @@ change.eff.set.centres <- function(to, eff.set=1L) {
 #' 
 #' @family loader functions
 #' @export
-change.eff.set.centres.of.allele <- function(allele, to, eff.set=1L, reset.centres=T) {
+change.eff.set.centres.of.allele <- function(allele, to, effect.set=0L, reset.centres=T, eff.set=0L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  .Call(SXP_change_eff_set_centres_of_allele, sim.data$p, allele, to, eff.set, reset.centres)
+  effect.set <- fallback.param.names(0L, c(effect.set, eff.set))
+  .Call(SXP_change_eff_set_centres_of_allele, sim.data$p, allele, to, effect.set, reset.centres)
 }
 
 #' Create a custom label
@@ -509,16 +514,6 @@ create.markerblocks.from.chrsplit <- function(n.blocks.per.chr, map=0L) {
   }
   if (length(map) > 1) {
     stop("Please provide only one map.")
-  }
-  if (!is.integer(n.blocks.per.chr)) {
-    tmp <- n.blocks.per.chr
-    n.blocks.per.chr <- as.integer(n.blocks.per.chr)
-    if (!isTRUE(all(tmp==n.blocks.per.chr))) { stop("n.blocks.per.chr must be an integer.") }
-  }
-  if (!is.integer(map)) {
-    tmp <- map
-    map <- as.integer(map)
-    if (!isTRUE(all(tmp==map))) { stop("Map identifier must be an integer.") }
   }
   return(.Call(SXP_create_markerblocks_nperchr, sim.data$p, n.blocks.per.chr, map))
 }

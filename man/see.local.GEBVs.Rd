@@ -4,16 +4,17 @@
 \alias{see.local.GEBVs}
 \title{Get local GEBVs of candidates in the simulation}
 \usage{
-see.local.GEBVs(blocks, group = NULL, eff.set = 0L)
+see.local.GEBVs(blocks, group, effect.set = 0L, eff.set = 0L)
 }
 \arguments{
 \item{blocks}{external pointer for a marker blocks object created by \code{create.markerblocks}}
 
 \item{group}{a vector of integers: the group number(s) of the group(s) to
-return breeding values for.}
+return breeding values for}
 
-\item{eff.set}{identifier for the set of marker effects to be used to calculate breeding values.
-By default is 0, to use the oldest currently-loaded set of marker effects}
+\item{effect.set}{identifier for the set of marker effects to be used to calculate breeding values.
+By default is 0, to use the oldest currently-loaded set of marker effects.
+For legacy reasons, you can also set this parameter using the name `eff.set`.}
 }
 \value{
 A matrix containing the local breeding values for each haplotype of 

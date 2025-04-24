@@ -4,7 +4,7 @@
 \alias{see.group.data}
 \title{Get data of all individuals that belong to a group.}
 \usage{
-see.group.data(group, data.type, effect.set = 1L, label = 1L)
+see.group.data(group, data.type, effect.set = 0L, label = 1L)
 }
 \arguments{
 \item{group}{a vector of integers: the group number(s) of the group(s) to
@@ -35,7 +35,8 @@ group member is returned.
 }}
 
 \item{effect.set}{identifier for the set of marker effects to be used to calculate breeding values.
-This parameter is only used if the data.type corresponds to a request for breeding values/GEBVs.}
+This parameter is only used if the data.type corresponds to a request for breeding values/GEBVs.
+If it is not otherwise specified, uses the earliest-loaded marker effect set in this simulation.}
 
 \item{label}{identifier for the custom label to be viewed. This parameter is only used 
 if the data.type corresponds to a request for viewing custom label values.}

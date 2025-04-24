@@ -187,7 +187,7 @@ test_that("make.double.crosses.from.file works", {
   
   #Make sure it doesn't crash and creates right-size group
   f <- make.all.unidirectional.crosses(g)
-  g2 <- make.double.crosses.from.file("helper_dcrosses.txt")
+  g2 <- make.double.crosses.from.file("helper_dcrosses.txt",map=1L)
   expect_identical(see.existing.groups(), data.frame("Group"=c(g,f,g2),"GroupSize"=c(6L,15L,2L)))
   
   clear.simdata()

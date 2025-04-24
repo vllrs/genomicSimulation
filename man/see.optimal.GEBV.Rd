@@ -5,11 +5,13 @@
 \alias{see.optimal.gebv}
 \title{Get the ultimate/highest-possible GEBV given the current loaded effect values.}
 \usage{
-see.optimal.GEBV(eff.set = 1L)
+see.optimal.GEBV(effect.set = 0L, eff.set = 0L)
 }
 \arguments{
-\item{eff.set}{identifier for the set of marker effects to use to calculate the
-maximal GEBV}
+\item{effect.set}{identifier for the set of marker effects to use to calculate the
+maximal GEBV. If not otherwise specified, uses the earliest-loaded marker 
+effect set in this simulation.
+For legacy reasons, you can also set this parameter using the name `eff.set`.}
 }
 \value{
 The highest possible GEBV

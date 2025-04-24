@@ -4,13 +4,13 @@
 \alias{save.allele.counts}
 \title{Generate and save count matrices of alleles in the simulation to a file}
 \usage{
-save.allele.counts(filename, group = NULL, allele, markers.as.rows = TRUE)
+save.allele.counts(filename, group = NA, allele, markers.as.rows = TRUE)
 }
 \arguments{
 \item{filename}{A string containing a filename to which the output will
 be written}
 
-\item{group}{If not set/set to NULL, will count and print all genotypes.
+\item{group}{If not set/set to NA or 0, will count and print all genotypes.
 Otherwise, if a group of that number exists, save only lines that belong
 to that group.}
 

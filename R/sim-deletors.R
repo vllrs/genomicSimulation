@@ -28,11 +28,7 @@ clear.simdata <- function() {
 #' @export
 delete.group <- function(groups) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  if (!is.integer(groups)) {
-    tmp <- groups
-    groups <- as.integer(groups)
-    if (!isTRUE(all(tmp==groups))) { stop("Group identifiers must be integers.") }
-  }
+  groups <- convert.to.integer(groups,"Group identifiers")
 	.Call(SXP_delete_group, sim.data$p, groups)
 }
 
@@ -49,11 +45,7 @@ delete.group <- function(groups) {
 #' @export
 delete.label <- function(labels) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  if (!is.integer(labels)) {
-    tmp <- labels
-    labels <- as.integer(labels)
-    if (!isTRUE(all(tmp==labels))) { stop("Label identifiers must be integers.") }
-  }
+  labels <- convert.to.integer(labels,"Label identifiers")
   .Call(SXP_delete_label, sim.data$p, labels)
 }
 
@@ -70,11 +62,7 @@ delete.label <- function(labels) {
 #' @export
 delete.effect.set <- function(effect.sets) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  if (!is.integer(effect.sets)) {
-    tmp <- effect.sets
-    effect.sets <- as.integer(effect.sets)
-    if (!isTRUE(all(tmp==effect.sets))) { stop("Effect set identifiers must be integers.") }
-  }
+  effect.sets <- convert.to.integer(effect.sets,"Effect set identifiers")
   .Call(SXP_delete_eff_set, sim.data$p, effect.sets)
 }
 
@@ -90,11 +78,7 @@ delete.effect.set <- function(effect.sets) {
 #' @export
 delete.recombination.map <- function(maps) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  if (!is.integer(maps)) {
-    tmp <- maps
-    maps <- as.integer(maps)
-    if (!isTRUE(all(tmp==maps))) { stop("Map identifiers must be integers.") }
-  }
+  maps <- convert.to.integer(maps,"Map identifiers")
   .Call(SXP_delete_recombination_map, sim.data$p, maps)
 }
 

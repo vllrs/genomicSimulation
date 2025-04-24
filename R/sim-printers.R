@@ -46,7 +46,7 @@ save.genome.model <- function(filename) {
 #'
 #' @param filename A string containing a filename to which the output will
 #' be written
-#' @param group If not set/set to NULL, will print all genotypes.
+#' @param group If not set/set to NA or 0, will print all genotypes.
 #' Otherwise, if a group of that number exists, save only lines that belong
 #' to that group. Non-integers and negatives raise an error. Nonexistent 
 #' groups result in empty files.
@@ -64,7 +64,7 @@ save.genome.model <- function(filename) {
 #' 
 #' @family saving functions
 #' @export
-save.genotypes <- function(filename, group=NULL, type=NULL, markers.as.rows=FALSE) {
+save.genotypes <- function(filename, group=NA, type=NULL, markers.as.rows=FALSE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	
   if (!is.null(type)) {
@@ -99,7 +99,7 @@ save.genotypes <- function(filename, group=NULL, type=NULL, markers.as.rows=FALS
 #'
 #' @param filename A string containing a filename to which the output will
 #' be written
-#' @param group If not set/set to NULL, will count and print all genotypes.
+#' @param group If not set/set to NA or 0, will count and print all genotypes.
 #' Otherwise, if a group of that number exists, save only lines that belong
 #' to that group.
 #' @param allele The first character of this string will be used as the 
@@ -111,7 +111,7 @@ save.genotypes <- function(filename, group=NULL, type=NULL, markers.as.rows=FALS
 #'
 #' @family saving functions
 #' @export
-save.allele.counts <- function(filename, group=NULL, allele, markers.as.rows=TRUE) {
+save.allele.counts <- function(filename, group=NA, allele, markers.as.rows=TRUE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	.Call(SXP_save_allele_counts, sim.data$p, my.expand.path(filename), 
 	             group, allele, markers.as.rows)
@@ -151,7 +151,7 @@ save.allele.counts <- function(filename, group=NULL, allele, markers.as.rows=TRU
 #'
 #' @param filename A string containing a filename to which the output will
 #' be written
-#' @param group If not set/set to NULL, will print all genotypes.
+#' @param group If not set/set to NA or 0, will print all genotypes.
 #' Otherwise, if a group of that number exists, save only lines that belong
 #' to that group.
 #' @param type The printing format. It is now preferred you use `recursive.format`
@@ -165,7 +165,7 @@ save.allele.counts <- function(filename, group=NULL, allele, markers.as.rows=TRU
 #'
 #' @family saving functions
 #' @export
-save.pedigrees <- function(filename, group=NULL, type=NULL, recursive.format=TRUE) {
+save.pedigrees <- function(filename, group=NA, type=NULL, recursive.format=TRUE) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
 	
   if (!is.null(type)) {
@@ -195,17 +195,19 @@ save.pedigrees <- function(filename, group=NULL, type=NULL, recursive.format=TRU
 #'
 #' @param filename A string containing a filename to which the output will
 #' be written
-#' @param group If not set/set to NULL, will print all genotypes.
+#' @param group If not set/set to NA or 0, will print all genotypes.
 #' Otherwise, if a group of that number exists, save only lines that belong
 #' to that group.
-#' @param eff.set identifier for the set of marker effects with which to calculate
-#' GEBVs.
+#' @param effect.set identifier for the set of marker effects with which to calculate
+#' GEBVs. If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
+#' For legacy reasons, you can also set this parameter using the name `eff.set`.
 #'
 #' @family saving functions
 #' @export
-save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
+save.GEBVs <- function(filename, group=NA, effect.set=0L, eff.set=0L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	.Call(SXP_save_GEBVs, sim.data$p, my.expand.path(filename), group, eff.set)
+  effect.set <- fallback.param.names(0L, c(effect.set, eff.set))
+	.Call(SXP_save_GEBVs, sim.data$p, my.expand.path(filename), group, effect.set)
 }
 
 #' Calculate and save local breeding values of candidates in the simulation to a file
@@ -220,16 +222,19 @@ save.GEBVs <- function(filename, group=NULL, eff.set=1L) {
 #' 
 #' @param filename A string containing a filename to which the output will
 #' be written
-#' @param group If not set/set to NULL, will print all genotypes.
+#' @param group If not set/set to NA or 0, will print all genotypes.
 #' Otherwise, if a group of that number exists, save only local GEBVs of haplotypes
 #' that belong to that group.
-#' @param eff.set identifier for the set of marker effects to be used to calculate breeding values.
+#' @param effect.set identifier for the set of marker effects to be used to calculate breeding values.
+#' If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
+#' For legacy reasons, you can also set this parameter using the name `eff.set`.
 #' 
 #' @family saving functions
 #' @export
-save.local.GEBVs <- function(filename, blocks, group=NULL, eff.set=1L) {
+save.local.GEBVs <- function(filename, blocks, group=NA, effect.set=0L, eff.set=0L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  .Call(SXP_save_local_GEBVs, sim.data$p, my.expand.path(filename), blocks, group, eff.set)
+  effect.set <- fallback.param.names(0L, c(effect.set, eff.set))
+  .Call(SXP_save_local_GEBVs, sim.data$p, my.expand.path(filename), blocks, group, effect.set)
 }
 
 #' OLD NAME | Save the local GEBVs of each block in each selected line's haplotypes to a file, using

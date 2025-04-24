@@ -1,7 +1,7 @@
 #include "r-wrappers.h"
 
 /*--------------------------SEXP HELPERS----------------------*/
-#define GROUPNUM_IFY(n) (GroupNum){.num=n}
+#define GROUPNUM_IFY(n) (GroupNum){.num=((n == NA_INTEGER) ? 0 : n)}
 #define EFFECTID_IFY(n) (EffectID){.id=n}
 #define MAPID_IFY(n)  (MapID){.id=n}
 #define LABELID_IFY(n) (LabelID){.id=n}
@@ -40,6 +40,59 @@ void check_if_is_markerblocks(SEXP exptr) {
 	}
 }
 
+GSC_ID_T extract_effid(SEXP s_eff_set, SimData* d) {
+	if (!d) { error("Simulation object is invalid."); }
+	
+	int eff_id = asInteger(s_eff_set);
+	
+	if (eff_id == NA_INTEGER || eff_id < 0) {
+		error("`effect.set` parameter is of invalid type\n");
+	} else if (eff_id == 0) {
+		if (d->n_eff_sets > 0) {
+			eff_id = d->eff_set_ids[0].id;
+		} else {
+			error("Simulation has no effect sets loaded.\n");
+		}
+	}
+	return eff_id;
+}
+
+GSC_ID_T extract_mapid(SEXP s_mapid, SimData* d, const char* paramname) {
+	if (!d) { error("Simulation object is invalid."); }
+	
+	int map_id = asInteger(s_mapid);
+	
+	if (map_id == NA_INTEGER || map_id < 0) {
+		error("`%s` parameter is of invalid type\n", paramname);
+	} else if (map_id == 0) {
+		if (d->genome.n_maps > 0) {
+			map_id = d->genome.map_ids[0].id;
+		} else {
+			error("Simulation has no genetic maps loaded.\n");
+		}
+	}
+	return map_id;
+}
+GSC_ID_T parse_mapid(GSC_ID_T map_id, SimData* d) {
+	if (!d) { error("Simulation object is invalid."); }
+	
+	if (map_id == 0) {
+		if (d->genome.n_maps > 0) {
+			map_id = d->genome.map_ids[0].id;
+		} else {
+			error("Simulation has no genetic maps loaded.\n");
+		}
+	}
+	return map_id;
+}
+
+GSC_ID_T extract_labelid(SEXP s_label_id) {
+	int label_id = asInteger(s_label_id);
+	if (label_id == NA_INTEGER || label_id < 1) {
+		error("`label` parameter is of invalid type\n");
+	}
+	return label_id;
+}
 
 /*-------------------------- Setup -------------------------*/
 void init_format_as_matrix(FileFormatSpec* mformat) {
@@ -169,10 +222,7 @@ SEXP SXP_create_new_label(SEXP exd, SEXP s_default) {
 SEXP SXP_change_eff_set_centres(SEXP exd, SEXP s_values, SEXP s_eff_set) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int eff_id = asInteger(s_eff_set);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-		error("`effect.set` parameter is of invalid type\n");
-	}
+	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
 	
 	// s_values: if is vector, extract as vector and call change_eff_set_centres_to_values
 	//           if is list, check it has two entries of same length and right type, and call change_eff_set_centres_of_markers
@@ -220,10 +270,7 @@ SEXP SXP_change_eff_set_centres(SEXP exd, SEXP s_values, SEXP s_eff_set) {
 SEXP SXP_change_eff_set_centres_of_allele(SEXP exd, SEXP s_allele, SEXP s_values, SEXP s_eff_set, SEXP s_reset) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
-	int eff_id = asInteger(s_eff_set);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-		error("`effect.set` parameter is of invalid type\n");
-	}
+	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
 	
 	if (asChar(s_allele) == NA_STRING) { error("`allele` parameter is of invalid type"); }
 	char allele = CHAR(asChar(s_allele))[0];
@@ -344,10 +391,7 @@ SEXP SXP_create_markerblocks_nperchr(SEXP exd, SEXP s_nperchr, SEXP s_mapid) {
 		error("`n.blocks.per.chr` parameter must be a positive number\n");
 	}
 	
-	int mapid = asInteger(s_mapid);
-	if (mapid == NA_INTEGER || mapid < 0) {
-		error("`map` must be a positive number\n");
-	}
+	GSC_ID_T mapid = extract_mapid(s_mapid, d, "map");
 	
 	MarkerBlocks b = create_evenlength_blocks_each_chr(d, MAPID_IFY(mapid), nperchr);
 	MarkerBlocks* bcopy = R_Calloc(1, MarkerBlocks);
@@ -363,10 +407,7 @@ SEXP SXP_see_optimal_haplotype(SEXP exd, SEXP s_eff_set, SEXP s_unknown_char) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->n_eff_sets <= 0) { error("Need to load effect values before running this function\n"); }
 
-	int eff_id = asInteger(s_eff_set);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-		error("`effect.set` parameter is of invalid type\n");
-	}
+	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
 	
 	if (asChar(s_unknown_char) == NA_STRING) { error("`unknown.allele` parameter is of invalid type"); }
 	char na_char = CHAR(asChar(s_unknown_char))[0];
@@ -385,10 +426,7 @@ SEXP SXP_get_optimal_possible_haplotype(SEXP exd, SEXP s_groups, SEXP s_eff_set,
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->n_eff_sets <= 0) { error("Need to load effect values before running this function\n"); }
 
-	int eff_id = asInteger(s_eff_set);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-	  error("`effect.set` parameter is of invalid type\n");
-	}
+	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
 	
 	if (asChar(s_unknown_char) == NA_STRING) { error("`unknown.allele` parameter is of invalid type"); }
 	char na_char = CHAR(asChar(s_unknown_char))[0];
@@ -427,10 +465,7 @@ SEXP SXP_get_optimal_GEBV(SEXP exd, SEXP s_eff_set) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->n_eff_sets <= 0) { error("Need to load effect values before running this function\n"); }
 
-	int eff_id = asInteger(s_eff_set);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-		error("`effect.set` parameter is of invalid type\n");
-	}
+	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
 
 	double best_GEBV = calculate_optimal_bv(d, EFFECTID_IFY(eff_id));
 
@@ -444,10 +479,7 @@ SEXP SXP_get_optimal_possible_GEBV(SEXP exd, SEXP s_groups, SEXP s_eff_set) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->n_eff_sets <= 0) { error("Need to load effect values before running this function\n"); }
 
-	int eff_id = asInteger(s_eff_set);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-	  error("`effect.set` parameter is of invalid type\n");
-	}
+	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
 
 	R_xlen_t len = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
@@ -480,10 +512,7 @@ SEXP SXP_get_minimal_GEBV(SEXP exd, SEXP s_eff_set) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	if (d->n_eff_sets <= 0) { error("Need to load effect values before running this function\n"); }
 
-	int eff_id = asInteger(s_eff_set);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-		error("`effect.set` parameter is of invalid type\n");
-	}
+	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
 
 	double worst_GEBV = calculate_minimal_bv(d, EFFECTID_IFY(eff_id));
 
@@ -511,11 +540,11 @@ SEXP SXP_find_crossovers(SEXP exd, SEXP s_parentFile, SEXP s_outFile, SEXP s_win
 SEXP SXP_see_map(SEXP exd, SEXP s_map) {
   SimData* d = (SimData*) R_ExternalPtrAddr(exd);
   
-  int mapid = asInteger(s_map);
+  GSC_ID_T mapid = extract_mapid(s_map, d, "map");
   int mapix = 0;
   if (mapid > 0) { mapix = get_index_of_map(d, MAPID_IFY(mapid)); }
   if (mapix < 0 || mapix >= d->genome.n_maps) {
-    error("Invalid map identifier");
+	error("Invalid map identifier");
   }
 
 	SEXP map = PROTECT(allocVector(VECSXP, 3));
@@ -555,12 +584,11 @@ SEXP SXP_see_map(SEXP exd, SEXP s_map) {
 }
 
 
-SEXP SXP_see_effects(SEXP exd, SEXP s_effset) {
+SEXP SXP_see_effects(SEXP exd, SEXP s_eff_set) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int effID = asInteger(s_effset);
-	int effix = 0;
-	if (effID > 0) { effix = get_index_of_eff_set(d, EFFECTID_IFY(effID)); }
+	GSC_ID_T effID = extract_effid(s_eff_set, d);
+	int effix = get_index_of_eff_set(d, EFFECTID_IFY(effID));
 	if (effix < 0 || effix >= d->n_eff_sets) {
 		error("Invalid marker effect set identifier");
 	}
@@ -750,10 +778,7 @@ SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set
 	    error("Need to load at least one set of marker effects before requesting breeding values\n"); 
 	  }
 	  
-	  int eff_id = asInteger(s_eff_set_id);
-	  if (eff_id == NA_INTEGER || eff_id < 1) {
-	    error("`effect.set` parameter is of invalid type: needs to be effect set id\n");
-	  }
+	  GSC_ID_T eff_id = extract_effid(s_eff_set_id, d);
 	  
 	  out = PROTECT(allocVector(REALSXP, cumulativesize));
 	  outcr = REAL(out);
@@ -821,10 +846,7 @@ SEXP SXP_see_group_data(SEXP exd, SEXP s_groups, SEXP s_whatData, SEXP s_eff_set
 	case ACCESS_LABEL: // uses a bidirectional iterator through each group
 	  if (d->n_labels <= 0) { error("Need to create at least one custom label before requesting custom label values\n"); }
 	  
-	  int label_id = asInteger(s_label_id);
-	  if (label_id == NA_INTEGER || label_id < 1) {
-	    error("`label` parameter is of invalid type: needs to be a custom label id\n");
-	  }
+	  GSC_ID_T label_id = extract_labelid(s_label_id);
 	  int label_index = get_index_of_label(d, LABELID_IFY(label_id));
 	  if (label_index == GSC_NA) {
 	    error("`label` parameter does not match a current existing custom label id\n");
@@ -1038,54 +1060,30 @@ SEXP SXP_see_local_gebvs(SEXP exd, SEXP exblocks, SEXP s_groups, SEXP s_eff_set_
 	MarkerBlocks* b = (MarkerBlocks*) R_ExternalPtrAddr(exblocks);
 	
 	if (d->n_eff_sets <= 0) { error("Need to load at least one set of marker effects before requesting breeding values\n"); }
-	int eff_id = asInteger(s_eff_set_id);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-		error("`effect.set` parameter is of invalid type: needs to be effect set id\n");
-	} else if (eff_id == 0) {
-		//if (d->n_eff_sets > 0) {
-			eff_id = d->eff_set_ids[0].id;
-		//} else {
-		//	error("No effect sets loaded: cannot calculate GEBVs");
-		//}
-	}
+	GSC_ID_T eff_id = extract_effid(s_eff_set_id, d);
 	
-	if (isNull(s_groups)) {
-		gsc_DecimalMatrix m = gsc_calculate_local_bvs(d, NO_GROUP, *b, EFFECTID_IFY(eff_id));
-		SEXP out = PROTECT(allocMatrix(REALSXP, m.dim1, m.dim2));
-		double* outc = REAL(out);
-		for (size_t d1 = 0; d1 < m.dim1; ++d1) {
+	R_xlen_t glen = xlength(s_groups);
+	int *groups = INTEGER(s_groups);
+	size_t* gsizes = (size_t*)R_alloc(glen, sizeof(size_t));
+	size_t cumulativesize = check_group_sizes(d, glen, groups, gsizes);
+
+	SEXP out = PROTECT(allocMatrix(REALSXP, 2*cumulativesize, b->num_blocks));
+	double* outc = REAL(out);
+	R_xlen_t outi = 0;
+	for (R_xlen_t i = 0; i < glen; ++i) {
+	  if (gsizes[i] > 0) {
+		gsc_DecimalMatrix m = gsc_calculate_local_bvs(d, GROUPNUM_IFY(groups[i]), *b, EFFECTID_IFY(eff_id));
+		for (size_t d1 = 0; d1 < m.dim1; ++d1,++outi) {
 			for (size_t d2 = 0; d2 < m.dim2; ++d2) {
-				outc[d1 + m.dim1*d2] = m.matrix[d1][d2];
+				outc[outi + 2*cumulativesize*d2] = m.matrix[d1][d2];
 			}
 		}
 		gsc_delete_dmatrix(&m);
-		UNPROTECT(1);
-		return(out);
-		
-	} else {
-		R_xlen_t glen = xlength(s_groups);
-		int *groups = INTEGER(s_groups);
-		size_t* gsizes = (size_t*)R_alloc(glen, sizeof(size_t));
-		size_t cumulativesize = check_group_sizes(d, glen, groups, gsizes);
-	
-		SEXP out = PROTECT(allocMatrix(REALSXP, 2*cumulativesize, b->num_blocks));
-		double* outc = REAL(out);
-		R_xlen_t outi = 0;
-		for (R_xlen_t i = 0; i < glen; ++i) {
-		  if (gsizes[i] > 0) {
-			gsc_DecimalMatrix m = gsc_calculate_local_bvs(d, GROUPNUM_IFY(groups[i]), *b, EFFECTID_IFY(eff_id));
-			for (size_t d1 = 0; d1 < m.dim1; ++d1,++outi) {
-				for (size_t d2 = 0; d2 < m.dim2; ++d2) {
-					outc[outi + 2*cumulativesize*d2] = m.matrix[d1][d2];
-				}
-			}
-			gsc_delete_dmatrix(&m);
-		  }
-		}
-		
-		UNPROTECT(1);
-		return(out);
+	  }
 	}
+	
+	UNPROTECT(1);
+	return(out);
 }
 
 
@@ -1564,12 +1562,7 @@ SEXP SXP_break_group_into_probabilities(SEXP exd, SEXP s_group, SEXP s_probs) {
 SEXP SXP_break_group_by_label_value(SEXP exd, SEXP s_label, SEXP s_value, SEXP s_groups) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int label = asInteger(s_label);
-	if (label == NA_INTEGER) {
-		error("`label` parameter is invalid: must be an integer");
-	} else if (label < 0) {
-		error("`label` parameter is invalid: negative");
-	}
+	GSC_ID_T label = extract_labelid(s_label);
 
 	R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
@@ -1612,12 +1605,7 @@ SEXP SXP_break_group_by_label_range(SEXP exd, SEXP s_label, SEXP s_lowbound, SEX
 
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int label = asInteger(s_label);
-	if (label == NA_INTEGER) {
-		error("`label` parameter is invalid: must be an integer");
-	} else if (label < 0) {
-		error("`label` parameter is invalid: negative");
-	}
+	GSC_ID_T label = extract_labelid(s_label);
 
 	R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
@@ -1674,8 +1662,8 @@ SEXP SXP_change_label_default(SEXP exd, SEXP s_labels, SEXP s_defaults) {
 	R_xlen_t matchedLen = lblen < dlen ? lblen : dlen;
 
 	for (R_xlen_t i = 0; i < matchedLen; ++i) {
-		if (labels[i] < 1) {
-			error("entry in `label` vector is invalid: too small or large to be a label");
+		if (labels[i] == NA_INTEGER || labels[i] == 0) {
+			error("entry in `label` vector is invalid");
 		} else {
 			change_label_default(d, LABELID_IFY(labels[i]), defaults[i]);
 		}
@@ -1687,13 +1675,8 @@ SEXP SXP_change_label_default(SEXP exd, SEXP s_labels, SEXP s_defaults) {
 SEXP SXP_change_label_to_values(SEXP exd, SEXP s_label, SEXP s_values, SEXP s_group, SEXP s_skip) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int label = asInteger(s_label);
-	if (label == NA_INTEGER) {
-		error("`label` parameter is invalid: must be an integer");
-	} else if (label < 0) {
-		error("`label` parameter is invalid: negative");
-	}
-
+	GSC_ID_T label = extract_labelid(s_label);
+	
 	R_xlen_t vlen = xlength(s_values);
 	int* values = INTEGER(s_values);
 
@@ -1717,12 +1700,7 @@ SEXP SXP_change_label_to_values(SEXP exd, SEXP s_label, SEXP s_values, SEXP s_gr
 SEXP SXP_change_label_by_amount(SEXP exd, SEXP s_label, SEXP s_incr, SEXP s_groups) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int label = asInteger(s_label);
-	if (label == NA_INTEGER) {
-		error("`label` parameter is invalid: must be an integer");
-	} else if (label < 0) {
-		error("`label` parameter is invalid: negative");
-	}
+	GSC_ID_T label = extract_labelid(s_label);
 
 	int incr = asInteger(s_incr);
 	if (incr == NA_INTEGER) {
@@ -1758,12 +1736,7 @@ SEXP SXP_change_label_by_amount(SEXP exd, SEXP s_label, SEXP s_incr, SEXP s_grou
 SEXP SXP_change_label_to_this(SEXP exd, SEXP s_label, SEXP s_const, SEXP s_groups) {
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
-	int label = asInteger(s_label);
-	if (label == NA_INTEGER) {
-		error("`label` parameter is invalid: must be an integer");
-	} else if (label < 0) {
-		error("`label` parameter is invalid: negative");
-	}
+	GSC_ID_T label = extract_labelid(s_label);
 
 	int num = asInteger(s_const);
 	if (num == NA_INTEGER) {
@@ -1807,10 +1780,7 @@ SEXP SXP_break_group_by_GEBV_num(SEXP exd, SEXP s_groups, SEXP s_eff_set, SEXP s
 		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: negative at index %i\n", i+1); }
 	}
 
-	int eff_id = asInteger(s_eff_set);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-	  error("`effect.set` parameter is of invalid type\n");
-	}
+	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
 
 	int num_to_select = asInteger(s_number);
 	if (num_to_select == NA_INTEGER || num_to_select < 0) {
@@ -1844,10 +1814,7 @@ SEXP SXP_break_group_by_GEBV_percent(SEXP exd, SEXP s_groups, SEXP s_eff_set, SE
 		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: negative at index %i\n", i+1); }
 	}
 
-	int eff_id = asInteger(s_eff_set);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-	  error("`effect.set` parameter is of invalid type\n");
-	}
+	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
 
 	double pc_to_select = asReal(s_percent);
 	if (ISNA(pc_to_select) || pc_to_select < 0) {
@@ -1959,19 +1926,20 @@ SEXP SXP_make_random_crosses(SEXP exd, SEXP s_groups, SEXP s_crosses, SEXP s_cap
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
 	if (glen == 1) {
-		return ScalarInteger(make_random_crosses(d, GROUPNUM_IFY(groups[0]), n, cap, MAPID_IFY(map[0]), g).num);
+		return ScalarInteger(make_random_crosses(d, GROUPNUM_IFY(groups[0]), n, cap, MAPID_IFY(parse_mapid(map[0],d)), g).num);
 
 	} else {
 		// Get an R vector of the same length as the number of new size 1 groups created
 		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
 		if (maplen == 1) {
+			gsc_MapID gsmap = MAPID_IFY(parse_mapid(map[0],d));
 			for (R_xlen_t i = 0; i < glen; ++i) {
-				outc[i] = make_random_crosses(d, GROUPNUM_IFY(groups[i]), n, cap, MAPID_IFY(map[0]), g).num;
+				outc[i] = make_random_crosses(d, GROUPNUM_IFY(groups[i]), n, cap, gsmap, g).num;
 			}
 		} else {
 			for (R_xlen_t i = 0; i < glen; ++i) {
-				outc[i] = make_random_crosses(d, GROUPNUM_IFY(groups[i]), n, cap, MAPID_IFY(map[i]), g).num;
+				outc[i] = make_random_crosses(d, GROUPNUM_IFY(groups[i]), n, cap, MAPID_IFY(parse_mapid(map[i],d)), g).num;
 			}
 		}
 		UNPROTECT(1);
@@ -1997,18 +1965,16 @@ SEXP SXP_make_random_crosses_between(SEXP exd, SEXP s_group1, SEXP s_group2, SEX
 	int cap2 = asInteger(s_cap2);
 	if (cap2 == NA_INTEGER) { error("The parameter `cap2` is invalid\n"); }
 	
+	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
+	
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
 		warning("More than one recombination map per group provided. Only the first recombination map will be used");
 	}
-	int map1 = asInteger(s_map1);
-	if (map1 == NA_INTEGER || map1 < 0) { error("The parameter `map1` is invalid\n"); }
-	int map2 = asInteger(s_map2);
-	if (map2 == NA_INTEGER || map2 < 0) { error("The parameter `map2` is invalid\n"); }
+	GSC_ID_T map1 = extract_mapid(s_map1,d,"map1");
+	GSC_ID_T map2 = extract_mapid(s_map2,d,"map2");
 
 	int n = asInteger(s_crosses);
 	if (n == NA_INTEGER) { error("`n.crosses` parameter is invalid\n"); }
-
-	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
 	return ScalarInteger(make_random_crosses_between(d, GROUPNUM_IFY(group1_c), GROUPNUM_IFY(group2_c), n, cap1, cap2, MAPID_IFY(map1), MAPID_IFY(map2), g).num);
 }
@@ -2072,11 +2038,8 @@ SEXP SXP_make_targeted_crosses(SEXP exd, SEXP s_firstparents, SEXP s_secondparen
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
 		warning("More than one recombination map per group provided. Only the first recombination map each will be used");
 	}
-	int map1 = asInteger(s_map1);
-	if (map1 == NA_INTEGER || map1 < 0) { error("The parameter `map1` is invalid\n"); }
-	int map2 = asInteger(s_map2);
-	if (map2 == NA_INTEGER || map2 < 0) { error("The parameter `map2` is invalid\n"); }
-
+	GSC_ID_T map1 = extract_mapid(s_map1,d,"map1");
+	GSC_ID_T map2 = extract_mapid(s_map2,d,"map2");
 
 	GenOptions g = SXP_create_genoptions(s_name, s_namePrefix, s_familySize, s_trackPedigree,
 								 s_giveIds, s_filePrefix, s_savePedigree, s_saveEffects,
@@ -2100,10 +2063,8 @@ SEXP SXP_make_crosses_from_file(SEXP exd, SEXP s_filename, SEXP s_map1, SEXP s_m
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
 		warning("More than one recombination map per parent provided. Only the first recombination map each will be used");
 	}
-	int map1 = asInteger(s_map1);
-	if (map1 == NA_INTEGER || map1 < 0) { error("The parameter `map1` is invalid\n"); }
-	int map2 = asInteger(s_map2);
-	if (map2 == NA_INTEGER || map2 < 0) { error("The parameter `map2` is invalid\n"); }
+	GSC_ID_T map1 = extract_mapid(s_map1,d,"map1");
+	GSC_ID_T map2 = extract_mapid(s_map2,d,"map2");
 
 	return ScalarInteger(make_crosses_from_file(d, filename, MAPID_IFY(map1),MAPID_IFY(map2), g).num);
 }
@@ -2122,10 +2083,8 @@ SEXP SXP_make_double_crosses_from_file(SEXP exd, SEXP s_filename, SEXP s_map1, S
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
 		warning("More than one recombination map per parent provided. Only the first recombination map each will be used");
 	}
-	int map1 = asInteger(s_map1);
-	if (map1 == NA_INTEGER || map1 < 0) { error("The parameter `map1` is invalid\n"); }
-	int map2 = asInteger(s_map2);
-	if (map2 == NA_INTEGER || map2 < 0) { error("The parameter `map2` is invalid\n"); }
+	GSC_ID_T map1 = extract_mapid(s_map1,d,"map1");
+	GSC_ID_T map2 = extract_mapid(s_map2,d,"map2");
 
 	return ScalarInteger(make_double_crosses_from_file(d, filename, MAPID_IFY(map1), MAPID_IFY(map2), g).num);
 
@@ -2152,18 +2111,19 @@ SEXP SXP_make_all_unidirectional_crosses(SEXP exd, SEXP s_groups, SEXP s_map, SE
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
 	if (glen == 1) {
-		return ScalarInteger(make_all_unidirectional_crosses(d, GROUPNUM_IFY(groups[0]), MAPID_IFY(map[0]), g).num);
+		return ScalarInteger(make_all_unidirectional_crosses(d, GROUPNUM_IFY(groups[0]), MAPID_IFY(parse_mapid(map[0],d)), g).num);
 	} else {
 		// Get an R vector of the same length as the number of new size 1 groups created
 		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
 		if (maplen == 1) {
+			gsc_MapID gsmap = MAPID_IFY(parse_mapid(map[0],d));
 			for (R_xlen_t i = 0; i < glen; ++i) {
-				outc[i] = make_all_unidirectional_crosses(d, GROUPNUM_IFY(groups[i]), MAPID_IFY(map[0]), g).num;
+				outc[i] = make_all_unidirectional_crosses(d, GROUPNUM_IFY(groups[i]), gsmap, g).num;
 			}
 		} else {
 			for (R_xlen_t i = 0; i < glen; ++i) {
-				outc[i] = make_all_unidirectional_crosses(d, GROUPNUM_IFY(groups[i]), MAPID_IFY(map[i]), g).num;
+				outc[i] = make_all_unidirectional_crosses(d, GROUPNUM_IFY(groups[i]), MAPID_IFY(parse_mapid(map[i],d)), g).num;
 			}
 	
 		}
@@ -2196,18 +2156,19 @@ SEXP SXP_self_n_times(SEXP exd, SEXP s_groups, SEXP s_ngen, SEXP s_map, SEXP s_n
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
 	if (glen == 1) {
-		return ScalarInteger(self_n_times(d, cn, GROUPNUM_IFY(groups[0]), MAPID_IFY(map[0]), g).num);
+		return ScalarInteger(self_n_times(d, cn, GROUPNUM_IFY(groups[0]), MAPID_IFY(parse_mapid(map[0],d)), g).num);
 	} else {
 		// Get an R vector of the same length as the number of new size 1 groups created
 		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
 		if (maplen == 1) {
+			gsc_MapID gsmap = MAPID_IFY(parse_mapid(map[0],d));
 			for (R_xlen_t i = 0; i < glen; ++i) {
-				outc[i] = self_n_times(d, cn, GROUPNUM_IFY(groups[i]), MAPID_IFY(map[0]), g).num;
+				outc[i] = self_n_times(d, cn, GROUPNUM_IFY(groups[i]), gsmap, g).num;
 			}
 		} else {
 			for (R_xlen_t i = 0; i < glen; ++i) {
-				outc[i] = self_n_times(d, cn, GROUPNUM_IFY(groups[i]), MAPID_IFY(map[i]), g).num;
+				outc[i] = self_n_times(d, cn, GROUPNUM_IFY(groups[i]), MAPID_IFY(parse_mapid(map[i],d)), g).num;
 			}			
 		}
 		UNPROTECT(1);
@@ -2236,18 +2197,19 @@ SEXP SXP_make_doubled_haploids(SEXP exd, SEXP s_groups, SEXP s_map, SEXP s_name,
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 
 	if (glen == 1) {
-		return ScalarInteger(make_doubled_haploids(d, GROUPNUM_IFY(groups[0]), MAPID_IFY(map[0]), g).num);
+		return ScalarInteger(make_doubled_haploids(d, GROUPNUM_IFY(groups[0]), MAPID_IFY(parse_mapid(map[0],d)), g).num);
 	} else {
 		// Get an R vector of the same length as the number of new size 1 groups created
 		SEXP out = PROTECT(allocVector(INTSXP, glen));
 		int* outc = INTEGER(out);
 		if (maplen == 1) {
+			gsc_MapID gsmap = MAPID_IFY(parse_mapid(map[0],d));
 			for (R_xlen_t i = 0; i < glen; ++i) {
-				outc[i] = make_doubled_haploids(d, GROUPNUM_IFY(groups[i]), MAPID_IFY(map[0]), g).num;
+				outc[i] = make_doubled_haploids(d, GROUPNUM_IFY(groups[i]), gsmap, g).num;
 			}
 		} else {
 			for (R_xlen_t i = 0; i < glen; ++i) {
-				outc[i] = make_doubled_haploids(d, GROUPNUM_IFY(groups[i]), MAPID_IFY(map[i]), g).num;
+				outc[i] = make_doubled_haploids(d, GROUPNUM_IFY(groups[i]), MAPID_IFY(parse_mapid(map[i],d)), g).num;
 			}			
 		}
 		UNPROTECT(1);
@@ -2292,10 +2254,8 @@ SEXP SXP_make_clones(SEXP exd, SEXP s_groups, SEXP s_inherit_name, SEXP s_name,
 SEXP SXP_save_genotypes(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_markersasrows) {
 	const char* filename = CHAR(asChar(s_filename));
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	GroupNum gr = NO_GROUP;
-	if (!isNull(s_group)) {
-	  gr = GROUPNUM_IFY(asInteger(s_group));
-	}
+	GroupNum gr = GROUPNUM_IFY(asInteger(s_group));
+	
 	int markers_as_rows;
 	if (isLogical(s_markersasrows) && asLogical(s_markersasrows) != NA_LOGICAL) {
 	  markers_as_rows = asLogical(s_markersasrows);
@@ -2310,10 +2270,8 @@ SEXP SXP_save_genotypes(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_markersa
 SEXP SXP_save_allele_counts(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_allele, SEXP s_markersasrows) {
 	const char* filename = CHAR(asChar(s_filename));
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	GroupNum gr = NO_GROUP;
-	if (!isNull(s_group)) {
-	  gr = GROUPNUM_IFY(asInteger(s_group));
-	}
+	GroupNum gr = GROUPNUM_IFY(asInteger(s_group));
+	
 	const char allele = CHAR(asChar(s_allele))[0];
 	int markers_as_rows;
 	if (isLogical(s_markersasrows) && asLogical(s_markersasrows) != NA_LOGICAL) {
@@ -2329,10 +2287,8 @@ SEXP SXP_save_allele_counts(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_alle
 SEXP SXP_save_pedigrees(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_fullpedigree) {
 	const char* filename = CHAR(asChar(s_filename));
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	GroupNum gr = NO_GROUP;
-	if (!isNull(s_group)) {
-	  gr = GROUPNUM_IFY(asInteger(s_group));
-	}
+	GroupNum gr = GROUPNUM_IFY(asInteger(s_group));
+	
 	int full_pedigree;
 	if (isLogical(s_fullpedigree) && asLogical(s_fullpedigree) != NA_LOGICAL) {
 	  full_pedigree = asLogical(s_fullpedigree);
@@ -2347,16 +2303,10 @@ SEXP SXP_save_pedigrees(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_fullpedi
 SEXP SXP_save_GEBVs(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_eff_set) {
 	const char* filename = CHAR(asChar(s_filename));
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	GroupNum gr = NO_GROUP;
-	if (!isNull(s_group)) {
-	  gr = GROUPNUM_IFY(asInteger(s_group));
-	}
+	GroupNum gr = GROUPNUM_IFY(asInteger(s_group));
 	
 	if (d->n_eff_sets <= 0) { error("Need to load at least one set of marker effects before requesting breeding values\n"); }
-	int eff_id = asInteger(s_eff_set);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-	  error("`effect.set` parameter is of invalid type\n");
-	}
+	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
 
   save_bvs(filename, d, gr, EFFECTID_IFY(eff_id));
 	return ScalarInteger(0);
@@ -2365,22 +2315,10 @@ SEXP SXP_save_GEBVs(SEXP exd, SEXP s_filename, SEXP s_group, SEXP s_eff_set) {
 SEXP SXP_save_local_GEBVs(SEXP exd, SEXP s_filename, SEXP s_blocks, SEXP s_group, SEXP s_eff_set) {
 	const char* filename = CHAR(asChar(s_filename));
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
-	GroupNum gr = NO_GROUP;
-	if (!isNull(s_group)) {
-	  gr = GROUPNUM_IFY(asInteger(s_group));
-	}
+	GroupNum gr = GROUPNUM_IFY(asInteger(s_group));
 	
 	if (d->n_eff_sets <= 0) { error("Need to load at least one set of marker effects before requesting breeding values\n"); }
-	int eff_id = asInteger(s_eff_set);
-	if (eff_id == NA_INTEGER || eff_id < 0) {
-		error("`effect.set` parameter is of invalid type\n");
-	} else if (eff_id == 0) {
-		//if (d->n_eff_sets > 0) {
-			eff_id = d->eff_set_ids[0].id;
-		//} else {
-		//	error("No effect sets loaded: cannot calculate GEBVs");
-		//}
-	}
+	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
 	
 	check_if_is_markerblocks(s_blocks);
 	MarkerBlocks* b = (MarkerBlocks*) R_ExternalPtrAddr(s_blocks);

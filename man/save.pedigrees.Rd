@@ -4,13 +4,13 @@
 \alias{save.pedigrees}
 \title{Save pedigrees from the simulation to a file}
 \usage{
-save.pedigrees(filename, group = NULL, type = NULL, recursive.format = TRUE)
+save.pedigrees(filename, group = NA, type = NULL, recursive.format = TRUE)
 }
 \arguments{
 \item{filename}{A string containing a filename to which the output will
 be written}
 
-\item{group}{If not set/set to NULL, will print all genotypes.
+\item{group}{If not set/set to NA or 0, will print all genotypes.
 Otherwise, if a group of that number exists, save only lines that belong
 to that group.}
 

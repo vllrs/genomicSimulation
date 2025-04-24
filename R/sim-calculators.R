@@ -14,8 +14,10 @@
 #' associated with missing alleles. A '\0' missing allele in the optimal haplotype
 #' will truncate the string.
 #'
-#' @param eff.set identifier for the set of marker effects to use to calculate the
-#' haplotypes and haplotype scores.
+#' @param effect.set identifier for the set of marker effects to use to calculate the
+#' haplotypes and haplotype scores. If not otherwise specified, uses the 
+#' earliest-loaded marker effect set in this simulation. 
+#' For legacy reasons, you can also set this parameter using the name `eff.set`. 
 #' @param unknown.allele The character that will appear in the haplotype at markers
 #' where there are no known marker effects. If you pass a string to this, only its 
 #' first character will be used.
@@ -26,9 +28,10 @@
 #'
 #' @family data access functions
 #' @export
-see.optimal.haplotype <- function(eff.set=1L,unknown.allele="-") {
+see.optimal.haplotype <- function(effect.set=0L,unknown.allele="-", eff.set=0L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_see_optimal_haplotype, sim.data$p, eff.set, unknown.allele))
+  effect.set <- fallback.param.names(0L, c(effect.set, eff.set))
+	return(.Call(SXP_see_optimal_haplotype, sim.data$p, effect.set, unknown.allele))
 }
 
 #' Get a string containing the ultimate/highest-scoring set of alleles available
@@ -51,8 +54,10 @@ see.optimal.haplotype <- function(eff.set=1L,unknown.allele="-") {
 #' @param group an integer: the group number of the group to have a look at. 
 #' Can be a vector of groups, in which case the calculation will be run independently
 #' for each group.
-#' @param eff.set identifier for the set of marker effects to use to calculate the
-#' optimal haplotype and haplotype breeding values
+#' @param effect.set identifier for the set of marker effects to use to calculate the
+#' optimal haplotype and haplotype breeding values. If not otherwise specified, 
+#' uses the earliest-loaded marker effect set in this simulation.
+#' For legacy reasons, you can also set this parameter using the name `eff.set`.
 #' @param unknown.allele The character that will appear in the haplotype at markers
 #' where there are no known marker effects. If you pass a string to this, only its 
 #' first character will be used.
@@ -63,14 +68,15 @@ see.optimal.haplotype <- function(eff.set=1L,unknown.allele="-") {
 #'
 #' @family data access functions
 #' @export
-see.optimal.possible.haplotype <- function(group, eff.set=1L,unknown.allele="-") {
+see.optimal.possible.haplotype <- function(group, effect.set=0L,unknown.allele="-", eff.set=0L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   if (!is.integer(group)) {
     tmp <- group
     group <- as.integer(group)
     if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
   }
-  return(.Call(SXP_get_optimal_possible_haplotype, sim.data$p, group, eff.set, unknown.allele))  
+  effect.set <- fallback.param.names(0L, c(effect.set, eff.set))
+  return(.Call(SXP_get_optimal_possible_haplotype, sim.data$p, group, effect.set, unknown.allele))  
 }
 
 #' Get the ultimate/highest-possible GEBV given the current loaded effect values.
@@ -79,17 +85,20 @@ see.optimal.possible.haplotype <- function(group, eff.set=1L,unknown.allele="-")
 #' according to the current loaded effect values. An error is 
 #' raised if no effect values have been loaded.
 #' 
-#' @param eff.set identifier for the set of marker effects to use to calculate the
-#' maximal GEBV
+#' @param effect.set identifier for the set of marker effects to use to calculate the
+#' maximal GEBV. If not otherwise specified, uses the earliest-loaded marker 
+#' effect set in this simulation.
+#' For legacy reasons, you can also set this parameter using the name `eff.set`.
 #'
 #' @return The highest possible GEBV
 #'
 #' @family data access functions
 #' @export
 #' @aliases see.optimal.gebv
-see.optimal.GEBV <- function(eff.set=1L) {
+see.optimal.GEBV <- function(effect.set=0L, eff.set=0L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
-	return(.Call(SXP_get_optimal_GEBV, sim.data$p, eff.set))
+  effect.set <- fallback.param.names(0L, c(effect.set, eff.set))
+	return(.Call(SXP_get_optimal_GEBV, sim.data$p, effect.set))
 }
 
 #' Get the ultimate/highest-possible GEBV given the pool of alleles available in
@@ -103,22 +112,25 @@ see.optimal.GEBV <- function(eff.set=1L) {
 #' @param group an integer: the group number of the group to have a look at.
 #' Can be a vector of groups, in which case the calculation will be run independently
 #' for each group.
-#' @param eff.set identifier for the set of marker effects to use to calculate the
-#' optimal possible GEBV
+#' @param effect.set identifier for the set of marker effects to use to calculate the
+#' optimal possible GEBV. If not otherwise specified, uses the earliest-loaded 
+#' marker effect set in this simulation.
+#' For legacy reasons, you can also set this parameter using the name `eff.set`.
 #' @return The highest possible GEBV that can be created from alleles available
 #' in the group.
 #'
 #' @family data access functions
 #' @export
 #' @aliases see.optimal.possible.gebv
-see.optimal.possible.GEBV <- function(group, eff.set=1L) {
+see.optimal.possible.GEBV <- function(group, effect.set=0L, eff.set=0L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   if (!is.integer(group)) {
     tmp <- group
     group <- as.integer(group)
     if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
   }
-  return(.Call(SXP_get_optimal_possible_GEBV, sim.data$p, group, eff.set))    
+  effect.set <- fallback.param.names(0L, c(effect.set, eff.set))
+  return(.Call(SXP_get_optimal_possible_GEBV, sim.data$p, group, effect.set))    
 }
 
 #' Get the lowest-possible GEBV given the current loaded effect values.
@@ -127,17 +139,20 @@ see.optimal.possible.GEBV <- function(group, eff.set=1L) {
 #' possible according to the current loaded effect values. An error is 
 #' raised if no effect values have been loaded.
 #' 
-#' @param eff.set identifier for the set of marker effects to use to calculate the
-#' minimum GEBV.
+#' @param effect.set identifier for the set of marker effects to use to calculate the
+#' minimum GEBV. If not otherwise specified, uses the earliest-loaded marker effect set 
+#' in this simulation.
+#' For legacy reasons, you can also set this parameter using the name `eff.set`.
 #'
 #' @return The lowest possible GEBV
 #'
 #' @family data access functions
 #' @export
 #' @aliases see.minimal.gebv
-see.minimal.GEBV <- function(eff.set=1L) {
+see.minimal.GEBV <- function(effect.set=0L, eff.set=0L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  return(.Call(SXP_get_minimal_GEBV, sim.data$p, eff.set))
+  effect.set <- fallback.param.names(0L, c(effect.set, eff.set))
+  return(.Call(SXP_get_minimal_GEBV, sim.data$p, effect.set))
 }
 
 #' OLD NAME | Get the lowest-possible GEBV given the current loaded effect values.
@@ -164,9 +179,10 @@ see.minimum.GEBV <- function(eff.set=1L) {
 #' 
 #' @param blocks external pointer for a marker blocks object created by \code{create.markerblocks}
 #' @param group a vector of integers: the group number(s) of the group(s) to
-#' return breeding values for. 
-#' @param eff.set identifier for the set of marker effects to be used to calculate breeding values.
-#' By default is 0, to use the oldest currently-loaded set of marker effects
+#' return breeding values for
+#' @param effect.set identifier for the set of marker effects to be used to calculate breeding values.
+#' By default is 0, to use the oldest currently-loaded set of marker effects.
+#' For legacy reasons, you can also set this parameter using the name `eff.set`.
 #' 
 #' @return A matrix containing the local breeding values for each haplotype of 
 #' each member of each group. Columns correspond to blocks, each pair of rows 
@@ -174,14 +190,11 @@ see.minimum.GEBV <- function(eff.set=1L) {
 #' as their ordering in the output of \code{see.group.data}.
 #' @family data access functions 
 #' @export 
-see.local.GEBVs <- function(blocks, group=NULL, eff.set=0L) {
+see.local.GEBVs <- function(blocks, group, effect.set = 0L, eff.set=0L) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
-  if (!is.null(group) && !is.integer(group)) {
-    tmp <- group
-    group <- as.integer(group)
-    if (!isTRUE(all(tmp==group))) { stop("Group identifiers must be integers.") }
-  }
-  m <- .Call(SXP_see_local_gebvs, sim.data$p, blocks, group, eff.set)
+  group <- convert.to.integer(group,"Group identifiers",T)
+  effect.set <- fallback.param.names(0L, c(effect.set, eff.set))
+  m <- .Call(SXP_see_local_gebvs, sim.data$p, blocks, group, effect.set)
   return(m)
 }
 
@@ -195,12 +208,15 @@ see.local.GEBVs <- function(blocks, group=NULL, eff.set=0L) {
 #' 
 #' @param group a vector of integers: the group number(s) of the group(s) to
 #' return breeding values for
-#' @param eff.set identifier for the set of marker effects to be used to calculate breeding values.
+#' @param effect.set identifier for the set of marker effects to be used to calculate breeding values.
+#' For legacy reasons, you can also set this parameter using the name `eff.set`.
 #' @return A vector containing the breeding values for each member of each group.
 #' @family data access functions
 #' @export 
-see.GEBVs <- function(group, eff.set=0L) {
-  see.group.data(group,"B",effect.set=eff.set)
+see.GEBVs <- function(group, effect.set=0L, eff.set=0L) {
+  group <- convert.to.integer(group,"Group identifiers",T)
+  effect.set <- fallback.param.names(0L, c(effect.set, eff.set))
+  see.group.data(group,"B",effect.set=effect.set)
 }
 
 #' Identify historical crossover events

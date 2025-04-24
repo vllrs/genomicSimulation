@@ -4,11 +4,13 @@
 \alias{see.optimal.haplotype}
 \title{Get a string containing the ultimate/highest-scoring set of alleles.}
 \usage{
-see.optimal.haplotype(eff.set = 1L, unknown.allele = "-")
+see.optimal.haplotype(effect.set = 0L, unknown.allele = "-", eff.set = 0L)
 }
 \arguments{
-\item{eff.set}{identifier for the set of marker effects to use to calculate the
-haplotypes and haplotype scores.}
+\item{effect.set}{identifier for the set of marker effects to use to calculate the
+haplotypes and haplotype scores. If not otherwise specified, uses the 
+earliest-loaded marker effect set in this simulation. 
+For legacy reasons, you can also set this parameter using the name `eff.set`.}
 
 \item{unknown.allele}{The character that will appear in the haplotype at markers
 where there are no known marker effects. If you pass a string to this, only its 

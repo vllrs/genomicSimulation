@@ -21,14 +21,16 @@ self.n.times(
 )
 }
 \arguments{
-\item{group}{The group number from which to draw the parents of these
-random crosses. If a vector, the parameters and breeding method 
-(eg. random crossing) will be applied to each group number in the vector.}
+\item{group}{The group number from which to draw the parents. If a vector, 
+the parameters will be used for each group number from the vector, independently,
+therefore the output of the function will be a vector of the same length 
+where each group number in the output is the offspring produced from the 
+corresponding group in the input vector.}
 
 \item{n}{An integer representing the number of steps of selfing to perform.}
 
 \item{map}{The identifier for the recombination map with which gametes 
-from members of @a group will be generated. By default uses the oldest 
+from members of \code{group} will be generated. By default uses the oldest 
 loaded map currently active in simulation. If a vector of groups is provided,
 this parameter can be a single map to be used for crossing operations on all groups, 
 or this parameter can be a vector of the same length as `group`, in which case 
@@ -74,21 +76,21 @@ system memory can hold.}
 \item{save.pedigree}{A logical value. If TRUE, saves the pedigrees of each
 generated genotype to the file with filename "[file.prefix]-pedigree.txt". 
 Pedigrees are saved progressively (1000 at a time). They are saved in recursive 
-predigree format - see @a save.pedigrees or the package vignette for more details.}
+predigree format - see function \code{save.pedigrees} or the package vignette for more details.}
 
 \item{save.gebv}{An integer representing a marker effect set identifier, or 0.
 If FALSE, 0, or negative, does not save GEBVs. If positive and corresponding to the identifier
 of a loaded set of marker effects, saves the GEBVs of each generated genotype to the
 file with filename "[file.prefix]-bv.txt". This is a tab-separated text file. 
 Breeding values for generated genotypes are calculated and saved progressively (1000 at a 
-time). See @a save.GEBVs for more details on the output format. A reminder that 
+time). See function \code{save.GEBVs} for more details on the output format. A reminder that 
 if only one set of marker effects have been loaded, the identifier for that set of 
 marker effects is 1.}
 
 \item{save.genotype}{A logical value. If TRUE, saves the SNP matrix of the generated 
 genotypes to the file with filename "[file.prefix]-genotype.txt". 
 Generated genotypes are saved progressively (1000 at a time). The output file 
-uses genetic markers as columns and genotypes as rows. See @a save.genotypes}
+uses genetic markers as columns and genotypes as rows. See \code{save.genotypes}}
 }
 \value{
 The group number of the new genotypes produced, or 0 if none could be

@@ -4,13 +4,13 @@
 \alias{save.genotypes}
 \title{Save genotypes of lines in the simulation to a file}
 \usage{
-save.genotypes(filename, group = NULL, type = NULL, markers.as.rows = FALSE)
+save.genotypes(filename, group = NA, type = NULL, markers.as.rows = FALSE)
 }
 \arguments{
 \item{filename}{A string containing a filename to which the output will
 be written}
 
-\item{group}{If not set/set to NULL, will print all genotypes.
+\item{group}{If not set/set to NA or 0, will print all genotypes.
 Otherwise, if a group of that number exists, save only lines that belong
 to that group. Non-integers and negatives raise an error. Nonexistent 
 groups result in empty files.}
