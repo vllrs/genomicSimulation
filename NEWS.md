@@ -16,7 +16,7 @@
 
 ## Bug Fixes
 
-- Fix a bug in `create.markerblocks.from.chrsplit` where too many markers would be allocated to the last block.
+- Fix a bug in `create.markerblocks.from.chrsplit` where too many markers would be allocated to the last block because genetic distances were being cumulatively summed even though they were already cumulative values. 
 
 
 # genomicSimulation v0.2.6

@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.6.08 - last edit 24 Apr 2025 */
+/* genomicSimulationC v0.2.6.09 - last edit 28 Apr 2025 */
 // Converted using Rconversion.sh v2
 
 /** Default parameter values for GenOptions, to help with quick scripts and prototypes.
@@ -9607,7 +9607,6 @@ gsc_MarkerBlocks gsc_create_evenlength_blocks_each_chr(const gsc_SimData* d,
     for (GSC_GENOLEN_T chr = 0; chr < map.n_chr; ++chr) {
         GSC_GENOLEN_T firstblockix = chr*n;
         GSC_GENOLEN_T blockix = firstblockix;
-        double pos_along = 0;
         
         switch (map.chrs[chr].type) {
         case GSC_LINKAGEGROUP_SIMPLE:
@@ -9622,9 +9621,9 @@ gsc_MarkerBlocks gsc_create_evenlength_blocks_each_chr(const gsc_SimData* d,
                 
                 for (GSC_GENOLEN_T m = 1; m < map.chrs[chr].map.simple.n_markers; ++m) {
                     R_CheckUserInterrupt();
-                    pos_along += map.chrs[chr].map.simple.dists[m];
                     
-                    while (blockix - firstblockix < n-1 && pos_along > (blockix - firstblockix + 1) / (float)n) {
+                    while (blockix - firstblockix < n-1 && 
+                            map.chrs[chr].map.simple.dists[m] > (blockix - firstblockix + 1) / (float)n) {
                         // Save this block and move on to the next one.
                         if (blocks.num_markers_in_block[blockix] > 0) {
                             unsigned int bcapacity = sizeof(**blocks.markers_in_block) * blocks.num_markers_in_block[blockix];
@@ -9664,9 +9663,9 @@ gsc_MarkerBlocks gsc_create_evenlength_blocks_each_chr(const gsc_SimData* d,
             
                 for (GSC_GENOLEN_T m = 1; m < map.chrs[chr].map.reorder.n_markers; ++m) {
                     R_CheckUserInterrupt();
-                    pos_along += map.chrs[chr].map.reorder.dists[m];
                     
-                    while (blockix - firstblockix < n-1 && pos_along > (blockix - firstblockix + 1) / (float)n) {
+                    while (blockix - firstblockix < n-1 && 
+                            map.chrs[chr].map.reorder.dists[m] > (blockix - firstblockix + 1) / (float)n) {
                         // Save this block and move on to the next one.
                         if (blocks.num_markers_in_block[blockix] > 0) {
                             unsigned int bcapacity = sizeof(**blocks.markers_in_block) * blocks.num_markers_in_block[blockix];
