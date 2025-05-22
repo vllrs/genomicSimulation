@@ -20,7 +20,7 @@ void convertVECSXP_to_GroupNum(SEXP container, GroupNum* output) {
 
 	for (R_xlen_t i = 0; i < len; ++i) {
 		if (intvec[i] <= 0) {
-			warning("%lu is not a possible group number", intvec[i]);
+			Rprintf("NOTE! %lu is not a possible group number", intvec[i]);
 			output[i] = NO_GROUP;
 		} else {
 			output[i] = GROUPNUM_IFY(intvec[i]);
@@ -711,18 +711,18 @@ size_t check_group_sizes(SimData* d, R_xlen_t glen, int* groups, size_t* gsizes)
     gsizes[i] = 0;
     if (groups[i] == NA_INTEGER || groups[i] < 1) {
       if (glen == 1) {
-        warning("`group` parameter is invalid (0 or negative)");
+        Rprintf("NOTE! `group` parameter is invalid (0 or negative)");
       } else {
-        warning("%i (entry %lu in the `group` vector) is an invalid group number (0 or negative)", groups[i], i + 1);
+        Rprintf("NOTE! %i (entry %lu in the `group` vector) is an invalid group number (0 or negative)", groups[i], i + 1);
       }
       
     } else {
       gsizes[i] = get_group_size(d, GROUPNUM_IFY(groups[i]));
       if (gsizes[i] == 0) {
         if (glen == 1) {
-          warning("`group` is an empty group\n");
+          Rprintf("NOTE! `group` is an empty group\n");
         } else {
-          warning("Group %i (entry %lu in the `group` vector) is an empty group\n", groups[i], i + 1);
+          Rprintf("NOTE! Group %i (entry %lu in the `group` vector) is an empty group\n", groups[i], i + 1);
         }
       } else {
         cumulativesize += gsizes[i];
@@ -1128,7 +1128,7 @@ SEXP SXP_see_group_gene_data(SEXP exd, SEXP s_groups, SEXP s_countAllele, SEXP s
 	  char printUnknown;
 	  if (asChar(s_unknownAllele) == NA_STRING || !isprint(CHAR(asChar(s_unknownAllele))[0])) {
 	    printUnknown = '-';
-	    warning("Defaulting to printing '\\0' alleles as a dash '-'");
+	    Rprintf("NOTE! Defaulting to printing '\\0' alleles as a dash '-'");
 	  } else {
 	    printUnknown = CHAR(asChar(s_unknownAllele))[0];
 	  }
@@ -1995,7 +1995,7 @@ SEXP SXP_make_random_crosses_between(SEXP exd, SEXP s_group1, SEXP s_group2, SEX
 	SimData* d = (SimData*) R_ExternalPtrAddr(exd);
 	
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
-		warning("More than one recombination map per group provided. Only the first recombination map will be used");
+		Rprintf("NOTE! More than one recombination map per group provided. Only the first recombination map will be used");
 	}
 	GSC_ID_T map1 = extract_mapid(s_map1,d,"map1");
 	GSC_ID_T map2 = extract_mapid(s_map2,d,"map2");
@@ -2052,7 +2052,7 @@ SEXP SXP_make_targeted_crosses(SEXP exd, SEXP s_firstparents, SEXP s_secondparen
 	R_xlen_t filleri = 0;
 	for (R_xlen_t checkeri = 0; checkeri < ncrosses; ++checkeri) {
 		if (combinations[0][checkeri] < 0 || combinations[1][checkeri] < 0) {
-			warning("Names or indexes at row %lu of the crossing plan are invalid\n", checkeri);
+			Rprintf("NOTE! Names or indexes at row %lu of the crossing plan are invalid\n", checkeri);
 		} else {
 			if (checkeri != filleri) { // copy the information at "checkeri" to position "filleri"
 				combinations[0][filleri] = combinations[0][checkeri];
@@ -2063,7 +2063,7 @@ SEXP SXP_make_targeted_crosses(SEXP exd, SEXP s_firstparents, SEXP s_secondparen
 	}
 	
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
-		warning("More than one recombination map per group provided. Only the first recombination map each will be used");
+		Rprintf("NOTE! More than one recombination map per group provided. Only the first recombination map each will be used");
 	}
 	GSC_ID_T map1 = extract_mapid(s_map1,d,"map1");
 	GSC_ID_T map2 = extract_mapid(s_map2,d,"map2");
@@ -2088,7 +2088,7 @@ SEXP SXP_make_crosses_from_file(SEXP exd, SEXP s_filename, SEXP s_map1, SEXP s_m
 	const char* filename = CHAR(asChar(s_filename));
 	
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
-		warning("More than one recombination map per parent provided. Only the first recombination map each will be used");
+		Rprintf("NOTE! More than one recombination map per parent provided. Only the first recombination map each will be used");
 	}
 	GSC_ID_T map1 = extract_mapid(s_map1,d,"map1");
 	GSC_ID_T map2 = extract_mapid(s_map2,d,"map2");
@@ -2108,7 +2108,7 @@ SEXP SXP_make_double_crosses_from_file(SEXP exd, SEXP s_filename, SEXP s_map1, S
 	const char* filename = CHAR(asChar(s_filename));
 	
 	if (xlength(s_map1) > 1 || xlength(s_map2) > 1) {
-		warning("More than one recombination map per parent provided. Only the first recombination map each will be used");
+		Rprintf("NOTE! More than one recombination map per parent provided. Only the first recombination map each will be used");
 	}
 	GSC_ID_T map1 = extract_mapid(s_map1,d,"map1");
 	GSC_ID_T map2 = extract_mapid(s_map2,d,"map2");

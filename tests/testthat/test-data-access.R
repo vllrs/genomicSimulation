@@ -58,7 +58,7 @@ test_that("see.group.data works with multiple groups", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   g <- init$groupNum
   
-  expect_warning(ntmp <- see.group.data(c(g,50), "Names"))
+  expect_snapshot(ntmp <- see.group.data(c(g,50), "Names"))
   expect_identical(ntmp, c("G01","G02","G03","G04","G05","G06"))
   
   g2 <- make.random.crosses(g,n.crosses=10)
@@ -68,7 +68,7 @@ test_that("see.group.data works with multiple groups", {
   
   capture_output(delete.group(g))
   
-  expect_warning(ntmp <- see.group.data(c(g3,g,g2),"D"))
+  expect_snapshot(ntmp <- see.group.data(c(g3,g,g2),"D"))
   expect_identical(ntmp, c(17:18, 7:16))
   
   clear.simdata()
@@ -101,7 +101,7 @@ test_that("See.group.gene.data works", {
   expect_equal(sum(mt2b=="??"),1)
   expect_equal(which(mt2b=="AT" | mt2b=="TA" | mt2b=="??"),which(mt2=="AT"|mt2=="TA"))
   
-  expect_warning(see.group.gene.data(g2,unknown.allele='\n'))
+  expect_snapshot(tmp <- see.group.gene.data(g2,unknown.allele='\n'))
   
   # Check counts of one allele
   mt3 <- see.group.gene.data(1,"A")
