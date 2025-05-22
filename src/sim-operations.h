@@ -1,10 +1,10 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.2.6.13
+genomicSimulationC v0.2.6.14
 // Converted using Rconversion.sh v2
 
-    Last edit: 6 May 2025
+    Last edit: 22 May 2025
     License: MIT License
 
 Copyright (c) 2021 Kira Villiers
@@ -752,7 +752,7 @@ typedef struct {
 typedef struct {
     unsigned int n_chr; /**< The number of chromosomes/linkage groups represented in the map. **/
     unsigned long* chr_names; /**< An identifying number/code for each chromosome/linkage group in the map, 
-              * as a base-36 number. */
+              * as a base-36 number. Not used for anything besides making output clearer. */
     gsc_LinkageGroup* chrs; /**< Vector of @a n_chr recombination maps, one for each chromosome/linkage group
               * in this recombination map. */
 

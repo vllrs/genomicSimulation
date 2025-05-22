@@ -17,6 +17,7 @@
 ## Bug Fixes
 
 - Fix a bug in `create.markerblocks.from.chrsplit` where too many markers would be allocated to the last block because genetic distances were being cumulatively summed even though they were already cumulative values. 
+- `SimData.n_groups` is no longer decremented if a call is made to `delete.group` for a group number with zero members (a nonexistent group). While this did not cause errors, it did cause a warning to be shown when calling `see.existing.groups`.
 
 
 # genomicSimulation v0.2.6

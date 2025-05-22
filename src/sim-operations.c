@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.6.13 - last edit 6 May 2025 */
+/* genomicSimulationC v0.2.6.14 - last edit 22 May 2025 */
 // Converted using Rconversion.sh v2
 
 /** Default parameter values for GenOptions, to help with quick scripts and prototypes.
@@ -4641,9 +4641,11 @@ void gsc_delete_group(gsc_SimData* d, const gsc_GroupNum group_id) {
         total_deleted += deleted;
 
         if (m->next == NULL) {
-            gsc_condense_allele_matrix( d );
             Rprintf("%lu genotypes were deleted\n", (long unsigned int) total_deleted);
-            d->n_groups--;
+			if (total_deleted > 0) { 
+				gsc_condense_allele_matrix( d );
+				d->n_groups--; 
+			}
             return;
         } else {
             m = m->next;
