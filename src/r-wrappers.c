@@ -7,17 +7,41 @@
 #define LABELID_IFY(n) (LabelID){.id=n}
 #define PEDIGREEID_IFY(n) (PedigreeID){.id=n}
 
+// The maximum length of a buffer needed to store a base36 representation of a number of a given integer type
+// Explanation: sizeof(type)*CHAR_BIT is the number of binary digits.
+//     The number of binary digits is more than 5 times the number of base36 digits, but less than 6 times. 
+//     So b/5 is greater than the number of base36 digits. Integer division makes this "/ 5 + 1"
+//     And then add one more, to store the terminating null character of the base36 string.
+#define BASE36_BUFFER_SIZE(type) (sizeof(type)*CHAR_BIT / 5 + 2)
+
 void convertVECSXP_to_GroupNum(SEXP container, GroupNum* output) {
   R_xlen_t len = xlength(container);
 	int *intvec = INTEGER(container);
 
 	for (R_xlen_t i = 0; i < len; ++i) {
 		if (intvec[i] <= 0) {
-			warning("%i is not a possible group number", intvec[i]);
+			warning("%lu is not a possible group number", intvec[i]);
 			output[i] = NO_GROUP;
 		} else {
 			output[i] = GROUPNUM_IFY(intvec[i]);
 		}
+	}
+}
+
+void base36tostr(unsigned long n, char* buf) {
+	// Construct the string backwards
+	size_t len = 1;
+	char* s = buf; 
+	*s = '\0';
+	do {
+		++s; ++len;
+		*s = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"[n % 36];
+		n /= 36;
+	} while (n > 0 && len < 15); // the 'len' condition is just for safety
+	
+	// turn it all around
+	for (size_t i = 0; i < len/2; ++i) {
+		char tmp = buf[i]; buf[i] = buf[len-1-i]; buf[len-1-i] = tmp;
 	}
 }
 
@@ -434,7 +458,7 @@ SEXP SXP_get_optimal_possible_haplotype(SEXP exd, SEXP s_groups, SEXP s_eff_set,
 	R_xlen_t len = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 	for (R_xlen_t i = 0; i < len; ++i) {
-		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n", i+1); }
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %lu\n", i+1); }
 	}
 
 	if (len == 1) {
@@ -484,7 +508,7 @@ SEXP SXP_get_optimal_possible_GEBV(SEXP exd, SEXP s_groups, SEXP s_eff_set) {
 	R_xlen_t len = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 	for (R_xlen_t i = 0; i < len; ++i) {
-		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n",i+1); }
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %lu\n",i+1); }
 	}
 
 	if (len == 1) {
@@ -548,26 +572,29 @@ SEXP SXP_see_map(SEXP exd, SEXP s_map) {
   }
 
 	SEXP map = PROTECT(allocVector(VECSXP, 3));
-	SEXP snp = PROTECT(allocVector(STRSXP, d->genome.n_markers));
-	SEXP chr = PROTECT(allocVector(REALSXP, d->genome.n_markers));
-	SEXP pos = PROTECT(allocVector(REALSXP, d->genome.n_markers));
-	double* cchr = REAL(chr);
-	double* cpos = REAL(pos);
+	SEXP ssnp = PROTECT(allocVector(STRSXP, d->genome.n_markers));
+	SEXP schr = PROTECT(allocVector(STRSXP, d->genome.n_markers));
+	SEXP spos = PROTECT(allocVector(REALSXP, d->genome.n_markers));
+	double* cpos = REAL(spos);
+	
+	char chr_name_buffer[BASE36_BUFFER_SIZE(unsigned long)];
 
 	GSC_GENOLEN_T m_ix = 0;
 	for (int chr = 0; chr < d->genome.maps[mapix].n_chr; ++chr) {
+	  base36tostr(d->genome.maps[mapix].chr_names[chr], chr_name_buffer);
+	  
 	  if (d->genome.maps[mapix].chrs[chr].type == GSC_LINKAGEGROUP_SIMPLE) {
 	    for (int i = 0; i < d->genome.maps[mapix].chrs[chr].map.simple.n_markers; ++i) {
-	      SET_STRING_ELT(snp, m_ix, mkChar(d->genome.marker_names[i + d->genome.maps[mapix].chrs[chr].map.simple.first_marker_index]));
-	      cchr[m_ix] = chr;
+	      SET_STRING_ELT(ssnp, m_ix, mkChar(d->genome.marker_names[i + d->genome.maps[mapix].chrs[chr].map.simple.first_marker_index]));
+		  SET_STRING_ELT(schr, m_ix, mkChar(chr_name_buffer));
 	      cpos[m_ix] = d->genome.maps[mapix].chrs[chr].map.simple.dists[i] * 
 	        d->genome.maps[mapix].chrs[chr].map.simple.expected_n_crossovers * 100;
 		  ++m_ix;
 	    }
 	  } else if (d->genome.maps[mapix].chrs[chr].type == GSC_LINKAGEGROUP_REORDER) {
 	    for (int i = 0; i < d->genome.maps[mapix].chrs[chr].map.reorder.n_markers; ++i) {
-	      SET_STRING_ELT(snp, m_ix, mkChar(d->genome.marker_names[d->genome.maps[mapix].chrs[chr].map.reorder.marker_indexes[i]]));
-	      cchr[m_ix] = chr;
+	      SET_STRING_ELT(ssnp, m_ix, mkChar(d->genome.marker_names[d->genome.maps[mapix].chrs[chr].map.reorder.marker_indexes[i]]));
+	      SET_STRING_ELT(schr, m_ix, mkChar(chr_name_buffer));
 	      cpos[m_ix] = d->genome.maps[mapix].chrs[chr].map.reorder.dists[i] * 
 	        d->genome.maps[mapix].chrs[chr].map.reorder.expected_n_crossovers * 100;
 		  ++m_ix;
@@ -575,9 +602,9 @@ SEXP SXP_see_map(SEXP exd, SEXP s_map) {
 	  }
 	}
 
-	SET_VECTOR_ELT(map, 0, snp);
-	SET_VECTOR_ELT(map, 1, chr);
-	SET_VECTOR_ELT(map, 2, pos);
+	SET_VECTOR_ELT(map, 0, ssnp);
+	SET_VECTOR_ELT(map, 1, schr);
+	SET_VECTOR_ELT(map, 2, spos);
 	
 	UNPROTECT(4);
 	return map;
@@ -686,7 +713,7 @@ size_t check_group_sizes(SimData* d, R_xlen_t glen, int* groups, size_t* gsizes)
       if (glen == 1) {
         warning("`group` parameter is invalid (0 or negative)");
       } else {
-        warning("%i (entry %i in the `group` vector) is an invalid group number (0 or negative)", groups[i], i + 1);
+        warning("%i (entry %lu in the `group` vector) is an invalid group number (0 or negative)", groups[i], i + 1);
       }
       
     } else {
@@ -695,7 +722,7 @@ size_t check_group_sizes(SimData* d, R_xlen_t glen, int* groups, size_t* gsizes)
         if (glen == 1) {
           warning("`group` is an empty group\n");
         } else {
-          warning("Group %i (entry %i in the `group` vector) is an empty group\n", groups[i], i + 1);
+          warning("Group %i (entry %lu in the `group` vector) is an empty group\n", groups[i], i + 1);
         }
       } else {
         cumulativesize += gsizes[i];
@@ -1589,7 +1616,7 @@ SEXP SXP_break_group_by_label_value(SEXP exd, SEXP s_label, SEXP s_value, SEXP s
 		int j = 0;
 		for (R_xlen_t i = 0; i < glen; ++i) {
 			if (groups[i] < 1) {
-				Rprintf("Entry %i in the `group` vector is an invalid group number (0 or negative)", i + 1);
+				Rprintf("Entry %lu in the `group` vector is an invalid group number (0 or negative)", i + 1);
 			} else {
 				newSubGroups[j] = split_by_label_value(d, GROUPNUM_IFY(groups[i]), LABELID_IFY(label), value);
 				++j;
@@ -1637,7 +1664,7 @@ SEXP SXP_break_group_by_label_range(SEXP exd, SEXP s_label, SEXP s_lowbound, SEX
 		int j = 0;
 		for (R_xlen_t i = 0; i < glen; ++i) {
 			if (groups[i] < 1) {
-				Rprintf("entry %i in the `group` vector is an invalid group number (0 or negative)", i + 1);
+				Rprintf("entry %lu in the `group` vector is an invalid group number (0 or negative)", i + 1);
 			} else {
 				newSubGroups[j] = split_by_label_range(d, GROUPNUM_IFY(groups[i]), LABELID_IFY(label), low, high);
 				++j;
@@ -1668,7 +1695,7 @@ SEXP SXP_change_label_default(SEXP exd, SEXP s_labels, SEXP s_defaults) {
 			change_label_default(d, LABELID_IFY(labels[i]), defaults[i]);
 		}
 	}
-	Rprintf("Set the defaults of %i labels.\n", matchedLen);
+	Rprintf("Set the defaults of %lu labels.\n", matchedLen);
 	return ScalarInteger(0);
 }
 
@@ -1723,7 +1750,7 @@ SEXP SXP_change_label_by_amount(SEXP exd, SEXP s_label, SEXP s_incr, SEXP s_grou
 	} else {
 		for (R_xlen_t i = 0; i < len; ++i) {
 			if (groups[i] < 1) {
-				Rprintf("entry %i in the `group` vector is an invalid group number (0 or negative)", i + 1);
+				Rprintf("entry %lu in the `group` vector is an invalid group number (0 or negative)", i + 1);
 			} else {
 				change_label_by_amount(d, GROUPNUM_IFY(groups[i]), LABELID_IFY(label), incr);
 			}
@@ -1760,7 +1787,7 @@ SEXP SXP_change_label_to_this(SEXP exd, SEXP s_label, SEXP s_const, SEXP s_group
 	} else {
 		for (R_xlen_t i = 0; i < len; ++i) {
 			if (groups[i] < 1) {
-				Rprintf("entry %i in the `group` vector is an invalid group number (0 or negative)", i + 1);
+				Rprintf("entry %lu in the `group` vector is an invalid group number (0 or negative)", i + 1);
 			} else {
 				change_label_to(d, GROUPNUM_IFY(groups[i]), LABELID_IFY(label), num);
 			}
@@ -1777,7 +1804,7 @@ SEXP SXP_break_group_by_GEBV_num(SEXP exd, SEXP s_groups, SEXP s_eff_set, SEXP s
 	R_xlen_t len = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 	for (R_xlen_t i = 0; i < len; ++i) {
-		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: negative at index %i\n", i+1); }
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: negative at index %lu\n", i+1); }
 	}
 
 	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
@@ -1811,7 +1838,7 @@ SEXP SXP_break_group_by_GEBV_percent(SEXP exd, SEXP s_groups, SEXP s_eff_set, SE
 	R_xlen_t len = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 	for (R_xlen_t i = 0; i < len; ++i) {
-		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: negative at index %i\n", i+1); }
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: negative at index %lu\n", i+1); }
 	}
 
 	GSC_ID_T eff_id = extract_effid(s_eff_set, d);
@@ -1908,7 +1935,7 @@ SEXP SXP_make_random_crosses(SEXP exd, SEXP s_groups, SEXP s_crosses, SEXP s_cap
   R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 	for (R_xlen_t i = 0; i < glen; ++i) {
-		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n", i+1); }
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %lu\n", i+1); }
 	}
 	
 	R_xlen_t maplen = xlength(s_map);
@@ -2025,7 +2052,7 @@ SEXP SXP_make_targeted_crosses(SEXP exd, SEXP s_firstparents, SEXP s_secondparen
 	R_xlen_t filleri = 0;
 	for (R_xlen_t checkeri = 0; checkeri < ncrosses; ++checkeri) {
 		if (combinations[0][checkeri] < 0 || combinations[1][checkeri] < 0) {
-			warning("Names or indexes at row %i of the crossing plan are invalid\n", checkeri);
+			warning("Names or indexes at row %lu of the crossing plan are invalid\n", checkeri);
 		} else {
 			if (checkeri != filleri) { // copy the information at "checkeri" to position "filleri"
 				combinations[0][filleri] = combinations[0][checkeri];
@@ -2099,7 +2126,7 @@ SEXP SXP_make_all_unidirectional_crosses(SEXP exd, SEXP s_groups, SEXP s_map, SE
   R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 	for (R_xlen_t i = 0; i < glen; ++i) {
-		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n", i+1); }
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %lu\n", i+1); }
 	}
 	
 	R_xlen_t maplen = xlength(s_map);
@@ -2141,7 +2168,7 @@ SEXP SXP_self_n_times(SEXP exd, SEXP s_groups, SEXP s_ngen, SEXP s_map, SEXP s_n
   R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 	for (R_xlen_t i = 0; i < glen; ++i) {
-		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n", i+1); }
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %lu\n", i+1); }
 	}
 	
 	R_xlen_t maplen = xlength(s_map);
@@ -2185,7 +2212,7 @@ SEXP SXP_make_doubled_haploids(SEXP exd, SEXP s_groups, SEXP s_map, SEXP s_name,
   R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 	for (R_xlen_t i = 0; i < glen; ++i) {
-		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n", i+1); }
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %lu\n", i+1); }
 	}
 	
 	R_xlen_t maplen = xlength(s_map);
@@ -2227,7 +2254,7 @@ SEXP SXP_make_clones(SEXP exd, SEXP s_groups, SEXP s_inherit_name, SEXP s_name,
   R_xlen_t glen = xlength(s_groups);
 	int *groups = INTEGER(s_groups);
 	for (int i = 0; i < glen; ++i) {
-		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %i\n", i+1); }
+		if (groups[i] == NA_INTEGER || groups[i] < 0) { error("The contents of `groups` is invalid: at index %lu\n", i+1); }
 	}
 
 	int inherit_name = asLogical(s_inherit_name);

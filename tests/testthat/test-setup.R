@@ -21,9 +21,7 @@ test_that("package is loading genetic map correctly", {
   
   # what was literally read from the file
   capture_output(map.df <- read.table("helper_map.txt",header=TRUE), print=F)
-  # convert chromosome numbers to chromosome indexes
-  chr.conversions <- chr.names.to.genomicSimulation.numbering(map.df$chr)
-  map.df$chr <- chr.conversions$genomicSimulation.chr.number[match(map.df$chr,chr.conversions$chr)]
+  map.df$chr <- as.character(map.df$chr)
   # Chromosome's first marker's position is "0"
   chrdata <- data.frame(chr=unique(map.df$chr))
   chrdata$min <- sapply(chrdata$chr, function(chr) min(map.df$pos[map.df$chr == chr]))
@@ -37,7 +35,7 @@ test_that("package is loading genetic map correctly", {
   expect_identical(see.genetic.map(init$mapID), map.df)
   #and also check this manually
   expect_identical(see.genetic.map(init$mapID)$marker, c("m1","m2","m3"))
-  expect_equal(see.genetic.map(init$mapID)$chr, c(0,0,1))
+  expect_equal(see.genetic.map(init$mapID)$chr, c('1','1','3'))
   expect_equal(see.genetic.map(init$mapID)$pos, c(0,3.1,NaN))
 })
 

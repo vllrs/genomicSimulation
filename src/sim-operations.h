@@ -1,10 +1,10 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.2.6.09
+genomicSimulationC v0.2.6.13
 // Converted using Rconversion.sh v2
 
-    Last edit: 28 Apr 2025
+    Last edit: 6 May 2025
     License: MIT License
 
 Copyright (c) 2021 Kira Villiers
@@ -751,6 +751,8 @@ typedef struct {
  */
 typedef struct {
     unsigned int n_chr; /**< The number of chromosomes/linkage groups represented in the map. **/
+    unsigned long* chr_names; /**< An identifying number/code for each chromosome/linkage group in the map, 
+              * as a base-36 number. */
     gsc_LinkageGroup* chrs; /**< Vector of @a n_chr recombination maps, one for each chromosome/linkage group
               * in this recombination map. */
 
@@ -1095,7 +1097,7 @@ typedef struct {
 gsc_FileFormatSpec gsc_define_matrix_format_details(const GSC_LOGICVAL has_header, 
         const GSC_LOGICVAL markers_as_rows, const enum gsc_GenotypeFileCellStyle cell_style);
 
-
+/** @} */
 /** @defgroup supporters Utils/Supporting Functions
  *
  * @{

@@ -130,12 +130,12 @@ test_that("See.group.gene.data works", {
 test_that("see.genetic.map works", {
   capture_output(init <- load.data("helper_genotypes.txt", "helper_map.txt", "helper_eff.txt"), print=F)
   
-  truth <- data.frame("marker"=c("m1","m2","m3"), "chr"=c(0,0,1), "pos"=c(0,8.3-5.2,NaN))
+  truth <- data.frame("marker"=c("m1","m2","m3"), "chr"=c('1','1','3'), "pos"=c(0,8.3-5.2,NaN))
   expect_equal(see.genetic.map(), truth)
   
   clear.simdata()
   capture_output(init2 <- load.data(map.file="helper_map2.txt"))
-  truth2 <- data.frame("marker"=c("and&a2","a1"), "chr"=c(0,1), "pos"=c(NaN,NaN))
+  truth2 <- data.frame("marker"=c("and&a2","a1"), "chr"=c('1A','1B'), "pos"=c(NaN,NaN))
   expect_equal(see.genetic.map(init2$map), truth2)
   
 })

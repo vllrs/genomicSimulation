@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.6.09 - last edit 28 Apr 2025 */
+/* genomicSimulationC v0.2.6.13 - last edit 6 May 2025 */
 // Converted using Rconversion.sh v2
 
 /** Default parameter values for GenOptions, to help with quick scripts and prototypes.
@@ -5824,34 +5824,40 @@ gsc_MapID gsc_create_recombmap_from_markerlist(gsc_SimData* d,
 
     GSC_CREATE_BUFFER(chr_nmembers,GSC_GENOLEN_T,40);
     memset(chr_nmembers,0,sizeof(*chr_nmembers)*40);
+    GSC_CREATE_BUFFER(chr_ids,unsigned long,40);
     chr_nmembers[0] = 1;
     GSC_GENOLEN_T n_chr = 1;
-    unsigned long current_chr = markerlist[0].chr;
+    chr_ids[n_chr-1] = markerlist[0].chr;
     for (GSC_GENOLEN_T i = 1; i < n_markers; ++i) {
         while (i < n_markers && markerlist[i].name == NULL) {
             ++i;
         }
-        if (current_chr != markerlist[i].chr) {
+        if (chr_ids[n_chr-1] != markerlist[i].chr) {
             // First of next
             if (n_chr >= chr_nmemberscap) {
+                GSC_STRETCH_BUFFER(chr_ids,2*n_chr);
                 GSC_STRETCH_BUFFER(chr_nmembers,2*n_chr);
                 memset(chr_nmembers+n_chr,0,sizeof(*chr_nmembers)*n_chr);
             }
             ++n_chr;
-            current_chr = markerlist[i].chr;
+            chr_ids[n_chr-1] = markerlist[i].chr;
             chr_nmembers[n_chr-1] = 1;
         } else {
             ++(chr_nmembers[n_chr-1]);
         }
     }
 
-    gsc_RecombinationMap map = {.n_chr=n_chr, .chrs=gsc_malloc_wrap(sizeof(gsc_LinkageGroup) * n_chr, GSC_TRUE) };
+    gsc_RecombinationMap map = {.n_chr=n_chr, 
+                                .chr_names=NULL,
+                                .chrs=gsc_malloc_wrap(sizeof(gsc_LinkageGroup) * n_chr, GSC_TRUE) };
+    GSC_FINALISE_BUFFER(chr_ids,map.chr_names,n_chr);
 
     // Populate the map. Each chr/linkage group may be "Simple" or "Reordered"
     GSC_GENOLEN_T could_not_match = 0;
     GSC_GENOLEN_T current_marker = 0;
     GSC_GENOLEN_T first_marker;
     GSC_GENOLEN_T n_bad_chr = 0;
+    GSC_GENOLEN_T n_sparse_chr = 0;
     for (GSC_GENOLEN_T chr_ix = 0; chr_ix < map.n_chr; ++chr_ix) {      
         first_marker = current_marker;
         double chrdist = markerlist[first_marker + chr_nmembers[chr_ix] - 1].pos - markerlist[first_marker].pos;
@@ -5929,12 +5935,18 @@ gsc_MapID gsc_create_recombmap_from_markerlist(gsc_SimData* d,
             map.chrs[chr_ix_actual].map.reorder.marker_indexes = marker_coords;
             map.chrs[chr_ix_actual].map.reorder.dists = lgdists;
         }
+        if (chrdist >= 5000*n_goodmembers) { ++n_sparse_chr; }
     }
     GSC_DELETE_BUFFER(chr_nmembers);
     map.n_chr = map.n_chr-n_bad_chr;
     if (map.n_chr == 0) {
         GSC_FREE(map.chrs);
         return NO_MAP;
+    }
+    if (n_sparse_chr > 0) {
+        Rprintf("NOTE! %d of this map's chromosomes are very sparse (averaging less than 1 marker "
+            "per 5 Morgans of distance). If the map is not expected to be this sparse, check that "
+            "positions in the map file are in centimorgans, not base pairs.\n", n_sparse_chr);
     }
     return gsc_helper_insert_recombmap_into_simdata(d, map);
 }
@@ -6047,7 +6059,7 @@ gsc_MapID gsc_create_uniformspaced_recombmap(gsc_SimData* d,
         }
         
         if (could_not_match > 0) {
-            Rprintf("NOTE! %d of the marker names do not appear in the genome", could_not_match);
+            Rprintf("NOTE! %d of the marker names do not appear in the genome\n", could_not_match);
         }
         
     }
@@ -6210,6 +6222,16 @@ gsc_MapID gsc_load_mapfile(SimData* d, const char* filename) {
             d->genome.names_alphabetical[i] = &(d->genome.marker_names[i]);
         }
         qsort(d->genome.names_alphabetical,d->genome.n_markers,sizeof(*d->genome.names_alphabetical),gsc_helper_indirect_alphabetical_str_comparer);
+
+        // Want to raise a warning if any marker names are repeated. One quick scan through.
+        int n_dups = 0;
+        for (GSC_GENOLEN_T i = 1; i < d->genome.n_markers; ++i) {
+            if (strcmp(*d->genome.names_alphabetical[i-1],*d->genome.names_alphabetical[i]) == 0) { ++n_dups; }
+        }
+        if (n_dups > 0) {
+            Rprintf("NOTE! %d marker names were duplicates. It is recommended to remove duplicate names from the map file "
+                "because data will only be loaded into one of the duplicates.\n", n_dups);
+        }
 
         freeMapNames = 0;
         //printf( "Warning: loading genetic map before loading any founder genotypes. Many simulation operations will not yet run.\n");
@@ -9853,6 +9875,15 @@ gsc_DecimalMatrix gsc_calculate_local_bvs(const gsc_SimData* d,
 gsc_DecimalMatrix gsc_calculate_utility_local_bvs(gsc_BidirectionalIterator* targets, 
                                                   gsc_MarkerBlocks b,
                                                   gsc_MarkerEffects e) {
+    if (b.num_blocks == 0) {
+        GSC_GENOLEN_T ntargets = 0;
+        gsc_GenoLocation loc = gsc_set_bidirectional_iter_to_start(targets);
+        while (IS_VALID_LOCATION(loc)) {
+            ++ntargets; loc = gsc_next_forwards(targets);
+        }
+        return gsc_generate_zero_dmatrix(2*ntargets, 0);
+    }
+    
     GSC_CREATE_BUFFER(bvs, double*, 50);
     GSC_GLOBALX_T n_genotypes = 0;
     
