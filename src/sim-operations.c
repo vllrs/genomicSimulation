@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.6.14 - last edit 22 May 2025 */
+/* genomicSimulationC v0.2.6.15 - last edit 30 May 2025 */
 // Converted using Rconversion.sh v2
 
 /** Default parameter values for GenOptions, to help with quick scripts and prototypes.
@@ -7191,7 +7191,7 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
                     
                     
                     if (build_map_from_rows) {
-                        ++nvalidmarker;
+                        ++nvalidmarker; have_valid_marker = 1;
                         if (first) {
                             markerix = 0;
                         } else {

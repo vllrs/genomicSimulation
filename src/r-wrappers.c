@@ -12,7 +12,7 @@
 //     The number of binary digits is more than 5 times the number of base36 digits, but less than 6 times. 
 //     So b/5 is greater than the number of base36 digits. Integer division makes this "/ 5 + 1"
 //     And then add one more, to store the terminating null character of the base36 string.
-#define BASE36_BUFFER_SIZE(type) (sizeof(type)*CHAR_BIT / 5 + 2)
+#define BASE36_BUFFER_SIZE(type) ((int) fmax(sizeof(type)*CHAR_BIT / 5 + 2,18))
 
 void convertVECSXP_to_GroupNum(SEXP container, GroupNum* output) {
   R_xlen_t len = xlength(container);
@@ -581,27 +581,39 @@ SEXP SXP_see_map(SEXP exd, SEXP s_map) {
 
 	GSC_GENOLEN_T m_ix = 0;
 	for (int chr = 0; chr < d->genome.maps[mapix].n_chr; ++chr) {
-	  base36tostr(d->genome.maps[mapix].chr_names[chr], chr_name_buffer);
+	  if (d->genome.maps[mapix].chr_names == NULL) {
+		  snprintf(chr_name_buffer, BASE36_BUFFER_SIZE(unsigned long), "unnamed%d", chr);
+	  } else {
+		  base36tostr(d->genome.maps[mapix].chr_names[chr], chr_name_buffer);
+	  }
 	  
 	  if (d->genome.maps[mapix].chrs[chr].type == GSC_LINKAGEGROUP_SIMPLE) {
-	    for (int i = 0; i < d->genome.maps[mapix].chrs[chr].map.simple.n_markers; ++i) {
-	      SET_STRING_ELT(ssnp, m_ix, mkChar(d->genome.marker_names[i + d->genome.maps[mapix].chrs[chr].map.simple.first_marker_index]));
+		for (int i = 0; i < d->genome.maps[mapix].chrs[chr].map.simple.n_markers; ++i) {
+		  SET_STRING_ELT(ssnp, m_ix, mkChar(d->genome.marker_names[i + d->genome.maps[mapix].chrs[chr].map.simple.first_marker_index]));
 		  SET_STRING_ELT(schr, m_ix, mkChar(chr_name_buffer));
-	      cpos[m_ix] = d->genome.maps[mapix].chrs[chr].map.simple.dists[i] * 
-	        d->genome.maps[mapix].chrs[chr].map.simple.expected_n_crossovers * 100;
+		  if (d->genome.maps[mapix].chrs[chr].map.simple.dists == NULL) {
+			cpos[m_ix] = NAN;
+		  } else { 
+			cpos[m_ix] = d->genome.maps[mapix].chrs[chr].map.simple.dists[i] * 
+			d->genome.maps[mapix].chrs[chr].map.simple.expected_n_crossovers * 100;
+		  }
 		  ++m_ix;
-	    }
+		}
 	  } else if (d->genome.maps[mapix].chrs[chr].type == GSC_LINKAGEGROUP_REORDER) {
-	    for (int i = 0; i < d->genome.maps[mapix].chrs[chr].map.reorder.n_markers; ++i) {
-	      SET_STRING_ELT(ssnp, m_ix, mkChar(d->genome.marker_names[d->genome.maps[mapix].chrs[chr].map.reorder.marker_indexes[i]]));
-	      SET_STRING_ELT(schr, m_ix, mkChar(chr_name_buffer));
-	      cpos[m_ix] = d->genome.maps[mapix].chrs[chr].map.reorder.dists[i] * 
-	        d->genome.maps[mapix].chrs[chr].map.reorder.expected_n_crossovers * 100;
+		for (int i = 0; i < d->genome.maps[mapix].chrs[chr].map.reorder.n_markers; ++i) {
+		  SET_STRING_ELT(ssnp, m_ix, mkChar(d->genome.marker_names[d->genome.maps[mapix].chrs[chr].map.reorder.marker_indexes[i]]));
+		  SET_STRING_ELT(schr, m_ix, mkChar(chr_name_buffer));
+		  if (d->genome.maps[mapix].chrs[chr].map.reorder.dists == NULL) {
+			cpos[m_ix] = NAN;
+		  } else {
+			cpos[m_ix] = d->genome.maps[mapix].chrs[chr].map.reorder.dists[i] * 
+			d->genome.maps[mapix].chrs[chr].map.reorder.expected_n_crossovers * 100;
+		  }
 		  ++m_ix;
-	    }
+		}
 	  }
 	}
-
+	
 	SET_VECTOR_ELT(map, 0, ssnp);
 	SET_VECTOR_ELT(map, 1, schr);
 	SET_VECTOR_ELT(map, 2, spos);
