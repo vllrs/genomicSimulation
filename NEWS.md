@@ -13,7 +13,8 @@
 
 - `save.`, `change.` and `delete.` functions no longer return anything. They used to return 0L.
 - Improved consistency in default parameters for group numbers, map IDs, and effect set IDs. The default value for map ID and effect ID parameters everywhere is now 0, which is interpreted as the oldest currently-active genetic map/marker effect set in the simulation. The default value for group numbers is NA, and (across all functions that take group numbers) NA and 0 are both interpreted as requesting all candidates in the simulation rather than only a specific group. (Not all functions accept requests to use all candidates in the simulation. For those that do not, a 0 or NA group number will still throw an error.) 
-- Warnings are now displayed as regular printed output statements that begin with "NOTE! ", rather than as R `warning()`. This choice comes from a few experiences debugging simulations running in remote environments, where the process was made much more difficult by the fact that warnings were hidden until catastrophic failure.  
+- Warnings are now displayed as regular printed output statements that begin with "NOTE! ", rather than as R `warning()`. This choice comes from a few experiences debugging simulations running in remote environments, where the process was made much more difficult by the fact that warnings were hidden until catastrophic failure. 
+- Function names `delete.map` and `delete.effects` are now available, to match `load.map` and `load.effects`. (The previous deletion function names, `delete.recombination.map` and `delete.effect.set`, are still available for backwards compatibility)
 
 ## Bug Fixes
 

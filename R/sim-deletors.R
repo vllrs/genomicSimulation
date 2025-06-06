@@ -60,10 +60,23 @@ delete.label <- function(labels) {
 #'
 #' @family deletor functions
 #' @export
-delete.effect.set <- function(effect.sets) {
+delete.effects <- function(effect.sets) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   effect.sets <- convert.to.integer(effect.sets,"Effect set identifiers")
   .Call(SXP_delete_eff_set, sim.data$p, effect.sets)
+}
+
+#' OLD NAME | Delete marker effect set(s)
+#'
+#' ! This is the old name for \code{delete.effects}. It has been changed for consistency
+#' with \code{load.effects}
+#'
+#' @seealso \link{delete.effects}
+#' 
+#' @keywords internal 
+#' @export
+delete.effect.set <- function(effect.sets) {
+  return(delete.effects(effect.sets))
 }
 
 
@@ -76,9 +89,23 @@ delete.effect.set <- function(effect.sets) {
 #'
 #' @family deletor functions
 #' @export
-delete.recombination.map <- function(maps) {
+delete.map <- function(maps) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   maps <- convert.to.integer(maps,"Map identifiers")
   .Call(SXP_delete_recombination_map, sim.data$p, maps)
+}
+
+
+#' OLD NAME | Delete recombination map(s)
+#' 
+#' ! This is the old name for \code{delete.map}. It has been changed for consistency
+#' with \code{load.map}
+#'
+#' @seealso \link{delete.map}
+#' 
+#' @keywords internal 
+#' @export
+delete.recombination.map <- function(maps) {
+  return(delete.map(maps))
 }
 
