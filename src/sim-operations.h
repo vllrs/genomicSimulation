@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.2.6.15
+genomicSimulationC v0.2.6.16
 // Converted using Rconversion.sh v2
 
     Last edit: 30 May 2025
@@ -751,8 +751,7 @@ typedef struct {
  */
 typedef struct {
     unsigned int n_chr; /**< The number of chromosomes/linkage groups represented in the map. **/
-    unsigned long* chr_names; /**< An identifying number/code for each chromosome/linkage group in the map, 
-              * as a base-36 number. Not used for anything besides making output clearer. */
+    char** chr_names; /**< An identifying code for each chromosome/linkage group in the map. Optional. */
     gsc_LinkageGroup* chrs; /**< Vector of @a n_chr recombination maps, one for each chromosome/linkage group
               * in this recombination map. */
 
@@ -971,7 +970,7 @@ enum gsc_GenotypeFileCellStyle {
 /** Unprocessed data for one marker (linkage group and position) loaded from a map file. */
 struct gsc_MapfileUnit {
     char* name;
-    unsigned long chr;
+    char* chr;
     double pos;
 };
 

@@ -135,7 +135,7 @@ test_that("see.genetic.map works", {
   
   clear.simdata()
   capture_output(init2 <- load.data(map.file="helper_map2.txt"))
-  truth2 <- data.frame("marker"=c("and&a2","a1"), "chr"=c('1A','1B'), "pos"=c(NaN,NaN))
+  truth2 <- data.frame("marker"=c("a1","and&a2"), "chr"=c('1B','1a'), "pos"=c(NaN,NaN))
   expect_equal(see.genetic.map(init2$map), truth2)
   
 })

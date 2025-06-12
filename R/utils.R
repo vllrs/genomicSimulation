@@ -19,14 +19,6 @@ my.expand.path <- function(name) {
 }
 
 #' @noRd
-chr.ix.to.genomicSimulation.numbering <- function(chr.names) {
-  chr.uniqnames <- unique(chr.names)
-  data.frame("chr.names"=chr.uniqnames,
-             "genomicSimulation.chr.number"=rank(strtoi(chr.uniqnames,36))-1)
-}
-
-
-#' @noRd
 fallback.param.names <- function(emptydefault, params.in.order) {
   for (param in params.in.order) {
     if (param != emptydefault) {

@@ -7,12 +7,6 @@
 #define LABELID_IFY(n) (LabelID){.id=n}
 #define PEDIGREEID_IFY(n) (PedigreeID){.id=n}
 
-// The maximum length of a buffer needed to store a base36 representation of a number of a given integer type
-// Explanation: sizeof(type)*CHAR_BIT is the number of binary digits.
-//     The number of binary digits is more than 5 times the number of base36 digits, but less than 6 times. 
-//     So b/5 is greater than the number of base36 digits. Integer division makes this "/ 5 + 1"
-//     And then add one more, to store the terminating null character of the base36 string.
-#define BASE36_BUFFER_SIZE(type) ((int) fmax(sizeof(type)*CHAR_BIT / 5 + 2,18))
 
 void convertVECSXP_to_GroupNum(SEXP container, GroupNum* output) {
   R_xlen_t len = xlength(container);
@@ -25,23 +19,6 @@ void convertVECSXP_to_GroupNum(SEXP container, GroupNum* output) {
 		} else {
 			output[i] = GROUPNUM_IFY(intvec[i]);
 		}
-	}
-}
-
-void base36tostr(unsigned long n, char* buf) {
-	// Construct the string backwards
-	size_t len = 1;
-	char* s = buf; 
-	*s = '\0';
-	do {
-		++s; ++len;
-		*s = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"[n % 36];
-		n /= 36;
-	} while (n > 0 && len < 15); // the 'len' condition is just for safety
-	
-	// turn it all around
-	for (size_t i = 0; i < len/2; ++i) {
-		char tmp = buf[i]; buf[i] = buf[len-1-i]; buf[len-1-i] = tmp;
 	}
 }
 
@@ -577,20 +554,21 @@ SEXP SXP_see_map(SEXP exd, SEXP s_map) {
 	SEXP spos = PROTECT(allocVector(REALSXP, d->genome.n_markers));
 	double* cpos = REAL(spos);
 	
-	char chr_name_buffer[BASE36_BUFFER_SIZE(unsigned long)];
+	char* blank_chr_name = "";
+	SEXP chr_name;
 
 	GSC_GENOLEN_T m_ix = 0;
 	for (int chr = 0; chr < d->genome.maps[mapix].n_chr; ++chr) {
-	  if (d->genome.maps[mapix].chr_names == NULL) {
-		  snprintf(chr_name_buffer, BASE36_BUFFER_SIZE(unsigned long), "unnamed%d", chr);
+	  if (d->genome.maps[mapix].chr_names[chr] != NULL) {
+	    chr_name = mkChar(d->genome.maps[mapix].chr_names[chr]);
 	  } else {
-		  base36tostr(d->genome.maps[mapix].chr_names[chr], chr_name_buffer);
+	    chr_name = mkChar(blank_chr_name);
 	  }
 	  
 	  if (d->genome.maps[mapix].chrs[chr].type == GSC_LINKAGEGROUP_SIMPLE) {
 		for (int i = 0; i < d->genome.maps[mapix].chrs[chr].map.simple.n_markers; ++i) {
 		  SET_STRING_ELT(ssnp, m_ix, mkChar(d->genome.marker_names[i + d->genome.maps[mapix].chrs[chr].map.simple.first_marker_index]));
-		  SET_STRING_ELT(schr, m_ix, mkChar(chr_name_buffer));
+		  SET_STRING_ELT(schr, m_ix, chr_name);
 		  if (d->genome.maps[mapix].chrs[chr].map.simple.dists == NULL) {
 			cpos[m_ix] = NAN;
 		  } else { 
@@ -602,7 +580,7 @@ SEXP SXP_see_map(SEXP exd, SEXP s_map) {
 	  } else if (d->genome.maps[mapix].chrs[chr].type == GSC_LINKAGEGROUP_REORDER) {
 		for (int i = 0; i < d->genome.maps[mapix].chrs[chr].map.reorder.n_markers; ++i) {
 		  SET_STRING_ELT(ssnp, m_ix, mkChar(d->genome.marker_names[d->genome.maps[mapix].chrs[chr].map.reorder.marker_indexes[i]]));
-		  SET_STRING_ELT(schr, m_ix, mkChar(chr_name_buffer));
+		  SET_STRING_ELT(schr, m_ix, chr_name);
 		  if (d->genome.maps[mapix].chrs[chr].map.reorder.dists == NULL) {
 			cpos[m_ix] = NAN;
 		  } else {

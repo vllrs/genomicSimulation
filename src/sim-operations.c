@@ -1343,8 +1343,8 @@ static int gsc_helper_indirect_alphabetical_str_comparer(const void* p0, const v
 static int gsc_helper_mapfileunit_ascending_chr_comparer(const void* p0, const void* p1) {
     struct gsc_MapfileUnit s0 = *(struct gsc_MapfileUnit*)p0;
     struct gsc_MapfileUnit s1 = *(struct gsc_MapfileUnit*)p1;
-    //return s0.ul - s1.ul;
-    return (s0.chr < s1.chr) ? -1 : (s0.chr > s1.chr);
+    //return (s0.chr < s1.chr) ? -1 : (s0.chr > s1.chr);
+    return strcmp(s0.chr, s1.chr);
 }
 
 /** Comparator function for qsort. Used to compare a pair of gsc_MapFileUnits
@@ -4919,6 +4919,14 @@ void gsc_delete_recombination_map_nointegrity(gsc_RecombinationMap* m) {
         GSC_FREE(m->chrs);
         m->chrs = NULL;
     }
+    if (m->chr_names != NULL) {
+        for (GSC_GENOLEN_T i = 0; i < m->n_chr; ++i) {
+            GSC_FREE(m->chr_names[i]);
+        }
+        GSC_FREE(m->chr_names);
+        m->chr_names = NULL;
+    }
+	m->n_chr = 0;
 }
 
 /** Delete the gsc_AlleleMatrix linked list from m onwards and frees its memory.
@@ -5377,34 +5385,31 @@ static int gsc_helper_read_first_row(gsc_TableFileReader* tf,
                                      int max_headerlen,
                                      gsc_TableFileCell* outputq,
                                      unsigned int* queuesize) {
-    int ncell = max_headerlen;
-    for (int i = 0; i < max_headerlen; ++i) {
+    for (int i = 0; i < max_headerlen + 1; ++i) {
         // Read the next cell if it hasn't been read yet
         if (*queuesize <= i) {
             outputq[i] = gsc_tablefilereader_get_next_cell(tf);
             (*queuesize)++;
         }
+		
+		int headerlength = -1;
+		if (outputq[i].predNewline) { // detected a newline after the previous cell 
+			headerlength = i; 
+		} else if (outputq[i].eof) { // detected end of file at the end of this cell
+			headerlength = i+1; 
+		}
+		
+		if (headerlength > 0) {
+			if (headerlength >= min_headerlen && headerlength <= max_headerlen) {
+				return headerlength;
+			} else {
+				return GSC_NA;
+			}
+			
+		}
         
-        // Check header length validity
-        if (outputq[i].eof || outputq[i].predNewline) { 
-            if (i < min_headerlen - 1) { // Is the header row too short?
-                return GSC_NA; // -1
-            } else { // or does it just end without containing all optional columns?
-                ncell = i;
-                break;
-            }
-        }
     }
-    // Check the header row ends there, if not already established.
-    if (*queuesize <= ncell) {
-        outputq[ncell] = gsc_tablefilereader_get_next_cell(tf);
-        (*queuesize)++;
-    }
-    if (!(outputq[ncell].eof || outputq[ncell].predNewline)) {
-        return GSC_NA; // -1
-    } else {
-        return ncell;
-    }
+	return GSC_NA;
 }
 
 
@@ -5443,8 +5448,7 @@ static GSC_LOGICVAL gsc_helper_parse_ncell_header(int ncellrow1,
                                                   int ncell_optional,
                                                   const char** titles_optional,
                                                   int* col_order) {
-    
-    // Check ordering of titles.
+	// Check ordering of titles.
     // Step 1: Initialise
     int ncell_total = ncell_required + ncell_optional;
     for (int i = 0; i < ncell_total; ++i) {
@@ -5555,7 +5559,7 @@ static unsigned int gsc_helper_parse_mapfile(const char* filename, struct gsc_Ma
     const char* titles[3] = { "marker", "chr", "pos"};
     int colnums[3];
     int marker_colnum, chr_colnum, pos_colnum;
-    GSC_LOGICVAL header = gsc_helper_parse_ncell_header(row1len, cellqueue, 3, titles, 0, NULL, colnums);
+    GSC_LOGICVAL header = (row1len == 3) ? gsc_helper_parse_ncell_header(row1len, cellqueue, 3, titles, 0, NULL, colnums) : GSC_NA;
     if (header == GSC_TRUE) {
         Rprintf("(Loading %s) Format: map file with header\n", filename);
         marker_colnum = colnums[0] + 1, chr_colnum = colnums[1] + 1, pos_colnum = colnums[2] + 1;
@@ -5582,7 +5586,7 @@ static unsigned int gsc_helper_parse_mapfile(const char* filename, struct gsc_Ma
     unsigned int goodrow_counter = 0;
 
     char* marker = NULL;
-    unsigned long chr = 0;
+    char* chr = NULL;
     double pos = 0;
     char* conversionflag;
 
@@ -5605,8 +5609,14 @@ static unsigned int gsc_helper_parse_mapfile(const char* filename, struct gsc_Ma
                         GSC_STRETCH_BUFFER(buffer,2*row);
                     }
                     marker = NULL;
-                } else if (marker != NULL) {
-                    GSC_FREE(marker);
+                    chr = NULL;
+                } else {
+                    if (marker != NULL) {
+                        GSC_FREE(marker);
+                    }
+                    if (chr != NULL) {
+                        GSC_FREE(chr);
+                    }
                 }
                 row += ncell.predNewline;
                 goodrow = 1;
@@ -5619,17 +5629,20 @@ static unsigned int gsc_helper_parse_mapfile(const char* filename, struct gsc_Ma
                 goodrow = 0;
             } if (col == marker_colnum) {
                 gsc_tablefilecell_deep_copy(&ncell);
-                marker = ncell.cell;
-                ncell.isCellShallow = GSC_TRUE; // so it isn't freed.
+                marker = ncell.cell; ncell.cell = NULL;
+                //ncell.isCellShallow = GSC_TRUE; // so it isn't freed.
 
             } else if (col == chr_colnum) {
-                char tmp = ncell.cell[ncell.cell_len]; ncell.cell[ncell.cell_len] = '\0';
+                gsc_tablefilecell_deep_copy(&ncell);
+                chr = ncell.cell; ncell.cell = NULL;
+                //ncell.isCellShallow = GSC_TRUE; // so it isn't freed
+                /*char tmp = ncell.cell[ncell.cell_len]; ncell.cell[ncell.cell_len] = '\0';
                 chr = strtoul(ncell.cell,&conversionflag,36);
                 ncell.cell[ncell.cell_len] = tmp;
                 if (conversionflag != ncell.cell + ncell.cell_len) { // unsuccessful read
                     //Rprintf("NOTE! Entry at row %i column %i of file %s could not be parsed as an integer or alphanumeric string\n", row, chr_colnum, filename);
                     goodrow = 0;
-                }
+                }*/
 
             } else if (col == pos_colnum) {
                 char tmp = ncell.cell[ncell.cell_len]; ncell.cell[ncell.cell_len] = '\0';
@@ -5645,7 +5658,7 @@ static unsigned int gsc_helper_parse_mapfile(const char* filename, struct gsc_Ma
             }
 
             // Reset to get next cell.
-            if (!ncell.isCellShallow) { GSC_FREE(ncell.cell); }
+            if (!ncell.isCellShallow && ncell.cell != NULL) { GSC_FREE(ncell.cell); }
         }
     } while (!ncell.eof);
 
@@ -5657,8 +5670,13 @@ static unsigned int gsc_helper_parse_mapfile(const char* filename, struct gsc_Ma
 
             ++goodrow_counter;
             marker = NULL;
-        } else if (marker != NULL) {
-            GSC_FREE(marker);
+        } else {
+            if (marker != NULL) {
+                GSC_FREE(marker);
+            }
+            if (chr != NULL) {
+                GSC_FREE(chr);
+            }
         }
     }
     //row -= ncell.predNewline; // don't count trailing newlines in stats.
@@ -5708,7 +5726,7 @@ static GSC_GENOLEN_T gsc_helper_str_markerlist_leftjoin(gsc_KnownGenome g,
 
             } else { // discard this marker. n_joined lags behind i by one more step.
                 GSC_FREE(rlist[i].name);
-
+				GSC_FREE(rlist[i].chr);
             }
         }
     }
@@ -5788,10 +5806,10 @@ static void gsc_helper_sort_markerlist(GSC_GENOLEN_T n_markers, struct gsc_Mapfi
     // sort each linkage group by pos
     //int n_chr = 1;
     GSC_GENOLEN_T chr_start = 0;
-    unsigned long current_chr = markerlist[0].chr;
+    char* current_chr = markerlist[0].chr;
 
     for (GSC_GENOLEN_T i = 1; i < n_markers; ++i) {
-        if (markerlist[i].chr != current_chr) { // found end of current chr
+        if (strcmp(markerlist[i].chr, current_chr) != 0) { // found end of current chr
             //n_chr++;
             qsort(markerlist + chr_start, i - chr_start,
                     sizeof(*markerlist), gsc_helper_mapfileunit_ascending_d_comparer);
@@ -5826,15 +5844,16 @@ gsc_MapID gsc_create_recombmap_from_markerlist(gsc_SimData* d,
 
     GSC_CREATE_BUFFER(chr_nmembers,GSC_GENOLEN_T,40);
     memset(chr_nmembers,0,sizeof(*chr_nmembers)*40);
-    GSC_CREATE_BUFFER(chr_ids,unsigned long,40);
+    GSC_CREATE_BUFFER(chr_ids,char*,40);
     chr_nmembers[0] = 1;
     GSC_GENOLEN_T n_chr = 1;
-    chr_ids[n_chr-1] = markerlist[0].chr;
+    chr_ids[n_chr-1] = markerlist[0].chr; 
+	markerlist[0].chr = NULL; // so that it will not be freed
     for (GSC_GENOLEN_T i = 1; i < n_markers; ++i) {
         while (i < n_markers && markerlist[i].name == NULL) {
             ++i;
         }
-        if (chr_ids[n_chr-1] != markerlist[i].chr) {
+        if (strcmp(chr_ids[n_chr-1], markerlist[i].chr) != 0) {
             // First of next
             if (n_chr >= chr_nmemberscap) {
                 GSC_STRETCH_BUFFER(chr_ids,2*n_chr);
@@ -5843,6 +5862,7 @@ gsc_MapID gsc_create_recombmap_from_markerlist(gsc_SimData* d,
             }
             ++n_chr;
             chr_ids[n_chr-1] = markerlist[i].chr;
+			markerlist[i].chr = NULL;
             chr_nmembers[n_chr-1] = 1;
         } else {
             ++(chr_nmembers[n_chr-1]);
@@ -5978,7 +5998,7 @@ gsc_MapID gsc_create_uniformspaced_recombmap(gsc_SimData* d,
         return NO_MAP;
     } 
     
-    gsc_RecombinationMap map = {.n_chr=1, .chrs=gsc_malloc_wrap(sizeof(gsc_LinkageGroup)*1, GSC_TRUE) };
+    gsc_RecombinationMap map = {.n_chr=1, .chr_names=NULL, .chrs=gsc_malloc_wrap(sizeof(gsc_LinkageGroup)*1, GSC_TRUE) };
 
     if (markernames == NULL) {
         double* lgdists = gsc_malloc_wrap(sizeof(double)*d->genome.n_markers,GSC_TRUE);
@@ -6096,7 +6116,7 @@ gsc_MapID gsc_create_unlinked_recombmap(gsc_SimData* d, GSC_GENOLEN_T n_markers,
         n_markers = d->genome.n_markers;
         //markernames = d->genome.marker_names;
         
-        gsc_RecombinationMap map = {.n_chr=n_markers, 
+        gsc_RecombinationMap map = {.n_chr=n_markers, .chr_names=NULL,
                                     .chrs=gsc_malloc_wrap(sizeof(gsc_LinkageGroup)*n_markers, GSC_TRUE) };
         
         for (GSC_GENOLEN_T i = 0; i < n_markers; ++i) {
@@ -6127,7 +6147,7 @@ gsc_MapID gsc_create_unlinked_recombmap(gsc_SimData* d, GSC_GENOLEN_T n_markers,
             }
         }
         if (could_not_match > 0) {
-            Rprintf("NOTE! %d of the marker names do not appear in the genome", could_not_match);
+            Rprintf("NOTE! %d of the marker names do not appear in the genome\n", could_not_match);
         }
         
         // Then create and populate the map 
@@ -6245,6 +6265,9 @@ gsc_MapID gsc_load_mapfile(SimData* d, const char* filename) {
             GSC_FREE(mapcontents[i].name);
         }
     }
+	for (unsigned int i = 0; i < nrows; ++i) { // free the chr names that haven't been moved to the proper map object
+		if (mapcontents[i].chr != NULL) { GSC_FREE(mapcontents[i].chr); }
+	}
     GSC_FREE(mapcontents);
 
     return map;
@@ -7136,6 +7159,7 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
             do {
              cell = gsc_tablefilereader_get_next_cell(&tbl2);
                 if (cell.predNewline) { ++nmarkersread; }
+				if (!cell.isCellShallow) { GSC_FREE(cell.cell); }
             } while (!cell.eof);
             gsc_tablefilereader_close(&tbl2);
             if (cell.predNewline) { // there's a newline before eof, so no real actual last row
@@ -7199,7 +7223,7 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
                         }
                         gsc_tablefilecell_deep_copy(&ncell);
                         d->genome.marker_names[markerix] = ncell.cell;
-                        ncell.isCellShallow = GSC_TRUE; // prevent deletion
+                        ncell.cell = NULL; // prevent deletion
                     } else {
 						char tmp = ncell.cell[ncell.cell_len]; ncell.cell[ncell.cell_len] = '\0';
 						
