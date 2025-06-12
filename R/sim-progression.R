@@ -153,6 +153,9 @@ cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, 
 #' @param map If \code{map1} and \code{map2} are not specified 
 #' but \code{map} is, then the map specified by parameter \code{map} will be used for 
 #' both map1 and map2.
+#' @param cap If \code{cap1} and \code{cap2} are not specified 
+#' but \code{cap} is, then the map specified by parameter \code{cap} will be used for 
+#' both cap1 and cap2.
 #' @inheritParams make.random.crosses
 #' @return The group number of the new crosses produced, or 0 if they could not be
 #' produced due to an invalid parent group number being provided.
@@ -162,10 +165,13 @@ cross.randomly <- function(group, n.crosses=5, cap=0, offspring=1, retain=TRUE, 
 make.random.crosses.between <- function(group1, group2, n.crosses=5, cap1=0, cap2=0, 
 	  map1=0L, map2=0L, offspring=1, retain=TRUE, give.names=FALSE, name.prefix=NULL, 
 		track.pedigree=TRUE, give.ids=TRUE, file.prefix="", save.pedigree=FALSE, 
-		save.gebv=FALSE, save.genotype=FALSE, map=0L) {
+		save.gebv=FALSE, save.genotype=FALSE, map=0L, cap=0L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
   if (map1[1] == 0L && map2[1] == 0L && map[1] != 0L) {
     map1 = map; map2 = map;
+  }
+  if (cap1[1] == 0L && cap2[1] == 0L && cap[1] != 0L) {
+    cap1 = cap; cap2 = cap;
   }
   
 	return(.Call(SXP_make_random_crosses_between, sim.data$p, as.integer(group1), 

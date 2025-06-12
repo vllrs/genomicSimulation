@@ -12,7 +12,7 @@ If not specified, uses the earliest-loaded genetic map in this simulation.}
 }
 \value{
 A dataframe containing three columns: the first, named "marker", 
-containing marker names; the second, named "chr", containing chromosome numbers;
+containing marker names; the second, named "chr", containing chromosome names;
 and the third, named "pos", containing positions in cM.
 }
 \description{
@@ -22,11 +22,7 @@ match the order of the markers as stored by the simulation (eg.
 will match the marker order in genotypes from see.group.data(data.type="G")).
 }
 \details{
-Note that genomicSimulation does not store chromosome names after initial
-import. The "chr" column of the output contains the index of a chromosome
-as stored in the simulation. 
-
-Similarly, genomicSimulation does not store the marker positions exactly as 
+genomicSimulation does not store the marker positions exactly as 
 they were in the input file. The first marker in a chromosome is designated 
 to be at position 0, and the other markers are stored as their cM offset 
 from the first marker's position. Chromosomes containing only one marker

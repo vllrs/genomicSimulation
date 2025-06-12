@@ -20,10 +20,10 @@ Other loader functions:
 \code{\link{load.map}()}
 
 Other deletor functions: 
-\code{\link{delete.effect.set}()},
+\code{\link{delete.effects}()},
 \code{\link{delete.group}()},
 \code{\link{delete.label}()},
-\code{\link{delete.recombination.map}()}
+\code{\link{delete.map}()}
 }
 \concept{deletor functions}
 \concept{loader functions}

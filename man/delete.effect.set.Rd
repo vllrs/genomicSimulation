@@ -2,23 +2,15 @@
 % Please edit documentation in R/sim-deletors.R
 \name{delete.effect.set}
 \alias{delete.effect.set}
-\title{Delete marker effect set(s)}
+\title{OLD NAME | Delete marker effect set(s)}
 \usage{
 delete.effect.set(effect.sets)
 }
-\arguments{
-\item{effect.sets}{an vector containing the effect set identifiers of the 
-effect sets to be deleted}
-}
 \description{
-Removes the given marker effect set(s) 
-from simulation memory.
+! This is the old name for \code{delete.effects}. It has been changed for consistency
+with \code{load.effects}
 }
 \seealso{
-Other deletor functions: 
-\code{\link{clear.simdata}()},
-\code{\link{delete.group}()},
-\code{\link{delete.label}()},
-\code{\link{delete.recombination.map}()}
+\link{delete.effects}
 }
-\concept{deletor functions}
+\keyword{internal}

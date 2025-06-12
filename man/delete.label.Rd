@@ -25,9 +25,9 @@ Other label functions:
 
 Other deletor functions: 
 \code{\link{clear.simdata}()},
-\code{\link{delete.effect.set}()},
+\code{\link{delete.effects}()},
 \code{\link{delete.group}()},
-\code{\link{delete.recombination.map}()}
+\code{\link{delete.map}()}
 }
 \concept{deletor functions}
 \concept{label functions}

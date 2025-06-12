@@ -2,22 +2,15 @@
 % Please edit documentation in R/sim-deletors.R
 \name{delete.recombination.map}
 \alias{delete.recombination.map}
-\title{Delete recombination map(s)}
+\title{OLD NAME | Delete recombination map(s)}
 \usage{
 delete.recombination.map(maps)
 }
-\arguments{
-\item{maps}{an vector containing the map identifiers of the maps to be deleted}
-}
 \description{
-Removes the given recombination map(s)
-from simulation memory.
+! This is the old name for \code{delete.map}. It has been changed for consistency
+with \code{load.map}
 }
 \seealso{
-Other deletor functions: 
-\code{\link{clear.simdata}()},
-\code{\link{delete.effect.set}()},
-\code{\link{delete.group}()},
-\code{\link{delete.label}()}
+\link{delete.map}
 }
-\concept{deletor functions}
+\keyword{internal}

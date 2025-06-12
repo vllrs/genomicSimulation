@@ -22,7 +22,8 @@ make.random.crosses.between(
   save.pedigree = FALSE,
   save.gebv = FALSE,
   save.genotype = FALSE,
-  map = 0L
+  map = 0L,
+  cap = 0L
 )
 }
 \arguments{
@@ -107,6 +108,10 @@ uses genetic markers as columns and genotypes as rows. See \code{save.genotypes}
 \item{map}{If \code{map1} and \code{map2} are not specified 
 but \code{map} is, then the map specified by parameter \code{map} will be used for 
 both map1 and map2.}
+
+\item{cap}{If \code{cap1} and \code{cap2} are not specified 
+but \code{cap} is, then the map specified by parameter \code{cap} will be used for 
+both cap1 and cap2.}
 }
 \value{
 The group number of the new crosses produced, or 0 if they could not be

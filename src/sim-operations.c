@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.6.15 - last edit 30 May 2025 */
+/* genomicSimulationC v0.2.6.17 - last edit 12 June 2025 */
 // Converted using Rconversion.sh v2
 
 /** Default parameter values for GenOptions, to help with quick scripts and prototypes.
@@ -141,6 +141,7 @@ gsc_SimData* gsc_create_empty_simdata() {
  *  @param d pointer to the gsc_SimData to be cleared.
  */
 void gsc_clear_simdata(gsc_SimData* d) {
+	if (d == NULL) return;
     // Free label defaults
     if (d->n_labels > 0) {
         if (d->label_ids != NULL) {
@@ -158,11 +159,14 @@ void gsc_clear_simdata(gsc_SimData* d) {
     }
     if (d->n_eff_sets > 0) {
         GSC_FREE(d->eff_set_ids);
+        for (GSC_ID_T i = 0; i < d->n_eff_sets; ++i) {
+            gsc_delete_effects_table(&(d->e[i]));
+        }
         GSC_FREE(d->e);
     }
     gsc_delete_allele_matrix(d->m);
 
-    // Clear all values
+    // Clear all values but the RNG
     d->n_labels = 0;
     d->label_ids = NULL;
     d->label_defaults = NULL;
@@ -173,7 +177,9 @@ void gsc_clear_simdata(gsc_SimData* d) {
     d->genome.maps = NULL;
     d->m = NULL;
     d->n_eff_sets = 0;
+    d->eff_set_ids = NULL;
     d->e = NULL;
+    // d->rng
     d->current_id = GSC_NO_PEDIGREE;
     d->n_groups = 0;
 }
@@ -5004,32 +5010,10 @@ void gsc_delete_effects_table(gsc_MarkerEffects* m) {
  * @param m pointer to the struct whose data is to be cleared and memory freed.
  */
 void gsc_delete_simdata(gsc_SimData* m) {
-    if (m == NULL) {
-        return;
-    }
-
-    gsc_delete_genome(&(m->genome));
-
-    if (m->n_eff_sets > 0) {
-        GSC_FREE(m->eff_set_ids);
-        for (GSC_ID_T i = 0; i < m->n_eff_sets; ++i) {
-            gsc_delete_effects_table(&(m->e[i]));
-        }
-        GSC_FREE(m->e);
-    }
-
-    gsc_delete_allele_matrix(m->m);
-
-    if (m->n_labels > 0) {
-        if (m->label_ids != NULL) {
-            GSC_FREE(m->label_ids);
-        }
-        if (m->label_defaults != NULL) {
-            GSC_FREE(m->label_defaults);
-        }
-    }
-
     if (m != NULL) {
+		// clear_simdata does a tiny bit of extra work compared to just freeing everything (by setting to 0)
+		// but it's minor, and you won't be calling this function in a tight loop anyway
+		gsc_clear_simdata(m); 
         GSC_FREE(m);
     }
 }

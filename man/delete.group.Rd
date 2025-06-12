@@ -38,9 +38,9 @@ Other grouping functions:
 
 Other deletor functions: 
 \code{\link{clear.simdata}()},
-\code{\link{delete.effect.set}()},
+\code{\link{delete.effects}()},
 \code{\link{delete.label}()},
-\code{\link{delete.recombination.map}()}
+\code{\link{delete.map}()}
 }
 \concept{deletor functions}
 \concept{grouping functions}
