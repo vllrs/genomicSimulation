@@ -1,10 +1,10 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.2.6.17
+genomicSimulationC v0.2.6.18
 // Converted using Rconversion.sh v2
 
-    Last edit: 12 June 2025
+    Last edit: 23 July 2025
     License: MIT License
 
 Copyright (c) 2021 Kira Villiers

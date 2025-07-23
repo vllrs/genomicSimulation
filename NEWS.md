@@ -24,7 +24,7 @@
 - `SimData.n_groups` is no longer decremented if a call is made to `delete.group` for a group number with zero members (a nonexistent group). While this did not cause errors, it did cause a warning to be shown when calling `see.existing.groups`.
 - Fix a bug where founder alleles would be blank if a genetic map had been created from the markers in the genotype file during the `load.data` call.
 - Fix a crash in `see.genetic.map` when trying to view a genetic map created during a `load.data` call from the markers in the genotype file. 
-
+- Fix a crash occuring in many simulation functions if they were run after a `load.data` call where a genotype file was provided, but the genotype file could not be opened or contained zero genotypes. 
 
 # genomicSimulation v0.2.6
 

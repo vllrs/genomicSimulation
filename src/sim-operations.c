@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.6.17 - last edit 12 June 2025 */
+/* genomicSimulationC v0.2.6.18 - last edit 23 July 2025 */
 // Converted using Rconversion.sh v2
 
 /** Default parameter values for GenOptions, to help with quick scripts and prototypes.
@@ -639,7 +639,7 @@ gsc_LabelID gsc_create_new_label(gsc_SimData* d, const int setTo) {
     // Set all values of that label to the default
     gsc_AlleleMatrix* m = d->m;
     int warned = GSC_FALSE;
-    do {
+    while (m != NULL) {
         // Do we need to destroy the extant label table? happens if label_ids were missing and we discarded them
         if (m->n_labels != d->n_labels - 1 && m->labels != NULL) {
             for (GSC_ID_T i = 0; i < m->n_labels; ++i) {
@@ -692,8 +692,9 @@ gsc_LabelID gsc_create_new_label(gsc_SimData* d, const int setTo) {
             Rprintf("NOTE! Unable to create new label for all genotypes; gsc_SimData may be corrupted\n");
             warned = GSC_TRUE;
         }
-
-    } while ((m = m->next) != NULL);
+        
+        m = m->next;
+    }
     return d->label_ids[d->n_labels - 1];
 }
 
@@ -748,18 +749,19 @@ void gsc_change_label_to(gsc_SimData* d,
 
     gsc_AlleleMatrix* m = d->m;
     if (whichGroup.num != GSC_NO_GROUP.num) { // set the labels of group members
-        do {
+        while (m != NULL) {
 
             for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
                 if (m->groups[i].num == whichGroup.num) {
                     m->labels[labelIndex][i] = setTo;
                 }
             }
+            m = m->next;
 
-        } while ((m = m->next) != NULL);
+        }
 
     } else { // whichGroup == 0 so set the labels of all genotypes
-        do {
+        while (m != NULL) {
 
             if (setTo == 0) {
                 memset(m->labels[labelIndex], 0, sizeof(int) * m->n_genotypes);
@@ -768,8 +770,8 @@ void gsc_change_label_to(gsc_SimData* d,
                     m->labels[labelIndex][i] = setTo;
                 }
             }
-
-        } while ((m = m->next) != NULL);
+            m = m->next;
+        }
     }
 }
 
@@ -804,24 +806,24 @@ void gsc_change_label_by_amount(gsc_SimData* d,
 
     gsc_AlleleMatrix* m = d->m;
     if (whichGroup.num != GSC_NO_GROUP.num) { // set the labels of group members
-        do {
+        while (m != NULL) {
 
             for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
                 if (m->groups[i].num == whichGroup.num) {
                     m->labels[labelIndex][i] += byValue;
                 }
             }
-
-        } while ((m = m->next) != NULL);
+            m = m->next;
+        }
 
     } else { // whichGroup == 0 so set the labels of all genotypes
-        do {
+        while (m != NULL) {
 
             for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
                 m->labels[labelIndex][i] += byValue;
             }
-
-        } while ((m = m->next) != NULL);
+            m = m->next;
+        }
     }
 
 }
@@ -865,7 +867,7 @@ void gsc_change_label_to_values(gsc_SimData* d,
     GSC_GLOBALX_T currentIndex = 0;
     if (whichGroup.num != GSC_NO_GROUP.num) { // set the labels of group members
         // First scan through to find firstIndex
-        do {
+        while (m != NULL) {
 
             for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
                 if (m->groups[i].num == whichGroup.num) {
@@ -879,11 +881,11 @@ void gsc_change_label_to_values(gsc_SimData* d,
                     }
                 }
             }
-
-        } while ((m = m->next) != NULL);
+            m = m->next;
+        }
 
     } else { // whichGroup == 0 so set the labels of all genotypes
-        do {
+        while (m != NULL) {
 
             for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
                 // Update label if it is between startIndex and startIndex + n_values
@@ -895,8 +897,8 @@ void gsc_change_label_to_values(gsc_SimData* d,
                     return;
                 }
             }
-
-        } while ((m = m->next) != NULL);
+            m = m->next;
+        }
     }
 }
 
@@ -938,7 +940,7 @@ void gsc_change_names_to_values(gsc_SimData* d,
     GSC_GLOBALX_T currentIndex = 0;
     if (whichGroup.num != GSC_NO_GROUP.num) { // set the names of group members
         // First scan through to find firstIndex
-        do {
+        while (m != NULL) {
 
             for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
                 if (m->groups[i].num == whichGroup.num) {
@@ -960,11 +962,12 @@ void gsc_change_names_to_values(gsc_SimData* d,
                     }
                 }
             }
+            m = m->next;
 
-        } while ((m = m->next) != NULL);
+        }
 
     } else { // whichGroup == 0 so set the names of all genotypes
-        do {
+        while (m != NULL) {
 
             for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
                 // Update name if it is between startIndex and startIndex + n_values
@@ -985,8 +988,9 @@ void gsc_change_names_to_values(gsc_SimData* d,
                     return;
                 }
             }
+            m = m->next;
 
-        } while ((m = m->next) != NULL);
+        }
     }
 }
 
@@ -1973,10 +1977,12 @@ gsc_GenoLocation gsc_next_forwards(gsc_BidirectionalIterator* it) {
             // The next value is in the next gsc_AlleleMatrix
             gsc_AlleleMatrix* nextAM = it->cachedAM;
             int nextAMIndex = it->cachedAMIndex;
-            do {
-                nextAM = nextAM->next;
-                nextAMIndex++;
-            } while (nextAM != NULL && nextAM->n_genotypes == 0);
+			if (nextAM != NULL) {
+				do {
+					nextAM = nextAM->next;
+					nextAMIndex++;
+				} while (nextAM != NULL && nextAM->n_genotypes == 0);
+			}
 
             if (nextAM == NULL) {
                 // There is no further gsc_AlleleMatrix; we are at the end of the iterator.
@@ -2012,10 +2018,12 @@ gsc_GenoLocation gsc_next_forwards(gsc_BidirectionalIterator* it) {
 
             gsc_AlleleMatrix* nextAM = it->cachedAM;
             int nextAMIndex = it->cachedAMIndex;
-            do {
-                nextAM = nextAM->next;
-                nextAMIndex++;
-            } while (nextAM != NULL && nextAM->n_genotypes == 0);
+			if (nextAM != NULL) {
+				do {
+					nextAM = nextAM->next;
+					nextAMIndex++;
+				} while (nextAM != NULL && nextAM->n_genotypes == 0);
+			}
 
             if (nextAM == NULL) {
                 // There is no further gsc_AlleleMatrix; we are at the end of the iterator.
@@ -2091,10 +2099,12 @@ gsc_GenoLocation gsc_next_backwards(gsc_BidirectionalIterator* it) {
             } else {
                 gsc_AlleleMatrix* nextAM = it->cachedAM;
                 int nextAMIndex = it->cachedAMIndex;
-                do {
-                    nextAMIndex--;
-                    nextAM = gsc_get_nth_AlleleMatrix(it->am, nextAMIndex);
-                } while (nextAM != NULL && nextAM->n_genotypes == 0);
+				if (nextAM != NULL) {
+					do {
+						nextAMIndex--;
+						nextAM = gsc_get_nth_AlleleMatrix(it->am, nextAMIndex);
+					} while (nextAM != NULL && nextAM->n_genotypes == 0);
+				}
 
                 if (nextAM == NULL) {
                     it->atStart = 1;
@@ -2135,10 +2145,12 @@ gsc_GenoLocation gsc_next_backwards(gsc_BidirectionalIterator* it) {
             } else {
                 gsc_AlleleMatrix* nextAM = it->cachedAM;
                 int nextAMIndex = it->cachedAMIndex;
-                do {
-                    nextAMIndex--;
-                    nextAM = gsc_get_nth_AlleleMatrix(it->am, nextAMIndex);
-                } while (nextAM != NULL && nextAM->n_genotypes == 0);
+				if (nextAM != NULL) {
+					do {
+						nextAMIndex--;
+						nextAM = gsc_get_nth_AlleleMatrix(it->am, nextAMIndex);
+					} while (nextAM != NULL && nextAM->n_genotypes == 0);
+				}
 
                 if (nextAM == NULL) {
                     it->atStart = 1;
@@ -4137,19 +4149,16 @@ GSC_GLOBALX_T gsc_get_group_size( const gsc_SimData* d, const gsc_GroupNum group
     }
     const gsc_AlleleMatrix* m = d->m;
     GSC_GLOBALX_T size = 0;
-    while (1) {
+    while (m != NULL) {
         for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
             if (m->groups[i].num == group_id.num) {
                 ++size;
             }
         }
 
-        if (m->next == NULL) {
-            return size;
-        } else {
-            m = m->next;
-        }
+        m = m->next;
     }
+    return size;
 }
 
 /** Gets a shallow copy of the genes/alleles of each member of the group. Not
@@ -4175,7 +4184,7 @@ GSC_GLOBALX_T gsc_get_group_genes(const gsc_SimData* d,
                                   char** output) {
     const gsc_AlleleMatrix* m = d->m;
     GSC_GLOBALX_T outix = 0;
-    while (1) {
+    while (m != NULL) {
         for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
             if (m->groups[i].num == group_id.num) {
                 output[outix] = m->alleles[i];
@@ -4186,12 +4195,9 @@ GSC_GLOBALX_T gsc_get_group_genes(const gsc_SimData* d,
             }
         }
 
-        if (m->next == NULL) {
-            return outix;
-        } else {
-            m = m->next;
-        }
+        m = m->next;
     }
+    return outix;
 }
 
 /** Gets a shallow copy of the names of each member of the group.
@@ -4216,7 +4222,7 @@ GSC_GLOBALX_T gsc_get_group_names(const gsc_SimData* d,
                                   char** output) {
     const gsc_AlleleMatrix* m = d->m;
     GSC_GLOBALX_T outix = 0;
-    while (1) {
+    while (m != NULL) {
         for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
             if (m->groups[i].num == group_id.num) {
                 output[outix] = m->names[i];
@@ -4227,12 +4233,9 @@ GSC_GLOBALX_T gsc_get_group_names(const gsc_SimData* d,
             }
         }
 
-        if (m->next == NULL) {
-            return outix;
-        } else {
-            m = m->next;
-        }
+        m = m->next;
     }
+    return outix;
 }
 
 /** Gets the ids of each member of the group.
@@ -4257,7 +4260,7 @@ GSC_GLOBALX_T gsc_get_group_ids(const gsc_SimData* d,
                                 gsc_PedigreeID *output) {
     const gsc_AlleleMatrix* m = d->m;
     GSC_GLOBALX_T outix = 0;
-    while (1) {
+    while (m != NULL) {
         for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
             if (m->groups[i].num == group_id.num) {
                 output[outix] = m->ids[i];
@@ -4268,12 +4271,9 @@ GSC_GLOBALX_T gsc_get_group_ids(const gsc_SimData* d,
             }
         }
 
-        if (m->next == NULL) {
-            return outix;
-        } else {
-            m = m->next;
-        }
+        m = m->next;
     }
+    return outix;
 }
 
 /** Gets the 0-based global indexes of each member of the group.
@@ -4298,7 +4298,7 @@ GSC_GLOBALX_T gsc_get_group_indexes(const gsc_SimData* d,
                                     GSC_GLOBALX_T* output) {
     const gsc_AlleleMatrix* m = d->m;
     GSC_GLOBALX_T total_i = 0, outix = 0;
-    while (1) {
+    while (m != NULL) {
         for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i, ++total_i) {
             if (m->groups[i].num == group_id.num) {
                 output[outix] = total_i;
@@ -4309,12 +4309,9 @@ GSC_GLOBALX_T gsc_get_group_indexes(const gsc_SimData* d,
             }
         }
 
-        if (m->next == NULL) {
-            return outix;
-        } else {
-            m = m->next;
-        }
+        m = m->next;
     }
+    return outix;
 }
 
 /** Gets the breeding values/breeding values/fitnesses of each member of the group
@@ -4383,7 +4380,7 @@ GSC_GLOBALX_T gsc_get_group_parent_ids(const gsc_SimData* d,
 
     const gsc_AlleleMatrix* m = d->m;
     GSC_GLOBALX_T outix = 0;
-    while (1) {
+    while (m != NULL) {
         for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
             if (m->groups[i].num == group_id.num) {
                 output[outix] = m->pedigrees[parent][i];
@@ -4394,12 +4391,9 @@ GSC_GLOBALX_T gsc_get_group_parent_ids(const gsc_SimData* d,
             }
         }
 
-        if (m->next == NULL) {
-            return outix;
-        } else {
-            m = m->next;
-        }
+        m = m->next;
     }
+    return outix;
 }
 
 /** Gets the names of either the first or second parent of each member
@@ -4434,7 +4428,7 @@ GSC_GLOBALX_T gsc_get_group_parent_names(const gsc_SimData* d,
 
     const gsc_AlleleMatrix* m = d->m;
     GSC_GLOBALX_T outix = 0;
-    while (1) {
+    while (m != NULL) {
         for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
             if (m->groups[i].num == group_id.num) {
                 if (m->pedigrees[parent][i].id != GSC_NO_PEDIGREE.id) {
@@ -4449,12 +4443,9 @@ GSC_GLOBALX_T gsc_get_group_parent_names(const gsc_SimData* d,
             }
         }
 
-        if (m->next == NULL) {
-            return outix;
-        } else {
-            m = m->next;
-        }
+        m = m->next;
     }
+    return outix;
 }
 
 /** Gets the full pedigree string (as per gsc_save_group_full_pedigree() )
@@ -4623,7 +4614,7 @@ void gsc_delete_dmatrix(gsc_DecimalMatrix* m) {
 void gsc_delete_group(gsc_SimData* d, const gsc_GroupNum group_id) {
     gsc_AlleleMatrix* m = d->m;
     GSC_GLOBALX_T total_deleted = 0;
-    while (1) {
+    while (m != NULL) {
         GSC_LOCALX_T deleted = 0;
         for (GSC_LOCALX_T i = 0; i < m->n_genotypes; ++i) {
             if (m->groups[i].num == group_id.num) {
@@ -4646,16 +4637,12 @@ void gsc_delete_group(gsc_SimData* d, const gsc_GroupNum group_id) {
         m->n_genotypes -= deleted;
         total_deleted += deleted;
 
-        if (m->next == NULL) {
-            Rprintf("%lu genotypes were deleted\n", (long unsigned int) total_deleted);
-			if (total_deleted > 0) { 
-				gsc_condense_allele_matrix( d );
-				d->n_groups--; 
-			}
-            return;
-        } else {
-            m = m->next;
-        }
+        m = m->next;
+    }
+    Rprintf("%lu genotypes were deleted\n", (long unsigned int) total_deleted);
+    if (total_deleted > 0) { 
+        gsc_condense_allele_matrix( d );
+        d->n_groups--; 
     }
 }
 
@@ -4737,13 +4724,14 @@ void gsc_delete_label(gsc_SimData* d, const gsc_LabelID which_label) {
         d->label_defaults = NULL;
 
         gsc_AlleleMatrix* m = d->m;
-        do {
+        while (m != NULL) {
 
             GSC_FREE(m->labels[0]);
             GSC_FREE(m->labels);
             m->labels = NULL;
 
-        } while ((m = m->next) != NULL);
+            m = m->next;
+        }
 
     } else {
         // Reduce the list of labels in the gsc_SimData
@@ -4776,7 +4764,7 @@ void gsc_delete_label(gsc_SimData* d, const gsc_LabelID which_label) {
 
         // Remove the label from the gsc_AlleleMatrix linked list
         gsc_AlleleMatrix* m = d->m;
-        do {
+        while (m != NULL) {
             GSC_FREE(m->labels[label_ix]);
 
             m->n_labels = d->n_labels;
@@ -4792,7 +4780,9 @@ void gsc_delete_label(gsc_SimData* d, const gsc_LabelID which_label) {
                 GSC_FREE(m->labels);
                 m->labels = new_label_lookups;
             }
-        } while ((m = m->next) != NULL);
+
+            m = m->next;
+        }
     }
 }
 
@@ -4948,7 +4938,7 @@ void gsc_delete_allele_matrix(gsc_AlleleMatrix* m) {
         return;
     }
     gsc_AlleleMatrix* next;
-    do {
+    while (m != NULL) {
         /* free the big data matrix */
         for (GSC_LOCALX_T i = 0; i < CONTIG_WIDTH; i++) {
             if (m->alleles[i] != NULL) {
@@ -4976,7 +4966,8 @@ void gsc_delete_allele_matrix(gsc_AlleleMatrix* m) {
 
         next = m->next;
         GSC_FREE(m);
-    } while ((m = next) != NULL);
+		m = next;
+    }
 }
 
 /** Deletes an gsc_MarkerEffects object and frees its memory.
@@ -7065,6 +7056,7 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
     unsigned int queuesize = 0;
 
     gsc_TableFileReader tbl = gsc_tablefilereader_create(filename);
+    if (tbl.fp == NULL) { return NO_GROUP; }
     // Read one row + 2 cells (if possible)
     GSC_CREATE_BUFFER(cellsread,gsc_TableFileCell,100);
     unsigned int ncellsread = 0;
@@ -7330,9 +7322,10 @@ static gsc_GroupNum gsc_load_genotypefile_matrix(gsc_SimData* d,
     // PART 4: Tidy and clean and exit
     GSC_GLOBALX_T ngenos = 0;
     AlleleMatrix* tmpam = it.firstAM;
-    do {
+    while (tmpam != NULL) {
         ngenos += tmpam->n_genotypes;
-    } while ((tmpam = tmpam->next) != NULL);
+		tmpam = tmpam->next;
+    }
     Rprintf("(Loading %s) %lu genotype(s) of %lu marker(s) were loaded.\n", filename, 
             (long unsigned int) ngenos, (long unsigned int) nvalidmarker);
     if (ngenos == 0) {
