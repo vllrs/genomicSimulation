@@ -32,7 +32,7 @@ local GEBVs. By default uses the first loaded set of effect values.}
 }
 \description{
 From genomicSimulation v0.2.7,
-it is recommended you use \link{create.markerblocks.by.chrlength}, followed by
+it is recommended you use \link{create.markerblocks.from.chrsplit}, followed by
 \link{save.local.GEBVs}, to replicate the functionality of this function.
 }
 \details{

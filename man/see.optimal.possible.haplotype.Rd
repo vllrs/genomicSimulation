@@ -25,6 +25,8 @@ For legacy reasons, you can also set this parameter using the name `eff.set`.}
 \item{unknown.allele}{The character that will appear in the haplotype at markers
 where there are no known marker effects. If you pass a string to this, only its 
 first character will be used.}
+
+\item{eff.set}{Legacy name for the parameter now called `effect.set`}
 }
 \value{
 A string containing the allele out of all alleles in the group

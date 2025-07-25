@@ -17,6 +17,8 @@ that belong to that group.}
 \item{effect.set}{identifier for the set of marker effects to be used to calculate breeding values.
 If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
 For legacy reasons, you can also set this parameter using the name `eff.set`.}
+
+\item{eff.set}{Legacy name for the parameter now called `effect.set`}
 }
 \description{
 Calculates GEBVs for the maternal and paternal halves of each candidate's genotype

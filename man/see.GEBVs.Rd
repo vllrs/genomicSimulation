@@ -12,6 +12,8 @@ return breeding values for}
 
 \item{effect.set}{identifier for the set of marker effects to be used to calculate breeding values.
 For legacy reasons, you can also set this parameter using the name `eff.set`.}
+
+\item{eff.set}{Legacy name for the parameter now called `effect.set`}
 }
 \value{
 A vector containing the breeding values for each member of each group.

@@ -37,10 +37,7 @@ This can be useful when you want to add centring values for multiple alleles:
 run the function with reset.centres=T for the first allele, and reset.centres=F for 
 the next alleles.}
 
-\item{eff.set}{The ID of the effect set to be modified. Return value of load.data or load.effects.
-If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
-For legacy reasons, this parameter can be referred to as either `effect.set` or `eff.set`.
-If `effect.set` is set to a non-default value, it takes precedence over `eff.set`.}
+\item{eff.set}{Legacy name for the parameter now called `effect.set`}
 }
 \description{
 The simulation can store a centring value for each marker in a set of 

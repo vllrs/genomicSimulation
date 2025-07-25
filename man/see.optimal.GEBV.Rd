@@ -12,6 +12,8 @@ see.optimal.GEBV(effect.set = 0L, eff.set = 0L)
 maximal GEBV. If not otherwise specified, uses the earliest-loaded marker 
 effect set in this simulation.
 For legacy reasons, you can also set this parameter using the name `eff.set`.}
+
+\item{eff.set}{Legacy name for the parameter now called `effect.set`}
 }
 \value{
 The highest possible GEBV

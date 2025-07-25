@@ -17,6 +17,8 @@ to that group.}
 \item{effect.set}{identifier for the set of marker effects with which to calculate
 GEBVs. If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
 For legacy reasons, you can also set this parameter using the name `eff.set`.}
+
+\item{eff.set}{Legacy name for the parameter now called `effect.set`}
 }
 \description{
 The function prints its results to a tab-separated file with three columns 

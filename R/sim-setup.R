@@ -359,6 +359,7 @@ load.different.effects <- function(effect.file) {
 #' If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
 #' For legacy reasons, this parameter can be referred to as either `effect.set` or `eff.set`.
 #' If `effect.set` is set to a non-default value, it takes precedence over `eff.set`.
+#' @param eff.set Legacy name for the parameter now called `effect.set`
 #' 
 #' @family loader functions
 #' @export
@@ -466,7 +467,7 @@ make.label <- function(default) {
 #' @returns a genomicSimulation MarkerBlocks handle that can be passed to 
 #' \code{see.local.GEBVs} or \code{save.local.GEBVs}
 #' 
-#' @seealso \link{create.markerblocks.by.chrlength}
+#' @seealso \link{create.markerblocks.from.chrsplit}
 #' 
 #' @export
 create.markerblocks <- function(marker.allocations) {

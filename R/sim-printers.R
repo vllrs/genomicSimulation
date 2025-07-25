@@ -201,6 +201,7 @@ save.pedigrees <- function(filename, group=NA, type=NULL, recursive.format=TRUE)
 #' @param effect.set identifier for the set of marker effects with which to calculate
 #' GEBVs. If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
 #' For legacy reasons, you can also set this parameter using the name `eff.set`.
+#' @param eff.set Legacy name for the parameter now called `effect.set`
 #'
 #' @family saving functions
 #' @export
@@ -228,6 +229,7 @@ save.GEBVs <- function(filename, group=NA, effect.set=0L, eff.set=0L) {
 #' @param effect.set identifier for the set of marker effects to be used to calculate breeding values.
 #' If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
 #' For legacy reasons, you can also set this parameter using the name `eff.set`.
+#' @param eff.set Legacy name for the parameter now called `effect.set`
 #' 
 #' @family saving functions
 #' @export
@@ -267,7 +269,7 @@ save.local.GEBVs <- function(filename, blocks, group=NA, effect.set=0L, eff.set=
 save.local.GEBVs.blocks.from.file <- function(filename, block.file, group=NULL, eff.set=1L) {
 	if (is.null(sim.data$p)) { stop("Please load.data first.") }
   
-  block.df <- read.csv2(block.file,sep="")
+  block.df <- utils::read.csv2(block.file,sep="")
   markers.in.blocks <- strsplit(block.df[,5],";")
   
   block.allocs <- do.call(rbind,lapply(1:length(markers.in.blocks),
@@ -298,7 +300,7 @@ save.local.GEBVs.by.file <- function(filename, block.file, group=NULL, eff.set=1
 #' using blocks created by slicing chromosomes into segments. 
 #'
 #' From genomicSimulation v0.2.7,
-#' it is recommended you use \link{create.markerblocks.by.chrlength}, followed by
+#' it is recommended you use \link{create.markerblocks.from.chrsplit}, followed by
 #' \link{save.local.GEBVs}, to replicate the functionality of this function. 
 #'
 #' \code{save.local.GEBVs.blocks.from.chrsplit} calculates GEBVs for each block of markers created by

@@ -18,6 +18,7 @@
 #' haplotypes and haplotype scores. If not otherwise specified, uses the 
 #' earliest-loaded marker effect set in this simulation. 
 #' For legacy reasons, you can also set this parameter using the name `eff.set`. 
+#' @param eff.set Legacy name for the parameter now called `effect.set`
 #' @param unknown.allele The character that will appear in the haplotype at markers
 #' where there are no known marker effects. If you pass a string to this, only its 
 #' first character will be used.
@@ -58,6 +59,7 @@ see.optimal.haplotype <- function(effect.set=0L,unknown.allele="-", eff.set=0L) 
 #' optimal haplotype and haplotype breeding values. If not otherwise specified, 
 #' uses the earliest-loaded marker effect set in this simulation.
 #' For legacy reasons, you can also set this parameter using the name `eff.set`.
+#' @param eff.set Legacy name for the parameter now called `effect.set`
 #' @param unknown.allele The character that will appear in the haplotype at markers
 #' where there are no known marker effects. If you pass a string to this, only its 
 #' first character will be used.
@@ -89,6 +91,7 @@ see.optimal.possible.haplotype <- function(group, effect.set=0L,unknown.allele="
 #' maximal GEBV. If not otherwise specified, uses the earliest-loaded marker 
 #' effect set in this simulation.
 #' For legacy reasons, you can also set this parameter using the name `eff.set`.
+#' @param eff.set Legacy name for the parameter now called `effect.set`
 #'
 #' @return The highest possible GEBV
 #'
@@ -116,6 +119,7 @@ see.optimal.GEBV <- function(effect.set=0L, eff.set=0L) {
 #' optimal possible GEBV. If not otherwise specified, uses the earliest-loaded 
 #' marker effect set in this simulation.
 #' For legacy reasons, you can also set this parameter using the name `eff.set`.
+#' @param eff.set Legacy name for the parameter now called `effect.set`
 #' @return The highest possible GEBV that can be created from alleles available
 #' in the group.
 #'
@@ -143,6 +147,7 @@ see.optimal.possible.GEBV <- function(group, effect.set=0L, eff.set=0L) {
 #' minimum GEBV. If not otherwise specified, uses the earliest-loaded marker effect set 
 #' in this simulation.
 #' For legacy reasons, you can also set this parameter using the name `eff.set`.
+#' @param eff.set Legacy name for the parameter now called `effect.set`
 #'
 #' @return The lowest possible GEBV
 #'
@@ -183,6 +188,7 @@ see.minimum.GEBV <- function(eff.set=1L) {
 #' @param effect.set identifier for the set of marker effects to be used to calculate breeding values.
 #' By default is 0, to use the oldest currently-loaded set of marker effects.
 #' For legacy reasons, you can also set this parameter using the name `eff.set`.
+#' @param eff.set Legacy name for the parameter now called `effect.set`
 #' 
 #' @return A matrix containing the local breeding values for each haplotype of 
 #' each member of each group. Columns correspond to blocks, each pair of rows 
@@ -210,6 +216,7 @@ see.local.GEBVs <- function(blocks, group, effect.set = 0L, eff.set=0L) {
 #' return breeding values for
 #' @param effect.set identifier for the set of marker effects to be used to calculate breeding values.
 #' For legacy reasons, you can also set this parameter using the name `eff.set`.
+#' @param eff.set Legacy name for the parameter now called `effect.set`
 #' @return A vector containing the breeding values for each member of each group.
 #' @family data access functions
 #' @export 

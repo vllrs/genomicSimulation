@@ -27,5 +27,5 @@ defines the allocations of individual markers to blocks. The list of markers
 in the genetic map which can be allocated can be accessed via \link{see.genetic.map}.
 }
 \seealso{
-\link{create.markerblocks.by.chrlength}
+\link{create.markerblocks.from.chrsplit}
 }

@@ -20,10 +20,7 @@ should contain the centring values corresponding to those markers. Centring valu
 corresponding to markers names in the first column will be overwritten; centring
 values of makrers not in the first column will be unchanged.}
 
-\item{eff.set}{The ID of the effect set to be modified. Return value of load.data or load.effects.
-If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
-For legacy reasons, this parameter can be referred to as either `effect.set` or `eff.set`.
-If `effect.set` is set to a non-default value, it takes precedence over `eff.set`.}
+\item{eff.set}{Legacy name for the parameter now called `effect.set`}
 }
 \description{
 The simulation can store a centring value for each marker in a set of 

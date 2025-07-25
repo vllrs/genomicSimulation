@@ -400,6 +400,7 @@ change.label.by.amount <- function(label, amount, group=NA) {
 #' @param effect.set identifier for the set of marker effects to use to calculate the
 #' GEBVs. If not otherwise specified, uses the earliest-loaded marker effect set in this simulation.
 #' For legacy reasons, you can also set this parameter using the name `eff.set`.
+#' @param eff.set Legacy name for the parameter now called `effect.set`
 #' @return the group number of the new group, containing the genotypes that were 
 #' positively selected.
 #'

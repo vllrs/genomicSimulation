@@ -17,6 +17,8 @@ for each group.}
 optimal possible GEBV. If not otherwise specified, uses the earliest-loaded 
 marker effect set in this simulation.
 For legacy reasons, you can also set this parameter using the name `eff.set`.}
+
+\item{eff.set}{Legacy name for the parameter now called `effect.set`}
 }
 \value{
 The highest possible GEBV that can be created from alleles available

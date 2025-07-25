@@ -164,6 +164,7 @@ see.genetic.map <- function(mapID=0L) {
 #' @param effect.set the identifier of the specific marker effect set to view. 
 #' If not specified, uses the first-loaded marker effect set in this simulation.
 #' For legacy reasons, you can also set this parameter using the name `effectID`.
+#' @param effectID Legacy name for the parameter now called `effect.set`
 #' @return A dataframe with columns "marker", "allele" and "eff"
 #'
 #' @family data access functions

@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS
 #define SIM_OPERATIONS
 #include "sim-operations.h"
-/* genomicSimulationC v0.2.6.18 - last edit 23 July 2025 */
+/* genomicSimulationC v0.3 - last edit 23 July 2025 */
 // Converted using Rconversion.sh v2
 
 /** Default parameter values for GenOptions, to help with quick scripts and prototypes.

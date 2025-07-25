@@ -1,5 +1,5 @@
 ---
-title: "genomicSimulation (v0.2.6.development) Vignette"
+title: "genomicSimulation (v0.3) Vignette"
 author: "Kira Villiers"
 date: "`r Sys.Date()`"
 output:
@@ -9,7 +9,7 @@ output:
       toc: true
       #theme: simplex
 vignette: >
-  %\VignetteIndexEntry{genomicSimulation (v0.2.6.development) Vignette}
+  %\VignetteIndexEntry{genomicSimulation (v0.3) Vignette}
   %\VignetteEngine{knitr::rmarkdown}
   %\usepackage[utf8]{inputenc}
 ---
@@ -83,11 +83,11 @@ cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
 # Thanks https://stackoverflow.com/questions/19997242/simple-manual-rmarkdown-tables-that-look-good-in-html-pdf-and-docx
 ```
 
-**Min:** 0.0228 seconds 
-**Mean:** 0.0257 seconds 
-**Max:** 0.0564 seconds 
+**Min:** 0.0164 seconds 
+**Mean:** 0.0221 seconds 
+**Max:** 0.0643 seconds 
 
-![Boxplot of set-up time benchmark results](benchmark_gS_v0.2.6_loading.png)
+![Boxplot of set-up time benchmark results](benchmark_gS_v0.3_loading.png)
 
 ## Simulate crossing
 ```{r table3, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
@@ -104,11 +104,11 @@ tabl <- "
 cat(tabl)
 ```
 
-**Min:** 1.37 seconds 
-**Mean:** 1.46 seconds 
-**Max:** 1.63 seconds 
+**Min:** 1.26 seconds 
+**Mean:** 1.47 seconds 
+**Max:** 1.82 seconds 
 
-![Boxplot of simulating crossing benchmark results](benchmark_gS_v0.2.6_crossing.png)
+![Boxplot of simulating crossing benchmark results](benchmark_gS_v0.3_crossing.png)
 
 As the length of the chromosome increases, the average number of crossovers along the chromosome also increases (see [Methodology: Simulating meiosis](#methodology-simulating-meiosis)). The process of simulating meiosis on large chromosomes is slower, because genomicSimulation must currently compute the positions of each crossover. 
 
@@ -122,17 +122,17 @@ tabl <- "
 | R version     | R 4.3.1, running in RStudio       |
 | Device        | Laptop, 16GB RAM, 11th Gen Intel i7 CPU, running Windows 11 |
 | N replications | 500 |
-| genomicSimulation command | see.group.data(,\"B\") |
+| genomicSimulation command | see.GEBVs |
 | Input size | 50 founder lines genotyped across a 5112-marker, 2994-centimorgan map | 
 "
 cat(tabl)
 ```
 
-**Min:** 0.00284 seconds 
-**Mean:** 0.00300 seconds 
-**Max:** 0.00529 seconds 
+**Min:** 0.00069 seconds 
+**Mean:** 0.00080 seconds 
+**Max:** 0.00231 seconds 
 
-![Boxplot of calculating breeding value benchmark results](benchmark_gS_v0.2.6_bvcalc.png)
+![Boxplot of calculating breeding value benchmark results](benchmark_gS_v0.3_bvcalc.png)
 
 `see.GEBVs` is a function that accesses simulation output within R. Forms of output that involve writing to files will be slower than methods of output that involve accessing data within R. 
 
@@ -663,7 +663,7 @@ Custom labels can be used to track information about a genotype that you wish to
 
 Values of a custom label can only be whole numbers, so you may need to invent your own encodings. *Age (measured in years)* is an easy one: you can increment the age of all genotypes using `change.label.by.amount` after every simulation year. For a custom label tracking sex, you may need to choose that females are labelled 1 and males are labelled 2, or other numbers of your choice. 
 
-An example of using custom labels to track sex can be found in the example script [Tracking sex of genotypes](#tracking-sex-of-genotypes) in this document. Other examples of using custom labels exist in the [Features and Template Guide](https://vllrs.github.io/genomicSimulationCdocs/v0.2.6/templates.html) (online link).
+An example of using custom labels to track sex can be found in the example script [Tracking sex of genotypes](#tracking-sex-of-genotypes) in this document. Other examples of using custom labels exist in the [Features and Template Guide](https://vllrs.github.io/genomicSimulationCdocs/v0.3/templates.html) (online link).
 
 ## Primer on custom selection functions
 
@@ -784,7 +784,7 @@ This section of the vignette provides diagrams of the `SimData` structure and di
 
 ![Diagram overview of the internal table "SimData". The diagram shows: the main data matrix that holds simulation genotypes (lower right); metadata stored about each genotype (above the matrix); and how genetic maps and sets of marker effects (left of the matrix) are separate to the matrix, but correspond to the same markers. (This diagram is conceptual and does not show implementation details)](the_simdata_table.png){width=100%}
 
-An external pointer to `SimData` is saved in a package-global R variable called `sim.data$p`. `sim.data$p` is hidden during regular use, and attempting to access the C-level data via the external pointer is not advised. R equivalents are provided for all user-facing functions in the C library [(user-facing functions are shown in the Concordance page of the genomicSimulation C version documentation)](https://vllrs.github.io/genomicSimulationCdocs/v0.2.6/concordance.html).
+An external pointer to `SimData` is saved in a package-global R variable called `sim.data$p`. `sim.data$p` is hidden during regular use, and attempting to access the C-level data via the external pointer is not advised. R equivalents are provided for all user-facing functions in the C library [(user-facing functions are shown in the Concordance page of the genomicSimulation C version documentation)](https://vllrs.github.io/genomicSimulationCdocs/v0.3/concordance.html).
 
 `clear.simdata` and `load.data` reset the simulation/clear all data from the invisible table. (The latter then immediately creates a fresh simulation state.) Currently, genomicSimulation in R cannot have two concurrent simulation states in the same R session.
 
@@ -837,5 +837,5 @@ replacing `long unsigned int` with whatever integer type is large enough for you
 
 Every genomicSimulation function has a documentation page. Access using the `?` command from R, e.g. `?load.data`.
 
-The [Features and Template Guide](https://vllrs.github.io/genomicSimulationCdocs/v0.2.6/templates.html) (online link) provides template implementations of various breeding program features, such as selecting using an index, or tracking genotype age.
+The [Features and Template Guide](https://vllrs.github.io/genomicSimulationCdocs/v0.3/templates.html) (online link) provides template implementations of various breeding program features, such as selecting using an index, or tracking genotype age.
 

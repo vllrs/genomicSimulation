@@ -1,7 +1,7 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.2.6.18
+genomicSimulationC v0.3
 // Converted using Rconversion.sh v2
 
     Last edit: 23 July 2025
