@@ -1195,12 +1195,9 @@ SEXP SXP_change_name_to_values(SEXP exd, SEXP s_values, SEXP s_group, SEXP s_sta
 		error("`values` are invalid: must be strings");
 	}
 	R_xlen_t len = xlength(s_values);
-	char* names[len];
+	const char* names[len];
 	for (R_xlen_t i = 0; i < len; ++i) {
-		names[i] = R_Calloc(sizeof(char)*(NAME_LENGTH + 1), char);
-		strncpy(names[i], CHAR(STRING_ELT(s_values, i)), sizeof(char)*NAME_LENGTH);
-		//names[i][NAME_LENGTH] = '\0'; // terminate 'em. Just in case they're trying
-		// to spill over NAME_LENGTH
+		names[i] = CHAR(STRING_ELT(s_values, i));
 	}
 
 	int group = asInteger(s_group);
@@ -1213,11 +1210,11 @@ SEXP SXP_change_name_to_values(SEXP exd, SEXP s_values, SEXP s_group, SEXP s_sta
 		error("`startIndex` is invalid (wrong type or negative)\n");
 	}
 
-	change_names_to_values(d, GROUPNUM_IFY(group), startIndex, len, (const char**) names);
+	change_names_to_values(d, GROUPNUM_IFY(group), startIndex, len, names);
 
-	for (int i = 0; i < len; ++i) {
+	/*for (int i = 0; i < len; ++i) {
 		R_Free(names[i]);
-	}
+	}*/
 
 	return ScalarInteger(0);
 }
@@ -2009,12 +2006,10 @@ SEXP SXP_make_targeted_crosses(SEXP exd, SEXP s_firstparents, SEXP s_secondparen
 	R_xlen_t ncrosses = xlength(s_firstparents);
 
 	unsigned int combinations[2][ncrosses];
-	char pname[NAME_LENGTH+1];
 
 	if (TYPEOF(s_firstparents) == STRSXP) {
 		for (R_xlen_t i = 0; i < ncrosses; ++i) {
-			strncpy(pname, CHAR(STRING_ELT(s_firstparents, i)), sizeof(char)*NAME_LENGTH);
-			combinations[0][i] = gsc_get_index_of_name(d->m, pname);
+			combinations[0][i] = gsc_get_index_of_name(d->m, CHAR(STRING_ELT(s_firstparents, i)));
 		}
 	} else if (TYPEOF(s_firstparents) == INTSXP) {
 		int* indexes = INTEGER(s_firstparents);
@@ -2027,8 +2022,7 @@ SEXP SXP_make_targeted_crosses(SEXP exd, SEXP s_firstparents, SEXP s_secondparen
 
 	if (TYPEOF(s_secondparents) == STRSXP) {
 		for (R_xlen_t i = 0; i < ncrosses; ++i) {
-			strncpy(pname, CHAR(STRING_ELT(s_secondparents, i)), sizeof(char)*NAME_LENGTH);
-			combinations[1][i] = gsc_get_index_of_name(d->m, pname);
+			combinations[1][i] = gsc_get_index_of_name(d->m, CHAR(STRING_ELT(s_secondparents, i)));
 		}
 	} else if (TYPEOF(s_secondparents) == INTSXP) {
 		int* indexes = INTEGER(s_secondparents);

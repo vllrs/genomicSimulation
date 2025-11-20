@@ -225,7 +225,7 @@ see.markerblocks <- function(b) {
 #'
 #' @family label functions
 #' @export
-change.names.to.values <- function(values, group=NA, startIndex=0) {
+change.names.to.values <- function(values, group=0, startIndex=0) {
   if (is.null(sim.data$p)) { stop("Please load.data first.") }
   .Call(SXP_change_name_to_values, sim.data$p, values, group, startIndex)   
 }

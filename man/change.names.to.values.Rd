@@ -4,7 +4,7 @@
 \alias{change.names.to.values}
 \title{Set the names of genotypes in simulation memory}
 \usage{
-change.names.to.values(values, group = NA, startIndex = 0)
+change.names.to.values(values, group = 0, startIndex = 0)
 }
 \arguments{
 \item{values}{A vector of strings to copy into the genotypes' name slots.}

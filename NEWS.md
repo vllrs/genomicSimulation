@@ -1,3 +1,9 @@
+# genomicSimulation v0.3.1
+
+## Improvements
+
+- Genotype and file names are no longer constrained to less than 45 characters anywhere in the simulation tool (that is, the internal NAME_LENGTH cap has finally been entirely removed)
+
 # genomicSimulation v0.3
 
 This release would be v0.2.7 in the old numbering scheme, but the numbering scheme is being simplified.

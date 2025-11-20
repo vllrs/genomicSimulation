@@ -1,10 +1,10 @@
 #ifndef SIM_OPERATIONS_H
 #define SIM_OPERATIONS_H
 /* 
-genomicSimulationC v0.3
+genomicSimulationC v0.3.011
 // Converted using Rconversion.sh v2
 
-    Last edit: 23 July 2025
+    Last edit: 20 Nov 2025
     License: MIT License
 
 Copyright (c) 2021 Kira Villiers
@@ -55,15 +55,7 @@ SOFTWARE.
         This could be decreased to help long simulations or lower-end machines.
         Increasing this may provide some speed gain (likely very minor. I haven't
         tested).
-        
-    #define NAME_LENGTH 45
-    
-        The maximum number of characters allowed in a name field.
-        These include names of SNPs, names of genotypes loaded from files,
-        names of generated genotypes, and save-as-you-go filenames.
-        
-        @TODO render this setting meaningless. 
-        
+         
     #define GSC_ID_T unsigned int
     #define GSC_LOCALX_T unsigned int
     #define GSC_GLOBALX_T unsigned int
@@ -191,10 +183,6 @@ typedef enum {
         #define GSC_GLOBAL_T unsigned int
         #define GSC_NA_GLOBALX SIZE_MAX
     #endif //else LOCALX is already defined as unsigned int
-#endif
-
-#ifndef NAME_LENGTH
-    #define NAME_LENGTH 45
 #endif
 
 #if defined(GSC_MALLOC) && !defined(GSC_FREE) || !defined(GSC_MALLOC) && defined(GSC_FREE)
@@ -1535,6 +1523,7 @@ GSC_GLOBALX_T gsc_get_index_of_child( const gsc_AlleleMatrix* start, const gsc_P
                                       const gsc_PedigreeID parent2id);
 GSC_GLOBALX_T gsc_get_index_of_name( const gsc_AlleleMatrix* start, const char* name);
 gsc_PedigreeID gsc_get_id_of_index( const gsc_AlleleMatrix* start, const GSC_GLOBALX_T index);
+gsc_PedigreeID gsc_get_id_of_name( const gsc_AlleleMatrix* start, const char* name);
 char* gsc_get_genes_of_index( const gsc_AlleleMatrix* start, const GSC_GLOBALX_T index);
     /**@}*/
 
